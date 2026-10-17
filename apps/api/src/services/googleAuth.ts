@@ -83,7 +83,7 @@ export class GoogleAuthService {
         const documents = effective.release.documents.filter((d) => d.locale === input.locale);
         if (!input.adult_self_attestation || documents.length !== 3 || new Set(input.consents.map((c) => c.type)).size !== 3 || documents.some((d) => !input.consents.some((c) => c.id === d.id && c.type === d.document_type && hexDigestMatches(c.content_hash, d.content_digest)))) throw new HttpError(409, "consent_version_changed");
         const now = new Date();
-        const user = await tx.user.create({ data: { name: input.name, email: grant.email, email_verified_at: now, phone: null, phone_verified_at: null, password_hash: null, profile_state: "phone_required", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
+        const user = await tx.user.create({ data: { name: input.name, email: grant.email, email_verified_at: now, phone: null, phone_verified_at: null, password_hash: null, profile_state: "complete", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
         await tx.externalIdentity.create({ data: { user_id: user.id, provider: "google", provider_subject: grant.sub, provider_email_snapshot: grant.email, last_authenticated_at: now } });
         await tx.userConsent.createMany({ data: documents.map((d) => ({ user_id: user.id, consent_document_id: d.id, accepted_at: now, source: "google_registration", request_id: requestId, app_release: this.config.appRelease })) });
         return { user, session: await createSession(tx, user) };

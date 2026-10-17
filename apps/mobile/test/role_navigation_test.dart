@@ -63,19 +63,19 @@ void main() {
       expect(find.byType(RoleShellScaffold), findsOneWidget);
       expect(_bar(tester).currentIndex, 1);
       expect(
-        find.byKey(const ValueKey('driverScoringBreakdown')),
+        find.byKey(const ValueKey('driverMatchDetail')),
         findsOneWidget,
       );
 
       // Leaving and returning to the tab restores the pushed page.
       await _tapTab(tester, 0);
       expect(
-        find.byKey(const ValueKey('driverScoringBreakdown')),
+        find.byKey(const ValueKey('driverMatchDetail')),
         findsNothing,
       );
       await _tapTab(tester, 1);
       expect(
-        find.byKey(const ValueKey('driverScoringBreakdown')),
+        find.byKey(const ValueKey('driverMatchDetail')),
         findsOneWidget,
         reason: 'branch stack was not preserved across tab switches',
       );
@@ -83,7 +83,7 @@ void main() {
       // Android back returns through the branch stack to the inbox.
       await _back(tester);
       expect(
-        find.byKey(const ValueKey('driverScoringBreakdown')),
+        find.byKey(const ValueKey('driverMatchDetail')),
         findsNothing,
       );
       expect(find.byKey(const ValueKey('openMatch-match_1')), findsOneWidget);
@@ -99,13 +99,13 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('openMatch-match_1')));
       await tester.pumpAndSettle();
       expect(
-        find.byKey(const ValueKey('driverScoringBreakdown')),
+        find.byKey(const ValueKey('driverMatchDetail')),
         findsOneWidget,
       );
 
       await _tapTab(tester, 1);
       expect(
-        find.byKey(const ValueKey('driverScoringBreakdown')),
+        find.byKey(const ValueKey('driverMatchDetail')),
         findsNothing,
         reason: 're-tapping the active tab should return to its root',
       );
@@ -144,8 +144,8 @@ void main() {
     testWidgets('bottom navigation survives every tab', (tester) async {
       await _pumpApp(tester, handler: _passengerHandler);
 
-      for (final index in [1, 2, 3, 4, 0, 1]) {
-        await _tapTab(tester, index);
+      for (final index in [1, 2, 3, 0, 1]) {
+        await _tapPassengerTab(tester, index);
         expect(find.byType(RoleShellScaffold), findsOneWidget);
         expect(_bar(tester).currentIndex, index);
       }
@@ -154,7 +154,7 @@ void main() {
     testWidgets('the trips tab lists the request history', (tester) async {
       await _pumpApp(tester, handler: _passengerHandler);
 
-      await _tapTab(tester, 1);
+      await _tapPassengerTab(tester, 1);
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('passengerTripsList')), findsOneWidget);
@@ -164,7 +164,6 @@ void main() {
         find.byKey(const ValueKey('passengerTrip-request_1')),
         findsOneWidget,
       );
-      expect(find.byType(NavigationBar), findsNothing);
       expect(find.byType(RoleShellScaffold), findsOneWidget);
     });
 
@@ -193,7 +192,7 @@ void main() {
     testWidgets('the account tab reaches session management', (tester) async {
       await _pumpApp(tester, handler: _passengerHandler);
 
-      await _tapTab(tester, _accountTab(tester));
+      await _tapPassengerTab(tester, _accountTab(tester));
       expect(find.text('الأمان والجلسات'), findsWidgets);
       expect(find.byType(RoleShellScaffold), findsOneWidget);
     });
@@ -204,7 +203,9 @@ void main() {
       await _pumpApp(tester, handler: _passengerHandler);
       final account = _accountTab(tester);
 
-      await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+      GoRouter.of(
+        tester.element(find.byType(RoleShellScaffold)),
+      ).go('/security/sessions');
       await tester.pumpAndSettle();
 
       expect(find.text('الأمان والجلسات'), findsWidgets);
@@ -296,8 +297,17 @@ int _accountTab(WidgetTester tester) =>
 /// icons keeps this tied to branch order.
 Finder _tabIcon(int index) => find.byKey(ValueKey('roleNavigation-$index'));
 
+/// The passenger shell renders the reference (Figma) bottom navigation rather
+/// than the sidebar, so its destinations are keyed separately.
+Finder _passengerTab(int index) => find.byKey(ValueKey('bottomNav-$index'));
+
 Future<void> _tapTab(WidgetTester tester, int index) async {
   await tester.tap(_tabIcon(index));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapPassengerTab(WidgetTester tester, int index) async {
+  await tester.tap(_passengerTab(index));
   await tester.pumpAndSettle();
 }
 

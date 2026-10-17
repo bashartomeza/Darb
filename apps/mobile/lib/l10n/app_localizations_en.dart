@@ -1224,6 +1224,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navTrips => 'My trips';
 
   @override
+  String get navMaps => 'Maps';
+
+  @override
+  String get navSetting => 'Setting';
+
+  @override
   String greetingMorning(String name) {
     return 'Good morning, $name';
   }
@@ -1237,6 +1243,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String greetingEvening(String name) {
     return 'Good evening, $name';
   }
+
+  @override
+  String get homeGreetingMorning => 'Good Morning';
+
+  @override
+  String get homeGreetingAfternoon => 'Good Afternoon';
+
+  @override
+  String get homeGreetingEvening => 'Good Evening';
+
+  @override
+  String get homePlanTripTitle => 'Plan Your Next Trip';
+
+  @override
+  String get homePlanTripBody =>
+      'Find a ride, share the journey, reach your destination';
+
+  @override
+  String get homeSearchRide => 'Search a Ride';
+
+  @override
+  String get homeUpcomingTrips => 'Upcoming Trips';
+
+  @override
+  String get homeNoUpcomingTrips => 'No upcoming trips';
+
+  @override
+  String get homeNoUpcomingTripsBody =>
+      'Search for a new ride and book your seat.';
 
   @override
   String get whereToGo => 'Where do you want to go?';

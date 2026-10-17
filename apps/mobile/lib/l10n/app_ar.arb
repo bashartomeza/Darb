@@ -406,6 +406,8 @@
   "navHome": "الرئيسية",
   "navAccount": "الحساب",
   "navTrips": "رحلاتي",
+  "navMaps": "الخرائط",
+  "navSetting": "الإعدادات",
   "greetingMorning": "صباح الخير، {name}",
   "@greetingMorning": {
     "placeholders": {
@@ -430,6 +432,15 @@
       }
     }
   },
+  "homeGreetingMorning": "صباح الخير",
+  "homeGreetingAfternoon": "مساء الخير",
+  "homeGreetingEvening": "مساء الخير",
+  "homePlanTripTitle": "خطّط لرحلتك القادمة",
+  "homePlanTripBody": "اعثر على رحلة، شارك المسير، ووصل إلى وجهتك",
+  "homeSearchRide": "ابحث عن رحلة",
+  "homeUpcomingTrips": "الرحلات القادمة",
+  "homeNoUpcomingTrips": "لا توجد رحلات قادمة",
+  "homeNoUpcomingTripsBody": "ابحث عن رحلة جديدة واحجز مقعدك.",
   "whereToGo": "إلى أين تريد الذهاب؟",
   "smartSearch": "بحث ذكي",
   "destinationSearchHint": "مثال: من البوليتكنك إلى بيت لحم",

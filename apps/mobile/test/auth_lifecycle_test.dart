@@ -2,21 +2,9 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:masari_mobile/features/auth/data/auth_repository.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
 import 'support/auth_test_support.dart';
 
 void main() {
-  test('a contradictory complete profile without a phone stays restricted', () {
-    final user = AuthUser.fromJson({
-      'id': 'u',
-      'name': 'Passenger',
-      'role': 'passenger',
-      'phone': null,
-      'profile_state': 'complete',
-    });
-    expect(user.requiresPhone, isTrue);
-  });
-
   test(
     'credential actions send purpose-specific proofs with session authorization',
     () async {
@@ -84,7 +72,7 @@ void main() {
                 'name': 'Passenger',
                 'role': 'passenger',
                 'phone': null,
-                'profile_state': 'phone_required',
+                'profile_state': 'complete',
                 'demo_account': false,
               },
             }),

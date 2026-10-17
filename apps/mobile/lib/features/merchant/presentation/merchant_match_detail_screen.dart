@@ -56,6 +56,7 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
     MerchantMatch match,
   ) {
     return ListView(
+      key: const ValueKey('merchantMatchDetail'),
       padding: const EdgeInsets.fromLTRB(
         AppTokens.marginMobile,
         AppTokens.spaceMedium,
@@ -71,17 +72,9 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: RouteChip(
-                      from: match.order.pickupLabel,
-                      to: match.route.destinationLabel,
-                    ),
-                  ),
-                  const SizedBox(width: AppTokens.gutterMobile),
-                  MatchScore(score: match.score, label: l10n.matchScore),
-                ],
+              RouteChip(
+                from: match.order.pickupLabel,
+                to: match.route.destinationLabel,
               ),
               const Divider(height: AppTokens.spaceLarge),
               DetailRow(
@@ -122,32 +115,6 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
           icon: Icons.visibility_outlined,
         ),
         const SizedBox(height: AppTokens.spaceLarge),
-
-        MasariSection(
-          title: l10n.scoringBreakdown,
-          titleKey: const ValueKey('merchantScoringBreakdown'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ScoreBreakdownList(
-                factors: [
-                  (
-                    label: l10n.corridorOverlap,
-                    value: match.breakdown.corridorOverlap,
-                  ),
-                  (
-                    label: l10n.pickupDistance,
-                    value: match.breakdown.pickupDistanceScore,
-                  ),
-                  (label: l10n.timingFit, value: match.breakdown.timingFit),
-                  (label: l10n.trustScore, value: match.breakdown.trustScore),
-                  (label: l10n.capacityFit, value: match.breakdown.capacityFit),
-                ],
-              ),
-              ExplanationNote(message: l10n.routeMatchExplanation),
-            ],
-          ),
-        ),
 
         const SizedBox(height: AppTokens.spaceLarge),
         DefaultTextStyle.merge(

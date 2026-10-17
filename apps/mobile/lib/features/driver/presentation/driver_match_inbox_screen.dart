@@ -145,8 +145,6 @@ class _MatchCard extends StatelessWidget {
       title: matchTypeLabel(l10n, match),
       statusLabel: driverStatusLabel(l10n, match.status),
       statusTone: statusToneFor(match.status),
-      score: match.score,
-      scoreLabel: l10n.matchScore,
       from: match.pickupLabel,
       to: match.destinationLabel,
       details: details,

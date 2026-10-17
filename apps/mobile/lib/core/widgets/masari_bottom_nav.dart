@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_tokens.dart';
+import '../theme/passenger_palette.dart';
 
 /// One destination in the bottom navigation bar.
 class MasariNavItem {
@@ -86,4 +87,93 @@ Future<T?> showMasariBottomSheet<T>({
       ),
     ),
   );
+}
+
+enum MasariNavStyle { material, reference }
+
+/// Reference-style (Figma) bottom navigation for the passenger home.
+class MasariReferenceBottomNav extends StatelessWidget {
+  const MasariReferenceBottomNav({
+    required this.items,
+    required this.currentIndex,
+    required this.onSelected,
+    super.key,
+  }) : assert(items.length >= 2, 'a nav bar needs at least two destinations');
+
+  final List<MasariNavItem> items;
+  final int currentIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          color: PassengerPalette.surface,
+          height: 45,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: InkWell(
+                    key: ValueKey('bottomNav-$i'),
+                    onTap: () => onSelected(i),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          i == currentIndex
+                              ? items[i].selectedIcon
+                              : items[i].icon,
+                          size: 24,
+                          color: i == currentIndex
+                              ? PassengerPalette.orange
+                              : PassengerPalette.inactive,
+                        ),
+                        const SizedBox(height: 3),
+                        Flexible(
+                          child: Text(
+                            items[i].label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'IBMPlexSansArabic',
+                              color: i == currentIndex
+                                  ? PassengerPalette.orange
+                                  : PassengerPalette.inactive,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        SafeArea(
+          top: false,
+          bottom: true,
+          child: Container(
+            height: 30,
+            color: PassengerPalette.surface,
+            child: Center(
+              child: Container(
+                width: 135,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: PassengerPalette.homeIndicator,
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

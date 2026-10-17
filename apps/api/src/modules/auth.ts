@@ -27,7 +27,7 @@ import { GoogleAuthService, googleCompleteSchema } from "../services/googleAuth.
 import { EmailAuthService, canonicalEmail, emailStartSchema, emailCompleteSchema, emailProofStartSchema, emailProofConfirmSchema, passwordResetSchema, passwordSetSchema, type EmailDelivery } from "../services/emailAuth.js";
 import type { ConsentReleaseService } from "../services/consentReleases.js";
 import { createAuthenticatedAuthRateLimiter } from "../middleware/rateLimit.js";
-import { IdentityProfileService, googleLinkSchema, phoneStartSchema, phoneConfirmSchema, type PhoneVerificationProvider } from "../services/identityProfile.js";
+import { IdentityProfileService, googleLinkSchema } from "../services/identityProfile.js";
 
 const emailField = canonicalEmail;
 const deviceNameField = z.string().trim().min(1).max(120).optional();
@@ -233,24 +233,18 @@ async function markRefreshReuse(
   });
 }
 
-export function createAuthRouter(appConfig: AppConfig = config, dependencies: { emailDelivery?: EmailDelivery; consentReleaseService?: ConsentReleaseService; googleVerifier?: GoogleVerifier; phoneVerificationProvider?: PhoneVerificationProvider } = {}) {
+export function createAuthRouter(appConfig: AppConfig = config, dependencies: { emailDelivery?: EmailDelivery; consentReleaseService?: ConsentReleaseService; googleVerifier?: GoogleVerifier } = {}) {
 const authRouter = Router();
 const emailAuth = new EmailAuthService(prisma, appConfig, dependencies.emailDelivery, dependencies.consentReleaseService);
 const googleAuth = new GoogleAuthService(prisma, appConfig, dependencies.googleVerifier, dependencies.consentReleaseService);
 const passwordSetRateLimiter = createAuthenticatedAuthRateLimiter(appConfig);
-const identityProfile = new IdentityProfileService(prisma, appConfig, dependencies.emailDelivery, dependencies.phoneVerificationProvider, dependencies.googleVerifier);
+const identityProfile = new IdentityProfileService(prisma, appConfig, dependencies.emailDelivery, dependencies.googleVerifier);
 
 authRouter.post("/auth/identities/google/link/start", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
   try { const input = z.strictObject({ locale: z.enum(["ar", "en"]) }).parse(req.body); res.status(202).json(await identityProfile.linkStart(req.user!.id, req.user!.securityVersion, input.locale)); } catch (error) { next(error); }
 });
 authRouter.post("/auth/identities/google/link", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
   try { res.json(await identityProfile.link(req.user!.id, req.user!.securityVersion, googleLinkSchema.parse(req.body))); } catch (error) { next(error); }
-});
-authRouter.post("/profile/phone/start-verification", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
-  try { res.status(202).json(await identityProfile.phoneStart(req.user!.id, req.user!.securityVersion, phoneStartSchema.parse(req.body))); } catch (error) { next(error); }
-});
-authRouter.post("/profile/phone/confirm-verification", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
-  try { res.json(await identityProfile.phoneConfirm(req.user!.id, req.user!.securityVersion, phoneConfirmSchema.parse(req.body))); } catch (error) { next(error); }
 });
 
 authRouter.get("/auth/capabilities", (_req, res) => {

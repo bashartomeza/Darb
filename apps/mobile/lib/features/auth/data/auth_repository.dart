@@ -123,18 +123,6 @@ class AuthRepository {
     },
   );
 
-  Future<Map<String, dynamic>> startPhone(String phone, String locale) =>
-      authenticatedApiClient.postJson(
-        '/profile/phone/start-verification',
-        body: {'phone': phone, 'locale': locale},
-      );
-  Future<void> confirmPhone(String phone, String token, String code) async {
-    await authenticatedApiClient.postJson(
-      '/profile/phone/confirm-verification',
-      body: {'phone': phone, 'action_token': token, 'code': code},
-    );
-  }
-
   Future<void> emailActionStart(
     String email,
     String locale, {

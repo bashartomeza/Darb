@@ -63,7 +63,7 @@ void main() {
     expect(find.byType(TextField), findsNothing);
   });
 
-  testWidgets('match inbox and detail display safe summary and scoring', (
+  testWidgets('match inbox and detail hide the score from the driver', (
     tester,
   ) async {
     await _pumpApp(tester, handler: _DriverHandler().call);
@@ -74,16 +74,16 @@ void main() {
 
     expect(find.text('طلب مسافر'), findsOneWidget);
     expect(find.textContaining('بوابة البوليتكنك'), findsOneWidget);
-    expect(find.textContaining('93.2%'), findsOneWidget);
+    expect(find.textContaining('93.2%'), findsNothing);
     expect(find.textContaining('password'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('openMatch-match_1')));
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('driverScoringBreakdown')),
+      find.byKey(const ValueKey('driverMatchDetail')),
       findsOneWidget,
     );
-    expect(find.textContaining('95.0%'), findsOneWidget);
+    expect(find.textContaining('95.0%'), findsNothing);
   });
 
   testWidgets('accept and reject actions disable while accept is running', (

@@ -361,7 +361,7 @@ describe("auth google", () => {
       registration_token: start.body.registration_token, name: "Passenger", locale: "en", adult_self_attestation: true,
       consents: documents.map((d) => ({ id: d.id, type: d.document_type, content_hash: d.content_digest }))
     }).expect(201);
-    expect(result.body.user).toMatchObject({ role: "passenger", phone: null, profile_state: "phone_required", email_verified: true });
+    expect(result.body.user).toMatchObject({ role: "passenger", phone: null, profile_state: "complete", email_verified: true });
     expect(result.body.access_token).toEqual(expect.any(String));
     expect(prismaMock.externalIdentity.create).toHaveBeenCalledWith({ data: expect.objectContaining({ provider: "google", provider_subject: "google-1", user_id: "user_1" }) });
   });

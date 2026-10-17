@@ -6,7 +6,6 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/semantic_colors.dart';
 import '../../../../core/widgets/entity_cards.dart';
 import '../../../../core/widgets/masari_card.dart';
-import '../../../../core/widgets/match_widgets.dart';
 import '../../../../core/widgets/route_chip.dart';
 import '../../domain/trip_offer.dart';
 
@@ -73,14 +72,7 @@ class TripOfferCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (offer.matchScore != null) ...[
-                const SizedBox(width: AppTokens.spaceSmall),
-                MatchScore(
-                  score: offer.matchScore!,
-                  label: l10n.matchScore,
-                  compact: true,
-                ),
-              ] else if (offer.priceLabel != null) ...[
+              if (offer.priceLabel != null) ...[
                 const SizedBox(width: AppTokens.spaceSmall),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,

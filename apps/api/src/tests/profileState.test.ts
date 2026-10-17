@@ -125,19 +125,19 @@ describe("complete profile gate", () => {
     "/api/v1/auth",
     "/api/v1/AUTH/sessions/",
     "/api/v1/capabilities/",
-    "/api/v1/ONBOARDING/CONSENTS/",
-    "/api/v1/profile/phone/start-verification",
-    "/api/v1/PROFILE/PHONE/CONFIRM-VERIFICATION/"
+    "/api/v1/ONBOARDING/CONSENTS/"
   ])("recognizes an Express-equivalent completion-safe path: %s", (originalUrl) => {
     expect(isProfileCompletionSafePath({ originalUrl } as never)).toBe(true);
   });
 
   it.each([
+    "/api/v1/profile/phone/start-verification",
+    "/api/v1/profile/phone/confirm-verification",
     "/api/v1/profile/phone/start-verification/unexpected",
     "/api/v1/profile/phone/confirm-verification/unexpected",
     "/api/v1/profile/telephone/start-verification",
     "/api/v1/phone-verification"
-  ])("does not broaden phone completion exceptions: %s", (originalUrl) => {
+  ])("does not treat phone verification as a completion exception: %s", (originalUrl) => {
     expect(isProfileCompletionSafePath({ originalUrl } as never)).toBe(false);
   });
 

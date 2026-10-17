@@ -64,7 +64,7 @@ void main() {
                 request.url.path.endsWith('/complete-registration')) {
               completions.add(jsonDecode(request.body) as Map<String, dynamic>);
               return http.Response(
-                '{"token":"new-masari-session","user":{"id":"new","name":"Passenger","phone":null,"profile_state":"phone_required","role":"passenger","demo_account":false}}',
+                '{"token":"new-masari-session","user":{"id":"new","name":"Passenger","phone":null,"profile_state":"complete","role":"passenger","demo_account":false}}',
                 201,
               );
             }
@@ -137,14 +137,9 @@ void main() {
         });
         expect(
           find.byKey(const ValueKey('phoneCompletionScreen')),
-          findsOneWidget,
+          findsNothing,
         );
-        expect(
-          Directionality.of(
-            tester.element(find.byKey(const ValueKey('phoneCompletionScreen'))),
-          ),
-          TextDirection.ltr,
-        );
+        expect(find.byKey(const ValueKey('passengerHome')), findsOneWidget);
         expect(
           (await container.read(tokenStorageProvider).readBundle())
               ?.accessToken,
@@ -177,176 +172,6 @@ void main() {
     },
   );
 
-  testWidgets(
-    'incorrect phone proof requires a new code and completion reloads server profile',
-    (tester) async {
-      var complete = false;
-      var starts = 0;
-      final attempts = <Map<String, dynamic>>[];
-      await _pumpApp(
-        tester,
-        localeValues: {DomainLabels.localeStorageKey: 'en'},
-        secureValues: {TokenStorage.tokenKey: 'masari-session'},
-        handler: (request) async {
-          if (request.url.path.endsWith('/me')) {
-            return http.Response(
-              jsonEncode({
-                'user': {
-                  'id': 'u',
-                  'name': 'Passenger',
-                  'phone': complete ? '+14155552671' : null,
-                  'profile_state': complete ? 'complete' : 'phone_required',
-                  'role': 'passenger',
-                  'demo_account': false,
-                },
-              }),
-              200,
-            );
-          }
-          if (request.url.path.endsWith('/profile/phone/start-verification')) {
-            starts++;
-            return http.Response(
-              '{"action_token":"proof-$starts","next_action":"verify_phone"}',
-              202,
-            );
-          }
-          if (request.url.path.endsWith(
-            '/profile/phone/confirm-verification',
-          )) {
-            attempts.add(jsonDecode(request.body) as Map<String, dynamic>);
-            if (attempts.length == 1) {
-              return http.Response('{"error":"auth_action_invalid"}', 400);
-            }
-            complete = true;
-            return http.Response('{"ok":true,"profile_state":"complete"}', 200);
-          }
-          return http.Response('{"error":"not_found"}', 404);
-        },
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('profilePhone')),
-        '+14155552671',
-      );
-      await tester.tap(find.text('Send code'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const ValueKey('authProof')), '000000');
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('completeAuth')));
-      await tester.pumpAndSettle();
-      expect(find.text('Send code'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('phoneCompletionScreen')),
-        findsOneWidget,
-      );
-      await tester.tap(find.text('Send code'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const ValueKey('authProof')), '123456');
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('completeAuth')));
-      await tester.pumpAndSettle();
-      expect(attempts, [
-        {'phone': '+14155552671', 'action_token': 'proof-1', 'code': '000000'},
-        {'phone': '+14155552671', 'action_token': 'proof-2', 'code': '123456'},
-      ]);
-      expect(find.byKey(const ValueKey('phoneCompletionScreen')), findsNothing);
-    },
-  );
-
-  testWidgets('restricted session blocks product deep links until phone proof', (
-    tester,
-  ) async {
-    await _pumpApp(
-      tester,
-      secureValues: {TokenStorage.tokenKey: 'masari-session'},
-      handler: (request) async {
-        if (request.url.path.endsWith('/me')) {
-          return http.Response(
-            '{"user":{"id":"u","name":"Passenger","phone":null,"profile_state":"phone_required","role":"passenger","demo_account":false}}',
-            200,
-          );
-        }
-        return http.Response('{"error":"not_found"}', 404);
-      },
-    );
-    expect(find.byKey(const ValueKey('phoneCompletionScreen')), findsOneWidget);
-    final context = tester.element(
-      find.byKey(const ValueKey('phoneCompletionScreen')),
-    );
-    expect(Directionality.of(context), TextDirection.rtl);
-    GoRouter.of(context).go('/passenger/request/new');
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('phoneCompletionScreen')), findsOneWidget);
-  });
-
-  testWidgets(
-    'confirmed phone retries only profile reload after network failure',
-    (tester) async {
-      var profileLoads = 0;
-      var confirmations = 0;
-      await _pumpApp(
-        tester,
-        localeValues: {DomainLabels.localeStorageKey: 'en'},
-        secureValues: {TokenStorage.tokenKey: 'masari-session'},
-        handler: (request) async {
-          if (request.url.path.endsWith('/me')) {
-            profileLoads++;
-            if (profileLoads == 2) throw const SocketException('offline');
-            return http.Response(
-              jsonEncode({
-                'user': {
-                  'id': 'u',
-                  'name': 'Passenger',
-                  'phone': profileLoads > 2 ? '+14155552671' : null,
-                  'profile_state': profileLoads > 2
-                      ? 'complete'
-                      : 'phone_required',
-                  'role': 'passenger',
-                  'demo_account': false,
-                },
-              }),
-              200,
-            );
-          }
-          if (request.url.path.endsWith('/profile/phone/start-verification')) {
-            return http.Response(
-              '{"action_token":"one-use-proof","next_action":"verify_phone"}',
-              202,
-            );
-          }
-          if (request.url.path.endsWith(
-            '/profile/phone/confirm-verification',
-          )) {
-            confirmations++;
-            return confirmations == 1
-                ? http.Response('{"ok":true,"profile_state":"complete"}', 200)
-                : http.Response('{"error":"auth_action_invalid"}', 400);
-          }
-          return http.Response('{"error":"not_found"}', 404);
-        },
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('profilePhone')),
-        '+14155552671',
-      );
-      await tester.tap(find.text('Send code'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const ValueKey('authProof')), '123456');
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('completeAuth')));
-      await tester.pumpAndSettle();
-      expect(confirmations, 1);
-      expect(profileLoads, 2);
-      expect(
-        find.byKey(const ValueKey('phoneCompletionScreen')),
-        findsOneWidget,
-      );
-      await tester.tap(find.byKey(const ValueKey('completeAuth')));
-      await tester.pumpAndSettle();
-      expect(confirmations, 1);
-      expect(profileLoads, 3);
-      expect(find.byKey(const ValueKey('phoneCompletionScreen')), findsNothing);
-    },
-  );
   test('Android excludes secure authentication storage from backup', () {
     final manifest = File(
       'android/app/src/main/AndroidManifest.xml',
@@ -630,7 +455,11 @@ void main() {
     );
 
     expect(find.byKey(const ValueKey('passengerHome')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('logoutButton')));
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('passengerHome'))),
+    ).go(passengerAccountPath);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('logoutCurrentSession')));
     await tester.pumpAndSettle();
     expect(find.text('Confirm logout'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('confirmSecurityActionButton')));
@@ -649,7 +478,9 @@ void main() {
       handler: _passengerHandler,
     );
 
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('passengerHome'))),
+    ).go(passengerAccountPath);
     await tester.pumpAndSettle();
 
     expect(find.text('الأمان والجلسات'), findsWidgets);
@@ -672,7 +503,9 @@ void main() {
       handler: _passengerHandler,
     );
 
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('passengerHome'))),
+    ).go(passengerAccountPath);
     await tester.pumpAndSettle();
 
     expect(find.text('Security and sessions'), findsWidgets);
@@ -690,7 +523,9 @@ void main() {
       secureValues: {TokenStorage.tokenKey: 'token'},
       handler: _passengerHandler,
     );
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('passengerHome'))),
+    ).go(passengerAccountPath);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('revokeCurrentSession')));
@@ -731,7 +566,9 @@ void main() {
         return _passengerHandler(request);
       },
     );
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('passengerHome'))),
+    ).go(passengerAccountPath);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('revokeSession')));
@@ -752,7 +589,9 @@ void main() {
       secureValues: {TokenStorage.tokenKey: 'token'},
       handler: _passengerHandler,
     );
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('passengerHome'))),
+    ).go(passengerAccountPath);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('logoutAllSessions')));
@@ -776,7 +615,9 @@ void main() {
         return _passengerHandler(request);
       },
     );
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('passengerHome'))),
+    ).go(passengerAccountPath);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('logoutAllSessions')));
     await tester.pumpAndSettle();
@@ -805,7 +646,11 @@ void main() {
       },
     );
 
-    await tester.tap(find.byKey(const ValueKey('logoutButton')));
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('passengerHome'))),
+    ).go(passengerAccountPath);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('logoutCurrentSession')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirmSecurityActionButton')));
     await tester.pumpAndSettle();

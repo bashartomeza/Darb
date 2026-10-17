@@ -1,5 +1,11 @@
 # Masari Email, Password, and Google Authentication Design
 
+> **Superseded (2026-10-13):** Phone verification has been removed from the
+> profile lifecycle. New accounts become active with `profile_state = complete`
+> and no `/profile/phone` challenge; application code no longer produces the
+> `phone_required` state or the `phone_verification` action purpose. References to
+> phone verification below are historical.
+
 ## Status
 
 Approved for planning on 2026-09-15. It authorizes neither implementation, PR creation, merge, deployment, nor real-data access.

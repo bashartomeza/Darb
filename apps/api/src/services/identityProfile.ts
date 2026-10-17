@@ -5,28 +5,16 @@ import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { AuthActionError, consumeAuthAction, issueAuthAction } from "../lib/authActionTokens.js";
 import { verifyGoogleIdentity, type GoogleVerifier } from "../lib/googleIdentity.js";
 import { keyedDigest, hexDigestMatches } from "../lib/keyedDigest.js";
-import { generateOtpCode } from "../lib/otp.js";
-import { normalizePhoneToE164 } from "../lib/phone.js";
 import { HttpError } from "../middleware/error.js";
 import type { EmailDelivery } from "./emailAuth.js";
 import { auditEvent } from "../lib/audit.js";
 
 const token = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
-const phoneInput = z.string().max(32).transform((value, ctx) => {
-  try { return normalizePhoneToE164(value); } catch { ctx.addIssue({ code: "custom", message: "invalid_phone" }); return z.NEVER; }
-});
 export const googleLinkSchema = z.strictObject({ id_token: z.string().min(1).max(8192), current_password: z.string().min(1).max(200).optional(), reauthentication_token: token.optional() });
-export const phoneStartSchema = z.strictObject({ phone: phoneInput, locale: z.enum(["ar", "en"]) });
-export const phoneConfirmSchema = z.strictObject({ action_token: token, phone: phoneInput, code: z.string().regex(/^\d{6}$/) });
-export interface PhoneVerificationProvider {
-  readonly kind: "test" | "approved";
-  /** Resolve only after delivery is accepted; reject unknown or failed delivery. */
-  send(input: { phoneE164: string; code: string; locale: "ar" | "en"; expiresAt: Date; idempotencyKey: string }): Promise<void>;
-}
 
 export class IdentityProfileService {
   constructor(private readonly db: PrismaClient, private readonly config: AppConfig, private readonly emailDelivery?: EmailDelivery,
-    private readonly phoneProvider?: PhoneVerificationProvider, private readonly verifier: GoogleVerifier = verifyGoogleIdentity) {}
+    private readonly verifier: GoogleVerifier = verifyGoogleIdentity) {}
   private key() { if (!this.config.authActions) throw new HttpError(503, "auth_action_unavailable"); return this.config.authActions.key; }
   private sender<T extends { kind: "test" | "approved" }>(provider: T | undefined, error: string): T {
     if (!provider || ((this.config.isProduction || this.config.isStaging) && provider.kind !== "approved")) throw new HttpError(503, error);
@@ -42,7 +30,7 @@ export class IdentityProfileService {
   }
   private subject(user: { id: string; security_version: number; email: string | null }) { return `google-link:${user.id}:${user.security_version}:${user.email}`; }
   private matches(digest: string | null, value: string) { return digest !== null && hexDigestMatches(digest, keyedDigest("masari:auth-action-subject", value, this.key())); }
-  private async consume(tx: Prisma.TransactionClient, raw: string, purpose: "email_verification" | "phone_verification") {
+  private async consume(tx: Prisma.TransactionClient, raw: string, purpose: "email_verification") {
     try { return await consumeAuthAction(tx, raw, purpose, { key: this.key() }); }
     catch (e) { if (e instanceof AuthActionError) throw new HttpError(400, "auth_action_invalid"); throw e; }
   }
@@ -95,39 +83,5 @@ export class IdentityProfileService {
       await auditEvent(tx, { userId: id, action: "auth_google_link", entityType: "User", entityId: id, metadata: { provider: "google", explicit: true } });
       return { ok: true, provider: "google" };
     }, "google_identity_conflict");
-  }
-  async phoneStart(id: string, version: number, input: z.infer<typeof phoneStartSchema>) {
-    const sender = this.sender(this.phoneProvider, "phone_verification_unavailable");
-    const code = generateOtpCode(); const phoneDigest = keyedDigest("masari:auth-profile-phone", input.phone, this.key());
-    const proof = await this.transaction(async (tx) => {
-      const user = await this.user(tx, id, version);
-      if (user.phone && user.phone !== input.phone) throw new HttpError(409, "phone_change_requires_reauthentication");
-      const count = await tx.authActionToken.count({ where: { purpose: "phone_verification", created_at: { gte: new Date(Date.now() - 3600000) }, OR: [{ user_id: id }, { payload: { path: "$.phone_digest", equals: phoneDigest } }] } });
-      if (count >= 5) throw new HttpError(429, "rate_limited");
-      return issueAuthAction(tx, { purpose: "phone_verification", userId: id, key: this.key(), subject: JSON.stringify([id, version, input.phone, code]), payload: { phone_digest: phoneDigest } });
-    }, "phone_already_in_use");
-    try { await sender.send({ phoneE164: input.phone, code, locale: input.locale, expiresAt: proof.expiresAt, idempotencyKey: proof.action.id }); }
-    catch { await this.db.authActionToken.updateMany({ where: { id: proof.action.id, consumed_at: null }, data: { consumed_at: new Date() } }); throw new HttpError(503, "phone_verification_unavailable"); }
-    return { action_token: proof.rawToken, expires_at: proof.expiresAt.toISOString(), next_action: "verify_phone" };
-  }
-  async phoneConfirm(id: string, version: number, input: z.infer<typeof phoneConfirmSchema>) {
-    this.sender(this.phoneProvider, "phone_verification_unavailable");
-    const valid = await this.transaction(async (tx) => {
-      const user = await this.user(tx, id, version);
-      const proof = await this.consume(tx, input.action_token, "phone_verification");
-      if (proof.user_id !== id) throw new HttpError(400, "auth_action_invalid");
-      // A failed guess commits consumption: one guess per action, with issuance
-      // capped persistently across app instances. Success stays atomic with User.
-      if (!this.matches(proof.subject_digest, JSON.stringify([id, version, input.phone, input.code]))) return false;
-      if (user.phone && user.phone !== input.phone) throw new HttpError(409, "phone_change_requires_reauthentication");
-      const owner = await tx.user.findUnique({ where: { phone: input.phone } });
-      if (owner && owner.id !== id) throw new HttpError(409, "phone_already_in_use");
-      const changed = await tx.user.updateMany({ where: { id, security_version: version, account_status: "active" }, data: { phone: input.phone, phone_verified_at: new Date(), profile_state: "complete" } });
-      if (changed.count !== 1) throw new HttpError(403, "account_unavailable");
-      await auditEvent(tx, { userId: id, action: "otp_verified", entityType: "User", entityId: id, metadata: { purpose: "profile_phone_completion" } });
-      return true;
-    }, "phone_already_in_use");
-    if (!valid) throw new HttpError(400, "auth_action_invalid");
-    return { ok: true, profile_state: "complete" };
   }
 }

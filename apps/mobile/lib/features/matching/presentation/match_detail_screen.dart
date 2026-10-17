@@ -11,7 +11,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_section.dart';
-import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../passenger/application/passenger_controller.dart';
 import '../data/matching_repository.dart';
@@ -85,68 +84,19 @@ class _MatchDetailScreenState extends ConsumerState<MatchDetailScreen> {
                 body: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              DetailRow(
-                                label: l10n.selectedRoute,
-                                value: match.routeLabel,
-                                icon: Icons.route_outlined,
-                              ),
-                              DetailRow(
-                                label: l10n.seatsAvailable,
-                                value: '${match.seatsAvailable}',
-                                icon: Icons.event_seat_outlined,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: AppTokens.gutterMobile),
-                        MatchScore(score: match.score, label: l10n.matchScore),
-                      ],
+                    DetailRow(
+                      label: l10n.selectedRoute,
+                      value: match.routeLabel,
+                      icon: Icons.route_outlined,
+                    ),
+                    DetailRow(
+                      label: l10n.seatsAvailable,
+                      value: '${match.seatsAvailable}',
+                      icon: Icons.event_seat_outlined,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppTokens.spaceLarge),
-
-              MasariSection(
-                title: l10n.scoringBreakdown,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ScoreBreakdownList(
-                      factors: [
-                        (
-                          label: l10n.corridorOverlap,
-                          value: match.breakdown.corridorOverlap,
-                        ),
-                        (
-                          label: l10n.pickupDistance,
-                          value: match.breakdown.pickupDistanceScore,
-                        ),
-                        (
-                          label: l10n.timingFit,
-                          value: match.breakdown.timingFit,
-                        ),
-                        (
-                          label: l10n.trustScore,
-                          value: match.breakdown.trustScore,
-                        ),
-                        (
-                          label: l10n.capacityFit,
-                          value: match.breakdown.capacityFit,
-                        ),
-                      ],
-                    ),
-                    ExplanationNote(message: l10n.routeMatchExplanation),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: AppTokens.spaceLarge),
               if (match.passengerRequestId != null)
                 _PassengerMatchLifecycleActions(

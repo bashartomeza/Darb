@@ -2402,6 +2402,18 @@ abstract class AppLocalizations {
   /// **'رحلاتي'**
   String get navTrips;
 
+  /// No description provided for @navMaps.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخرائط'**
+  String get navMaps;
+
+  /// No description provided for @navSetting.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإعدادات'**
+  String get navSetting;
+
   /// No description provided for @greetingMorning.
   ///
   /// In ar, this message translates to:
@@ -2419,6 +2431,60 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مساء الخير، {name}'**
   String greetingEvening(String name);
+
+  /// No description provided for @homeGreetingMorning.
+  ///
+  /// In ar, this message translates to:
+  /// **'صباح الخير'**
+  String get homeGreetingMorning;
+
+  /// No description provided for @homeGreetingAfternoon.
+  ///
+  /// In ar, this message translates to:
+  /// **'مساء الخير'**
+  String get homeGreetingAfternoon;
+
+  /// No description provided for @homeGreetingEvening.
+  ///
+  /// In ar, this message translates to:
+  /// **'مساء الخير'**
+  String get homeGreetingEvening;
+
+  /// No description provided for @homePlanTripTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطّط لرحلتك القادمة'**
+  String get homePlanTripTitle;
+
+  /// No description provided for @homePlanTripBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اعثر على رحلة، شارك المسير، ووصل إلى وجهتك'**
+  String get homePlanTripBody;
+
+  /// No description provided for @homeSearchRide.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن رحلة'**
+  String get homeSearchRide;
+
+  /// No description provided for @homeUpcomingTrips.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرحلات القادمة'**
+  String get homeUpcomingTrips;
+
+  /// No description provided for @homeNoUpcomingTrips.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد رحلات قادمة'**
+  String get homeNoUpcomingTrips;
+
+  /// No description provided for @homeNoUpcomingTripsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن رحلة جديدة واحجز مقعدك.'**
+  String get homeNoUpcomingTripsBody;
 
   /// No description provided for @whereToGo.
   ///

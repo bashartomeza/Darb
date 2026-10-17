@@ -878,6 +878,8 @@ export function createPublicOnboardingRouter(
             password_hash: passwordHash,
             role: attempt.intended_role,
             account_status: pending ? "pending" : "active",
+            profile_state: "complete",
+            phone_verified_at: now,
             security_version: 1,
             status_updated_at: now,
             last_login_at: null,

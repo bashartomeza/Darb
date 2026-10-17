@@ -24,15 +24,19 @@ class RoleNavDestination {
 ///
 /// Screens inside a branch may still use their own [Scaffold] for an app bar;
 /// nesting is fine because only this one supplies `bottomNavigationBar`.
+enum RoleBottomNavStyle { none, reference }
+
 class RoleShellScaffold extends StatelessWidget {
   const RoleShellScaffold({
     required this.navigationShell,
     required this.destinations,
+    this.bottomNav = RoleBottomNavStyle.none,
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
   final List<RoleNavDestination> destinations;
+  final RoleBottomNavStyle bottomNav;
 
   void _onSelected(int index) {
     // `initialLocation: true` only when re-tapping the active tab: that pops
@@ -74,30 +78,37 @@ class RoleShellScaffold extends StatelessWidget {
         ? l10n.requestDetails
         : path.contains('/match/')
         ? l10n.navRequests
-        : destinations[navigationShell.currentIndex].item.label;
+        : (navigationShell.currentIndex < destinations.length
+            ? destinations[navigationShell.currentIndex].item.label
+            : '');
+    final showReferenceNav = bottomNav == RoleBottomNavStyle.reference;
+    final hideAppBar = showReferenceNav && path == roleHome;
     final panel = Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        centerTitle: false,
-        automaticallyImplyLeading: false,
-        leading: isDetail ? MasariBackButton(fallback: roleHome) : null,
-        actions: [
-          if (!wide)
-            Builder(
-              builder: (context) => IconButton(
-                tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-                icon: const Icon(Icons.menu_rounded),
-                onPressed: () => Scaffold.of(context).openDrawer(),
+      appBar: hideAppBar
+          ? null
+          : AppBar(
+              title: Text(title),
+              centerTitle: false,
+              automaticallyImplyLeading: false,
+              leading: isDetail ? MasariBackButton(fallback: roleHome) : null,
+              actions: [
+                if (!wide)
+                  Builder(
+                    builder: (context) => IconButton(
+                      tooltip:
+                          MaterialLocalizations.of(context).openAppDrawerTooltip,
+                      icon: const Icon(Icons.menu_rounded),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                  ),
+                const LanguageSwitch(),
+                const SizedBox(width: 12),
+              ],
+              bottom: const PreferredSize(
+                preferredSize: Size.fromHeight(1),
+                child: Divider(height: 1),
               ),
             ),
-          const LanguageSwitch(),
-          const SizedBox(width: 12),
-        ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1),
-        ),
-      ),
       body: ShellLanguageControl(
         child: Center(
           child: ConstrainedBox(
@@ -106,16 +117,24 @@ class RoleShellScaffold extends StatelessWidget {
           ),
         ),
       ),
-      drawer: wide
-          ? null
-          : Drawer(child: _sidebar(context, arabic, closeDrawer: true)),
+      drawer: wide ? null : Drawer(child: _sidebar(context, arabic, closeDrawer: true)),
+      bottomNavigationBar: showReferenceNav
+          ? MasariReferenceBottomNav(
+              items: [for (final d in destinations) d.item],
+              currentIndex: navigationShell.currentIndex.clamp(
+                0,
+                destinations.length - 1,
+              ),
+              onSelected: _onSelected,
+            )
+          : null,
     );
     return ColoredBox(
       color: const Color(0xFFEAE5D9),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1200),
-          child: wide
+          child: (wide && !showReferenceNav)
               ? Row(
                   children: [
                     SizedBox(width: 264, child: _sidebar(context, arabic)),
@@ -299,8 +318,8 @@ class RoleNavDestinations {
     ),
     RoleNavDestination(
       item: MasariNavItem(
-        icon: Icons.route_outlined,
-        selectedIcon: Icons.route,
+        icon: Icons.directions_bus_outlined,
+        selectedIcon: Icons.directions_bus,
         label: l10n.navTrips,
       ),
     ),
@@ -308,21 +327,14 @@ class RoleNavDestinations {
       item: MasariNavItem(
         icon: Icons.map_outlined,
         selectedIcon: Icons.map,
-        label: l10n.navMapAlerts,
+        label: l10n.navMaps,
       ),
     ),
     RoleNavDestination(
       item: MasariNavItem(
-        icon: Icons.notifications_none,
-        selectedIcon: Icons.notifications,
-        label: l10n.navNotifications,
-      ),
-    ),
-    RoleNavDestination(
-      item: MasariNavItem(
-        icon: Icons.person_outline,
-        selectedIcon: Icons.person,
-        label: l10n.navAccount,
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings,
+        label: l10n.navSetting,
       ),
     ),
   ];
