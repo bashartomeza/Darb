@@ -32,7 +32,7 @@ function app(overrides: any = {}) {
 }
 function actor(overrides: any = {}) {
   return { id: "user_1", email: "owner+tag@example.com", name: "Passenger", phone: null, phone_verified_at: null,
-    profile_state: "complete", email_verified_at: new Date(), password_hash: null, role: "passenger",
+    profile_state: "phone_required", email_verified_at: new Date(), password_hash: null, role: "passenger",
     account_status: "active", security_version: 1, demo_account: false, ...overrides };
 }
 async function start(server = app()) {
@@ -152,7 +152,7 @@ describe("email authentication lifecycle", () => {
     await request(server).post("/api/v1/auth/mobile/register/complete").send({ ...complete(r.body), consents: [] }).expect(400);
     expect(users).toHaveLength(0);
     const response = await request(server).post("/api/v1/auth/mobile/register/complete").send(complete(r.body)).expect(201);
-    expect(response.body.user).toMatchObject({ role: "passenger", phone: null, profile_state: "complete" });
+    expect(response.body.user).toMatchObject({ role: "passenger", phone: null, profile_state: "phone_required" });
     expect(response.body.access_token).toEqual(expect.any(String)); expect(users[0].email_verified_at).toBeInstanceOf(Date);
     expect(await bcrypt.compare(registration.password, users[0].password_hash)).toBe(true);
     expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });

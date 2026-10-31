@@ -11,7 +11,7 @@ Email/password login uses `POST /auth/mobile/login`. Phone is contact/profile da
 
 ## Profile completion and recovery
 
-The API is the authorization authority. New passenger accounts are created with `profile_state` `complete`, so a signed-in user opens product routes immediately; product deep links stay blocked only while a session is unauthenticated.
+The API is the authorization authority. A session whose `profile_state` is not `complete`, or whose phone is absent, routes to `/profile/phone`; product deep links stay blocked. The screen sends E.164 contact data to `/profile/phone/start-verification`, then confirms a six-digit code at `/profile/phone/confirm-verification`. A rejected proof requires a fresh challenge. After success the app reloads `/me` before opening product routes.
 
 Login offers password reset and email verification. The account security screen offers password set/change and explicit Google linking, requiring current password or emailed reauthentication proof. Proofs can be pasted from delivery messages. Password changes revoke sessions and return to login.
 
@@ -25,4 +25,4 @@ Server rollout `GOOGLE_PASSENGER_SIGNUP_MODE=disabled|allowlist|open` controls f
 
 ## Verification
 
-Run `flutter test` and `flutter analyze`. Tests cover endpoint contracts, no session before consent, email/Google consent completion, recovery entry points, and Arabic/English directionality. Google credential issuance and real email/SMS delivery still require the disposable QA environment and configured provider/client credentials.
+Run `flutter test` and `flutter analyze`. Tests cover endpoint contracts, no session before consent, email/Google consent completion, restricted deep links, incorrect-phone-code retry and fresh server profile reload, recovery entry points, and Arabic/English directionality. Google credential issuance and real email/SMS delivery still require the disposable QA environment and configured provider/client credentials.

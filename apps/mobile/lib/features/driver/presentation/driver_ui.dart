@@ -60,6 +60,8 @@ String nextTripActionLabel(AppLocalizations l10n, String status) =>
       _ => status,
     };
 
+String percent(double value) => '${(value * 100).toStringAsFixed(1)}%';
+
 Widget technicalText(String value, {Key? key, bool selectable = false}) {
   return Directionality(
     textDirection: TextDirection.ltr,

@@ -1268,12 +1268,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navTrips => 'رحلاتي';
 
   @override
-  String get navMaps => 'الخرائط';
-
-  @override
-  String get navSetting => 'الإعدادات';
-
-  @override
   String greetingMorning(String name) {
     return 'صباح الخير، $name';
   }
@@ -1287,33 +1281,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String greetingEvening(String name) {
     return 'مساء الخير، $name';
   }
-
-  @override
-  String get homeGreetingMorning => 'صباح الخير';
-
-  @override
-  String get homeGreetingAfternoon => 'مساء الخير';
-
-  @override
-  String get homeGreetingEvening => 'مساء الخير';
-
-  @override
-  String get homePlanTripTitle => 'خطّط لرحلتك القادمة';
-
-  @override
-  String get homePlanTripBody => 'اعثر على رحلة، شارك المسير، ووصل إلى وجهتك';
-
-  @override
-  String get homeSearchRide => 'ابحث عن رحلة';
-
-  @override
-  String get homeUpcomingTrips => 'الرحلات القادمة';
-
-  @override
-  String get homeNoUpcomingTrips => 'لا توجد رحلات قادمة';
-
-  @override
-  String get homeNoUpcomingTripsBody => 'ابحث عن رحلة جديدة واحجز مقعدك.';
 
   @override
   String get whereToGo => 'إلى أين تريد الذهاب؟';

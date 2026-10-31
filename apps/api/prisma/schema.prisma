@@ -397,7 +397,7 @@ model User {
   email_verified_at DateTime?
   google_sub        String?       @unique
   password_hash     String?
-  profile_state     ProfileState  @default(complete)
+  profile_state     ProfileState  @default(phone_required)
   role              UserRole
   account_status    AccountStatus @default(active)
   security_version  Int           @default(1)

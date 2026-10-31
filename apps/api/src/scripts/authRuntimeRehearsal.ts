@@ -4,6 +4,7 @@ import { config } from "../config.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { ConsentReleaseService } from "../services/consentReleases.js";
 import { GoogleAuthService, googleCompleteSchema } from "../services/googleAuth.js";
+import { IdentityProfileService } from "../services/identityProfile.js";
 
 const url = new URL(config.databaseUrl);
 const port = Number(url.port);
@@ -28,12 +29,20 @@ async function main() {
   assert.equal(race.filter(r => r.status === "fulfilled").length, 1, "one_concurrent_registration_winner");
   assert.equal(race.filter(r => r.status === "rejected").length, 1);
   const user = await prisma.user.findUniqueOrThrow({ where: { email: identity.email } });
-  assert.equal(user.role, "passenger"); assert.equal(user.profile_state, "complete"); assert.equal(user.phone, null);
+  assert.equal(user.role, "passenger"); assert.equal(user.profile_state, "phone_required"); assert.equal(user.phone, null);
   assert.equal(await prisma.externalIdentity.count({ where: { user_id: user.id } }), 1);
   assert.equal(await prisma.userConsent.count({ where: { user_id: user.id } }), 3);
   assert.equal(await prisma.authSession.count({ where: { user_id: user.id } }), 1);
   await assert.rejects(prisma.externalIdentity.create({ data: { user_id: admin.id, provider: "google", provider_subject: identity.sub } }), "provider_subject_uniqueness");
   await assert.rejects(prisma.externalIdentity.create({ data: { user_id: user.id, provider: "google", provider_subject: "different-sub" } }), "user_provider_uniqueness");
+  let deliveredCode = "";
+  const profile = new IdentityProfileService(prisma, config, undefined, { kind: "test", async send(message) { deliveredCode = message.code; } });
+  const proof = await profile.phoneStart(user.id, user.security_version, { phone: "+12025550124", locale: "en" });
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).profile_state, "phone_required");
+  await profile.phoneConfirm(user.id, user.security_version, { action_token: proof.action_token, phone: "+12025550124", code: deliveredCode });
+  const completed = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+  assert.equal(completed.profile_state, "complete"); assert(completed.phone_verified_at); assert.equal(completed.phone, "+12025550124");
+  await assert.rejects(profile.phoneConfirm(user.id, user.security_version, { action_token: proof.action_token, phone: "+12025550124", code: deliveredCode }));
   const rollbackIdentity = { sub: "rollback-sub", email: "rollback@example.invalid", emailVerified: true as const };
   const rollbackGoogle = new GoogleAuthService(prisma, config, async () => rollbackIdentity, legal);
   const grant = await rollbackGoogle.start("test-boundary-proof"); assert(grant.kind === "registration");
@@ -41,6 +50,6 @@ async function main() {
   await assert.rejects(rollbackGoogle.complete(complete(grant), async (tx, newUser) => { await createSession(tx, newUser); throw new Error("intentional_transaction_failure"); }), /intentional_transaction_failure/);
   assert.deepEqual(await Promise.all([prisma.user.count(), prisma.externalIdentity.count(), prisma.userConsent.count(), prisma.authSession.count(), prisma.authActionToken.count({ where: { consumed_at: { not: null } } })]), counts, "no_partial_writes_after_rollback");
   await rollbackGoogle.complete(complete(grant), createSession);
-  console.log("PASS real MySQL: legal publication, pre-consent grant, concurrent registration, identity uniqueness, account/identity/consent/session atomicity, rollback and grant retry");
+  console.log("PASS real MySQL: legal publication, pre-consent grant, concurrent registration, identity uniqueness, account/identity/consent/session atomicity, phone completion/replay, rollback and grant retry");
 }
 main().catch(error => { console.error(error instanceof Error ? error.message : "auth_runtime_rehearsal_failed"); process.exitCode = 1; }).finally(() => prisma.$disconnect());

@@ -2,6 +2,7 @@ import express from "express";
 import type { Logger } from "pino";
 import { createAuthRouter } from "./modules/auth.js";
 import type { EmailDelivery } from "./services/emailAuth.js";
+import { EmailPhoneVerificationProvider, type PhoneVerificationProvider } from "./services/identityProfile.js";
 import type { GoogleVerifier } from "./lib/googleIdentity.js";
 import { createDemoRouter } from "./modules/demoReset.js";
 import { passengerRouter } from "./modules/passenger.js";
@@ -79,6 +80,7 @@ export const CONSENT_RELEASE_JSON_LIMIT = "256kb";
 export const HTTP_FORM_LIMIT = "16kb";
 
 type AppDependencies = {
+  phoneVerificationProvider?: PhoneVerificationProvider;
   googleVerifier?: GoogleVerifier;
   emailDelivery?: EmailDelivery;
   logger?: Logger;
@@ -106,12 +108,13 @@ export function createApp(
 ) {
   const app = express();
   const logger = dependencies.logger ?? createOperationalLogger(appConfig);
-  // OTP_PROVIDER=email: Masari sends no SMS, so the onboarding phone-code flow
-  // delivers its code through the approved SMTP email delivery.
+  // OTP_PROVIDER=email: Masari sends no SMS, so both phone-code flows (onboarding attempts and the phone step after
+  // email sign-up) deliver their code through the approved SMTP email delivery.
   if (appConfig.otpProvider === "email" && dependencies.emailDelivery) {
     dependencies = {
       ...dependencies,
       otpProvider: dependencies.otpProvider ?? new EmailOtpProvider(dependencies.emailDelivery),
+      phoneVerificationProvider: dependencies.phoneVerificationProvider ?? new EmailPhoneVerificationProvider(dependencies.emailDelivery)
     };
   }
 

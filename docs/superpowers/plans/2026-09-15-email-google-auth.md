@@ -1,11 +1,5 @@
 # Email, Password, and Google Authentication Implementation Plan
 
-> **Superseded (2026-10-13):** Phone verification has been removed from the
-> profile lifecycle. New accounts become active with `profile_state = complete`
-> and no `/profile/phone` challenge; application code no longer produces the
-> `phone_required` state or the `phone_verification` action purpose. Phone tasks
-> and references below are historical.
-
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Implement consent-gated email/password and Google authentication for mobile and linked-admin-only Google sign-in.

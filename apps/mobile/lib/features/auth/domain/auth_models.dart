@@ -28,12 +28,15 @@ class AuthUser {
     required this.demoAccount,
     this.phone,
     this.email,
+    this.profileState = 'complete',
   });
 
   final String id;
   final String name;
   final String? phone;
   final String? email;
+  final String profileState;
+  bool get requiresPhone => profileState != 'complete' || phone == null;
   final UserRole role;
   final bool demoAccount;
 
@@ -46,6 +49,11 @@ class AuthUser {
       name: _readString(json, 'name'),
       phone: _optionalString(json, 'phone'),
       email: _optionalString(json, 'email'),
+      profileState: json['profile_state'] == 'complete'
+          ? 'complete'
+          : json['profile_state'] == null && json['phone'] != null
+          ? 'complete' // Compatibility with older cached/demo responses.
+          : 'phone_required',
       role: parseUserRole(_readString(json, 'role')),
       demoAccount: json['demo_account'] == true,
     );

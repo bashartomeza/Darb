@@ -22,9 +22,10 @@ on 2026-09-15. Unit fixtures alone never satisfy this gate.
 The deprecated `GOOGLE_OAUTH_CLIENT_IDS` never supplies either new endpoint's
 audience. Admin reads its public client ID from `/api/v1/auth/capabilities`.
 Mobile must use its official Google SDK and the matching server client ID.
-No email/password or Google flow can bypass consent/profile state checks.
+No email/password or phone flow can bypass consent/profile state checks.
 
-Service boundaries currently accept an injected `EmailDelivery`. The application does not instantiate an approved
+Service boundaries currently accept injected `EmailDelivery` and
+`PhoneVerificationProvider`. The application does not instantiate an approved
 adapter. A production deployment must not label an in-memory/test implementation
 as approved. The production adapter integration must include explicit credentials,
 sender ownership, delivery idempotency/timeouts, sanitized errors, and a real

@@ -155,7 +155,7 @@ export class EmailAuthService {
       }
       const now = new Date();
       const user = await tx.user.create({ data: { name: payload.name, email: payload.email, password_hash: payload.passwordHash, email_verified_at: now,
-        phone: null, phone_verified_at: null, profile_state: "complete", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
+        phone: null, phone_verified_at: null, profile_state: "phone_required", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
       await tx.userConsent.createMany({ data: documents.map((d) => ({ user_id: user.id, consent_document_id: d.id, accepted_at: now,
         source: "email_registration", request_id: requestId, app_release: this.config.appRelease })) });
       const session = await createSession(tx, user);

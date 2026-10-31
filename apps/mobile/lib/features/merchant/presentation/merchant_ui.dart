@@ -68,6 +68,8 @@ String merchantPriorityLabel(AppLocalizations l10n, String value) =>
       _ => l10n.priorityNormal,
     };
 
+String merchantPercent(double value) => '${(value * 100).toStringAsFixed(1)}%';
+
 Widget merchantTechnicalText(String value, {Key? key}) => Directionality(
   textDirection: TextDirection.ltr,
   child: SelectableText(value, key: key),

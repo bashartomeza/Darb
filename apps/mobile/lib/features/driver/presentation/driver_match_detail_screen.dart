@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/driver_controller.dart';
@@ -73,7 +74,6 @@ class _DriverMatchDetailScreenState
 
   Widget _content(AppLocalizations l10n, DriverMatch match) {
     return ListView(
-      key: const ValueKey('driverMatchDetail'),
       padding: const EdgeInsets.fromLTRB(
         AppTokens.marginMobile,
         AppTokens.spaceMedium,
@@ -88,9 +88,17 @@ class _DriverMatchDetailScreenState
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              RouteChip(
-                from: match.pickupLabel,
-                to: match.destinationLabel,
+              Row(
+                children: [
+                  Expanded(
+                    child: RouteChip(
+                      from: match.pickupLabel,
+                      to: match.destinationLabel,
+                    ),
+                  ),
+                  const SizedBox(width: AppTokens.gutterMobile),
+                  MatchScore(score: match.score, label: l10n.matchScore),
+                ],
               ),
               const Divider(height: AppTokens.spaceLarge),
               if (match.passengerRequest != null)
@@ -116,6 +124,34 @@ class _DriverMatchDetailScreenState
             ],
           ),
         ),
+        const SizedBox(height: AppTokens.spaceLarge),
+
+        MasariSection(
+          title: l10n.scoringBreakdown,
+          titleKey: const ValueKey('driverScoringBreakdown'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ScoreBreakdownList(
+                factors: [
+                  (
+                    label: l10n.corridorOverlap,
+                    value: match.breakdown.corridorOverlap,
+                  ),
+                  (
+                    label: l10n.pickupDistance,
+                    value: match.breakdown.pickupDistanceScore,
+                  ),
+                  (label: l10n.timingFit, value: match.breakdown.timingFit),
+                  (label: l10n.trustScore, value: match.breakdown.trustScore),
+                  (label: l10n.capacityFit, value: match.breakdown.capacityFit),
+                ],
+              ),
+              ExplanationNote(message: l10n.routeMatchExplanation),
+            ],
+          ),
+        ),
+
         if (_error != null) ...[
           const SizedBox(height: AppTokens.spaceMedium),
           OfflineBanner(message: _error!, tone: BannerTone.error),

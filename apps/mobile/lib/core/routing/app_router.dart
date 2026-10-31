@@ -73,6 +73,9 @@ final _passengerTripsKey = GlobalKey<NavigatorState>(
   debugLabel: 'passengerTrips',
 );
 final _passengerMapKey = GlobalKey<NavigatorState>(debugLabel: 'passengerMap');
+final _passengerAlertsKey = GlobalKey<NavigatorState>(
+  debugLabel: 'passengerAlerts',
+);
 final _passengerAccountKey = GlobalKey<NavigatorState>(
   debugLabel: 'passengerAccount',
 );
@@ -123,7 +126,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/auth/complete-registration',
-        builder: (context, state) => const AuthCompletionScreen(),
+        builder: (context, state) => const AuthCompletionScreen(phone: false),
+      ),
+      GoRoute(
+        path: '/profile/phone',
+        builder: (context, state) => const AuthCompletionScreen(phone: true),
       ),
       GoRoute(
         path: '/register',
@@ -214,7 +221,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           destinations: RoleNavDestinations.passenger(
             AppLocalizations.of(context),
           ),
-          bottomNav: RoleBottomNavStyle.reference,
         ),
         branches: [
           StatefulShellBranch(
@@ -239,10 +245,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'match/:id',
                     builder: (context, state) =>
                         MatchDetailScreen(matchId: state.pathParameters['id']!),
-                  ),
-                  GoRoute(
-                    path: 'notifications',
-                    builder: (context, state) => const NotificationsScreen(),
                   ),
                 ],
               ),
@@ -282,6 +284,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/passenger/map',
                 builder: (context, state) => const PassengerMapAlertsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _passengerAlertsKey,
+            routes: [
+              GoRoute(
+                path: '/passenger/notifications',
+                builder: (context, state) => const NotificationsScreen(),
               ),
             ],
           ),
@@ -562,6 +573,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       final role = auth.user!.role;
+      if (auth.user!.requiresPhone &&
+          role != UserRole.admin &&
+          role != UserRole.unsupported) {
+        return path == '/profile/phone' ? null : '/profile/phone';
+      }
       final target = routeForRole(role);
 
       // Send the shared security link to the signed-in role's account tab, so

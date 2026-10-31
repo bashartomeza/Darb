@@ -5,7 +5,9 @@ import { HttpError } from "./error.js";
 const completionSafePaths = new Set([
   "/api/v1/me",
   "/api/v1/capabilities",
-  "/api/v1/onboarding/consents"
+  "/api/v1/onboarding/consents",
+  "/api/v1/profile/phone/start-verification",
+  "/api/v1/profile/phone/confirm-verification"
 ]);
 
 function pathname(req: AuthenticatedRequest) {
@@ -22,8 +24,8 @@ export function isProfileCompletionSafePath(req: AuthenticatedRequest) {
 
 /**
  * Globally mounted before product routers so an authenticated account cannot
- * reach a newly added operational router before its profile is complete.
- * Public and account-completion routes are deliberately exempt.
+ * reach a newly added operational router before its verified phone profile is
+ * complete. Public and account-completion routes are deliberately exempt.
  */
 export async function requireCompleteProfile(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
   try {

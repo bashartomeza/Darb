@@ -51,9 +51,6 @@ flutter:
   # Bundled rather than fetched at runtime: the app is used in low-bandwidth
   # areas and must render Arabic correctly offline. Licence (OFL) ships
   # alongside the files in assets/fonts/.
-  assets:
-    - assets/images/
-
   fonts:
     - family: IBMPlexSansArabic
       fonts:

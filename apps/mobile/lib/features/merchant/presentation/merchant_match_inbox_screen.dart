@@ -110,6 +110,8 @@ class _MerchantMatchCard extends StatelessWidget {
       title: l10n.merchantOrder,
       statusLabel: merchantStatusLabel(l10n, match.status),
       statusTone: statusToneFor(match.status),
+      score: match.score,
+      scoreLabel: l10n.matchScore,
       from: match.order.pickupLabel,
       to: match.route.destinationLabel,
       details: [

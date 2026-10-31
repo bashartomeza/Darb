@@ -157,7 +157,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(handler.matchCalls, 1);
     expect(
-      find.byKey(const ValueKey('merchantMatchDetail')),
+      find.byKey(const ValueKey('merchantScoringBreakdown')),
       findsOneWidget,
     );
     expect(
