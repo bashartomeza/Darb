@@ -4,6 +4,7 @@ import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
+import '../../../core/widgets/map_cache_tile.dart';
 import '../../../core/widgets/masari_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/status_chip.dart';
@@ -55,6 +56,7 @@ class _SessionManagementScreenState
             children: [
               const SessionStatusBanner(),
               const CredentialSettings(),
+              const MapCacheTile(),
               if (_actionFailed) ...[
                 const SizedBox(height: AppTokens.spaceMedium),
                 OfflineBanner(

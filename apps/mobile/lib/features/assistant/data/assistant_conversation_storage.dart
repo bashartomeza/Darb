@@ -34,6 +34,7 @@ class AssistantConversationStorage {
         messages: messages,
         conversationId: json['conversation_id'] as String?,
         lastLocale: json['locale'] as String? ?? 'ar',
+        savedRequestId: json['saved_request_id'] as String?,
       );
     } catch (_) {
       await storage.delete(key: _key(userId));
@@ -50,6 +51,7 @@ class AssistantConversationStorage {
       'version': 1,
       'conversation_id': state.conversationId,
       'locale': state.lastLocale,
+      'saved_request_id': state.savedRequestId,
       'messages': state.messages
           .skip(state.messages.length > 100 ? state.messages.length - 100 : 0)
           .map((message) => {'role': message.role.name, 'text': message.text})

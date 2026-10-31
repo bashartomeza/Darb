@@ -57,6 +57,22 @@ class ApiClient {
     });
   }
 
+  /// Uploads raw bytes (for example a document) with an explicit content type.
+  Future<Map<String, dynamic>> postBytes(
+    String path, {
+    required List<int> bytes,
+    String? token,
+    String contentType = 'application/octet-stream',
+  }) async {
+    return _sendJson(() {
+      return client.post(
+        _uri(path),
+        headers: _headers(token, {HttpHeaders.contentTypeHeader: contentType}),
+        body: bytes,
+      );
+    });
+  }
+
   Future<Map<String, dynamic>> patchJson(
     String path, {
     Map<String, dynamic> body = const {},

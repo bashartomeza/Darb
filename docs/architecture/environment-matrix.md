@@ -18,7 +18,7 @@ while advertising reset as unavailable.
 
 Public onboarding defaults off. Only local, test, and demo may enable the M6C2B2 routes, and only with invitations, distinct keyed secrets, the injected fake provider, and a complete approved consent set. Staging and production reject public enablement, fake OTP delivery, and test legal fixtures at startup until a real provider and legal publication process are approved.
 
-M7C1 canonical operational entry also defaults off. `MULTI_ROUTE_ENTRY_ENABLED=true` is accepted only in local, test, and demo for explicit backend validation; staging and production reject it. `MULTI_ROUTE_MATCHING_ENABLED=true` is rejected in every environment. Route management remains independently controlled by `ROUTE_MANAGEMENT_ENABLED`.
+M7C1 canonical operational entry also defaults off. `MULTI_ROUTE_ENTRY_ENABLED=true` is accepted only in local, test, and demo for explicit backend validation; staging and production reject it. `MULTI_ROUTE_MATCHING_ENABLED=true` requires `MULTI_ROUTE_ENTRY_ENABLED` and is accepted only in local, test, and demo; staging and production reject it (see `apps/api/src/config.ts`). Route management remains independently controlled by `ROUTE_MANAGEMENT_ENABLED`.
 
 Staging and production backend startup additionally require `DATABASE_URL`, a non-placeholder JWT secret of at least 32 characters, explicit `CORS_ORIGINS`, and `APP_RELEASE`. Secret-bearing validation values are never echoed.
 

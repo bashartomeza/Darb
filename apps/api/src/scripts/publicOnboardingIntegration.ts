@@ -5,7 +5,7 @@ import { config } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { abuseSubjectDigest } from "../lib/keyedDigest.js";
 import { normalizeInvitationCode } from "../lib/invitations.js";
-import { FakeOtpProvider } from "../lib/otp.js";
+import { EmailOtpProvider, FakeOtpProvider } from "../lib/otp.js";
 import { resetDemoData, DEMO_ACCOUNTS } from "../modules/demoReset.js";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -75,7 +75,7 @@ async function invitationRecord(token: string, role: "passenger" | "driver" | "m
   const response = await request(app)
     .post("/api/v1/admin/invitations")
     .set("authorization", `Bearer ${token}`)
-    .send({ role, phone, region: "PS", source: "integration" });
+    .send({ role, phone, contact_email: `invited.${phone.slice(-6)}@example.com`, region: "PS", source: "integration" });
   assert(response.status === 201, `Invitation creation failed for ${role}`);
   return { id: response.body.invitation.id as string, code: response.body.code as string };
 }
@@ -165,6 +165,243 @@ async function onboard(
     completionKey
   );
   return { started, verified, completed, documents, completionKey, name, password };
+}
+
+const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from("integration jpeg body")]);
+
+async function openStart(role: string, phone: string) {
+  provider.outbox.clear();
+  return request(app)
+    .post("/api/v1/onboarding/attempts")
+    .set("idempotency-key", key("open-start"))
+    .send({ role, phone, email: `open.${phone.slice(-6)}@example.com`, region: "PS", locale: "ar" });
+}
+
+async function uploadDocument(path: string, token: string, kind: string) {
+  return request(app)
+    .post(`/api/v1/onboarding/${path}?kind=${kind}`)
+    .set("authorization", `Onboarding ${token}`)
+    .set("content-type", "application/octet-stream")
+    .send(JPEG);
+}
+
+const submitApplication = (token: string) =>
+  request(app).post("/api/v1/onboarding/application/submit").set("authorization", `Onboarding ${token}`);
+
+/** Open driver / shop-owner signup: no invitation, documents required before review. */
+async function openSignupChecks(admin: string, legal: Array<{ id: string; type: string; content_hash: string }>) {
+  await prisma.abuseCounter.deleteMany({
+    where: { bucket_type: { in: ["otp_ip_hour", "otp_phone_day", "otp_email_day", "open_start_ip", "open_start_phone", "open_start_email", "open_start_global", "registration_conflict_ip"] } }
+  });
+  const openConfig = await request(app).get("/api/v1/onboarding/config");
+  check(
+    JSON.stringify(openConfig.body.open_registration_roles) === JSON.stringify(["driver", "merchant"]),
+    "open roles are advertised only when the switch is on"
+  );
+  check((await openStart("passenger", "+970599222201")).status === 404, "passengers cannot register without an invitation");
+
+  // A number that already has an account looks exactly like a new one until the code is proven.
+  const existing = await openStart("driver", "+970599111115");
+  check(existing.status === 201 && existing.body.next_action === "verify_otp", "open start does not reveal an existing account");
+  const existingVerified = await verify(existing.body.attempt.id, existing.body.onboarding_token, latestOtp());
+  const existingComplete = await complete(
+    existing.body.attempt.id, existing.body.onboarding_token, existingVerified.body.registration_grant,
+    legal, "Duplicate Person", "duplicate secure pass 2026"
+  );
+  check(existingComplete.status === 409 && existingComplete.body.error === "registration_conflict", "an existing number cannot be registered again");
+
+  const started = await openStart("driver", "+970599222202");
+  check(started.status === 201, "open driver start succeeds");
+  const attempt = await prisma.onboardingAttempt.findUniqueOrThrow({ where: { id: started.body.attempt.id } });
+  check(attempt.invitation_id === null, "open attempt has no invitation");
+  check(attempt.delivery_email === "open.222202@example.com", "open attempt records the email the code is sent to");
+  const wrongOtp = await verify(started.body.attempt.id, started.body.onboarding_token, "000000");
+  check(wrongOtp.status === 400, "a wrong code is refused as in the invited flow");
+  const verified = await verify(started.body.attempt.id, started.body.onboarding_token, latestOtp());
+  check(verified.status === 200, "open driver phone verification succeeds");
+  const completed = await complete(
+    started.body.attempt.id, started.body.onboarding_token, verified.body.registration_grant,
+    legal, "Open Driver", "open driver secure pass 2026"
+  );
+  check(
+    completed.status === 201 && completed.body.account_status === "pending" && completed.body.next_action === "upload_documents",
+    "open driver is created pending and told to upload documents"
+  );
+  const statusToken = completed.body.onboarding_status_token as string;
+  const driver = await prisma.user.findUniqueOrThrow({ where: { phone: "+970599222202" } });
+  check(driver.review_submitted_at === null, "open driver has not been submitted for review");
+  check(
+    (await request(app).post("/api/v1/auth/login").send({ phone: "+970599222202", password: "open driver secure pass 2026" })).status === 403,
+    "an open pending driver cannot sign in"
+  );
+  const notQueued = await request(app).get("/api/v1/admin/driver-verifications?status=pending&limit=100").set("authorization", `Bearer ${admin}`);
+  check(
+    notQueued.status === 200 && !notQueued.body.verifications.some((entry: { candidate: { id: string } }) => entry.candidate.id === driver.id),
+    "an unsubmitted driver is not in the admin review queue"
+  );
+  const approveEarly = await request(app)
+    .post(`/api/v1/admin/driver-verifications/${driver.id}/approve`)
+    .set("authorization", `Bearer ${admin}`)
+    .send({ expected_revision: 1, profile: { vehicle_type: "sedan", seats_total: 4, parcel_capacity: 3 } });
+  check(approveEarly.status === 409 && approveEarly.body.error === "application_not_submitted", "admin cannot approve an unsubmitted application");
+  const noDocuments = await submitApplication(statusToken);
+  check(
+    noDocuments.status === 409 && noDocuments.body.error === "documents_required" && noDocuments.body.missing_documents.length === 3,
+    "submission is refused with no documents"
+  );
+  const statusBefore = await request(app).get("/api/v1/onboarding/status").set("authorization", `Onboarding ${statusToken}`);
+  check(statusBefore.body.onboarding_status === "documents_required", "status asks for documents");
+  check((await uploadDocument("driver-documents", statusToken, "driver_licence")).status === 201, "licence uploaded");
+  check((await uploadDocument("driver-documents", statusToken, "insurance")).status === 201, "optional insurance uploaded");
+  const partial = await submitApplication(statusToken);
+  check(partial.status === 409 && partial.body.missing_documents.length === 2, "an optional kind does not satisfy the required set");
+  check((await uploadDocument("driver-documents", statusToken, "vehicle_registration")).status === 201, "vehicle registration uploaded");
+  check((await uploadDocument("driver-documents", statusToken, "national_id")).status === 201, "national ID uploaded");
+  const submitted = await submitApplication(statusToken);
+  check(submitted.status === 200 && submitted.body.onboarding_status === "pending_review", "complete application is submitted");
+  check((await submitApplication(statusToken)).status === 200, "submission is idempotent");
+  const queued = await request(app).get("/api/v1/admin/driver-verifications?status=pending&limit=100").set("authorization", `Bearer ${admin}`);
+  check(queued.body.verifications.some((entry: { candidate: { id: string } }) => entry.candidate.id === driver.id), "a submitted driver enters the review queue");
+  const approved = await request(app)
+    .post(`/api/v1/admin/driver-verifications/${driver.id}/approve`)
+    .set("authorization", `Bearer ${admin}`)
+    .send({ expected_revision: 1, profile: { vehicle_type: "sedan", seats_total: 4, parcel_capacity: 3 } });
+  check(approved.status === 200, "admin approves a submitted open driver");
+  check(
+    (await request(app).post("/api/v1/auth/login").send({ phone: "+970599222202", password: "open driver secure pass 2026" })).status === 200,
+    "an approved open driver can sign in"
+  );
+
+  const shopStart = await openStart("merchant", "+970599222203");
+  const shopVerified = await verify(shopStart.body.attempt.id, shopStart.body.onboarding_token, latestOtp());
+  const shopCompleted = await complete(
+    shopStart.body.attempt.id, shopStart.body.onboarding_token, shopVerified.body.registration_grant,
+    legal, "Open Shop", "open shop secure pass 2026"
+  );
+  check(shopCompleted.status === 201 && shopCompleted.body.next_action === "upload_documents", "open shop owner is created pending");
+  const shopToken = shopCompleted.body.onboarding_status_token as string;
+  const shop = await prisma.user.findUniqueOrThrow({ where: { phone: "+970599222203" } });
+  const shopEarly = await request(app).post(`/api/v1/admin/merchant-approvals/${shop.id}/approve`).set("authorization", `Bearer ${admin}`).send({});
+  check(shopEarly.status === 409 && shopEarly.body.error === "application_not_submitted", "admin cannot approve an unsubmitted shop owner");
+  check((await submitApplication(shopToken)).status === 409, "shop owner cannot submit without documents");
+  for (const kind of ["commercial_register", "national_id"]) {
+    check((await uploadDocument("merchant-documents", shopToken, kind)).status === 201, `shop ${kind} uploaded`);
+  }
+  check((await submitApplication(shopToken)).status === 409, "shop owner cannot submit without the shop photo");
+  check((await uploadDocument("merchant-documents", shopToken, "shop_photo")).status === 201, "shop photo uploaded");
+  check((await submitApplication(shopToken)).status === 200, "complete shop application is submitted");
+  const shopApproved = await request(app).post(`/api/v1/admin/merchant-approvals/${shop.id}/approve`).set("authorization", `Bearer ${admin}`).send({});
+  check(shopApproved.status === 200, "admin approves a submitted open shop owner");
+
+  // Starting again for the same phone supersedes the older open attempt.
+  const again = await openStart("driver", "+970599222204");
+  const supersede = await openStart("driver", "+970599222204");
+  check(again.status === 201 && supersede.status === 201, "repeat open start succeeds");
+  const olderAttempt = await prisma.onboardingAttempt.findUniqueOrThrow({ where: { id: again.body.attempt.id } });
+  check(olderAttempt.status === "cancelled", "an older open attempt is superseded");
+  check(
+    (await verify(again.body.attempt.id, again.body.onboarding_token, "123456")).status === 401,
+    "the superseded attempt's token no longer works"
+  );
+  await emailDeliveryChecks(admin, legal);
+}
+
+/** OTP_PROVIDER=email behaviour: the code travels by email only, and an unproven phone is not a sign-in identity. */
+async function emailDeliveryChecks(admin: string, legal: Array<{ id: string; type: string; content_hash: string }>) {
+  const sent: Array<{ to: string; purpose: string; actionToken: string }> = [];
+  const emailApp = createApp(config, { otpProvider: new EmailOtpProvider({ kind: "approved", send: async (m) => { sent.push(m); } }) });
+  await prisma.abuseCounter.deleteMany({ where: { bucket_type: { in: ["otp_ip_hour", "otp_phone_day", "otp_email_day", "open_start_ip", "open_start_phone", "open_start_email", "open_start_global", "registration_conflict_ip"] } } });
+  const phone = "+970599333301";
+  const email = "email.flow@example.com";
+  const started = await request(emailApp).post("/api/v1/onboarding/attempts").set("idempotency-key", key("email-start"))
+    .send({ role: "driver", phone, email, region: "PS", locale: "en" });
+  check(started.status === 201 && sent.length === 1 && sent[0].to === email && sent[0].purpose === "phone_code", "the code is emailed to the open applicant");
+  check(!JSON.stringify(started.body).includes(sent[0].actionToken) && !JSON.stringify(started.body).includes(email), "the start response carries neither the code nor the email");
+  const token = `Onboarding ${started.body.onboarding_token}`;
+  const verified = await request(emailApp).post(`/api/v1/onboarding/attempts/${started.body.attempt.id}/verify`)
+    .set("authorization", token).set("idempotency-key", key("email-verify")).send({ otp: sent[0].actionToken });
+  check(verified.status === 200, "the emailed code verifies the attempt");
+  const done = await request(emailApp).post(`/api/v1/onboarding/attempts/${started.body.attempt.id}/complete`)
+    .set("authorization", token).set("idempotency-key", key("email-complete"))
+    .send({ registration_grant: verified.body.registration_grant, display_name: "Email Driver", password: "email driver secure pass 2026", locale: "ar", consents: legal, adult_self_attestation: true });
+  check(done.status === 201, "email-verified open sign-up completes");
+  const user = await prisma.user.findUniqueOrThrow({ where: { phone } });
+  check(user.email === email && user.email_verified_at !== null, "the proven email becomes the verified sign-in identity");
+  check(user.phone_verified_at === null, "an email-verified open sign-up leaves the phone unverified");
+  check(
+    (await request(emailApp).post("/api/v1/auth/login").send({ phone, password: "email driver secure pass 2026" })).status === 401,
+    "an unverified phone cannot be used to sign in"
+  );
+  await invitationPrecedenceChecks(admin, emailApp, sent, legal, { phone, squatterId: user.id });
+}
+
+/** An Admin-vouched claim always beats a self-typed, unverified phone; invitations are not burned or stuck. */
+async function invitationPrecedenceChecks(
+  admin: string,
+  emailApp: ReturnType<typeof createApp>,
+  sent: Array<{ to: string; purpose: string; actionToken: string }>,
+  legal: Array<{ id: string; type: string; content_hash: string }>,
+  squat: { phone: string; squatterId: string }
+) {
+  await prisma.abuseCounter.deleteMany({ where: { bucket_type: { in: ["otp_ip_hour", "otp_phone_day", "otp_email_day", "registration_conflict_ip", "admin_invitation_create"] } } });
+  const adminPost = (path: string, body: object) => request(app).post(path).set("authorization", `Bearer ${admin}`).send(body);
+
+  // 1. The squatter (unverified phone, verified email) is released when the invited person starts and completes.
+  const invited = await invitationRecord(admin, "driver", squat.phone);
+  sent.length = 0;
+  const started = await request(emailApp).post("/api/v1/onboarding/attempts").set("idempotency-key", key("squat-start"))
+    .send({ invitation_code: invited.code, role: "driver", phone: squat.phone, region: "PS", locale: "en" });
+  check(started.status === 201, "an invitation start succeeds although an unverified account holds the phone");
+  check(sent.length === 1, "the invited start emails exactly one code");
+  const token = `Onboarding ${started.body.onboarding_token}`;
+  const verified = await request(emailApp).post(`/api/v1/onboarding/attempts/${started.body.attempt.id}/verify`)
+    .set("authorization", token).set("idempotency-key", key("squat-verify")).send({ otp: sent[0].actionToken });
+  check(verified.status === 200, "the invited applicant verifies the emailed code");
+  const done = await request(emailApp).post(`/api/v1/onboarding/attempts/${started.body.attempt.id}/complete`)
+    .set("authorization", token).set("idempotency-key", key("squat-complete"))
+    .send({ registration_grant: verified.body.registration_grant, display_name: "Invited Driver", password: "invited driver secure pass 2026", locale: "ar", consents: legal, adult_self_attestation: true });
+  check(done.status === 201, "the invited applicant completes registration");
+  const owner = await prisma.user.findUniqueOrThrow({ where: { phone: squat.phone } });
+  check(owner.id !== squat.squatterId && owner.phone_verified_at !== null, "the phone now belongs to the admin-vouched account");
+  const squatter = await prisma.user.findUniqueOrThrow({ where: { id: squat.squatterId } });
+  check(squatter.phone === null && squatter.profile_state === "phone_required" && squatter.email_verified_at !== null, "the unverified holder lost only the phone and keeps its verified email");
+  const releases = await prisma.auditEvent.findMany({ where: { entity_id: squat.squatterId, action: "admin_action" } });
+  check(releases.length >= 1 && !JSON.stringify(releases.map((r) => r.metadata)).includes(squat.phone), "the release is audited without the phone number");
+
+  // 2. A verified holder is never evicted: a new invitation for the same phone stays unavailable.
+  // (The first invitation's mailbox now has an account, so the second one needs its own contact email.)
+  const againResponse = await adminPost("/api/v1/admin/invitations", { role: "driver", phone: squat.phone, contact_email: "second.invite@example.com", region: "PS" });
+  check(againResponse.status === 201, "a second invitation for the same phone can still be issued");
+  const again = { id: againResponse.body.invitation.id as string, code: againResponse.body.code as string };
+  const blocked = await request(emailApp).post("/api/v1/onboarding/attempts").set("idempotency-key", key("verified-start"))
+    .send({ invitation_code: again.code, role: "driver", phone: squat.phone, region: "PS", locale: "en" });
+  check(blocked.status === 404, "a verified phone holder blocks the invited start");
+  check((await prisma.user.findUniqueOrThrow({ where: { id: owner.id } })).phone === squat.phone, "a verified holder keeps its phone");
+  check((await prisma.invitation.findUniqueOrThrow({ where: { id: again.id } })).used_count === 0, "the blocked start did not redeem the invitation");
+
+  // 3. A contact email that already has an account is refused at creation and never burns an invitation at start.
+  const takenEmail = await adminPost("/api/v1/admin/invitations", { role: "passenger", phone: "+970599444401", contact_email: "email.flow@example.com", region: "PS" });
+  check(takenEmail.status === 409 && takenEmail.body.error === "invitation_email_in_use", "invitation creation refuses an email that already has an account");
+  const late = await invitationRecord(admin, "driver", "+970599444402");
+  await prisma.user.create({ data: { name: "Late Owner", email: "invited.444402@example.com", email_verified_at: new Date(), role: "passenger",
+    account_status: "active", profile_state: "phone_required", security_version: 1, demo_account: false } });
+  const lateStart = await request(emailApp).post("/api/v1/onboarding/attempts").set("idempotency-key", key("late-email"))
+    .send({ invitation_code: late.code, role: "driver", phone: "+970599444402", region: "PS", locale: "en" });
+  check(lateStart.status === 404, "a start whose contact email gained an account is refused");
+  check((await prisma.invitation.findUniqueOrThrow({ where: { id: late.id } })).used_count === 0, "that refused start did not redeem the invitation");
+
+  // 4. A redeemed invitation whose attempt never completed can be revoked; a completed one cannot.
+  const stuck = await invitationRecord(admin, "driver", "+970599444403");
+  const stuckStart = await start(stuck.code, "driver", "+970599444403");
+  check(stuckStart.status === 201, "an invitation is redeemed at start");
+  const stuckOtp = latestOtp();
+  const revoked = await adminPost(`/api/v1/admin/invitations/${stuck.id}/revoke`, { reason: "never completed" });
+  check(revoked.status === 200 && revoked.body.invitation.status === "revoked", "an invitation with an unfinished attempt can be revoked");
+  check((await prisma.onboardingAttempt.findUniqueOrThrow({ where: { id: stuckStart.body.attempt.id } })).status === "cancelled", "revoking cancels the unfinished attempt");
+  check((await verify(stuckStart.body.attempt.id, stuckStart.body.onboarding_token, stuckOtp)).status !== 200, "a revoked invitation's attempt can no longer be verified");
+  const completedInvitation = await prisma.invitation.findFirstOrThrow({ where: { redemptions: { some: { user_id: { not: null } } }, revoked_at: null } });
+  const notRevocable = await adminPost(`/api/v1/admin/invitations/${completedInvitation.id}/revoke`, { reason: "too late" });
+  check(notRevocable.status === 409 && notRevocable.body.error === "invitation_not_revocable", "a completed invitation cannot be revoked");
 }
 
 async function main() {
@@ -393,7 +630,9 @@ async function main() {
   check(await prisma.authSession.count({ where: { user_id: passengerUser.id } }) === 0, "passenger completion creates no auth session");
   check(await prisma.refreshToken.count({ where: { session: { user_id: passengerUser.id } } }) === 0, "passenger completion creates no refresh token");
   const login = await request(app).post("/api/v1/auth/login").send({ phone: "٠٥٩٩١١١١١٤", region: "PS", password: passengerPassword });
-  check(login.status === 400 && login.body.error === "validation_error", "deprecated phone-only login is rejected by the email contract");
+  check(login.status === 401 && login.body.error === "invalid_credentials", "a phone number without a country code is refused at sign-in");
+  const phoneLogin = await request(app).post("/api/v1/auth/login").send({ phone: "+970599111114", password: passengerPassword });
+  check(phoneLogin.status === 200 && phoneLogin.body.user?.role === "passenger", "a verified invited passenger signs in with the verified phone");
 
   const driverPassword = "driver secure pass 2026";
   const driver = await onboard(admin, "driver", "+970599111115", "سائق مساري", driverPassword);
@@ -423,7 +662,7 @@ async function main() {
   const driverStatus = await request(app).get("/api/v1/onboarding/status").set("authorization", `Onboarding ${driverCompletionReplay.body.onboarding_status_token}`);
   check(driverStatus.status === 200 && driverStatus.body.onboarding_status === "pending_review", "pending status endpoint works");
   check((await request(app).get("/api/v1/driver/routes").set("authorization", `Onboarding ${driver.completed.body.onboarding_status_token}`)).status === 401, "pending token cannot access operational routes");
-  check((await request(app).post("/api/v1/auth/login").send({ phone: "+970599111115", password: driverPassword })).status === 400, "deprecated phone-only login is rejected for pending driver");
+  check((await request(app).post("/api/v1/auth/login").send({ phone: "+970599111115", password: driverPassword })).status === 403, "a pending driver cannot sign in by phone");
   const recovered = await request(app).post("/api/v1/onboarding/status-sessions").send({ phone: "+970599111115", region: "PS", password: driverPassword });
   check(
     recovered.status === 200 &&
@@ -503,6 +742,10 @@ async function main() {
 
   const auditText = JSON.stringify(await prisma.auditEvent.findMany({ select: { metadata: true } }));
   check(!["+970599111114", replayOtp, passengerPassword, secondVerify.body.registration_grant].some((secret) => auditText.includes(secret)), "audit metadata contains no raw onboarding secret or phone");
+
+  if (config.openSignupEnabled && config.driverDocuments) {
+    await openSignupChecks(admin, legal);
+  }
 
   const onboardedUsers = await prisma.user.findMany({
     where: { demo_account: false },

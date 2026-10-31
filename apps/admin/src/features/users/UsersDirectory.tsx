@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ApiClient, ApiError, AccountStatus, User, UserAccountStatus, UserDetail, UserListItem, UserPage, UserRoleFilter } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
 import { AlertItem, BentoGrid, Button, Card, CardHeader, DataTable, EmptyState, Skeleton, StatusBadge, TechnicalValue, type Column } from "../../ui";
 
 type Props = { api: ApiClient; token: string; admin: User | null; search: string; canAct?: boolean };
 export type DemoFilter = "all" | "demo" | "real";
+type MerchantDocKind = "commercial_register" | "national_id" | "shop_photo" | "other";
 type UserStatusSnapshot = UserListItem | UserDetail;
 export type UserStatusIntent = { user: UserStatusSnapshot; nextStatus: AccountStatus; expectedStatus: UserAccountStatus };
 
@@ -51,9 +52,9 @@ const roleKey = (s: string) => `role_${s}` as any;
 function contextText(user: UserListItem, t: (key: any) => string) {
   if (user.role_context.kind === "driver") {
     const state = user.role_context.driver_verification_status === "none" ? t("verificationStatus_no") : t(`verificationStatus_${user.role_context.driver_verification_status}` as any);
-    return <span className="cell-stack__sub">{t("driverReview")}: {state} · {user.role_context.driver_profile_exists ? t("yes") : t("no")}</span>;
+    return <span className="cell-stack__sub">{t("driverReview")}: {state} · {user.role_context.driver_profile_exists ? t("yes") : t("no")}{user.role_context.application_submitted === false ? ` · ${t("applicationNotSubmitted")}` : ""}</span>;
   }
-  if (user.role_context.kind === "merchant") return <span className="cell-stack__sub">{t("pendingMerchantApprovalUnavailable")}</span>;
+  if (user.role_context.kind === "merchant") return <span className="cell-stack__sub">{user.account_status === "pending" ? t(user.role_context.application_submitted === false ? "applicationNotSubmitted" : "merchantAwaitingApproval") : "—"}</span>;
   return <span className="cell-stack__sub">—</span>;
 }
 
@@ -73,6 +74,37 @@ export function UsersDirectory({ api, token, admin, search, canAct = true }: Pro
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [merchantDecision, setMerchantDecision] = useState<{ user: UserStatusSnapshot; decision: "approve" | "reject" } | null>(null);
+  const [merchantReason, setMerchantReason] = useState("");
+  const [merchantBusy, setMerchantBusy] = useState(false);
+  const [merchantError, setMerchantError] = useState<string | null>(null);
+  const [merchantDocs, setMerchantDocs] = useState<Array<{ id: string; kind: string; size_bytes: number }> | null>(null);
+  const merchantDecisionUserId = merchantDecision?.user.id;
+  useEffect(() => {
+    setMerchantDocs(null);
+    if (!merchantDecisionUserId || !token) return;
+    let live = true;
+    api.merchantDocuments(token, merchantDecisionUserId)
+      .then((result) => { if (live) setMerchantDocs(result.documents); })
+      .catch(() => { if (live) setMerchantDocs([]); });
+    return () => { live = false; };
+  }, [api, token, merchantDecisionUserId]);
+
+  async function downloadMerchantDocument(documentId: string) {
+    if (!merchantDecision || !token) return;
+    setMerchantError(null);
+    try {
+      const blob = await api.downloadMerchantDocument(token, merchantDecision.user.id, documentId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `shop-document-${documentId}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch { setMerchantError(t("documentDownloadFailed")); }
+  }
   const query = useMemo(() => search.trim().slice(0, 64), [search]);
 
   async function loadUsers() {
@@ -123,8 +155,42 @@ export function UsersDirectory({ api, token, admin, search, canAct = true }: Pro
     finally { setBusy(false); }
   }
 
+  async function submitMerchantDecision() {
+    if (!merchantDecision || !token) return;
+    const clean = merchantReason.trim();
+    if (merchantDecision.decision === "reject" && clean.length < 3) return;
+    setMerchantBusy(true); setMerchantError(null);
+    try {
+      await api.decideMerchantApproval(token, merchantDecision.user.id, merchantDecision.decision, clean || undefined);
+      setMerchantDecision(null); setMerchantReason("");
+      await Promise.all([loadUsers(), selectedId === merchantDecision.user.id ? loadDetail(selectedId) : Promise.resolve()]);
+    } catch (caught) {
+      const failure = caught as ApiError;
+      if (failure.status === 409) {
+        setMerchantError(t("accountStatusConflictReloaded"));
+        await Promise.all([loadUsers(), selectedId ? loadDetail(selectedId) : Promise.resolve()]);
+      } else setMerchantError(t("resourceLoadErrorDescription"));
+    } finally { setMerchantBusy(false); }
+  }
+
+  const merchantCard = merchantDecision ? <Card span={6}>
+    <CardHeader title={merchantDecision.decision === "approve" ? t("approveMerchant") : t("rejectMerchant")} />
+    <AlertItem tone={merchantDecision.decision === "approve" ? "info" : "warning"} title={merchantDecision.user.name} description={merchantDecision.decision === "approve" ? t("approveMerchantEffect") : t("rejectMerchantEffect")} />
+    {merchantDocs && <div className="field"><strong>{t("merchantDocumentsTitle")}</strong>{merchantDocs.length === 0
+      ? <p className="muted">{t("merchantDocumentsNone")}</p>
+      : merchantDocs.map((item) => <p key={item.id}>{t(`merchantDocKind_${item.kind as MerchantDocKind}`)} <span className="muted">· {Math.ceil(item.size_bytes / 1024)} KB</span> <Button size="sm" variant="ghost" icon="id_card" onClick={() => void downloadMerchantDocument(item.id)}>{t("downloadDocument")}</Button></p>)}</div>}
+    {merchantDecision.decision === "reject" && <label className="field">{t("statusReason")}<input value={merchantReason} maxLength={500} onChange={(e) => setMerchantReason(e.target.value)} /></label>}
+    {merchantError && <p role="alert" className="overview-resource-note overview-resource-note--error">{merchantError}</p>}
+    <div className="card__actions">
+      <Button variant="primary" disabled={merchantBusy || (merchantDecision.decision === "reject" && merchantReason.trim().length < 3)} onClick={() => void submitMerchantDecision()}>{merchantBusy ? t("saving") : t("confirm")}</Button>
+      <Button variant="ghost" disabled={merchantBusy} onClick={() => { setMerchantDecision(null); setMerchantReason(""); setMerchantError(null); }}>{t("cancel")}</Button>
+    </div>
+  </Card> : null;
+
   const pages = Math.max(1, Math.ceil(data.total / data.limit));
   return <UsersDirectoryView
+    onMerchantDecision={(user, decision) => { setMerchantDecision({ user, decision }); setMerchantReason(""); setMerchantError(null); }}
+    merchantDecisionCard={merchantCard}
     phase={phase} data={data} page={page} pages={pages} query={query} role={role} accountStatus={accountStatus} demoAccount={demoAccount}
     adminId={admin?.id ?? null} canAct={canAct} selectedId={selectedId} detail={detail} detailPhase={detailPhase} pending={pending}
     reason={reason} busy={busy} error={error} onRoleChange={setRole} onStatusChange={setAccountStatus} onDemoChange={setDemoAccount}
@@ -134,6 +200,8 @@ export function UsersDirectory({ api, token, admin, search, canAct = true }: Pro
 }
 
 export type UsersDirectoryViewProps = {
+  onMerchantDecision?: (user: UserStatusSnapshot, decision: "approve" | "reject") => void;
+  merchantDecisionCard?: ReactNode;
   phase: "loading" | "ready" | "error";
   data: UserPage;
   page: number;
@@ -168,6 +236,12 @@ export function UsersDirectoryView(props: UsersDirectoryViewProps) {
   const { phase, data, page, pages, query, role, accountStatus, demoAccount, adminId, canAct, selectedId, detail, detailPhase, pending, reason, busy, error } = props;
   const accountControls = (user: UserStatusSnapshot) => {
     if (user.id === adminId) return <span className="muted">{t("selfAccountControlUnavailable")}</span>;
+    if (user.account_status === "pending" && user.role_context.kind !== "passenger" && user.role_context.kind !== "admin" && user.role_context.application_submitted === false) {
+      return <span className="muted">{t("applicationNotSubmitted")}</span>;
+    }
+    if (user.account_status === "pending" && user.role === "merchant" && props.onMerchantDecision) {
+      return canAct ? <div className="card__actions"><Button size="sm" variant="primary" icon="check_circle" onClick={() => props.onMerchantDecision!(user, "approve")}>{t("approveMerchant")}</Button><Button size="sm" variant="ghost" icon="block" onClick={() => props.onMerchantDecision!(user, "reject")}>{t("rejectMerchant")}</Button></div> : <span className="muted">{t("loading")}</span>;
+    }
     if (user.account_status === "pending") return <span className="muted">{user.role === "driver" ? t("pendingDriverApprovalUnavailable") : user.role === "merchant" ? t("pendingMerchantApprovalUnavailable") : t("pendingAccountControlUnavailable")}</span>;
     if (!canAct) return <span className="muted">{t("loading")}</span>;
     if (user.account_status === "active") return <div className="card__actions"><Button size="sm" variant="ghost" icon="block" onClick={() => props.onBeginStatus(createUserStatusIntent(user, "suspended"))}>{t("suspendAccount")}</Button><Button size="sm" variant="ghost" icon="block" onClick={() => props.onBeginStatus(createUserStatusIntent(user, "disabled"))}>{t("disableAccount")}</Button></div>;
@@ -198,6 +272,7 @@ export function UsersDirectoryView(props: UsersDirectoryViewProps) {
       {detail.role === "driver" && <>{detail.driver_verification?.status === "pending" && <AlertItem tone="info" title={t("pendingDriverApprovalUnavailable")} description={t("accountControlSeparateDescription")} />}<p><strong>{t("verificationStatus")}</strong> {detail.driver_verification ? t(`verificationStatus_${detail.driver_verification.status}` as any) : t("verificationStatus_no")}</p>{detail.driver_profile && <p><strong>{t("columnVerified")}</strong> {detail.driver_profile.verified ? t("yes") : t("no")} · {detail.driver_profile.vehicle_type}</p>}</>}
       {detail.role === "passenger" && <p><strong>{t("requestCount")}</strong> {number(detail.passenger_request_count)}</p>}{detail.role === "merchant" && <p><strong>{t("orderCount")}</strong> {number(detail.merchant_order_count)}</p>}
     </div></Card>}
+    {props.merchantDecisionCard}
     {pending && <Card span={6}><CardHeader title={pending.nextStatus === "active" ? t("reactivateAccount") : t(statusKey(pending.nextStatus))} /><AlertItem tone="info" title={t("accountControl")} description={t("accountControlSeparateDescription")} /><p>{t("accountStatusConfirm", { name: pending.user.name, status: t(statusKey(pending.nextStatus)) })}</p>{pending.nextStatus !== "active" && <label className="field">{t("statusReason")}<input value={reason} maxLength={500} onChange={(e) => props.onReasonChange(e.target.value)} /></label>}{error && <p role="alert" className="overview-resource-note overview-resource-note--error">{error}</p>}<div className="card__actions"><Button variant="primary" disabled={busy || (pending.nextStatus !== "active" && reason.trim().length < 3)} onClick={props.onSubmitStatus}>{busy ? t("saving") : t("confirm")}</Button><Button variant="ghost" disabled={busy} onClick={props.onCancelStatus}>{t("cancel")}</Button></div></Card>}
   </BentoGrid>;
 }

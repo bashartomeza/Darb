@@ -18,6 +18,7 @@ import { RouteDirectory, type RouteDirectoryFilters } from "./RouteDirectory";
 import { RouteOverview } from "./RouteOverview";
 import { RouteStops, type StopDialogMode } from "./RouteStops";
 import { RouteVersions } from "./RouteVersions";
+import { RouteFares } from "./RouteFares";
 import { RouteWorkspace } from "./RouteWorkspace";
 import {
   initialRouteUiState,
@@ -1089,6 +1090,7 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
         }
         versions={versionsPanel}
         stops={stopsPanel}
+        fares={<RouteFares api={api} token={token} locale={locale} routeId={selectedRoute.id} />}
       />
     </section>
   );

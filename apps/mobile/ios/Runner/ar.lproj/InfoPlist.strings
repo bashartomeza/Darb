@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "مساري";
+"NSCameraUsageDescription" = "يستخدم تطبيق مساري الكاميرا لتصوير مستندات السائق من أجل التحقق منها.";
+"NSLocationWhenInUseUsageDescription" = "يستخدم تطبيق مساري موقعك لعرض الخطوط القريبة وموقعك على الخريطة.";
+"NSPhotoLibraryUsageDescription" = "يحتاج تطبيق مساري إلى الوصول إلى صورك لتتمكن من اختيار مستند السائق ورفعه.";

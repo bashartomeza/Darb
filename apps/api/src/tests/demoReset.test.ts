@@ -211,6 +211,7 @@ describe("demo reset", () => {
         deleteMany: vi.fn(),
         create: vi.fn().mockResolvedValue({ id: "route_version_1" })
       },
+      routeFare: { deleteMany: vi.fn() },
       routeVersionStop: { deleteMany: vi.fn(), createMany: vi.fn() },
       stop: {
         deleteMany: vi.fn(),
@@ -237,6 +238,10 @@ describe("demo reset", () => {
     expect(tx.authSession.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
       tx.user.deleteMany.mock.invocationCallOrder[0]
     );
+    // Route fares restrict their route and the admin who set them: they must be cleared first.
+    expect(tx.routeFare.deleteMany).toHaveBeenCalledOnce();
+    expect(tx.routeFare.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(tx.serviceRoute.deleteMany.mock.invocationCallOrder[0]);
+    expect(tx.routeFare.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(tx.user.deleteMany.mock.invocationCallOrder[0]);
     expect(userCreate).toHaveBeenCalledTimes(5);
     expect(tx.driverVerification.createMany).toHaveBeenCalledWith({
       data: expect.arrayContaining([

@@ -34,11 +34,15 @@ class OnboardingConfig {
     required this.maximumPasswordUtf8Bytes,
     required this.otpDigits,
     required this.resendCooldownSeconds,
+    this.openRegistrationRoles = const [],
     this.requestId,
   });
 
   final bool enabled;
   final List<OnboardingRole> registrationRoles;
+
+  /// Roles that may register without an invitation code (the server switch is on).
+  final List<OnboardingRole> openRegistrationRoles;
   final List<String> supportedLocales;
   final int minimumPasswordCharacters;
   final int maximumPasswordCharacters;
@@ -94,9 +98,24 @@ class OnboardingConfig {
         cooldown < 1) {
       throw const FormatException('Invalid onboarding policy');
     }
+    final rawOpen = json['open_registration_roles'];
+    final openRoles = rawOpen is List
+        ? rawOpen
+              .whereType<String>()
+              .map(_roleFromApi)
+              .whereType<OnboardingRole>()
+              .where(
+                (role) =>
+                    role == OnboardingRole.driver ||
+                    role == OnboardingRole.merchant,
+              )
+              .toSet()
+              .toList(growable: false)
+        : const <OnboardingRole>[];
     return OnboardingConfig(
       enabled: true,
       registrationRoles: roles.cast<OnboardingRole>(),
+      openRegistrationRoles: openRoles,
       supportedLocales: rawLocales,
       minimumPasswordCharacters: minimum,
       maximumPasswordCharacters: maximum,
@@ -280,19 +299,106 @@ class CompleteRegistrationResult {
   }
 }
 
+const driverDocumentKinds = <String>[
+  'driver_licence',
+  'vehicle_registration',
+  'national_id',
+  'insurance',
+  'other',
+];
+
+const merchantDocumentKinds = <String>[
+  'commercial_register',
+  'national_id',
+  'shop_photo',
+  'other',
+];
+
+class DriverDocument {
+  const DriverDocument({
+    required this.id,
+    required this.kind,
+    required this.sizeBytes,
+  });
+
+  final String id;
+  final String kind;
+  final int sizeBytes;
+
+  factory DriverDocument.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final kind = json['kind'];
+    final size = json['size_bytes'];
+    if (id is! String || kind is! String || size is! int) {
+      throw const FormatException('Invalid document');
+    }
+    return DriverDocument(id: id, kind: kind, sizeBytes: size);
+  }
+}
+
+class DriverDocumentList {
+  const DriverDocumentList({
+    required this.documents,
+    required this.maxDocuments,
+    required this.maxBytes,
+  });
+
+  final List<DriverDocument> documents;
+  final int maxDocuments;
+  final int maxBytes;
+
+  factory DriverDocumentList.fromJson(Map<String, dynamic> json) {
+    final documents = json['documents'];
+    final limits = json['limits'];
+    if (documents is! List || limits is! Map<String, dynamic>) {
+      throw const FormatException('Invalid document list');
+    }
+    final maxDocuments = limits['max_documents'];
+    final maxBytes = limits['max_bytes'];
+    if (maxDocuments is! int || maxBytes is! int) {
+      throw const FormatException('Invalid document limits');
+    }
+    return DriverDocumentList(
+      documents: documents
+          .whereType<Map<String, dynamic>>()
+          .map(DriverDocument.fromJson)
+          .toList(growable: false),
+      maxDocuments: maxDocuments,
+      maxBytes: maxBytes,
+    );
+  }
+}
+
+/// Documents an applicant must upload before the application can be sent for review.
+const driverRequiredDocumentKinds = <String>[
+  'driver_licence',
+  'vehicle_registration',
+  'national_id',
+];
+
+const merchantRequiredDocumentKinds = <String>[
+  'commercial_register',
+  'national_id',
+  'shop_photo',
+];
+
 class PendingStatusResult {
   const PendingStatusResult({
     required this.role,
     required this.status,
     required this.nextAction,
+    this.missingDocuments = const [],
     this.pendingStatusToken,
     this.pendingStatusExpiresAt,
     this.requestId,
   });
 
   final OnboardingRole? role;
+
+  /// `pending_review`, `documents_required` (not yet submitted) or `approved_sign_in`.
   final String status;
   final String nextAction;
+  final List<String> missingDocuments;
   final String? pendingStatusToken;
   final DateTime? pendingStatusExpiresAt;
   final String? requestId;
@@ -307,6 +413,11 @@ class PendingStatusResult {
       role: role,
       status: _requiredString(json, 'onboarding_status'),
       nextAction: _requiredString(json, 'next_action'),
+      missingDocuments: json['missing_documents'] is List
+          ? (json['missing_documents'] as List).whereType<String>().toList(
+              growable: false,
+            )
+          : const [],
       pendingStatusToken: json['onboarding_status_token'] is String
           ? json['onboarding_status_token'] as String
           : null,

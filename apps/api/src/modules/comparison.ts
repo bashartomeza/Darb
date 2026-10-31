@@ -6,12 +6,18 @@ import { lockedCorridorDistanceKm, round } from "../lib/geo.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
+import { runComparisonSimulation } from "../services/matchingComparison.js";
 
 const compareRunSchema = z.object({
   scenarioKey: z.string().default("masari_batch_wins"),
   passengerRequestId: z.string().optional(),
   merchantOrderId: z.string().optional()
 });
+
+const simulationQuerySchema = z.object({
+  seed: z.coerce.number().int().min(0).max(4294967295).optional(),
+  manual_response_delay_min: z.coerce.number().min(0.5).max(30).optional()
+}).strict();
 
 export const comparisonRouter = Router();
 
@@ -91,6 +97,22 @@ comparisonRouter.get("/compare/runs/:id", requireAuth, requireRole("admin"), asy
     const run = await prisma.comparisonRun.findUnique({ where: { id: routeParam(req.params.id) } });
     if (!run) throw new HttpError(404, "comparison_run_not_found");
     res.json({ comparison: run });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Simulated comparison of manual dispatch, nearest-driver and Masari matching.
+// Pure computation: no database reads or writes, nothing is created.
+comparisonRouter.get("/compare/simulation", requireAuth, requireRole("admin"), (req, res, next) => {
+  try {
+    const query = simulationQuerySchema.parse(req.query);
+    res.json({
+      simulation: runComparisonSimulation({
+        ...(query.seed !== undefined ? { seed: query.seed } : {}),
+        ...(query.manual_response_delay_min !== undefined ? { manualResponseDelayMin: query.manual_response_delay_min } : {})
+      })
+    });
   } catch (error) {
     next(error);
   }

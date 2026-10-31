@@ -380,6 +380,7 @@ class _FakeOnboardingRepository extends OnboardingRepository {
     required String invitationCode,
     required OnboardingRole role,
     required String phone,
+    String email = '',
     required String locale,
     required String idempotencyKey,
   }) async {

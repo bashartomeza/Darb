@@ -1,3 +1,4 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,68 +23,73 @@ class MerchantMatchInboxScreen extends ConsumerWidget {
 
     void refresh() => ref.read(merchantMatchInboxProvider.notifier).refresh();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          l10n.merchantMatchInbox,
-          key: const ValueKey('merchantMatchInboxTitle'),
+    return ForegroundRefresh(
+      refresh: () async {
+        await ref.read(merchantMatchInboxProvider.notifier).refresh();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            l10n.merchantMatchInbox,
+            key: const ValueKey('merchantMatchInboxTitle'),
+          ),
+          actions: const [
+            LanguageSwitch(),
+            SizedBox(width: AppTokens.spaceSmall),
+          ],
         ),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () =>
-              ref.read(merchantMatchInboxProvider.notifier).refresh(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppTokens.marginMobile,
-              AppTokens.spaceMedium,
-              AppTokens.marginMobile,
-              AppTokens.spaceExtraLarge,
-            ),
-            children: [
-              // Merchants cannot act on a match, so the constraint is stated
-              // once at the top instead of repeated on every card.
-              ExplanationNote(
-                message: l10n.waitingReadOnly,
-                icon: Icons.visibility_outlined,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: () =>
+                ref.read(merchantMatchInboxProvider.notifier).refresh(),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.marginMobile,
+                AppTokens.spaceMedium,
+                AppTokens.marginMobile,
+                AppTokens.spaceExtraLarge,
               ),
-              const SizedBox(height: AppTokens.spaceLarge),
-              matches.when(
-                loading: () => const Column(
-                  children: [
-                    LoadingSkeleton.card(),
-                    SizedBox(height: AppTokens.spaceMedium),
-                    LoadingSkeleton.card(),
-                  ],
+              children: [
+                // Merchants cannot act on a match, so the constraint is stated
+                // once at the top instead of repeated on every card.
+                ExplanationNote(
+                  message: l10n.waitingReadOnly,
+                  icon: Icons.visibility_outlined,
                 ),
-                error: (error, _) => ErrorStateView(
-                  title: merchantErrorLabel(l10n, error),
-                  retryLabel: l10n.retry,
-                  onRetry: refresh,
-                ),
-                data: (items) => items.isEmpty
-                    ? EmptyState(
-                        title: l10n.noAvailableMatches,
-                        icon: Icons.inbox_outlined,
-                        actionLabel: l10n.refresh,
-                        onAction: refresh,
-                      )
-                    : Column(
-                        children: [
-                          for (final match in items) ...[
-                            _MerchantMatchCard(match: match),
-                            const SizedBox(height: AppTokens.spaceMedium),
+                const SizedBox(height: AppTokens.spaceLarge),
+                matches.when(
+                  loading: () => const Column(
+                    children: [
+                      LoadingSkeleton.card(),
+                      SizedBox(height: AppTokens.spaceMedium),
+                      LoadingSkeleton.card(),
+                    ],
+                  ),
+                  error: (error, _) => ErrorStateView(
+                    title: merchantErrorLabel(l10n, error),
+                    retryLabel: l10n.retry,
+                    onRetry: refresh,
+                  ),
+                  data: (items) => items.isEmpty
+                      ? EmptyState(
+                          title: l10n.noAvailableMatches,
+                          icon: Icons.inbox_outlined,
+                          actionLabel: l10n.refresh,
+                          onAction: refresh,
+                        )
+                      : Column(
+                          children: [
+                            for (final match in items) ...[
+                              _MerchantMatchCard(match: match),
+                              const SizedBox(height: AppTokens.spaceMedium),
+                            ],
                           ],
-                        ],
-                      ),
-              ),
-            ],
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

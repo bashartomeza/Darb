@@ -1,3 +1,4 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,34 +32,41 @@ class _DriverMatchDetailScreenState
     final l10n = AppLocalizations.of(context);
     final detail = ref.watch(driverMatchDetailProvider(widget.matchId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.matchResult),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ErrorStateView(
-            title: driverErrorLabel(l10n, error),
-            retryLabel: l10n.retry,
-            onRetry: () => ref
-                .read(driverMatchDetailProvider(widget.matchId).notifier)
-                .refresh(),
-          ),
-          data: (match) => _content(l10n, match),
+    return ForegroundRefresh(
+      refresh: () async {
+        await ref
+            .read(driverMatchDetailProvider(widget.matchId).notifier)
+            .refresh();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.matchResult),
+          actions: const [
+            LanguageSwitch(),
+            SizedBox(width: AppTokens.spaceSmall),
+          ],
         ),
-      ),
-      // The decision is the point of this screen, so its actions are pinned
-      // to the bottom rather than buried under the scoring detail.
-      bottomNavigationBar: detail.maybeWhen(
-        data: (match) => match.canRespond ? _decisionBar(l10n) : null,
-        orElse: () => null,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: detail.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => ErrorStateView(
+              title: driverErrorLabel(l10n, error),
+              retryLabel: l10n.retry,
+              onRetry: () => ref
+                  .read(driverMatchDetailProvider(widget.matchId).notifier)
+                  .refresh(),
+            ),
+            data: (match) => _content(l10n, match),
+          ),
+        ),
+        // The decision is the point of this screen, so its actions are pinned
+        // to the bottom rather than buried under the scoring detail.
+        bottomNavigationBar: detail.maybeWhen(
+          data: (match) => match.canRespond ? _decisionBar(l10n) : null,
+          orElse: () => null,
+        ),
       ),
     );
   }
@@ -94,7 +102,8 @@ class _DriverMatchDetailScreenState
               if (match.merchantOrder != null)
                 DetailRow(
                   label: l10n.parcelCount,
-                  value: '${match.merchantOrder!.parcelCount}',
+                  value:
+                      '${match.parcelBatch?.parcelCount ?? match.merchantOrder!.parcelCount}',
                   icon: Icons.widgets_outlined,
                 ),
               if (match.parcelBatch != null)

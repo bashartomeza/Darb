@@ -237,12 +237,12 @@ export function OverviewDashboard({
   return (
     <>
       <section className="kpi-row" aria-label={t("overviewMetrics")}>
-        <MetricCard metric="active-drivers" icon="directions_car" tone="info" label={t("activeDrivers")} emptyLabel="noActiveDrivers" unavailable unavailableLabel="activeDriversNotConnected" />
+        <MetricCard metric="active-drivers" icon="directions_car" tone="info" label={t("activeDrivers")} value={data.dashboard?.counts.active_drivers} emptyLabel="noActiveDrivers" state={data.resources.dashboard} />
         <MetricCard metric="active-trips" icon="route" tone="neutral" label={t("activeTrips")} value={activeTrips.length} emptyLabel="noActiveTrips" state={data.resources.trips} />
-        <MetricCard metric="pending-approvals" icon="verified" tone="warning" label={t("pendingApprovals")} emptyLabel="noPendingApprovals" unavailable unavailableLabel="pendingApprovalsNotConnected" />
+        <MetricCard metric="pending-approvals" icon="verified" tone="warning" label={t("pendingApprovals")} value={data.dashboard?.counts.pending_driver_approvals} emptyLabel="noPendingApprovals" state={data.resources.dashboard} />
         <MetricCard metric="orders" icon="inventory_2" tone="success" label={t("ordersMetric")} value={data.dashboard?.counts.merchant_orders} emptyLabel="noOrders" state={data.resources.dashboard} />
         <MetricCard metric="requests" icon="person_pin_circle" tone="info" label={t("requestsMetric")} value={data.dashboard?.counts.passenger_requests} emptyLabel="noRequests" state={data.resources.dashboard} />
-        <MetricCard metric="incidents" icon="report" tone="danger" label={t("incidentsMetric")} emptyLabel="incidentsNotConnected" unavailable />
+        <MetricCard metric="incidents" icon="report" tone="danger" label={t("incidentsMetric")} value={data.dashboard?.counts.open_incidents} emptyLabel="noOpenIncidents" state={data.resources.dashboard} />
       </section>
 
       <BentoGrid>

@@ -203,6 +203,8 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
     await tx.driverRoute.deleteMany();
     await tx.driverProfile.deleteMany();
     await tx.demoScenario.deleteMany();
+    // Tariff history restricts both its route and its admin author, so it goes first.
+    await tx.routeFare.deleteMany();
     await tx.serviceRoute.updateMany({ data: { current_version_id: null } });
     await tx.routeVersionStop.deleteMany();
     await tx.serviceRouteVersion.deleteMany();

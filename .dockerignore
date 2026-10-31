@@ -1,5 +1,10 @@
 .git
 .github
+.staging-data
+.superpowers
+**/Masari_AweenRayeh_173_Directory_Import.json
+apps/api/data/*
+!apps/api/data/checkpoint-directory.v1.manifest.json
 .env
 **/.env
 **/.env.local

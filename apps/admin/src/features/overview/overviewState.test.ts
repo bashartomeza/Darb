@@ -10,7 +10,7 @@ import {
 
 function loaders(overrides: Partial<OverviewLoaders> = {}): OverviewLoaders {
   return {
-    dashboard: async () => ({ counts: { users: 0, drivers: 0, routes: 0, passenger_requests: 0, merchant_orders: 0, parcels: 0 } }),
+    dashboard: async () => ({ counts: { users: 0, drivers: 0, routes: 0, passenger_requests: 0, merchant_orders: 0, parcels: 0, active_drivers: 0, pending_driver_approvals: 0, open_incidents: 0 } }),
     drivers: async () => ({ drivers: [] }),
     routes: async () => ({ routes: [] }),
     requests: async () => ({ requests: [] }),

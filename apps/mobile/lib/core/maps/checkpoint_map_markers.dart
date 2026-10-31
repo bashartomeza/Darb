@@ -1,114 +1,75 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
 
+import '../../features/canonical_routes/domain/canonical_route_models.dart';
 import '../../features/checkpoints/domain/checkpoint_models.dart';
+import '../widgets/masari_map.dart';
 
-/// Builds a map marker representing the traffic state of a checkpoint.
-///
-/// The checkpoint itself contains two independent traffic states:
-/// - entering
-/// - leaving
-///
-/// The marker color represents the most severe current state so the
-/// checkpoint is immediately visible on the map.
-///
-/// Tapping the marker shows both directions in the map callout.
+/// Builds a visually distinct marker for a checkpoint and includes both
+/// direction statuses in the information card shown when the marker is tapped.
 MasariMapMarker checkpointTrafficMarker(Checkpoint checkpoint) {
-  final status = _worstStatus(
-    checkpoint.enteringStatus,
-    checkpoint.leavingStatus,
-  );
+  final entering = _normaliseStatus(checkpoint.enteringStatus);
+  final leaving = _normaliseStatus(checkpoint.leavingStatus);
+
+  // Use the most severe of the two directions to colour the marker.
+  final status = checkpointStatusLabel(checkpoint.status);
 
   return MasariMapMarker(
-    position: checkpoint.position,
+    position: GeoPoint(
+      checkpoint.position.latitude,
+      checkpoint.position.longitude,
+    ),
     icon: _statusIcon(status),
     color: _statusColor(status),
     foreground: Colors.white,
-    size: 38,
+    size: 40,
     type: MasariMapMarkerType.checkpoint,
-    label: _buildLabel(checkpoint),
+    label: _buildLabel(checkpoint, entering: entering, leaving: leaving),
   );
 }
 
-/// Returns the most severe status available.
-///
-/// Priority:
-/// 1. أزمة
-/// 2. أزمة متوسطة
-/// 3. سالك
-/// 4. Unknown
-String? _worstStatus(String? entering, String? leaving) {
-  final statuses = <String>[
-    if (entering != null && entering.trim().isNotEmpty) entering.trim(),
-    if (leaving != null && leaving.trim().isNotEmpty) leaving.trim(),
-  ];
-
-  if (statuses.isEmpty) {
-    return null;
-  }
-
-  if (statuses.contains('أزمة')) {
-    return 'أزمة';
-  }
-
-  if (statuses.contains('أزمة متوسطة')) {
-    return 'أزمة متوسطة';
-  }
-
-  if (statuses.contains('سالك')) {
-    return 'سالك';
-  }
-
-  return statuses.first;
+String _buildLabel(
+  Checkpoint checkpoint, {
+  required String entering,
+  required String leaving,
+}) {
+  final name = checkpoint.displayName;
+  final city = checkpoint.city.trim();
+  return [
+    name,
+    if (city.isNotEmpty) city,
+    checkpointStatusLabel(checkpoint.status),
+    'دخول: $entering',
+    'خروج: $leaving',
+  ].join('\n');
 }
 
-Color _statusColor(String? status) {
+String _normaliseStatus(String? status) {
+  final value = status?.trim();
+  return value == null || value.isEmpty ? 'غير معروف' : value;
+}
+
+IconData _statusIcon(String status) {
+  switch (status) {
+    case 'سالك':
+      return Icons.directions_car_rounded;
+    case 'أزمة متوسطة':
+      return Icons.traffic_rounded;
+    case 'مغلق':
+      return Icons.car_crash_rounded;
+    default:
+      return Icons.signpost_rounded;
+  }
+}
+
+Color _statusColor(String status) {
   switch (status) {
     case 'سالك':
       return const Color(0xFF16A34A);
-
     case 'أزمة متوسطة':
       return const Color(0xFFF59E0B);
-
-    case 'أزمة':
+    case 'مغلق':
       return const Color(0xFFDC2626);
-
     default:
       return const Color(0xFF64748B);
   }
-}
-
-IconData _statusIcon(String? status) {
-  switch (status) {
-    case 'سالك':
-      return Icons.check_circle_rounded;
-
-    case 'أزمة متوسطة':
-      return Icons.traffic_rounded;
-
-    case 'أزمة':
-      return Icons.warning_rounded;
-
-    default:
-      return Icons.help_outline_rounded;
-  }
-}
-
-String _buildLabel(Checkpoint checkpoint) {
-  final entering = checkpoint.enteringStatus?.trim().isNotEmpty == true
-      ? checkpoint.enteringStatus!.trim()
-      : 'الحالة غير متوفرة';
-
-  final leaving = checkpoint.leavingStatus?.trim().isNotEmpty == true
-      ? checkpoint.leavingStatus!.trim()
-      : 'الحالة غير متوفرة';
-
-  final parts = <String>[
-    if (checkpoint.nameAr.trim().isNotEmpty) checkpoint.nameAr.trim(),
-    if (checkpoint.city.trim().isNotEmpty) checkpoint.city.trim(),
-    'دخول: $entering',
-    'خروج: $leaving',
-  ];
-
-  return parts.join(' • ');
 }

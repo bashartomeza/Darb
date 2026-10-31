@@ -1,3 +1,4 @@
+import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
 import '../../trips/data/trip_models.dart';
 
@@ -141,6 +142,7 @@ class MerchantOrder {
     required this.createdAt,
     required this.parcels,
     required this.batches,
+    this.handover,
   });
 
   final String id;
@@ -149,6 +151,9 @@ class MerchantOrder {
   final DateTime createdAt;
   final List<MerchantParcel> parcels;
   final List<MerchantBatch> batches;
+
+  /// Receiver hand-over state; its `code` is set only on the creating response.
+  final HandoverStatus? handover;
 
   bool get canBatch => status == 'submitted' && batches.isEmpty;
   bool get canCancel =>
@@ -175,6 +180,9 @@ class MerchantOrder {
                 .map(MerchantBatch.fromJson)
                 .toList()
           : const [],
+      handover: json['handover'] is Map<String, dynamic>
+          ? HandoverStatus.fromJson(json['handover'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

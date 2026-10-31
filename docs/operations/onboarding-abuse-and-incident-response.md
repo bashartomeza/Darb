@@ -2,7 +2,7 @@
 
 ## Operating boundary
 
-Keep `PUBLIC_ONBOARDING_ENABLED=false`. In staging/production use `OTP_PROVIDER=disabled` until a reviewed real provider exists. Store all six onboarding peppers separately, rotate by introducing a new positive version while retaining old keys only for the approved record lifetime, and never place values in tickets or logs.
+Keep `PUBLIC_ONBOARDING_ENABLED=false`. In staging/production use `OTP_PROVIDER=disabled` until the owner opens registration, then `OTP_PROVIDER=email` (codes are emailed over SMTP; there is no SMS). The per-day send cap (`OTP_MAX_SENDS_PER_PHONE_DAY`) applies to the phone and, separately, to the receiving email address. Store all six onboarding peppers separately, rotate by introducing a new positive version while retaining old keys only for the approved record lifetime, and never place values in tickets or logs.
 
 Default policy: invitation seven days; OTP five minutes; resend cooldown 60 seconds; five verification attempts; three resends; five sends per phone/day. Durable counters support phone/day, IP/hour, invitation, verification, completion, and admin-generation buckets. A limit event logs only record ID, bucket type, safe status, and request ID.
 

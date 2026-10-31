@@ -733,8 +733,8 @@ export function createCanonicalMatchingService(db: PrismaClient = prisma, appCon
         },
         include: {
           driver_route: { select: { departure_at: true, route_version_id: true } },
-          passenger_request: { select: { passenger_count: true, pickup_stop_id: true, dropoff_stop_id: true, requested_departure_from: true, requested_departure_until: true } },
-          merchant_order: { select: { pickup_stop_id: true, requested_departure_from: true, requested_departure_until: true, parcels: { select: { destination_stop_id: true } }, _count: { select: { parcels: true } } } },
+          passenger_request: { select: { passenger_count: true, pickup_stop_id: true, dropoff_stop_id: true, requested_departure_from: true, requested_departure_until: true, fare_unit_minor: true, fare_total_minor: true, fare_currency: true } },
+          merchant_order: { select: { pickup_stop_id: true, requested_departure_from: true, requested_departure_until: true, parcels: { select: { destination_stop_id: true, size: true, fare_minor: true, fare_currency: true } }, _count: { select: { parcels: true } } } },
           route_version: {
             select: {
               id: true,
@@ -785,8 +785,8 @@ export function createCanonicalMatchingService(db: PrismaClient = prisma, appCon
         },
         include: {
           driver_route: { select: { departure_at: true, route_version_id: true } },
-          passenger_request: { select: { passenger_count: true, pickup_stop_id: true, dropoff_stop_id: true, requested_departure_from: true, requested_departure_until: true } },
-          merchant_order: { select: { pickup_stop_id: true, requested_departure_from: true, requested_departure_until: true, parcels: { select: { destination_stop_id: true } } } },
+          passenger_request: { select: { passenger_count: true, pickup_stop_id: true, dropoff_stop_id: true, requested_departure_from: true, requested_departure_until: true, fare_unit_minor: true, fare_total_minor: true, fare_currency: true } },
+          merchant_order: { select: { pickup_stop_id: true, requested_departure_from: true, requested_departure_until: true, parcels: { select: { destination_stop_id: true, size: true, fare_minor: true, fare_currency: true } } } },
           route_version: {
             select: {
               id: true,
@@ -1309,7 +1309,7 @@ export function createCanonicalMatchingService(db: PrismaClient = prisma, appCon
       return db.merchantOrder.findMany({
         where: { merchant_id: ownerId, operational_mode: CANONICAL_MODE, ...(id ? { id } : {}) },
         include: {
-          parcels: { select: { id: true, status: true, destination_stop_id: true } },
+          parcels: { select: { id: true, status: true, destination_stop_id: true, size: true, fare_minor: true, fare_currency: true } },
           route_version: {
             select: {
               id: true,

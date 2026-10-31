@@ -203,6 +203,19 @@ describe("Admin Trips Management", () => {
     expect(sharedMarkup).toContain("QA Shared Merchant");
   });
 
+  it("shows how a delivery was confirmed and flags fallbacks with their reason", () => {
+    const confirmation = { required: true, total_orders: 1, confirmed_orders: 1, methods: ["receiver_unavailable" as const], flagged: true, reasons: ["Nobody home"] };
+    const flagged = { ...detail, delivery_confirmation: confirmation };
+    const en = render("en", <TripsManagementView {...props({ detail: flagged, data: { trips: [flagged], page: 1, limit: 25, total: 1 } })} />);
+    expect(en).toContain("Delivery confirmation");
+    expect(en).toContain("Receiver unavailable");
+    expect(en).toContain("Nobody home");
+    const ok = { ...detail, delivery_confirmation: { ...confirmation, methods: ["receiver_code" as const], flagged: false, reasons: [] } };
+    expect(render("en", <TripsManagementView {...props({ detail: ok, data: { trips: [ok], page: 1, limit: 25, total: 1 } })} />)).toContain("Receiver code");
+    const ar = render("ar", <TripsManagementView {...props({ detail: flagged })} />);
+    expect(ar).toContain("المستلم غير متوفر");
+  });
+
   it("renders a keyboard-semantic confirmation and bilingual RTL/LTR layout", () => {
     const pending = createTripStatusIntent(legacy)!;
     const en = render("en", <TripsManagementView {...props({ pending })} />);

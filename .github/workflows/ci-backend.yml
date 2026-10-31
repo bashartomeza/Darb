@@ -74,7 +74,7 @@ jobs:
           MYSQL_PWD: ci-only-root-password
         run: |
           mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root \
-            --execute="SET GLOBAL log_bin_trust_function_creators = 1;"
+            --execute="SET GLOBAL log_bin_trust_function_creators = 1; GRANT SELECT ON performance_schema.data_lock_waits TO 'masari_ci'@'%';"
       - name: Deploy migrations from empty database
         run: npm run db:migrate
       - name: Confirm migration deploy is idempotent
@@ -105,6 +105,34 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
+      - name: Real MySQL limited provider directory and shared budget (synthetic transport only)
+        run: node apps/api/dist/scripts/limitedCheckpointDirectoryIntegration.js
+      - name: Real MySQL synthetic checkpoint directory authorization
+        run: node apps/api/dist/scripts/checkpointDirectoryIntegration.js
+      - name: Real MySQL merchant order atomicity and recovery
+        env:
+          MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
+        run: npm run test:integration:merchant-orders
+      - name: Real MySQL merchant manual matching and synchronization contracts
+        env:
+          MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
+        run: npm run test:integration:merchant-matching
+      - name: Real MySQL legacy cargo batching integrity and recovery
+        env:
+          MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
+          MULTI_ROUTE_ENTRY_ENABLED: "false"
+          MULTI_ROUTE_MATCHING_ENABLED: "false"
+          CANONICAL_TRIP_CREATION_ENABLED: "false"
+          CANONICAL_SHARED_TRIPS_ENABLED: "false"
+        run: npm run test:integration:cargo
+      - name: Real MySQL passenger driver lifecycle synchronization and concurrency
+        env:
+          MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
+        run: npm run test:integration:passenger-trip-sync
+      - name: Real MySQL capacity contention, cancellation and response loss
+        env:
+          MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
+        run: npm run test:integration:capacity
       - name: Real MySQL deterministic and trusted-session integration smoke
         run: npm run test:integration:mysql
       - name: Real MySQL persistent demo-reset gate matrix
@@ -141,3 +169,14 @@ jobs:
             --execute="CREATE DATABASE masari_canonical_shared_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON masari_canonical_shared_ci.* TO 'masari_ci'@'%';"
           npm run db:migrate
           npm run test:integration:canonical-shared
+      - name: Real MySQL canonical capacity expiry and exact replay
+        env:
+          DATABASE_URL: mysql://masari_ci:ci-only-password@127.0.0.1:3306/masari_canonical_shared_ci
+          APP_ENV: demo
+          ENABLE_DEMO_FEATURES: "true"
+          MULTI_ROUTE_ENTRY_ENABLED: "true"
+          MULTI_ROUTE_MATCHING_ENABLED: "true"
+          CANONICAL_TRIP_CREATION_ENABLED: "true"
+          CANONICAL_SHARED_TRIPS_ENABLED: "true"
+          MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
+        run: npm run test:integration:canonical-capacity

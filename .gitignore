@@ -14,8 +14,24 @@ backups/
 *.sha256
 apps/mobile/build/
 apps/mobile/android/build/
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+apps/mobile/ios/.symlinks/
+apps/mobile/ios/**/xcuserdata/
+apps/mobile/ios/**/*.xcuserstate
+apps/mobile/ios/Flutter/ephemeral/
+apps/mobile/ios/Flutter/Generated.xcconfig
+apps/mobile/ios/Flutter/flutter_export_environment.sh
+apps/mobile/ios/Runner/GeneratedPluginRegistrant.*
+# Apple signing material and Google client plists must never be committed
+*.p12
+*.mobileprovision
+*.cer
+apps/mobile/ios/Runner/GoogleService-Info.plist
 apps/admin/dist/
 .staging-data/
+# Provider redistribution permission is pending; research data stays local.
+**/Masari_AweenRayeh_173_Directory_Import.json
 
 # Flutter/Dart generated state
 **/.dart_tool/

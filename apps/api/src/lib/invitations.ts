@@ -32,6 +32,7 @@ export async function createInvitation(
     createdById: string;
     intendedRole: OnboardingRole;
     intendedPhone?: string;
+    contactEmail?: string;
     phoneRegion?: string;
     campaign?: string;
     source?: string;
@@ -53,6 +54,7 @@ export async function createInvitation(
           intended_phone_digest: phoneDigest(canonicalPhone, input.keys.phone),
           phone_digest_version: input.keys.phone.version,
           phone_last4: phoneLast4(canonicalPhone),
+          contact_email: input.contactEmail ?? null,
           campaign: input.campaign,
           source: input.source,
           expires_at: input.expiresAt,

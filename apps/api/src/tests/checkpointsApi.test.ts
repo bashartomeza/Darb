@@ -46,11 +46,7 @@ function serviceConfig() {
 }
 
 function upstream(status: number, body: unknown) {
-  return vi.fn().mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body
-  } as unknown as Response);
+  return vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status }));
 }
 
 describe("checkpoint catalog", () => {
@@ -115,6 +111,23 @@ describe("checkpoint catalog", () => {
     expect(JSON.stringify(response.body)).not.toContain("permission denied");
   });
 
+  it("does not coerce booleans arrays or whitespace into geographic positions", async () => {
+    vi.stubGlobal("fetch", upstream(200, [
+      { id: "valid", latitude: "31.7", longitude: "35.2", status: "أزمة" },
+      ...[true, false, [], [31], " "].map((latitude) => ({ id: "invalid", latitude, longitude: 35.2 }))
+    ]));
+    const result = await new CheckpointService(serviceConfig()).list();
+    expect(result.checkpoints).toHaveLength(1);
+    expect(result.checkpoints[0]).toEqual(expect.objectContaining({ id: "valid", status: "congested" }));
+  });
+
+  it("rejects an entirely unusable feed through the authenticated API without exposing upstream data", async () => {
+    vi.stubGlobal("fetch", upstream(200, [{ name_en: "synthetic-invalid-upstream-row", latitude: true, longitude: [] }]));
+    const server = createApp(enabledConfig, { checkpointService: new CheckpointService(serviceConfig()) });
+    const response = await request(server).get("/api/v1/checkpoints").set(auth()).expect(502);
+    expect(response.body).toEqual({ error: "checkpoints_upstream_invalid", request_id: expect.any(String) });
+  });
+
   it("serves the last good read as stale rather than a blank map", async () => {
     const service = new CheckpointService({ ...serviceConfig(), cacheTtlSeconds: 0 });
     const server = createApp(enabledConfig, { checkpointService: service });
@@ -126,5 +139,15 @@ describe("checkpoint catalog", () => {
     const response = await request(server).get("/api/v1/checkpoints").set(auth()).expect(200);
     expect(response.body.stale).toBe(true);
     expect(response.body.checkpoints[0].id).toBe("1");
+  });
+
+  it("keeps qualified closure statuses without treating negated open as safe", async () => {
+    vi.stubGlobal("fetch", upstream(200, [
+      { id: 1, lat: 31.7, lng: 35.2, status: "closed temporarily" },
+      { id: 2, lat: 31.7, lng: 35.2, status: "مغلق مؤقتا" },
+      { id: 3, lat: 31.7, lng: 35.2, status: "not open" }
+    ]));
+    const result = await new CheckpointService(serviceConfig()).list();
+    expect(result.checkpoints.map((row) => row.status)).toEqual(["closed", "closed", "unknown"]);
   });
 });

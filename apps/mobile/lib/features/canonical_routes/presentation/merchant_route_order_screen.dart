@@ -30,6 +30,7 @@ class _MerchantRouteOrderScreenState
   final List<_ParcelDraft> _parcels = [_ParcelDraft()];
   bool _busy = false;
   Object? _error;
+  CanonicalOperationBundle? _completedOperation;
   CanonicalMerchantOrder? _result;
 
   @override
@@ -51,15 +52,7 @@ class _MerchantRouteOrderScreenState
           bundle?.actorId != actorId) {
         return;
       }
-      if (bundle!.recoveryWindowExpired(DateTime.now())) {
-        setState(
-          () => _error = const CanonicalOperationBlocked(
-            'canonical_recovery_expired',
-          ),
-        );
-        return;
-      }
-      final payload = bundle.payload;
+      final payload = bundle!.payload;
       final parcels = payload['parcels'];
       if (parcels is! List) return;
       setState(() {
@@ -107,6 +100,7 @@ class _MerchantRouteOrderScreenState
                 title: l10n.orderRecorded,
                 body: l10n.batchingMatchingDisabledNotice,
               ),
+              fareSnapshotBox(context, _result!.fare),
               if (_error != null) Text(_merchantError(l10n, _error!)),
               FilledButton(
                 onPressed: _acknowledgeResult,
@@ -283,6 +277,9 @@ class _MerchantRouteOrderScreenState
                               ),
                             ),
                           ),
+                        parcelFareEstimate(context, route.fares, [
+                          for (final parcel in _parcels) parcel.size,
+                        ]),
                         OutlinedButton.icon(
                           key: const ValueKey('addCanonicalParcel'),
                           onPressed: !_busy && _parcels.length < 50
@@ -340,12 +337,7 @@ class _MerchantRouteOrderScreenState
   }
 
   Future<void> _submit() async {
-    if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
-      setState(
-        () => _error = AppLocalizations.of(context).invalidDepartureWindow,
-      );
-      return;
-    }
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -378,11 +370,22 @@ class _MerchantRouteOrderScreenState
           .run<CanonicalMerchantOrder>(
             operation: 'merchant_route_order_create',
             scope: 'merchant',
+            allowExpiredReplay: true,
+            onBundle: (bundle) => _completedOperation = bundle,
             actorId: actorId,
             payload: payload,
-            preflight: () => ref
-                .read(canonicalRouteRepositoryProvider)
-                .requireFreshRoute(_routeVersionId!),
+            preflight: () async {
+              if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
+                throw const ApiException(
+                  ApiErrorType.validation,
+                  'invalid_departure_window',
+                  statusCode: 400,
+                );
+              }
+              await ref
+                  .read(canonicalRouteRepositoryProvider)
+                  .requireFreshRoute(_routeVersionId!);
+            },
             send: (bundle) => ref
                 .read(canonicalRouteRepositoryProvider)
                 .createMerchantOrder(
@@ -405,12 +408,15 @@ class _MerchantRouteOrderScreenState
   Future<void> _acknowledgeResult() async {
     final actorId = ref.read(authControllerProvider).value?.user?.id;
     if (actorId == null) return;
+    final completed = _completedOperation;
+    if (completed == null || completed.actorId != actorId) return;
     try {
       await ref
           .read(canonicalMutationRunnerProvider)
           .acknowledge(
             actorId: actorId,
             operation: 'merchant_route_order_create',
+            idempotencyKey: completed.idempotencyKey,
           );
       if (mounted) context.go('/merchant');
     } catch (error) {
@@ -482,6 +488,9 @@ String _stopName(BuildContext context, CanonicalStop stop) =>
     : stop.nameEn;
 
 String _merchantError(AppLocalizations l10n, Object error) {
+  if (error is ApiException && error.message == 'invalid_departure_window') {
+    return l10n.invalidDepartureWindow;
+  }
   if (error is String) return error;
   if (error is CanonicalOperationBlocked ||
       error is CanonicalOperationStorageException) {

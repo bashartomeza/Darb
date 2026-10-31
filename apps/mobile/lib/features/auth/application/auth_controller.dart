@@ -87,6 +87,11 @@ class AuthController extends AsyncNotifier<AuthState> {
   Map<String, dynamic>? _registrationGrant;
   int _authAttempt = 0;
   bool _disposed = false;
+  Object? _loginFailure;
+  bool _displayLoginFailure = false;
+
+  /// The current login attempt's failure survives router page recreation.
+  Object? get loginFailure => _loginFailure;
   bool _isCurrent(int attempt) => !_disposed && attempt == _authAttempt;
 
   @override
@@ -115,6 +120,8 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 
   Future<void> login({required String email, required String password}) {
+    _loginFailure = null;
+    _displayLoginFailure = true;
     _registrationGrant = null;
     return _completeAuthentication(
       () => _repository.login(email: email, password: password),
@@ -127,6 +134,8 @@ class AuthController extends AsyncNotifier<AuthState> {
     required String password,
     String locale = 'ar',
   }) {
+    _loginFailure = null;
+    _displayLoginFailure = false;
     return _startRegistration(
       () => _repository.register(
         name: name,
@@ -138,6 +147,8 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 
   Future<void> loginWithGoogle({required String idToken}) {
+    _loginFailure = null;
+    _displayLoginFailure = true;
     return _startRegistration(
       () => _repository.loginWithGoogle(idToken: idToken),
     );
@@ -176,13 +187,12 @@ class AuthController extends AsyncNotifier<AuthState> {
       }
     } catch (error, stack) {
       if (!_isCurrent(attempt)) return;
+      final failure = error is ApiException
+          ? error
+          : const ApiException(ApiErrorType.validation, 'invalid_response');
+      if (_displayLoginFailure) _loginFailure = failure;
       state = const AsyncData(AuthState.unauthenticated());
-      state = AsyncError(
-        error is ApiException
-            ? error
-            : const ApiException(ApiErrorType.validation, 'invalid_response'),
-        stack,
-      );
+      state = AsyncError(failure, stack);
     }
   }
 
@@ -239,6 +249,7 @@ class AuthController extends AsyncNotifier<AuthState> {
       state = AsyncData(AuthState.authenticated(result.user));
     } on ApiException catch (error, stackTrace) {
       if (!_isCurrent(generation)) return;
+      if (_displayLoginFailure) _loginFailure = error;
       // Riverpod keeps the prior value alongside an error, so settle back to
       // unauthenticated first: leaving `authenticating` as the retained value
       // would strand every screen watching this provider on a spinner.
@@ -259,6 +270,8 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   /// Drops a failed attempt's error so it cannot surface on another screen.
   void clearError() {
+    _loginFailure = null;
+    _displayLoginFailure = false;
     if (state.hasError) state = const AsyncData(AuthState.unauthenticated());
   }
 

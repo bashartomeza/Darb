@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
+import '../../../core/fares/fare.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/fare_estimate.dart';
 import '../../../core/widgets/masari_card.dart';
 import '../application/canonical_route_controller.dart';
 import '../domain/canonical_route_models.dart';
@@ -174,6 +176,68 @@ class OrderedStopTimeline extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Estimated seat fare for the chosen route and party size, shown before the
+/// passenger submits. Falls back to an explicit note when no tariff exists.
+Widget passengerFareEstimate(
+  BuildContext context,
+  RouteFares? fares,
+  int passengers,
+) {
+  final lines = fares == null
+      ? const <FareLine>[]
+      : seatFareLines(AppLocalizations.of(context), fares, passengers);
+  if (fares == null || lines.isEmpty) return const FareNotSetNote();
+  return FareEstimateBox(currency: fares.currency, lines: lines);
+}
+
+/// Estimated parcel fares for the order being built; unpriced sizes are not
+/// invented, a note says so instead.
+Widget parcelFareEstimate(
+  BuildContext context,
+  RouteFares? fares,
+  List<String> sizes,
+) {
+  final lines = fares == null
+      ? const <FareLine>[]
+      : parcelFareLines(AppLocalizations.of(context), fares, sizes);
+  if (fares == null || lines.isEmpty) return const FareNotSetNote();
+  final allPriced = sizes.every((size) => fares.parcelFor(size) != null);
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      FareEstimateBox(currency: fares.currency, lines: lines),
+      if (!allPriced) const FareNotSetNote(),
+    ],
+  );
+}
+
+/// The fare frozen on a created request, shown on result and status screens.
+Widget fareSnapshotBox(
+  BuildContext context,
+  FareSnapshot? snapshot, {
+  int? passengers,
+}) {
+  if (snapshot == null) return const SizedBox.shrink();
+  final l10n = AppLocalizations.of(context);
+  final unit = snapshot.unitMinor;
+  final seats = passengers;
+  return FareEstimateBox(
+    booked: true,
+    currency: snapshot.currency,
+    lines: [
+      if (unit != null && seats != null && seats > 1)
+        FareLine(label: l10n.farePerSeat, minor: unit),
+      FareLine(
+        label: seats != null && seats > 1
+            ? l10n.fareSeatsLine(seats)
+            : l10n.fareTotal,
+        minor: snapshot.totalMinor,
+        emphasis: true,
+      ),
+    ],
+  );
 }
 
 class OperationStatusCard extends StatelessWidget {

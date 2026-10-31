@@ -9,6 +9,7 @@ import {
   canonicalMatchingService,
   type CanonicalMatchingService
 } from "../services/canonicalMatching.js";
+import { orderFareResponse, parcelFareResponse, passengerFareResponse } from "../services/routeFares.js";
 
 const id = z.string().min(1).max(191);
 const idempotencyKey = z.string().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/);
@@ -55,14 +56,22 @@ function offerResponse(offer: Record<string, any>) {
           pickup_stop_id: passenger.pickup_stop_id,
           dropoff_stop_id: passenger.dropoff_stop_id,
           requested_departure_from: passenger.requested_departure_from,
-          requested_departure_until: passenger.requested_departure_until
+          requested_departure_until: passenger.requested_departure_until,
+          // Frozen at request time; shown to the driver before accepting. Estimate only.
+          fare: passengerFareResponse(passenger)
         }
       : {
           parcel_count: merchant?._count?.parcels ?? merchant?.parcels?.length,
           pickup_stop_id: merchant?.pickup_stop_id,
           destination_stop_ids: merchant?.parcels?.map((parcel: Record<string, unknown>) => parcel.destination_stop_id),
           requested_departure_from: merchant?.requested_departure_from,
-          requested_departure_until: merchant?.requested_departure_until
+          requested_departure_until: merchant?.requested_departure_until,
+          parcels: (merchant?.parcels ?? []).map((parcel: Record<string, unknown>) => ({
+            destination_stop_id: parcel.destination_stop_id,
+            size: parcel.size,
+            fare: parcelFareResponse(parcel)
+          })),
+          fare: orderFareResponse(merchant?.parcels)
         },
     trip: tripResponse(offer.canonical_trip)
   };
@@ -132,6 +141,7 @@ function statusResponse(resource: Record<string, any>, sharedPresentationAvailab
         ? assignedTrip.canonical_trip_version
         : null,
     passenger_count: resource.passenger_count,
+    fare: resource.parcels ? orderFareResponse(resource.parcels) : passengerFareResponse(resource),
     trip: tripResponse(trip),
     created_at: resource.canonical_created_at ?? resource.created_at,
     updated_at: dispatch?.updated_at ?? resource.created_at,
@@ -140,7 +150,9 @@ function statusResponse(resource: Record<string, any>, sharedPresentationAvailab
           parcels: resource.parcels.map((parcel: Record<string, unknown>) => ({
             id: parcel.id,
             status: parcel.status,
-            destination_stop_id: parcel.destination_stop_id
+            destination_stop_id: parcel.destination_stop_id,
+            size: parcel.size,
+            fare: parcelFareResponse(parcel)
           }))
         }
       : {})

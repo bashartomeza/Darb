@@ -8,6 +8,10 @@ class PassengerAssistantTripDraft {
     required this.destinationLabel,
     required this.preferredTime,
     required this.passengerCount,
+    this.pickupLat,
+    this.pickupLng,
+    this.destinationLat,
+    this.destinationLng,
   });
 
   factory PassengerAssistantTripDraft.fromJson(Map<String, dynamic> json) {
@@ -23,6 +27,10 @@ class PassengerAssistantTripDraft {
       destinationLabel: _requiredString(json, 'destination_label'),
       preferredTime: DateTime.parse(preferredTime).toLocal(),
       passengerCount: passengerCount.toInt(),
+      pickupLat: _optionalDouble(json['pickup_lat']),
+      pickupLng: _optionalDouble(json['pickup_lng']),
+      destinationLat: _optionalDouble(json['destination_lat']),
+      destinationLng: _optionalDouble(json['destination_lng']),
     );
   }
 
@@ -33,6 +41,12 @@ class PassengerAssistantTripDraft {
   final DateTime preferredTime;
   final int passengerCount;
 
+  /// Coordinates of the matched stops. Absent for the legacy preset corridor.
+  final double? pickupLat;
+  final double? pickupLng;
+  final double? destinationLat;
+  final double? destinationLng;
+
   PassengerAssistantTripDraft copyWith({
     String? pickupKey,
     String? pickupLabel,
@@ -40,6 +54,10 @@ class PassengerAssistantTripDraft {
     String? destinationLabel,
     DateTime? preferredTime,
     int? passengerCount,
+    double? pickupLat,
+    double? pickupLng,
+    double? destinationLat,
+    double? destinationLng,
   }) => PassengerAssistantTripDraft(
     pickupKey: pickupKey ?? this.pickupKey,
     pickupLabel: pickupLabel ?? this.pickupLabel,
@@ -47,6 +65,10 @@ class PassengerAssistantTripDraft {
     destinationLabel: destinationLabel ?? this.destinationLabel,
     preferredTime: preferredTime ?? this.preferredTime,
     passengerCount: passengerCount ?? this.passengerCount,
+    pickupLat: pickupLat ?? this.pickupLat,
+    pickupLng: pickupLng ?? this.pickupLng,
+    destinationLat: destinationLat ?? this.destinationLat,
+    destinationLng: destinationLng ?? this.destinationLng,
   );
 }
 
@@ -205,7 +227,15 @@ enum PassengerAssistantPhase {
   error,
 }
 
-enum PassengerAssistantFailure { unavailable, network, generic }
+enum PassengerAssistantFailure {
+  unavailable,
+  selectedDriverUnavailable,
+  network,
+  expired,
+  unknownBooking,
+  savedBooking,
+  generic,
+}
 
 class PassengerAssistantState {
   const PassengerAssistantState({
@@ -221,6 +251,8 @@ class PassengerAssistantState {
     this.tripOptions = const [],
     this.selectingTripId,
     this.selectionFailure,
+    this.savedRequestId,
+    this.selectionRequestId,
   });
 
   final PassengerAssistantPhase phase;
@@ -235,7 +267,14 @@ class PassengerAssistantState {
   final List<PassengerAssistantTripOption> tripOptions;
   final String? selectingTripId;
   final PassengerAssistantFailure? selectionFailure;
+  final String? savedRequestId;
+
+  /// Saved request resolved by this selection attempt, never a previous search.
+  final String? selectionRequestId;
 }
+
+double? _optionalDouble(Object? value) =>
+    value is num ? value.toDouble() : null;
 
 String _requiredString(Map<String, dynamic> json, String key) {
   final value = json[key];

@@ -98,7 +98,7 @@ describe("Admin user directory", () => {
     ["passenger", baseUser, { kind: "passenger" }],
     ["approved driver", { ...baseUser, id: "approved_driver", role: "driver", driver_profile: { id: "profile_1", vehicle_type: "sedan", seats_total: 4, parcel_capacity: 3, verified: true, trust_score: 80 }, driver_verification: { id: "verification_1", status: "approved", revision: 2, submitted_at: now, reviewed_at: now, reviewed_by: { id: admin.id, name: admin.name } } }, expect.objectContaining({ kind: "driver", driver_profile_verified: true, driver_verification_status: "approved" })],
     ["pending driver", { ...baseUser, id: "pending_driver", role: "driver", account_status: "pending", driver_verification: { id: "verification_2", status: "pending", revision: 1, submitted_at: now, reviewed_at: null, reviewed_by: null } }, expect.objectContaining({ kind: "driver", driver_profile_exists: false, driver_verification_status: "pending" })],
-    ["pending merchant", { ...baseUser, id: "pending_merchant", role: "merchant", account_status: "pending" }, { kind: "merchant", merchant_approval_connected: false }]
+    ["pending merchant", { ...baseUser, id: "pending_merchant", role: "merchant", account_status: "pending" }, { kind: "merchant", merchant_approval_connected: true, application_submitted: true }]
   ])("returns safe %s detail with authoritative role context", async (_label, user, roleContext) => {
     prismaMock.user.findUnique.mockResolvedValue(user);
     const response = await request(createApp()).get(`/api/v1/admin/users/${user.id}`).set(authorization()).expect(200);

@@ -472,6 +472,13 @@ class _OfferSummary extends StatelessWidget {
             ],
           ),
         ),
+        // Shown before the driver accepts. Display-only: no payment happens
+        // in the app and the passenger or merchant pays the driver directly.
+        fareSnapshotBox(
+          context,
+          offer.demand.fare,
+          passengers: offer.demand.passengerCount,
+        ),
         if (offer.trip case final trip?) ...[
           const SizedBox(height: AppTokens.spaceMedium),
           _TripSummaryCard(trip: trip),
@@ -780,6 +787,11 @@ class _AssignmentSummary extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          fareSnapshotBox(
+            context,
+            assignment.fare,
+            passengers: assignment.passengerCount,
           ),
           if (assignment.trip case final trip?) ...[
             const SizedBox(height: AppTokens.spaceMedium),

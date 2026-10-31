@@ -5,7 +5,7 @@ const prismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
   user: { findUnique: vi.fn() },
   authSession: { findUnique: vi.fn(), update: vi.fn() },
-  trip: {
+  trip: { findUniqueOrThrow: vi.fn(),
     count: vi.fn(),
     findMany: vi.fn(),
     findUnique: vi.fn(),
@@ -132,7 +132,7 @@ describe("Admin trip management", () => {
         recorded_at: now,
       }],
     }));
-    prismaMock.trip.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.trip.updateMany.mockImplementation(({ data }) => { prismaMock.trip.findUniqueOrThrow.mockResolvedValue(tripRow({ status: data.status })); return { count: 1 }; });
     prismaMock.trip.update.mockImplementation(({ data }: { data: { status: string } }) => tripRow({ status: data.status }));
     prismaMock.auditEvent.create.mockResolvedValue({ id: "audit_1" });
     prismaMock.$transaction.mockImplementation(
@@ -261,7 +261,7 @@ describe("Admin trip management", () => {
       .set(authorization())
       .send({ status: "pickup_started", expected_status: "created" })
       .expect(409);
-    expect(prismaMock.trip.update).not.toHaveBeenCalled();
+    expect(prismaMock.trip.updateMany).not.toHaveBeenCalled();
   });
 
   it.each(["completed", "cancelled"] as const)("blocks mutation from terminal %s trips", async (terminalStatus) => {
@@ -271,7 +271,7 @@ describe("Admin trip management", () => {
       .set(authorization())
       .send({ status: "pickup_started", expected_status: terminalStatus })
       .expect(409);
-    expect(prismaMock.trip.update).not.toHaveBeenCalled();
+    expect(prismaMock.trip.updateMany).not.toHaveBeenCalled();
   });
 
   it("rejects stale Admin status with zero writes", async () => {
@@ -283,14 +283,14 @@ describe("Admin trip management", () => {
       .expect(409);
 
     expect(response.body.error).toBe("trip_status_conflict");
-    expect(prismaMock.trip.update).not.toHaveBeenCalled();
+    expect(prismaMock.trip.updateMany).not.toHaveBeenCalled();
     expect(prismaMock.driverRoute.update).not.toHaveBeenCalled();
     expect(prismaMock.passengerRequest.update).not.toHaveBeenCalled();
     expect(prismaMock.auditEvent.create).not.toHaveBeenCalled();
   });
 
   it("turns a concurrent conditional-write miss into 409 before related writes", async () => {
-    prismaMock.trip.update.mockRejectedValueOnce(Object.assign(new Error("record changed"), { code: "P2025" }));
+    prismaMock.trip.updateMany.mockResolvedValueOnce({ count: 0 });
     const response = await request(createApp())
       .post("/api/v1/admin/trips/trip_legacy/status")
       .set(authorization())
@@ -303,7 +303,7 @@ describe("Admin trip management", () => {
   });
 
   it("advances legacy trips through the shared transaction and keeps canonical/shared read-only", async () => {
-    prismaMock.trip.update.mockResolvedValueOnce({
+    prismaMock.trip.findUniqueOrThrow.mockResolvedValueOnce({
       ...tripRow({ status: "pickup_started" }),
       route_snapshot_json: { private: true },
       route_snapshot_checksum: "must-not-leak",
@@ -315,7 +315,7 @@ describe("Admin trip management", () => {
       .expect(200);
     expect(response.body.trip).toEqual({ id: "trip_legacy", status: "pickup_started" });
     expect(JSON.stringify(response.body)).not.toMatch(/route_snapshot|checksum|private/);
-    expect(prismaMock.trip.update).toHaveBeenCalledWith({
+    expect(prismaMock.trip.updateMany).toHaveBeenCalledWith({
       where: { id: "trip_legacy", status: "accepted" },
       data: { status: "pickup_started", started_at: expect.any(Date), completed_at: undefined },
     });
@@ -332,6 +332,6 @@ describe("Admin trip management", () => {
       .set(authorization())
       .send({ status: "pickup_started", expected_status: "accepted" })
       .expect(409);
-    expect(prismaMock.trip.update).toHaveBeenCalledTimes(1);
+    expect(prismaMock.trip.updateMany).toHaveBeenCalledTimes(1);
   });
 });

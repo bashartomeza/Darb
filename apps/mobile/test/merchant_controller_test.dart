@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -113,6 +114,96 @@ void main() {
     controller.resumePolling();
     expect(controller.activeTimerCount, 3);
   });
+  test(
+    'queued refresh cannot publish an older merchant order snapshot',
+    () async {
+      final fake = _FakeMerchantRepository(orders: [_order()]);
+      final container = _container(fake);
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        merchantOrderProvider('order_1'),
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await container.read(merchantOrderProvider('order_1').future);
+      final old = Completer<MerchantOrder>();
+      final fresh = Completer<MerchantOrder>();
+      fake.pendingOrders.addAll([old.future, fresh.future]);
+      final controller = container.read(
+        merchantOrderProvider('order_1').notifier,
+      );
+      final first = controller.refresh();
+      final second = controller.refresh();
+      old.complete(_order(status: 'matched'));
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        container.read(merchantOrderProvider('order_1')).value!.order.status,
+        'batched',
+      );
+      fresh.complete(_order(status: 'assigned'));
+      await Future.wait([first, second]);
+      expect(
+        container.read(merchantOrderProvider('order_1')).value!.order.status,
+        'assigned',
+      );
+    },
+  );
+
+  test(
+    'refresh failure retains authoritative merchant dashboard records',
+    () async {
+      final fake = _FakeMerchantRepository(orders: [_order()]);
+      final container = _container(fake);
+      addTearDown(container.dispose);
+      await container.read(merchantDashboardProvider.future);
+      fake.failLists = true;
+      await expectLater(
+        container.read(merchantDashboardProvider.notifier).refresh(),
+        throwsStateError,
+      );
+      expect(
+        container.read(merchantDashboardProvider).value?.orders.single.id,
+        'order_1',
+      );
+    },
+  );
+  test('terminal merchant orders never expose manual matching', () {
+    for (final status in ['cancelled', 'expired', 'completed', 'assigned']) {
+      final state = MerchantOrderViewState(
+        order: _order(status: status),
+        matches: const [],
+        trip: null,
+      );
+      expect(state.canRunMatch, isFalse, reason: status);
+    }
+  });
+  test(
+    'secondary batch order retains the root match and assigned trip',
+    () async {
+      final batch = _batch();
+      final order = MerchantOrder(
+        id: 'secondary',
+        pickupLabel: merchantPickupLabel,
+        status: 'assigned',
+        createdAt: _time,
+        parcels: const [],
+        batches: [batch],
+      );
+      final fake = _FakeMerchantRepository(
+        orders: [order],
+        matches: [_match(batch: batch)],
+        trips: [_trip(batch: batch)],
+      );
+      final container = _container(fake);
+      addTearDown(container.dispose);
+      final state = await container.read(
+        merchantOrderProvider('secondary').future,
+      );
+      expect(state.latestMatch?.id, 'match_1');
+      expect(state.trip?.id, 'trip_1');
+      expect(state.canRunMatch, isFalse);
+    },
+  );
 }
 
 ProviderContainer _container(_FakeMerchantRepository fake) => ProviderContainer(
@@ -137,6 +228,7 @@ class _FakeMerchantRepository extends MerchantRepository {
   List<MerchantMatch> matches;
   List<MerchantTrip> trips;
   bool failLists = false;
+  final pendingOrders = <Future<MerchantOrder>>[];
   int batchCalls = 0;
   int matchCalls = 0;
 
@@ -147,7 +239,8 @@ class _FakeMerchantRepository extends MerchantRepository {
   }
 
   @override
-  Future<MerchantOrder> orderDetail(String id) async => orders.first;
+  Future<MerchantOrder> orderDetail(String id) async =>
+      pendingOrders.isEmpty ? orders.first : await pendingOrders.removeAt(0);
 
   @override
   Future<List<MerchantMatch>> listMatches({String? status}) async {
@@ -231,7 +324,7 @@ MerchantOrder _order({
   batches: batches ?? [_batch()],
 );
 
-MerchantMatch _match() => MerchantMatch(
+MerchantMatch _match({MerchantBatch? batch}) => MerchantMatch(
   id: 'match_1',
   status: 'proposed',
   score: 0.93,
@@ -253,14 +346,14 @@ MerchantMatch _match() => MerchantMatch(
     status: 'batched',
     parcelCount: 1,
   ),
-  batch: null,
+  batch: batch,
 );
 
-MerchantTrip _trip() => MerchantTrip(
+MerchantTrip _trip({MerchantBatch? batch}) => MerchantTrip(
   id: 'trip_1',
   status: 'accepted',
   createdAt: _time,
   route: _route(),
   order: _order(status: 'assigned'),
-  batch: null,
+  batch: batch,
 );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../matching/data/matching_repository.dart';
 import '../data/passenger_models.dart';
 import '../data/passenger_repository.dart';
+import '../application/legacy_passenger_request_mutation.dart';
 import 'location_picker_screen.dart';
 
 class CreateRequestScreen extends ConsumerStatefulWidget {
@@ -23,7 +25,8 @@ class CreateRequestScreen extends ConsumerStatefulWidget {
       _CreateRequestScreenState();
 }
 
-class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
+class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
+    with WidgetsBindingObserver {
   PassengerLocation? _pickup;
   PassengerLocation? _destination;
 
@@ -32,13 +35,111 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
   int _count = 1;
   bool _loading = false;
   String? _error;
+  Map<String, dynamic>? _pendingPayload;
+  bool _restoring = true;
+  bool _recoveryBlocked = false;
+  bool _foreground = true;
+  Timer? _retryTimer;
+  int _automaticRetries = 0;
+  bool get _locked => _pendingPayload != null || _recoveryBlocked || _restoring;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    Future<void>(_restorePending);
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    _retryTimer?.cancel();
+    if (_foreground && !_loading) {
+      _automaticRetries = 0;
+      unawaited(_restorePending());
+    }
+  }
+
+  Future<void> _restorePending() async {
+    try {
+      final pending = await ref
+          .read(legacyPassengerRequestMutationProvider)
+          .pending();
+      if (!mounted) return;
+      if (pending != null) {
+        final payload = Map<String, dynamic>.from(pending.payload)
+          ..remove('route_version_id');
+        setState(() {
+          _pendingPayload = payload;
+          _pickup = PassengerLocation(
+            label: payload['pickup_label'] as String,
+            latitude: (payload['pickup_lat'] as num).toDouble(),
+            longitude: (payload['pickup_lng'] as num).toDouble(),
+          );
+          _destination = PassengerLocation(
+            label: payload['destination_label'] as String,
+            latitude: (payload['destination_lat'] as num).toDouble(),
+            longitude: (payload['destination_lng'] as num).toDouble(),
+          );
+          _preferredTime = DateTime.parse(
+            payload['preferred_time'] as String,
+          ).toLocal();
+          _count = payload['passenger_count'] as int;
+          _restoring = false;
+          _recoveryBlocked = false;
+          _error = AppLocalizations.of(context).bookingOutcomeUnknown;
+        });
+        await _submit();
+      } else {
+        setState(() {
+          _restoring = false;
+          _pendingPayload = null;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _restoring = false;
+        _recoveryBlocked = true;
+        _pickup = null;
+        _destination = null;
+        _pendingPayload = null;
+        _error = AppLocalizations.of(context).canonicalRecoveryRequired;
+      });
+    }
+  }
+
+  void _scheduleVerification() {
+    _retryTimer?.cancel();
+    if (_pendingPayload == null || !_foreground || _automaticRetries >= 5) {
+      return;
+    }
+    _retryTimer = Timer(const Duration(seconds: 15), () {
+      if (mounted && !_loading && _foreground) {
+        _automaticRetries++;
+        unawaited(_submit());
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    final canSubmit = _pickup != null && _destination != null && !_loading;
+    final canSubmit =
+        _pickup != null &&
+        _destination != null &&
+        !_loading &&
+        !_restoring &&
+        !_recoveryBlocked;
 
     return Scaffold(
       appBar: AppBar(
@@ -75,7 +176,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                         ? 'اضغطي لاختيار الموقع من الخريطة'
                         : _coordinatesText(_pickup!),
                     selected: _pickup != null,
-                    onTap: _loading
+                    onTap: _loading || _locked
                         ? null
                         : () => _chooseLocation(isPickup: true),
                   ),
@@ -98,7 +199,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                         ? 'اضغطي لاختيار الوجهة من الخريطة'
                         : _coordinatesText(_destination!),
                     selected: _destination != null,
-                    onTap: _loading
+                    onTap: _loading || _locked
                         ? null
                         : () => _chooseLocation(isPickup: false),
                   ),
@@ -158,7 +259,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: _loading ? null : _pickTime,
+                    onPressed: _loading || _locked ? null : _pickTime,
                     icon: const Icon(Icons.schedule_rounded),
                     label: Text(
                       '${l10n.preferredTime}: '
@@ -182,7 +283,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                           ),
                         )
                         .toList(),
-                    onChanged: _loading
+                    onChanged: _loading || _locked
                         ? null
                         : (value) {
                             setState(() {
@@ -210,7 +311,11 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.send_rounded),
-                    label: Text(l10n.submitRequest),
+                    label: Text(
+                      _pendingPayload == null
+                          ? l10n.submitRequest
+                          : l10n.verifyBooking,
+                    ),
                   ),
                 ],
               ),
@@ -287,10 +392,16 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
   // ----------------------------------------------------------------------
 
   Future<void> _submit() async {
+    if (_loading || _restoring || _recoveryBlocked) return;
     if (_pickup == null || _destination == null) {
       setState(() {
         _error = 'اختاري موقع الانطلاق والوجهة أولاً';
       });
+      return;
+    }
+
+    if (_pendingPayload == null && !_preferredTime.isAfter(DateTime.now())) {
+      setState(() => _error = AppLocalizations.of(context).bookingTimePassed);
       return;
     }
 
@@ -300,45 +411,114 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
     });
 
     try {
-      final created = await ref
-          .read(passengerRepositoryProvider)
-          .createRequest(
-            pickup: _pickup!,
-            destination: _destination!,
-            preferredTime: _preferredTime,
-            passengerCount: _count,
-          );
+      final mutation = ref.read(legacyPassengerRequestMutationProvider);
+      final payload =
+          _pendingPayload ??
+          <String, dynamic>{
+            'pickup_label': _pickup!.label,
+            'pickup_lat': _pickup!.latitude,
+            'pickup_lng': _pickup!.longitude,
+            'destination_label': _destination!.label,
+            'destination_lat': _destination!.latitude,
+            'destination_lng': _destination!.longitude,
+            'preferred_time': _preferredTime.toUtc().toIso8601String(),
+            'passenger_count': _count,
+          };
+      final receipt = await mutation.create(
+        payload: payload,
+        send: ref.read(passengerRepositoryProvider).createPayload,
+      );
+      final createdId = receipt.value;
+      final recovery = receipt.bundle.payload['client_recovery'];
+      String? selectedRoute;
+      if (recovery != null) {
+        final option = recovery is Map ? recovery['option'] : null;
+        final routeId = option is Map ? option['id'] : null;
+        if (routeId is! String || routeId.isEmpty) {
+          throw const FormatException('Missing selected driver route');
+        }
+        selectedRoute = routeId;
+      }
+      if (!mounted) return;
 
       try {
         final match = await ref
             .read(matchingRepositoryProvider)
-            .runForPassengerRequest(created.id);
+            .runForPassengerRequest(createdId, driverRouteId: selectedRoute);
+        mutation.requireActor(receipt.bundle.actorId);
+        await mutation.acknowledge(receipt);
         if (mounted) {
           context.go('/passenger/match/${match.id}');
         }
       } catch (error) {
-        // The request is already persisted. A matching failure (including no
-        // compatible driver) must never discard it or encourage a duplicate
-        // submission; the detail screen can retry matching against real data.
+        mutation.requireActor(receipt.bundle.actorId);
+        if (selectedRoute != null) {
+          final existing = await ref
+              .read(matchingRepositoryProvider)
+              .latestForPassengerRequest(
+                createdId,
+                driverRouteId: selectedRoute,
+              );
+          mutation.requireActor(receipt.bundle.actorId);
+          if (existing != null) {
+            await mutation.acknowledge(receipt);
+            if (mounted) context.go('/passenger/match/${existing.id}');
+            return;
+          }
+          final definitive =
+              error is ApiException &&
+              error.message != 'passenger_request_already_matched' &&
+              [400, 404, 409, 422].contains(error.statusCode);
+          if (!definitive) rethrow;
+        }
+        await mutation.acknowledge(receipt);
         if (mounted) {
-          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(_matchingCreateErrorLabel(l10n, error))),
+            SnackBar(
+              content: Text(
+                _matchingCreateErrorLabel(AppLocalizations.of(context), error),
+              ),
+            ),
           );
-          context.go('/passenger/request/${created.id}');
+          context.go('/passenger/request/$createdId');
         }
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _error = AppLocalizations.of(context).validationError;
-        });
+    } catch (error) {
+      try {
+        final pending = await ref
+            .read(legacyPassengerRequestMutationProvider)
+            .pending();
+        if (mounted) {
+          setState(() {
+            _pendingPayload = pending == null
+                ? null
+                : (Map<String, dynamic>.from(pending.payload)
+                    ..remove('route_version_id'));
+            _error = pending != null
+                ? AppLocalizations.of(context).bookingOutcomeUnknown
+                : _matchingCreateErrorLabel(
+                    AppLocalizations.of(context),
+                    error,
+                  );
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _recoveryBlocked = true;
+            _pickup = null;
+            _destination = null;
+            _pendingPayload = null;
+            _error = AppLocalizations.of(context).canonicalRecoveryRequired;
+          });
+        }
       }
     } finally {
       if (mounted) {
         setState(() {
           _loading = false;
         });
+        _scheduleVerification();
       }
     }
   }
@@ -355,6 +535,13 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
 
 String _matchingCreateErrorLabel(AppLocalizations l10n, Object error) {
   if (error is! ApiException) return l10n.requestFailed;
+  if (error.message == 'selected_driver_route_unavailable') {
+    return l10n.selectedDriverUnavailable;
+  }
+  if (error.message == 'booking_time_passed' ||
+      error.message == 'preferred_time_in_past') {
+    return l10n.bookingTimePassed;
+  }
   if (error.type == ApiErrorType.network) return l10n.networkUnavailable;
   if (error.type == ApiErrorType.timeout) return l10n.requestTimedOut;
   return error.message == 'no_compatible_driver_route'

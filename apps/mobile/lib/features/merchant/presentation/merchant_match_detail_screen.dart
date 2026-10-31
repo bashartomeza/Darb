@@ -1,3 +1,4 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,28 +24,34 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final match = ref.watch(merchantMatchDetailProvider(matchId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          l10n.matchResult,
-          key: const ValueKey('merchantMatchDetailTitle'),
-        ),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: match.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ErrorStateView(
-            title: merchantErrorLabel(l10n, error),
-            retryLabel: l10n.retry,
-            onRetry: () => ref.invalidate(merchantMatchDetailProvider(matchId)),
+    return ForegroundRefresh(
+      refresh: () async {
+        await ref.read(merchantMatchDetailProvider(matchId).notifier).refresh();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            l10n.matchResult,
+            key: const ValueKey('merchantMatchDetailTitle'),
           ),
-          data: (value) => _content(context, l10n, value),
+          actions: const [
+            LanguageSwitch(),
+            SizedBox(width: AppTokens.spaceSmall),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: match.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => ErrorStateView(
+              title: merchantErrorLabel(l10n, error),
+              retryLabel: l10n.retry,
+              onRetry: () =>
+                  ref.invalidate(merchantMatchDetailProvider(matchId)),
+            ),
+            data: (value) => _content(context, l10n, value),
+          ),
         ),
       ),
     );

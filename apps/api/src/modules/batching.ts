@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { auditEvent } from "../lib/audit.js";
-import { haversineKm, lockedCorridorDistanceKm, round, toNumber } from "../lib/geo.js";
+import { lockedCorridorDistanceKm, round, toNumber } from "../lib/geo.js";
+import { BATCHING_LIMITS, type ParcelSize } from "../lib/batchingConfig.js";
+import { planBatches } from "../services/batchPlanner.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { LOCKED_CORRIDOR_KEY, LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
@@ -29,15 +31,16 @@ export async function createParcelBatch(req: AuthenticatedRequest, orderId: stri
       throw new HttpError(403, "forbidden");
     }
     if (order.canonical_entry_version) throw new HttpError(409, "canonical_batching_not_enabled");
-    if (order.parcels.length < 1 || order.parcels.length > 10) throw new HttpError(400, "invalid_parcel_count");
+    if (order.parcels.length < 1 || order.parcels.length > BATCHING_LIMITS.maxParcelsPerOrder) throw new HttpError(400, "invalid_parcel_count");
     const hasActiveBatch = order.parcel_batches.some((batch) => !["cancelled", "failed", "expired"].includes(batch.status));
     const hasActiveBatchMembership = order.batch_members.some((member) => member.active);
     if (hasActiveBatch || hasActiveBatchMembership) throw new HttpError(409, "order_already_batched");
     if (order.status !== "submitted") throw new HttpError(409, "order_not_batchable");
 
     // A compatible batch keeps one merchant's pickup point and groups real,
-    // still-submitted orders that originate within the same operational pickup
-    // area. No synthetic orders are ever created.
+    // still-submitted orders whose dropoffs lie close together along the route
+    // and fit one driver's capacity. Further orders form separate batches.
+    // No synthetic orders are ever created.
     const pool = await tx.merchantOrder.findMany({
       where: {
         merchant_id: order.merchant_id,
@@ -49,24 +52,27 @@ export async function createParcelBatch(req: AuthenticatedRequest, orderId: stri
       },
       include: { parcels: true },
       orderBy: [{ created_at: "asc" }, { id: "asc" }],
-      take: 20
+      take: BATCHING_LIMITS.maxOrdersPerBatch * 2
     });
-    const compatible = pool.filter((candidate) =>
-      haversineKm(
-        { lat: toNumber(candidate.pickup_lat), lng: toNumber(candidate.pickup_lng) },
-        { lat: toNumber(order.pickup_lat), lng: toNumber(order.pickup_lng) }
-      ) <= 1
+    const candidates = [order, ...pool.filter((candidate) => candidate.id !== order.id)];
+    const plan = planBatches(
+      candidates.map((candidate) => ({
+        id: candidate.id,
+        pickup: { lat: toNumber(candidate.pickup_lat), lng: toNumber(candidate.pickup_lng) },
+        parcels: candidate.parcels.map((parcel) => ({
+          lat: toNumber(parcel.destination_lat),
+          lng: toNumber(parcel.destination_lng),
+          size: (parcel.size === "L" || parcel.size === "M" ? parcel.size : "S") as ParcelSize
+        }))
+      })),
+      undefined,
+      { seedId: order.id }
     );
-
-    const selected = [order, ...compatible.filter((candidate) => candidate.id !== order.id)];
-    const selectedOrders: typeof selected = [];
-    let parcelCount = 0;
-    for (const candidate of selected) {
-      if (selectedOrders.length >= 20) break;
-      if (parcelCount + candidate.parcels.length > 50) continue;
-      selectedOrders.push(candidate);
-      parcelCount += candidate.parcels.length;
-    }
+    const planned = plan.batches.find((candidate) => candidate.order_ids.includes(order.id));
+    if (!planned) throw new HttpError(400, "order_exceeds_batch_capacity");
+    const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+    const selectedOrders = planned.order_ids.map((id) => byId.get(id)!);
+    const parcelCount = planned.parcel_count;
     if (selectedOrders.length < 1 || parcelCount < 1) throw new HttpError(400, "invalid_batch_contents");
 
     const corridorKm = lockedCorridorDistanceKm();
@@ -75,6 +81,13 @@ export async function createParcelBatch(req: AuthenticatedRequest, orderId: stri
     const explanation =
       `${selectedOrders.length} compatible merchant ${orderWord} with ${parcelCount} parcels share the ` +
       `${LOCKED_CORRIDOR_LABEL} pickup corridor and can be assigned together to one driver capacity allocation.`;
+
+    const orderIds = selectedOrders.map((candidate) => candidate.id);
+    const claimed = await tx.merchantOrder.updateMany({
+      where: { id: { in: orderIds }, merchant_id: order.merchant_id, canonical_entry_version: null, status: "submitted" },
+      data: { status: "batched" }
+    });
+    if (claimed.count !== orderIds.length) throw new HttpError(409, "order_not_batchable");
 
     let batch;
     try {
@@ -105,8 +118,6 @@ export async function createParcelBatch(req: AuthenticatedRequest, orderId: stri
       throw error;
     }
 
-    const orderIds = selectedOrders.map((candidate) => candidate.id);
-    await tx.merchantOrder.updateMany({ where: { id: { in: orderIds }, status: "submitted" }, data: { status: "batched" } });
     await tx.parcel.updateMany({ where: { order_id: { in: orderIds }, status: "pending" }, data: { status: "batched", batch_id: batch.id } });
 
     await auditEvent(tx, {

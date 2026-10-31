@@ -22,7 +22,7 @@ describe("public onboarding boundary", () => {
   it("keeps safe config registered and every mutation absent when disabled", async () => {
     const app = createApp(disabledConfig());
     const config = await request(app).get("/api/v1/onboarding/config").expect(200);
-    expect(config.body).toEqual({ enabled: false, registration_roles: [], request_id: expect.any(String) });
+    expect(config.body).toEqual({ enabled: false, registration_roles: [], open_registration_roles: [], request_id: expect.any(String) });
     expect(JSON.stringify(config.body)).not.toMatch(/provider|pepper|environment/);
     const consent = await request(app).get("/api/v1/onboarding/consents?locale=ar").expect(404);
     expect(consent.body).toEqual({ error: "not_found", request_id: expect.any(String) });
@@ -44,8 +44,10 @@ describe("public onboarding boundary", () => {
       APP_RELEASE: "test",
       TRUST_PROXY: "none"
     };
-    expect(() => createConfig({ ...base, PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow(/cannot be enabled/);
+    expect(() => createConfig({ ...base, PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow(/requires OTP_PROVIDER=email/);
     expect(() => createConfig({ ...base, OTP_PROVIDER: "fake" })).toThrow(/forbidden/);
+    // Email delivery needs the SMTP settings; Masari sends no SMS.
+    expect(() => createConfig({ ...base, OTP_PROVIDER: "email" })).toThrow(/OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp/);
   });
 
   it("uses an isolated keyed digest for secret-bearing idempotency payloads", () => {

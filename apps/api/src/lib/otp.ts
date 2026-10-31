@@ -3,6 +3,7 @@ import type { PrismaClient } from "../generated/prisma/client.js";
 import { otpCodeDigest, keyedDigestMatches, type VersionedKey } from "./keyedDigest.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { auditEvent } from "./audit.js";
+import type { EmailDelivery } from "../services/emailAuth.js";
 
 export type OtpDeliveryResult =
   | { status: "accepted"; providerMessageId: string }
@@ -10,7 +11,29 @@ export type OtpDeliveryResult =
 
 export interface OtpProvider {
   readonly name: string;
-  send(input: { phoneE164: string; code: string; locale: "ar" | "en"; expiresAt: Date; idempotencyKey: string }): Promise<OtpDeliveryResult>;
+  /**
+   * Whether receiving the code proves control of the phone number. True for the fake (demo/test) provider
+   * that simulates SMS; false for email delivery, which proves the mailbox only.
+   */
+  readonly provesPhone?: boolean;
+  send(input: { phoneE164: string; email?: string; code: string; locale: "ar" | "en"; expiresAt: Date; idempotencyKey: string }): Promise<OtpDeliveryResult>;
+}
+
+/** Delivers the one-time code by email (Masari sends no SMS). Nothing but the delivery outcome is returned or logged. */
+export class EmailOtpProvider implements OtpProvider {
+  readonly name = "email";
+  readonly provesPhone = false;
+  constructor(private readonly delivery: EmailDelivery) {}
+
+  async send(input: { email?: string; code: string; locale: "ar" | "en"; expiresAt: Date; idempotencyKey: string }): Promise<OtpDeliveryResult> {
+    if (!input.email) return { status: "rejected" };
+    try {
+      await this.delivery.send({ to: input.email, locale: input.locale, purpose: "phone_code", actionToken: input.code, expiresAt: input.expiresAt });
+      return { status: "accepted", providerMessageId: input.idempotencyKey };
+    } catch {
+      return { status: "unknown" };
+    }
+  }
 }
 
 export class FakeOtpProvider implements OtpProvider {
@@ -60,7 +83,8 @@ export async function dispatchOtpChallenge(
     where: {
       id: input.attemptId,
       expires_at: { gt: now },
-      redemption: { isNot: null },
+      // Invited attempts must hold a redemption; open-signup attempts have no invitation.
+      AND: [{ OR: [{ invitation_id: null }, { redemption: { isNot: null } }] }],
       OR: [
         { status: { in: ["created", "otp_sent"] }, otp_dispatch_claim_id: null },
         { status: "otp_dispatching", otp_dispatch_started_at: { lte: staleBefore } }
@@ -72,7 +96,7 @@ export async function dispatchOtpChallenge(
 
   const attempt = await db.onboardingAttempt.findFirstOrThrow({
     where: { id: input.attemptId, otp_dispatch_claim_id: claimId },
-    select: { id: true, phone_e164: true, current_challenge_id: true }
+    select: { id: true, phone_e164: true, delivery_email: true, current_challenge_id: true }
   });
   const restoreStatus = attempt.current_challenge_id ? "otp_sent" as const : "created" as const;
   const acceptedCount = await db.otpChallenge.count({
@@ -135,6 +159,7 @@ export async function dispatchOtpChallenge(
   try {
     delivery = await provider.send({
       phoneE164: attempt.phone_e164,
+      email: attempt.delivery_email ?? undefined,
       code,
       locale: input.locale ?? "ar",
       expiresAt,

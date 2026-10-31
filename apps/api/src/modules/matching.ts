@@ -1,14 +1,17 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { clamp01, haversineKm, LOCKED_DESTINATION, LOCKED_ORIGIN, round, toNumber } from "../lib/geo.js";
+import { haversineKm, LOCKED_DESTINATION } from "../lib/geo.js";
+import { compareRankedRoutes, scoreDriverRoute } from "../lib/routeScoring.js";
+
 import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { LOCKED_CORRIDOR_KEY, LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { AuditAction, MatchStatus } from "../generated/prisma/enums.js";
-import { reserveLegacyCapacity } from "../services/legacyCapacity.js";
+import { notifyMatchOffered } from "../services/notifications.js";
+import { isLegacyRouteTimely, legacyRouteTimingWhere, reserveLegacyCapacity, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
 
 const runMatchSchema = z
   .object({
@@ -101,12 +104,15 @@ const matchSummarySelect = {
       status: true,
       estimated_distance_saved: true,
       explanation: true,
-      created_at: true
+      created_at: true,
+      members: { select: { merchant_order: { select: { _count: { select: { parcels: true } } } } } }
     }
   }
 } satisfies Prisma.MatchSelect;
 
 type MatchSummaryRecord = Prisma.MatchGetPayload<{ select: typeof matchSummarySelect }>;
+
+export { scoreDriverRoute };
 
 export const matchingRouter = Router();
 
@@ -172,7 +178,8 @@ function toMatchSummary(match: MatchSummaryRecord) {
           status: match.parcel_batch.status,
           estimated_distance_saved: match.parcel_batch.estimated_distance_saved,
           explanation: match.parcel_batch.explanation,
-          created_at: match.parcel_batch.created_at
+          created_at: match.parcel_batch.created_at,
+          parcel_count: match.parcel_batch.members?.reduce((count, member) => count + member.merchant_order._count.parcels, 0) ?? match.merchant_order?._count.parcels ?? 0
         }
       : null
   };
@@ -220,48 +227,6 @@ async function loadAuthorizedInput(req: AuthenticatedRequest, input: MatchInput)
   return { passengerRequest, merchantOrder };
 }
 
-export function scoreDriverRoute(input: {
-  route: {
-    origin_label: string;
-    destination_label: string;
-    origin_lat: unknown;
-    origin_lng: unknown;
-    seats_available: number;
-    parcel_capacity_available: number;
-    driver: { trust_score: number };
-  };
-  passengerRequest?: { pickup_lat: unknown; pickup_lng: unknown; passenger_count: number; preferred_time: Date | string } | null;
-  parcelCount: number;
-}) {
-  const isForwardCorridor =
-    input.route.origin_label === "Hebron / PPU / Bab Al-Zawiya" && input.route.destination_label === "Bethlehem";
-  const corridorOverlap = isForwardCorridor ? 0.95 : 0.3;
-  const pickupPoint = input.passengerRequest
-    ? { lat: toNumber(input.passengerRequest.pickup_lat), lng: toNumber(input.passengerRequest.pickup_lng) }
-    : LOCKED_ORIGIN;
-  const routeOrigin = { lat: toNumber(input.route.origin_lat), lng: toNumber(input.route.origin_lng) };
-  const pickupDistanceKm = haversineKm(routeOrigin, pickupPoint);
-  const pickupDistanceScore = clamp01(1 - pickupDistanceKm / 25);
-  const timingFit = 0.9;
-  const trustScore = clamp01(input.route.driver.trust_score / 100);
-  const seatFit = input.passengerRequest ? input.route.seats_available / Math.max(1, input.passengerRequest.passenger_count) : 1;
-  const parcelFit = input.parcelCount > 0 ? input.route.parcel_capacity_available / input.parcelCount : 1;
-  const capacityFit = clamp01(Math.min(seatFit, parcelFit));
-  const finalScore = round(
-    0.4 * corridorOverlap + 0.25 * pickupDistanceScore + 0.15 * timingFit + 0.1 * trustScore + 0.1 * capacityFit
-  );
-
-  return {
-    corridorOverlap: round(corridorOverlap),
-    pickupDistanceScore: round(pickupDistanceScore),
-    timingFit: round(timingFit),
-    trustScore: round(trustScore),
-    capacityFit: round(capacityFit),
-    finalScore,
-    estimatedDeviationKm: round(pickupDistanceKm, 2)
-  };
-}
-
 type PassengerDemand = {
   pickup_lat: unknown;
   pickup_lng: unknown;
@@ -274,13 +239,15 @@ async function rankDriverRoutes(input: {
   parcelCount: number;
   excludeRouteIds?: ReadonlySet<string>;
 }) {
+  const now = new Date();
   const routes = await prisma.driverRoute.findMany({
     where: {
       status: "active",
       corridor_key: LOCKED_CORRIDOR_KEY,
       canonical_availability_version: null,
       operational_mode: "legacy",
-      driver: { verified: true }
+      driver: { verified: true, user: { role: "driver", account_status: "active" } },
+      ...legacyRouteTimingWhere(now)
     },
     include: {
       driver: {
@@ -293,6 +260,7 @@ async function rankDriverRoutes(input: {
   });
 
   return routes
+    .filter((route) => isLegacyRouteTimely(route, now))
     .filter((route) => !input.excludeRouteIds?.has(route.id))
     .filter((route) => !input.passengerRequest || route.seats_available >= input.passengerRequest.passenger_count)
     .filter((route) => input.parcelCount === 0 || route.parcel_capacity_available >= input.parcelCount)
@@ -304,16 +272,7 @@ async function rankDriverRoutes(input: {
         parcelCount: input.parcelCount
       })
     }))
-    .sort((a, b) => {
-      if (b.breakdown.finalScore !== a.breakdown.finalScore) return b.breakdown.finalScore - a.breakdown.finalScore;
-      if (a.breakdown.estimatedDeviationKm !== b.breakdown.estimatedDeviationKm) {
-        return a.breakdown.estimatedDeviationKm - b.breakdown.estimatedDeviationKm;
-      }
-      if (b.route.driver.trust_score !== a.route.driver.trust_score) {
-        return b.route.driver.trust_score - a.route.driver.trust_score;
-      }
-      return a.route.id.localeCompare(b.route.id);
-    });
+    .sort(compareRankedRoutes);
 }
 
 type RankedDriverRoute = Awaited<ReturnType<typeof rankDriverRoutes>>[number];
@@ -348,6 +307,12 @@ function passengerDemandFromSearch(input: PassengerMatchSearchInput): PassengerD
 
 async function createBestMatch(req: AuthenticatedRequest, input: MatchInput) {
   const { passengerRequest, merchantOrder } = await loadAuthorizedInput(req, input);
+  if (merchantOrder && !["submitted", "batched", "matched"].includes(merchantOrder.status)) {
+    throw new HttpError(409, "merchant_order_not_matchable");
+  }
+  if (passengerRequest && passengerRequest.preferred_time <= new Date()) {
+    throw new HttpError(409, "passenger_request_expired");
+  }
   const merchantBatchId = merchantOrder?.parcel_batches[0]?.id ?? merchantOrder?.batch_members[0]?.parcel_batch_id ?? null;
   const parcelCount = merchantOrder
     ? merchantBatchId
@@ -400,7 +365,8 @@ async function createBestMatch(req: AuthenticatedRequest, input: MatchInput) {
             id: passengerRequest.id,
             passenger_id: passengerRequest.passenger_id,
             status: { in: ["pending", "matched"] },
-            canonical_entry_version: null
+            canonical_entry_version: null,
+            preferred_time: { gt: new Date() }
           },
           data: { status: "matched" }
         });
@@ -464,9 +430,14 @@ async function createBestMatch(req: AuthenticatedRequest, input: MatchInput) {
         await reserveLegacyCapacity(tx, {
           driverRouteId: best.route.id,
           seats: seatsToReserve,
-          parcelUnits: parcelCount
+          parcelUnits: parcelCount,
+          passengerRequestId: passengerRequest?.id
         });
       }
+
+      // Batch/order writes may themselves wait on locks. Recheck approved
+      // supply and demand with a separate DB clock after all those waits.
+      await requireEligibleLegacyRoute(tx, best.route.id, { passengerRequestId: passengerRequest?.id });
 
       const created = await tx.match.create({
         data: {
@@ -511,6 +482,8 @@ async function createBestMatch(req: AuthenticatedRequest, input: MatchInput) {
     throw error;
   }
 
+  await notifyMatchOffered(prisma, match);
+
   return { match, scoringBreakdown: best.breakdown, candidatesConsidered: candidates.length };
 }
 
@@ -521,6 +494,7 @@ matchingRouter.post(
   async (req: AuthenticatedRequest, res, next) => {
     try {
       const input = passengerMatchSearchSchema.parse(req.body);
+      if (input.preferred_time <= new Date()) throw new HttpError(400, "preferred_time_in_past");
       const destinationDistanceKm = haversineKm(
         { lat: input.destination_lat, lng: input.destination_lng },
         LOCKED_DESTINATION

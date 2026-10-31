@@ -8,9 +8,18 @@ import { startCanonicalDispatchWorker } from "./lib/canonicalDispatchWorker.js";
 import { startLegacyDispatchWorker } from "./lib/legacyDispatchWorker.js";
 import { createOperationalLogger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
+import { createSmtpEmailDelivery } from "./services/smtpEmailDelivery.js";
 
 const logger = createOperationalLogger(config);
-const app = createApp(config, { logger });
+// Staging/production email sign-up, verification and reset need an approved delivery (EMAIL_DELIVERY=smtp).
+// Without it EmailAuthService answers 503 email_auth_unavailable. Credentials are never logged.
+const smtp = config.email.smtp;
+const emailDelivery = smtp ? createSmtpEmailDelivery({
+  host: smtp.host, port: smtp.port, secure: smtp.secure, user: smtp.user, password: smtp.password,
+  fromAddress: smtp.fromAddress, fromName: smtp.fromName
+}) : undefined;
+logger.info({ event: "email_delivery_configured", delivery: config.email.delivery }, "Email delivery configured");
+const app = createApp(config, { logger, emailDelivery });
 const canonicalDispatchWorker = startCanonicalDispatchWorker(config, logger);
 const legacyDispatchWorker = startLegacyDispatchWorker(logger);
 let shuttingDown = false;

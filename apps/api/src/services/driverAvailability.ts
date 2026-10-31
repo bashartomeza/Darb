@@ -63,6 +63,10 @@ function validateCapacity(totalSeats: number, totalParcelCapacity: number) {
 
 async function requireApprovedProfile(db: PrismaClient | Prisma.TransactionClient, userId: string) {
   const profile = await db.driverProfile.findUnique({ where: { user_id: userId } });
+  if (profile && !profile.verified) {
+    const verification = await db.driverVerification.findUnique({ where: { user_id: userId }, select: { status: true } });
+    if (verification?.status === "documents_expired") throw new HttpError(403, "driver_documents_expired");
+  }
   if (!profile || !profile.verified) throw new HttpError(403, "driver_not_approved");
   return profile;
 }
@@ -195,7 +199,6 @@ export function createDriverAvailabilityService(db: PrismaClient = prisma) {
 
     async createOneOff(input: DriverAvailabilityInput, actor: Actor & { idempotencyKey: string }) {
       validateCapacity(input.totalSeats, input.totalParcelCapacity);
-      validateTiming(input.departureAt, input.availabilityWindowEnd);
       try {
         return await db.$transaction(async (tx) => {
           const payload = {
@@ -212,7 +215,8 @@ export function createDriverAvailabilityService(db: PrismaClient = prisma) {
             keyDigest: digest(actor.idempotencyKey),
             keyVersion: 1,
             requestDigest: digest(JSON.stringify(payload)),
-            expiresAt: new Date(Date.now() + 86_400_000)
+            expiresAt: new Date(Date.now() + 86_400_000),
+            retainCompleted: true,
           });
           if (claim.kind === "conflict") throw new HttpError(409, "idempotency_conflict");
           if (claim.kind === "in_progress") throw new HttpError(409, "idempotency_in_progress");
@@ -224,6 +228,7 @@ export function createDriverAvailabilityService(db: PrismaClient = prisma) {
             const resource = await ownerAvailability(tx, claim.record.resource_id, actor.id);
             return { resource, replayed: true };
           }
+          validateTiming(input.departureAt, input.availabilityWindowEnd);
           const profile = await requireApprovedProfile(tx, actor.id);
           if (input.totalSeats > profile.seats_total || input.totalParcelCapacity > profile.parcel_capacity) {
             throw new HttpError(400, "availability_exceeds_vehicle_capacity");

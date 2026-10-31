@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { auditEvent } from "../lib/audit.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
@@ -9,6 +8,7 @@ import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
 import { MatchStatus, TripStatus } from "../generated/prisma/enums.js";
 import { advanceLegacyTrip } from "../services/tripLifecycle.js";
 import { releaseLegacyCapacity } from "../services/legacyCapacity.js";
+import { legacyPassengerCreationService } from "../services/legacyPassengerCreation.js";
 
 const createPassengerRequestSchema = z.object({
   pickup_label: z.string().min(1),
@@ -20,6 +20,7 @@ const createPassengerRequestSchema = z.object({
   preferred_time: z.coerce.date(),
   passenger_count: z.coerce.number().int().min(1).max(4)
 });
+const idempotencyKeySchema = z.string().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/).optional();
 
 export const passengerRouter = Router();
 
@@ -53,30 +54,9 @@ passengerRouter.use("/passenger", requireAuth, requireRole("passenger"));
 passengerRouter.post("/passenger/requests", async (req: AuthenticatedRequest, res, next) => {
   try {
     const input = createPassengerRequestSchema.parse(req.body);
-    const created = await prisma.passengerRequest.create({
-      data: {
-        passenger_id: req.user!.id,
-        pickup_label: input.pickup_label,
-        pickup_lat: input.pickup_lat.toFixed(6),
-        pickup_lng: input.pickup_lng.toFixed(6),
-        destination_label: input.destination_label,
-        destination_lat: input.destination_lat.toFixed(6),
-        destination_lng: input.destination_lng.toFixed(6),
-        preferred_time: input.preferred_time,
-        passenger_count: input.passenger_count,
-        status: "pending",
-        source: "manual"
-      }
-    });
-
-    await auditEvent(prisma, {
-      userId: req.user!.id,
-      action: AuditAction.passenger_request_created,
-      entityType: "PassengerRequest",
-      entityId: created.id
-    });
-
-    res.status(201).json({ request: serializeLegacyPassengerRequest(created as unknown as Record<string, unknown>) });
+    const idempotencyKey = idempotencyKeySchema.parse(req.header("idempotency-key"));
+    const result = await legacyPassengerCreationService.create(input, { id: req.user!.id, idempotencyKey });
+    res.status(201).json({ request: serializeLegacyPassengerRequest(result.resource as unknown as Record<string, unknown>) });
   } catch (error) {
     next(error);
   }
@@ -129,6 +109,13 @@ passengerRouter.patch("/passenger/requests/:id/cancel", async (req: Authenticate
   try {
     const requestId = routeParam(req.params.id);
     const request = await prisma.$transaction(async (tx) => {
+      // Lock before the first snapshot read: matching claims this same request.
+      // A cancellation must see every hold committed before it obtains the lock.
+      await tx.$queryRaw`
+        SELECT id FROM passenger_requests
+        WHERE id = ${requestId} AND passenger_id = ${req.user!.id} AND canonical_entry_version IS NULL
+        FOR UPDATE
+      `;
       const existing = await tx.passengerRequest.findFirst({
         where: { id: requestId, passenger_id: req.user!.id, canonical_entry_version: null },
       });

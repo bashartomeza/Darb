@@ -1,3 +1,4 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -43,151 +44,158 @@ class _MerchantHomeScreenState extends ConsumerState<MerchantHomeScreen> {
     final canonicalStatus =
         capabilities?.canonicalAssignmentStatusAvailable == true;
 
-    return Column(
-      key: const ValueKey('merchantHome'),
-      children: [
-        Expanded(
-          child: SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-              onRefresh: () =>
-                  ref.read(merchantDashboardProvider.notifier).refresh(),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppTokens.marginMobile,
-                  AppTokens.spaceSmall,
-                  AppTokens.marginMobile,
-                  AppTokens.spaceLarge,
-                ),
-                children: [
-                  HomeTopBar(
-                    title: l10n.appTitle,
-                    role: 'merchant',
-                    name: user?.name,
-                    notificationsKey: const ValueKey('merchantNotifications'),
+    return ForegroundRefresh(
+      refresh: () async {
+        await ref.read(merchantDashboardProvider.notifier).refresh();
+      },
+      child: Column(
+        key: const ValueKey('merchantHome'),
+        children: [
+          Expanded(
+            child: SafeArea(
+              bottom: false,
+              child: RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(merchantDashboardProvider.notifier).refresh(),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTokens.marginMobile,
+                    AppTokens.spaceSmall,
+                    AppTokens.marginMobile,
+                    AppTokens.spaceLarge,
                   ),
-                  const SizedBox(height: AppTokens.spaceSmall),
-                  Text(
-                    homeGreeting(l10n, user?.name.trim() ?? l10n.merchant),
-                    key: const ValueKey('merchantDashboardTitle'),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w700,
+                  children: [
+                    HomeTopBar(
+                      title: l10n.appTitle,
+                      role: 'merchant',
+                      name: user?.name,
+                      notificationsKey: const ValueKey('merchantNotifications'),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: AppTokens.spaceMedium),
-                  const SessionStatusBanner(),
-
-                  if (_error != null) ...[
+                    const SizedBox(height: AppTokens.spaceSmall),
+                    Text(
+                      homeGreeting(l10n, user?.name.trim() ?? l10n.merchant),
+                      key: const ValueKey('merchantDashboardTitle'),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: AppTokens.spaceMedium),
-                    OfflineBanner(message: _error!, tone: BannerTone.error),
-                  ],
+                    const SessionStatusBanner(),
 
-                  const SizedBox(height: AppTokens.spaceMedium),
-                  _StatsBlock(stats: stats),
+                    if (_error != null) ...[
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      OfflineBanner(message: _error!, tone: BannerTone.error),
+                    ],
 
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  FilledButton.icon(
-                    key: const ValueKey('createMerchantOrder'),
-                    onPressed: () => context.go('/merchant/order/new'),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(60),
+                    const SizedBox(height: AppTokens.spaceMedium),
+                    _StatsBlock(stats: stats),
+
+                    const SizedBox(height: AppTokens.spaceLarge),
+                    FilledButton.icon(
+                      key: const ValueKey('createMerchantOrder'),
+                      onPressed: () => context.go('/merchant/order/new'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(60),
+                      ),
+                      icon: const Icon(Icons.add_box_outlined),
+                      label: Text(l10n.createShipment),
                     ),
-                    icon: const Icon(Icons.add_box_outlined),
-                    label: Text(l10n.createShipment),
-                  ),
 
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  MasariSection(
-                    title: l10n.smartBatchingTitle,
-                    child: _Suggestions(
-                      stats: stats,
-                      busy: _busy,
-                      onMerge: _merge,
-                    ),
-                  ),
-
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  MasariSection(
-                    title: l10n.liveTracking,
-                    child: _Tracking(dashboard: dashboard),
-                  ),
-
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  MasariSection(
-                    title: l10n.recentOrders,
-                    // The home strip shows only the newest few; the shipments
-                    // tab is where the full list lives.
-                    actionLabel: l10n.viewDetails,
-                    onAction: () => context.go('/merchant/shipments'),
-                    child: _RecentOrders(dashboard: dashboard),
-                  ),
-
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  MasariInfoCard(
-                    title: l10n.merchantMatchInbox,
-                    icon: Icons.inbox_outlined,
-                    body: StatStrip(
-                      stats: [
-                        (
-                          label: l10n.waitingForDriver,
-                          value: '${dashboard.value?.waitingMatchCount ?? 0}',
-                          valueKey: const ValueKey('merchantWaitingMatchCount'),
-                        ),
-                      ],
-                    ),
-                    primaryAction: CardAction(
-                      key: const ValueKey('openMerchantMatches'),
-                      label: l10n.matchInbox,
-                      onPressed: () => context.go('/merchant/matches'),
-                    ),
-                  ),
-
-                  if (canonicalEntry) ...[
                     const SizedBox(height: AppTokens.spaceLarge),
                     MasariSection(
-                      title: l10n.canonicalRoutes,
-                      child: MasariInfoCard(
-                        title: l10n.canonicalMerchantOrder,
-                        subtitle: l10n.canonicalMerchantOrderBody,
-                        icon: Icons.alt_route_outlined,
-                        primaryAction: CardAction(
-                          key: const ValueKey('openCanonicalMerchantOrder'),
-                          label: l10n.canonicalMerchantOrder,
-                          onPressed: () =>
-                              context.go('/merchant/routes/order/new'),
-                        ),
-                        secondaryAction: canonicalStatus
-                            ? CardAction(
-                                key: const ValueKey(
-                                  'openMerchantCanonicalAssignments',
-                                ),
-                                label: l10n.canonicalAssignmentStatus,
-                                filled: false,
-                                onPressed: () => context.go(
-                                  '/merchant/canonical-assignments',
-                                ),
-                              )
-                            : null,
+                      title: l10n.smartBatchingTitle,
+                      child: _Suggestions(
+                        stats: stats,
+                        busy: _busy,
+                        onMerge: _merge,
                       ),
                     ),
-                  ],
 
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  const Divider(),
-                  const RoleSecurityActions(),
-                  const Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: LanguageSwitch(),
-                  ),
-                ],
+                    const SizedBox(height: AppTokens.spaceLarge),
+                    MasariSection(
+                      title: l10n.liveTracking,
+                      child: _Tracking(dashboard: dashboard),
+                    ),
+
+                    const SizedBox(height: AppTokens.spaceLarge),
+                    MasariSection(
+                      title: l10n.recentOrders,
+                      // The home strip shows only the newest few; the shipments
+                      // tab is where the full list lives.
+                      actionLabel: l10n.viewDetails,
+                      onAction: () => context.go('/merchant/shipments'),
+                      child: _RecentOrders(dashboard: dashboard),
+                    ),
+
+                    const SizedBox(height: AppTokens.spaceLarge),
+                    MasariInfoCard(
+                      title: l10n.merchantMatchInbox,
+                      icon: Icons.inbox_outlined,
+                      body: StatStrip(
+                        stats: [
+                          (
+                            label: l10n.waitingForDriver,
+                            value: '${dashboard.value?.waitingMatchCount ?? 0}',
+                            valueKey: const ValueKey(
+                              'merchantWaitingMatchCount',
+                            ),
+                          ),
+                        ],
+                      ),
+                      primaryAction: CardAction(
+                        key: const ValueKey('openMerchantMatches'),
+                        label: l10n.matchInbox,
+                        onPressed: () => context.go('/merchant/matches'),
+                      ),
+                    ),
+
+                    if (canonicalEntry) ...[
+                      const SizedBox(height: AppTokens.spaceLarge),
+                      MasariSection(
+                        title: l10n.canonicalRoutes,
+                        child: MasariInfoCard(
+                          title: l10n.canonicalMerchantOrder,
+                          subtitle: l10n.canonicalMerchantOrderBody,
+                          icon: Icons.alt_route_outlined,
+                          primaryAction: CardAction(
+                            key: const ValueKey('openCanonicalMerchantOrder'),
+                            label: l10n.canonicalMerchantOrder,
+                            onPressed: () =>
+                                context.go('/merchant/routes/order/new'),
+                          ),
+                          secondaryAction: canonicalStatus
+                              ? CardAction(
+                                  key: const ValueKey(
+                                    'openMerchantCanonicalAssignments',
+                                  ),
+                                  label: l10n.canonicalAssignmentStatus,
+                                  filled: false,
+                                  onPressed: () => context.go(
+                                    '/merchant/canonical-assignments',
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: AppTokens.spaceLarge),
+                    const Divider(),
+                    const RoleSecurityActions(),
+                    const Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: LanguageSwitch(),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -371,6 +379,7 @@ class _RecentOrders extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return dashboard.when(
+      skipError: dashboard.hasValue,
       loading: () => const LoadingSkeleton.card(),
       error: (error, _) => ErrorStateView(
         title: merchantErrorLabel(l10n, error),

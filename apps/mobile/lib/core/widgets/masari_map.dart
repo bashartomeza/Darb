@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:masari_mobile/l10n/app_localizations.dart';
+
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
+import '../maps/map_tile_cache.dart';
 import '../theme/app_tokens.dart';
 
 /// Defines the visual purpose of a Masari map marker.
@@ -90,6 +93,9 @@ class MasariMap extends StatefulWidget {
     this.banner,
     this.interactive = true,
     this.onTap,
+    this.controlsTop,
+    this.tileProvider,
+    this.tileCache,
     super.key,
   });
 
@@ -122,6 +128,18 @@ class MasariMap extends StatefulWidget {
   /// The callback receives the exact [LatLng] selected by the user.
   final ValueChanged<LatLng>? onTap;
 
+  /// Distance of the zoom buttons from the top edge, when a screen overlays
+  /// its own controls there. Defaults to a small inset.
+  final double? controlsTop;
+
+  /// Replaces the tile source (widget tests pass a fake). By default tiles come
+  /// from [MapTileConfig.tileUrlTemplate] through the on-device [tileCache].
+  final TileProvider? tileProvider;
+
+  /// The cache whose "showing saved map" state the indicator follows.
+  /// Defaults to [MapTileCache.shared].
+  final MapTileCache? tileCache;
+
   @override
   State<MasariMap> createState() => _MasariMapState();
 }
@@ -130,6 +148,23 @@ class _MasariMapState extends State<MasariMap> {
   final MapController _controller = MapController();
 
   String? _selectedLabel;
+
+  MapTileCache get _tileCache => widget.tileCache ?? MapTileCache.shared;
+
+  // The tile layer disposes its provider with itself, so a rebuilt layer
+  // (see _reloadTiles) needs a fresh one.
+  TileProvider? _ownedProvider;
+  int _ownedProviderEpoch = -1;
+
+  TileProvider _provider() {
+    final injected = widget.tileProvider;
+    if (injected != null) return injected;
+    if (_ownedProviderEpoch != _tileEpoch || _ownedProvider == null) {
+      _ownedProviderEpoch = _tileEpoch;
+      _ownedProvider = NetworkTileProvider(cachingProvider: _tileCache);
+    }
+    return _ownedProvider!;
+  }
 
   /// Default Masari geographic area.
   static const LatLng _defaultCenter = LatLng(31.6, 35.15);
@@ -269,6 +304,21 @@ class _MasariMapState extends State<MasariMap> {
     }
 
     _controller.fitCamera(_cameraFit(points));
+    _reloadTiles();
+  }
+
+  /// Incremented to rebuild the tile layer after the camera was moved by code.
+  int _tileEpoch = 0;
+
+  /// A programmatic camera move (fitting the route) is not picked up by an
+  /// already-running tile layer: it keeps the tiles of the starting view and
+  /// the map stays blank until the user touches it. Recreating the layer makes
+  /// it load the tiles for the camera as it is now.
+  void _reloadTiles() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _tileEpoch++);
+    });
   }
 
   CameraFit _cameraFit(List<LatLng> points) {
@@ -313,6 +363,9 @@ class _MasariMapState extends State<MasariMap> {
             options: MapOptions(
               initialCenter: single ? points.first : _defaultCenter,
               initialZoom: single ? 14 : _defaultZoom,
+              // Start already fitted to the route: fitting only after the first
+              // frame left the tile layer blank until the user touched the map.
+              initialCameraFit: points.length >= 2 ? _cameraFit(points) : null,
 
               interactionOptions: InteractionOptions(
                 flags: widget.interactive
@@ -347,9 +400,16 @@ class _MasariMapState extends State<MasariMap> {
               // MAP TILES
               // ==============================================================
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'ps.masari.mobile',
+                key: ValueKey('tiles-$_tileEpoch'),
+                urlTemplate: MapTileConfig.tileUrlTemplate,
+                userAgentPackageName: MapTileConfig.userAgentPackageName,
+                tileProvider: _provider(),
+                errorTileCallback: (tile, error, stackTrace) =>
+                    _tileCache.reportTileError(),
                 maxNativeZoom: 19,
+                // A tile that failed once is retried when it scrolls back into view.
+                evictErrorTileStrategy:
+                    EvictErrorTileStrategy.notVisibleRespectMargin,
               ),
 
               // ==============================================================
@@ -414,7 +474,9 @@ class _MasariMapState extends State<MasariMap> {
         // MAP CONTROLS
         // ====================================================================
         Positioned(
-          top: widget.banner != null || !hasPoints ? 72 : 14,
+          top:
+              widget.controlsTop ??
+              (widget.banner != null || !hasPoints ? 72 : 14),
           right: 12,
           child: _MapControls(
             enabled: widget.interactive,
@@ -450,6 +512,19 @@ class _MasariMapState extends State<MasariMap> {
           start: 6,
           bottom: 5,
           child: _Attribution(label: widget.attributionLabel),
+        ),
+
+        // ====================================================================
+        // OFFLINE INDICATOR
+        // ====================================================================
+        PositionedDirectional(
+          start: 6,
+          bottom: 26,
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _tileCache.showingSavedMap,
+            builder: (context, offline, _) =>
+                offline ? const _OfflineMapChip() : const SizedBox.shrink(),
+          ),
         ),
       ],
     );
@@ -582,6 +657,9 @@ class _ModernPin extends StatelessWidget {
 // MAP CONTROLS
 // ============================================================================
 
+bool _ar(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar';
+
 class _MapControls extends StatelessWidget {
   const _MapControls({
     required this.enabled,
@@ -606,19 +684,19 @@ class _MapControls extends StatelessWidget {
         children: [
           _MapControlButton(
             icon: Icons.add_rounded,
-            tooltip: 'تكبير الخريطة',
+            tooltip: _ar(context) ? 'تكبير الخريطة' : 'Zoom in',
             onPressed: enabled ? onZoomIn : null,
           ),
           const Divider(height: 1, thickness: 1),
           _MapControlButton(
             icon: Icons.remove_rounded,
-            tooltip: 'تصغير الخريطة',
+            tooltip: _ar(context) ? 'تصغير الخريطة' : 'Zoom out',
             onPressed: enabled ? onZoomOut : null,
           ),
           const Divider(height: 1, thickness: 1),
           _MapControlButton(
             icon: Icons.center_focus_strong_rounded,
-            tooltip: 'إظهار المسار',
+            tooltip: _ar(context) ? 'إظهار المسار' : 'Show route',
             onPressed: enabled ? onReset : null,
           ),
         ],
@@ -743,35 +821,126 @@ class _Callout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final lines = label
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    final title = lines.isNotEmpty ? lines.first : 'تفاصيل الحاجز';
+    final details = lines.length > 1 ? lines.skip(1).toList() : <String>[];
 
     return Material(
-      color: theme.colorScheme.inverseSurface,
-      elevation: 5,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
+      color: Colors.white,
+      elevation: 7,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE8EAED)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.info_outline_rounded,
-              size: 18,
-              color: theme.colorScheme.onInverseSurface,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.onInverseSurface,
-                  fontWeight: FontWeight.w600,
+            Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF2EA),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.local_police_rounded,
+                    color: Color(0xFFFF6B1A),
+                    size: 22,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: const Color(0xFF111418),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 19,
+                  color: Color(0xFF68707B),
+                ),
+              ],
             ),
+            if (details.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              for (final detail in details)
+                Padding(
+                  padding: const EdgeInsets.only(top: 5),
+                  child: _CalloutDetail(text: detail),
+                ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CalloutDetail extends StatelessWidget {
+  const _CalloutDetail({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEntering = text.startsWith('دخول:');
+    final isLeaving = text.startsWith('خروج:');
+    final status = text.split(':').length > 1
+        ? text.substring(text.indexOf(':') + 1).trim()
+        : text;
+    final color = status == 'سالك'
+        ? const Color(0xFF16A34A)
+        : status == 'أزمة'
+        ? const Color(0xFFDC2626)
+        : status == 'أزمة متوسطة'
+        ? const Color(0xFFF59E0B)
+        : const Color(0xFF64748B);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isEntering
+                ? Icons.login_rounded
+                : isLeaving
+                ? Icons.logout_rounded
+                : Icons.info_outline_rounded,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -802,6 +971,51 @@ class _Attribution extends StatelessWidget {
           color: theme.colorScheme.onSurfaceVariant,
           fontSize: 9,
           fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+/// Small, unobtrusive note that the map is drawn from tiles saved on the device.
+class _OfflineMapChip extends StatelessWidget {
+  const _OfflineMapChip();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = AppLocalizations.of(context).mapOfflineSaved;
+
+    return Semantics(
+      liveRegion: true,
+      label: label,
+      child: ExcludeSemantics(
+        child: Container(
+          key: const ValueKey('mapOfflineChip'),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.86),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 11,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

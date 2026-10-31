@@ -28,6 +28,9 @@ class OnboardingState {
     this.restored = false,
     this.ambiguousFailure = false,
     this.consentRevision = 0,
+    this.applicationSubmitted = true,
+    this.submitting = false,
+    this.missingDocuments = const [],
   });
 
   const OnboardingState.checking()
@@ -47,6 +50,11 @@ class OnboardingState {
   final bool ambiguousFailure;
   final int consentRevision;
 
+  /// False while a pending applicant still has to upload documents and send the application.
+  final bool applicationSubmitted;
+  final bool submitting;
+  final List<String> missingDocuments;
+
   bool get enabled => config?.enabled == true;
   bool get busy => switch (stage) {
     OnboardingStage.checkingAvailability ||
@@ -55,6 +63,7 @@ class OnboardingState {
     OnboardingStage.verifyingOtp ||
     OnboardingStage.loadingConsents ||
     OnboardingStage.completingRegistration => true,
+    OnboardingStage.pendingReview => submitting,
     _ => false,
   };
 
@@ -72,6 +81,9 @@ class OnboardingState {
     bool? restored,
     bool? ambiguousFailure,
     int? consentRevision,
+    bool? applicationSubmitted,
+    bool? submitting,
+    List<String>? missingDocuments,
     bool clearError = false,
   }) {
     return OnboardingState(
@@ -88,6 +100,9 @@ class OnboardingState {
       restored: restored ?? this.restored,
       ambiguousFailure: ambiguousFailure ?? this.ambiguousFailure,
       consentRevision: consentRevision ?? this.consentRevision,
+      applicationSubmitted: applicationSubmitted ?? this.applicationSubmitted,
+      submitting: submitting ?? this.submitting,
+      missingDocuments: missingDocuments ?? this.missingDocuments,
     );
   }
 }
@@ -98,6 +113,9 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
   OnboardingStorage get _storage => ref.read(onboardingStorageProvider);
 
   OnboardingBundle? _bundle;
+
+  /// The pending-review session token, for features that act on the same application.
+  String? get pendingStatusToken => _bundle?.pendingStatusToken;
   final Map<String, _PendingMutation> _pendingMutations = {};
   int _generation = 0;
   bool _inFlight = false;
@@ -153,6 +171,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
   Future<void> start({
     required String invitationCode,
     required String phone,
+    String email = '',
     required String locale,
   }) async {
     final current = state.value;
@@ -165,9 +184,22 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
         !current.enabled) {
       return;
     }
+    // Without a code only the open driver / shop-owner signup can start.
+    if (invitationCode.trim().isEmpty &&
+        current.config?.openRegistrationRoles.contains(role) != true) {
+      state = AsyncData(current.copyWith(errorCode: 'validation_error'));
+      return;
+    }
+    // Open sign-up emails the code, so it needs a plausible address; invited applicants use the Admin's.
+    if (invitationCode.trim().isEmpty &&
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.trim())) {
+      state = AsyncData(current.copyWith(errorCode: 'validation_error'));
+      return;
+    }
     final payload = <String, String>{
       'invitation': invitationCode.trim(),
       'phone': phone.trim(),
+      'email': invitationCode.trim().isEmpty ? email.trim().toLowerCase() : '',
       'role': role.apiValue,
       'locale': locale,
     };
@@ -183,6 +215,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
           invitationCode: invitationCode,
           role: role,
           phone: phone,
+          email: email,
           locale: locale,
           idempotencyKey: key,
         );
@@ -466,7 +499,8 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
             result.accountStatus == 'pending' &&
             result.pendingStatusToken != null &&
             result.pendingStatusExpiresAt != null &&
-            result.nextAction == 'await_approval') {
+            (result.nextAction == 'await_approval' ||
+                result.nextAction == 'upload_documents')) {
           final pending = OnboardingBundle(
             type: OnboardingBundleType.pendingStatus,
             safeStage: OnboardingStage.pendingReview,
@@ -482,6 +516,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
               stage: OnboardingStage.pendingReview,
               selectedRole: result.role,
               requestId: result.requestId,
+              applicationSubmitted: result.nextAction == 'await_approval',
               ambiguousFailure: false,
               clearError: true,
             ),
@@ -489,6 +524,39 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
           return;
         }
         throw const ApiException(ApiErrorType.validation, 'invalid_response');
+      },
+    );
+  }
+
+  /// Sends the application for admin review once the documents are uploaded.
+  /// The server enforces the same rule and answers `documents_required`.
+  Future<void> submitApplication() async {
+    final current = state.value;
+    final token = _bundle?.pendingStatusToken;
+    if (current == null ||
+        current.stage != OnboardingStage.pendingReview ||
+        current.applicationSubmitted ||
+        token == null ||
+        _inFlight) {
+      return;
+    }
+    final generation = _generation;
+    await _guarded(
+      generation: generation,
+      failureStage: OnboardingStage.pendingReview,
+      action: () async {
+        state = AsyncData(current.copyWith(clearError: true, submitting: true));
+        await _repository.submitApplication(token);
+        _ensureCurrent(generation);
+        state = AsyncData(
+          current.copyWith(
+            applicationSubmitted: true,
+            missingDocuments: const [],
+            submitting: false,
+            ambiguousFailure: false,
+            clearError: true,
+          ),
+        );
       },
     );
   }
@@ -522,18 +590,14 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
               ambiguousFailure: false,
             ),
           );
-        } else if (result.status == 'pending_review') {
-          if (result.nextAction != 'await_approval') {
-            throw const ApiException(
-              ApiErrorType.validation,
-              'invalid_response',
-            );
-          }
+        } else if (_isPendingResult(result)) {
           state = AsyncData(
             current.copyWith(
               stage: OnboardingStage.pendingReview,
               selectedRole: result.role ?? bundle!.selectedRole,
               requestId: result.requestId,
+              applicationSubmitted: result.status == 'pending_review',
+              missingDocuments: result.missingDocuments,
               ambiguousFailure: false,
             ),
           );
@@ -575,8 +639,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
         _ensureCurrent(generation);
         if (result.pendingStatusToken == null ||
             result.pendingStatusExpiresAt == null ||
-            result.status != 'pending_review' ||
-            result.nextAction != 'await_approval' ||
+            !_isPendingResult(result) ||
             (result.role != OnboardingRole.driver &&
                 result.role != OnboardingRole.merchant)) {
           throw const ApiException(ApiErrorType.validation, 'invalid_response');
@@ -595,6 +658,8 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
             stage: OnboardingStage.pendingReview,
             selectedRole: result.role,
             requestId: result.requestId,
+            applicationSubmitted: result.status == 'pending_review',
+            missingDocuments: result.missingDocuments,
             ambiguousFailure: false,
             clearError: true,
           ),
@@ -660,9 +725,11 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
         throw const ApiException(ApiErrorType.validation, 'invalid_response');
       }
       if (restored.type == OnboardingBundleType.pendingStatus) {
-        if (server.status == 'pending_review' &&
-            server.nextAction == 'await_approval') {
-          return _stateFromBundle(config, restored);
+        if (_isPendingResult(server)) {
+          return _stateFromBundle(config, restored).copyWith(
+            applicationSubmitted: server.status == 'pending_review',
+            missingDocuments: server.missingDocuments,
+          );
         }
         if (server.status == 'approved_sign_in' &&
             server.nextAction == 'login') {
@@ -836,6 +903,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
                 : failureStage,
             errorCode: error.message,
             ambiguousFailure: ambiguous,
+            submitting: false,
           ),
         );
       }
@@ -847,6 +915,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
             current.copyWith(
               stage: failureStage,
               errorCode: 'secure_storage_unavailable',
+              submitting: false,
               ambiguousFailure: true,
             ),
           );
@@ -902,6 +971,13 @@ class _PendingMutation {
 class _StaleOnboardingOperation implements Exception {
   const _StaleOnboardingOperation();
 }
+
+/// A pending application is either under review or still waiting for documents.
+bool _isPendingResult(PendingStatusResult result) =>
+    (result.status == 'pending_review' &&
+        result.nextAction == 'await_approval') ||
+    (result.status == 'documents_required' &&
+        result.nextAction == 'upload_documents');
 
 bool _isAmbiguous(ApiException error) =>
     error.type == ApiErrorType.network ||

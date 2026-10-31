@@ -92,6 +92,7 @@
   "noConnectedTrip": "No connected trip yet.",
   "matchResult": "Match result",
   "selectedDriver": "Selected driver",
+  "selectedDriverUnavailable": "The selected driver route is no longer available. Please search again.",
   "selectedRoute": "Selected route",
   "matchScore": "Match score",
   "scoringBreakdown": "Scoring breakdown",
@@ -257,9 +258,19 @@
   "selectAccountType": "Select account type",
   "passengerActiveAfterRegistration": "Active after registration",
   "pendingAfterRegistration": "Pending until review",
+  "registerChooseTitle": "How will you use Masari?",
+  "registerChooseSubtitle": "Pick the option that fits you. We will take you through the right steps.",
+  "registerPassengerTitle": "Normal user",
+  "registerPassengerHelp": "Request trips and deliveries. Your account is ready right after sign-up.",
+  "registerDriverTitle": "Driver",
+  "registerDriverHelp": "Carry trips and deliveries. You upload your documents and an admin approves your account.",
+  "registerMerchantTitle": "Shop owner",
+  "registerMerchantHelp": "Send orders from your shop. You upload your documents and an admin approves your account.",
   "invitationCode": "Invitation code",
   "phoneNumber": "Phone number",
   "sendVerificationCode": "Send verification code",
+  "emailForCode": "Email address (we send the code here)",
+  "codeSentToEmail": "We emailed a six-digit code. Check your email, including the spam folder.",
   "enterVerificationCode": "Enter verification code",
   "resendCode": "Resend code",
   "resendAvailableIn": "Resend available in",
@@ -271,11 +282,13 @@
   "privacyNotice": "Privacy Notice",
   "confirmAdult": "I confirm I am 18 or older",
   "acceptAndContinue": "Accept and continue",
-  "createAccount": "Create account",
   "accountCreated": "Account created",
   "signInToContinue": "Your account was created. Sign in to continue.",
   "applicationUnderReview": "Application under review",
-  "pendingReviewBody": "Your account was created and is under review. You can sign in after the account is approved.",
+  "pendingReviewBody": "Your account was created and is now pending. An admin will review it, which usually takes up to 24 hours. You can sign in once it is approved.",
+  "merchantDocumentsHint": "To get approved, upload clear photos or PDFs of your commercial register (or shop licence), your national ID and a photo of your shop. Files are stored on our server and only the review team can open them.",
+  "documentKindCommercialRegister": "Commercial register",
+  "documentKindShopPhoto": "Shop photo",
   "checkApplicationStatus": "Check an existing application",
   "registrationUnavailable": "Registration is temporarily unavailable.",
   "unableToStartRegistration": "Unable to start registration. Check your invitation details and try again.",
@@ -303,18 +316,32 @@
   "directionLoop": "Loop",
   "orderedStops": "Ordered stops",
   "stopSequence": "Stop {sequence}",
-  "@stopSequence": {"placeholders": {"sequence": {"type": "int"}}},
+  "@stopSequence": {
+    "placeholders": {
+      "sequence": {
+        "type": "int"
+      }
+    }
+  },
   "driverAvailabilities": "Route availability",
   "newAvailability": "Create route availability",
   "noAvailabilities": "No route availability has been created.",
   "departureTime": "Departure time",
   "availabilityWindowEnd": "Availability window end (optional)",
   "seatCapacity": "Seat capacity",
-  "parcelCapacity": "Parcel capacity",
   "reviewAndConfirm": "Review and confirm",
   "availabilityRecorded": "Availability recorded",
   "remainingCapacity": "Remaining: {seats} seats, {parcels} parcels",
-  "@remainingCapacity": {"placeholders": {"seats": {"type": "int"}, "parcels": {"type": "int"}}},
+  "@remainingCapacity": {
+    "placeholders": {
+      "seats": {
+        "type": "int"
+      },
+      "parcels": {
+        "type": "int"
+      }
+    }
+  },
   "activateAvailability": "Activate availability",
   "pauseAvailability": "Pause availability",
   "resumeAvailability": "Resume availability",
@@ -326,24 +353,15 @@
   "dropoffStop": "Drop-off stop",
   "departureFrom": "Departure from",
   "departureUntil": "Departure until",
-  "passengerCount": "Passenger count",
   "requestRecorded": "Your route request was recorded.",
   "matchingDisabledNotice": "Matching is not enabled in this milestone. No driver has been assigned and no trip has been created.",
   "canonicalMerchantOrder": "Route parcel order",
   "canonicalMerchantOrderBody": "Create one atomic order on an approved route.",
   "parcelPickupStop": "Parcel pickup stop",
-  "addParcel": "Add parcel",
-  "removeParcel": "Remove parcel",
   "parcelDestination": "Parcel destination",
-  "parcelSize": "Parcel size",
   "parcelPriority": "Parcel priority",
-  "priorityLow": "Low",
-  "priorityNormal": "Normal",
-  "priorityHigh": "High",
   "orderRecorded": "Your route parcel order was recorded.",
   "batchingMatchingDisabledNotice": "Batching and matching are not enabled in this milestone. No driver has been assigned and no delivery trip has been created.",
-  "submitRequest": "Submit request",
-  "submitOrder": "Submit order",
   "submitAvailability": "Submit availability",
   "selectDateTime": "Select date and time",
   "invalidDepartureWindow": "Choose a valid future departure window.",
@@ -359,11 +377,9 @@
   "canonicalRecoveryRequired": "A previous operation is unresolved. Sign in with the original account and retry the exact operation, or contact support if its recovery window expired.",
   "transactionRetryRequired": "A temporary transaction conflict occurred. Retry this operation.",
   "refreshRoutes": "Refresh routes",
-  "statusActive": "Active",
   "statusPaused": "Paused",
   "statusFilled": "Filled",
   "statusDeparted": "Departed",
-  "statusExpired": "Expired",
   "returnToDashboard": "Return to dashboard",
   "canonicalDriverOffers": "Route offers",
   "canonicalDriverOffersBody": "Review current passenger and parcel assignments for your route availability.",
@@ -449,7 +465,6 @@
   "completedTripsToday": "{count} completed trips",
   "activateYourRoute": "Activate your route",
   "activateRouteHint": "Set your destination to receive requests along your way",
-  "deactivateRoute": "Deactivate route",
   "mapNoLocation": "No location data yet.",
   "batchSavings": "Consolidation savings",
   "batchSavingsCaption": "Saved by consolidating shipments",
@@ -466,7 +481,6 @@
   "liveTracking": "Live tracking",
   "recentOrders": "Recent orders",
   "orderReference": "Order #{reference}",
-
   "navRequests": "Requests",
   "navMyTrip": "My trip",
   "navPerformance": "Earnings",
@@ -474,7 +488,6 @@
   "navMapAlerts": "Map",
   "navShipments": "Shipments",
   "navReports": "Reports",
-
   "myTrips": "My trips",
   "tripsActiveSection": "Active trip",
   "tripsUpcomingSection": "Upcoming trips",
@@ -483,20 +496,17 @@
   "noTripsYet": "No trips yet",
   "noTripsYetBody": "Your trips will appear here once you create your first request.",
   "tripHistoryFailed": "Could not load your trip history.",
-
   "mapsUnavailable": "Map unavailable",
   "mapsUnavailableBody": "Map services are not enabled in this build, so no live position can be shown.",
   "incidentReports": "Reports",
   "incidentReportingUnavailable": "Incident reporting unavailable",
   "incidentReportingUnavailableBody": "There is no backend to receive incident reports yet, so nothing would be submitted from here.",
   "notificationsUnavailableBody": "There is no notification service in this build. Updates appear inside the trip screen.",
-
   "performanceTitle": "Earnings and performance",
   "earningsNotTracked": "Earnings are not tracked",
   "earningsNotTrackedBody": "The database holds no fare or pricing data, so no real earnings figure can be shown.",
   "completedTripsTotal": "Completed trips in total",
   "acceptanceRateUnavailable": "Acceptance rate unavailable",
-
   "destinationCount": "{count} destinations",
   "shipmentsTitle": "Shipments",
   "noShipments": "No shipments",
@@ -504,7 +514,6 @@
   "shipmentsFailed": "Could not load your shipments.",
   "reportsUnavailable": "Reports unavailable",
   "reportsUnavailableBody": "There is no backend for generating or exporting PDF or Excel reports.",
-
   "accountProfile": "Profile",
   "accountSupport": "Support",
   "supportUnavailable": "In-app support unavailable",
@@ -585,15 +594,27 @@
   "mapDriverRoute": "Available driver route",
   "mapOriginLabel": "Origin: {name}",
   "@mapOriginLabel": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "mapDestinationLabel": "Destination: {name}",
   "@mapDestinationLabel": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "mapStopLabel": "Stop: {name}",
   "@mapStopLabel": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "mapLegend": "Legend",
   "locationServiceDisabled": "Location services are off on this device. Turn them on to show your position.",
@@ -609,7 +630,11 @@
   "checkpointsEmpty": "No barriers recorded on this route.",
   "checkpointCount": "{count, plural, =0{No barriers} =1{1 barrier} other{{count} barriers}}",
   "@checkpointCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "checkpointOpen": "Open",
   "checkpointCongested": "Congested",
@@ -618,11 +643,264 @@
   "checkpointLabel": "{name} — {status}",
   "@checkpointLabel": {
     "placeholders": {
-      "name": { "type": "String" },
-      "status": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
     }
   },
   "checkpointUnnamed": "Barrier",
   "mapRouteMissingCoordinates": "This route has no coordinates, so it cannot be drawn on the map.",
-  "mapSelectRoute": "Choose a route to show it on the map."
+  "mapSelectRoute": "Choose a route to show it on the map.",
+  "recoverMerchantOrder": "Recover order",
+  "merchantOrderUncertain": "The order may have been saved. Recover it before creating another order.",
+  "merchantOrderRecoveryExpired": "The retry window has expired. Only a saved-order lookup is allowed. Contact support if recovery remains unresolved.",
+  "merchantOrderRecoveryUnavailable": "Order recovery is unavailable. Sign in to the original merchant account or contact support. Do not submit a replacement order.",
+  "bookingTimePassed": "This departure time has passed. Choose an upcoming time.",
+  "bookingOutcomeUnknown": "The booking may already be saved. We will verify it when the connection returns. Do not create another booking.",
+  "verifyBooking": "Verify booking",
+  "checkpointDirectoryTitle": "Checkpoint directory",
+  "checkpointDirectoryDisabled": "Checkpoint directory is not enabled.",
+  "checkpointDirectoryLoadFailed": "Checkpoint directory could not be loaded.",
+  "checkpointDirectorySearch": "Search checkpoints or cities",
+  "checkpointDirectoryNoResults": "No matching checkpoints",
+  "checkpointDirectoryTrafficUnavailable": "Traffic status unavailable",
+  "checkpointDirectoryLimitedNotice": "Limited provider dataset: up to seven checkpoints per city. This is not the complete directory.",
+  "checkpointDirectoryGenerated": "Provider response generated",
+  "checkpointDirectoryEnteringUpdated": "Entering status last changed (status unavailable)",
+  "checkpointDirectoryLeavingUpdated": "Leaving status last changed (status unavailable)",
+  "checkpointDirectoryTimezoneUnspecified": "timezone unspecified",
+  "notifMatchOfferedTitle": "New match offer",
+  "notifMatchOfferedBody": "A new request is waiting for your response.",
+  "notifMatchAcceptedTitle": "Your request was accepted",
+  "notifMatchAcceptedBody": "A driver accepted your request.",
+  "notifMatchRejectedTitle": "Driver declined",
+  "notifMatchRejectedBody": "The driver declined the request. You can look for another match.",
+  "notifTripStatusTitle": "Trip update",
+  "notifTripStatusBody": "The trip is now: {status}",
+  "@notifTripStatusBody": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "notifVerificationApprovedTitle": "Account approved",
+  "notifVerificationApprovedBody": "Your driver account was approved. You can start working now.",
+  "notifVerificationRejectedTitle": "Verification rejected",
+  "notifVerificationRejectedBody": "Your account verification was not approved.",
+  "notifVerificationRejectedReason": "Reason: {reason}",
+  "@notifVerificationRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "notifUnknownTitle": "New notification",
+  "notificationsMarkAllRead": "Mark all as read",
+  "notificationsLoadError": "Could not load notifications.",
+  "notificationsUnreadCount": "{count} unread",
+  "@notificationsUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsDeliveries": "Deliveries",
+  "reportsLoadError": "Could not load the report.",
+  "reportsOrdersByStatus": "Orders by status",
+  "reportsDeliveriesByStatus": "Deliveries by status",
+  "reportsNoRecords": "No records yet.",
+  "incidentReportAction": "Report a problem",
+  "incidentReportTitle": "Report a problem",
+  "incidentReportNotice": "Your report is recorded for Admin review. This is not an emergency service; if you are in danger, contact the authorities directly.",
+  "incidentDescriptionLabel": "Describe the problem",
+  "incidentSubmit": "Send report",
+  "incidentSubmitted": "Report sent.",
+  "incidentSubmitFailed": "The report could not be sent. Try again.",
+  "incidentTooMany": "You already have several reports under review. Wait for them to be handled before sending another.",
+  "incidentCategorySafety": "Safety",
+  "incidentCategoryDelay": "Delay",
+  "incidentCategoryParcelDamage": "Damaged parcel",
+  "incidentCategoryBehavior": "Behavior",
+  "incidentCategoryOther": "Other",
+  "notifIncidentUpdatedTitle": "Update on your report",
+  "notifIncidentReviewingBody": "Your report is under review.",
+  "notifIncidentResolvedBody": "Your report has been resolved.",
+  "verificationDocuments": "Verification documents",
+  "verificationDocumentsHint": "To get approved, upload clear photos or PDFs of your driving licence, your vehicle registration and your national ID. Files are stored on our server and only the review team can open them.",
+  "documentKind": "Document type",
+  "documentKindDriverLicence": "Driving licence",
+  "documentKindVehicleRegistration": "Vehicle registration",
+  "documentKindNationalId": "National ID",
+  "documentKindInsurance": "Insurance",
+  "documentKindOther": "Other document",
+  "addDocument": "Add a document",
+  "removeDocument": "Remove document",
+  "documentTooLarge": "That file is too large. The limit is 5 MB.",
+  "documentTypeUnsupported": "Only JPEG, PNG or PDF files can be uploaded.",
+  "documentLimitReached": "You have reached the maximum number of documents.",
+  "acceptanceRateTitle": "Acceptance rate",
+  "acceptanceRateValue": "{percent}%",
+  "@acceptanceRateValue": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "acceptanceRateDetail": "{accepted} of {responded} offers you answered were accepted. Offers that expired unanswered are not counted.",
+  "@acceptanceRateDetail": {
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      },
+      "responded": {
+        "type": "int"
+      }
+    }
+  },
+  "acceptanceRateNeedMore": "Your rate appears after {needed} answered offers ({responded} so far).",
+  "@acceptanceRateNeedMore": {
+    "placeholders": {
+      "needed": {
+        "type": "int"
+      },
+      "responded": {
+        "type": "int"
+      }
+    }
+  },
+  "emailOrPhone": "Email or phone number",
+  "emailOrPhoneRequired": "Enter your email or phone number.",
+  "emailOrPhoneInvalid": "Enter a valid email, or a phone number starting with + and the country code.",
+  "mapLegendStart": "Start",
+  "mapLegendDestination": "Destination",
+  "sendParcelTitle": "Send a parcel",
+  "sendParcelEntryBody": "Send a small parcel with a driver already travelling an approved route.",
+  "sendParcelIntro": "Choose a route and stops, then tell us who receives the parcel. A driver travelling that way carries it.",
+  "sendParcelPickupHint": "Hand the parcel to the driver at this stop.",
+  "parcelSizeSmallHint": "S - small, fits in a bag",
+  "parcelSizeMediumHint": "M - medium, about a shoebox",
+  "parcelSizeLargeNotAllowed": "Large parcels are for shops and cannot be sent from a personal account.",
+  "receiverNameLabel": "Receiver's name",
+  "receiverPhoneLabel": "Receiver's phone",
+  "receiverPrivacyNote": "The receiver does not need the app. Their name and phone are used only for this delivery, are never shown to other users, and are erased afterwards.",
+  "parcelNoteLabel": "Note for the driver (optional)",
+  "forbiddenItemsAck": "I confirm the parcel contains no cash, valuables, medicine, weapons, flammable, illegal or perishable items.",
+  "sendParcelSubmit": "Send parcel",
+  "sendParcelRecorded": "Your parcel request was recorded.",
+  "sendParcelRecordedBody": "We are looking for a driver on this route. You can cancel until a driver is offered the parcel.",
+  "myParcelsTitle": "My parcels",
+  "myParcelsEmpty": "You have not sent any parcels yet.",
+  "parcelTrackSearching": "Finding a driver",
+  "parcelTrackAssigned": "Driver assigned",
+  "parcelTrackPickedUp": "Picked up from you",
+  "parcelTrackInTransit": "On the way",
+  "parcelTrackDelivered": "Delivered",
+  "parcelTrackCancelled": "Cancelled",
+  "parcelTrackFailed": "Delivery failed",
+  "parcelTrackExpired": "Expired",
+  "parcelCancelAction": "Cancel parcel",
+  "parcelCancelConfirm": "Cancel this parcel? The receiver's details will be erased.",
+  "parcelCancelledNotice": "Parcel cancelled.",
+  "parcelCannotCancel": "A driver has already been offered this parcel, so it can no longer be cancelled.",
+  "parcelReceiverLine": "Receiver: {name} ({phone})",
+  "@parcelReceiverLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelReceiverRemoved": "Receiver details have been erased.",
+  "parcelLimitReached": "You already have the maximum number of parcels on the way. Wait for one to finish or cancel one.",
+  "parcelDailyLimit": "Daily parcel limit reached. Try again tomorrow.",
+  "invalidReceiverPhone": "Enter a valid phone number for the receiver.",
+  "receiverNameInvalid": "Enter the receiver's name.",
+  "parcelAckRequired": "Confirm the statement about forbidden items to continue.",
+  "keepParcel": "Keep parcel",
+  "mapOfflineSaved": "Offline - showing saved map",
+  "clearMapCache": "Clear saved map",
+  "clearMapCacheHint": "Deletes map tiles saved on this device. They are saved again as you browse.",
+  "mapCacheCleared": "Saved map cleared",
+  "mapCacheClearFailed": "Could not clear the saved map",
+  "notifDocsExpiringTitle": "Document expiring soon",
+  "notifDocsExpiringBody": "Your {document} expires on {date}. Send renewed documents before then to keep working without interruption.",
+  "@notifDocsExpiringBody": {
+    "placeholders": {
+      "document": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notifDocsExpiredTitle": "Your documents have expired",
+  "notifDocsExpiredBody": "Your account is restricted: you cannot go online or accept new trips until you send renewed documents and they are approved. Trips you already accepted are not affected.",
+  "notifDocsRenewalSubmittedTitle": "Renewal documents sent",
+  "notifDocsRenewalSubmittedBody": "Our team will review them and you will be notified of the decision.",
+  "documentKindContract": "Contract",
+  "availabilityDocumentsExpired": "Your documents have expired. Send renewed documents to restore access.",
+  "applicationDocumentsRequiredTitle": "Upload your documents",
+  "applicationDocumentsRequiredBody": "Your account is created but is not under review yet. Upload every required document, then send your application. Review usually takes up to 24 hours.",
+  "documentsStillNeeded": "Still needed: {documents}",
+  "@documentsStillNeeded": {
+    "placeholders": {
+      "documents": {
+        "type": "String"
+      }
+    }
+  },
+  "submitApplication": "Send for review",
+  "documentsRequiredError": "Upload all the required documents before sending your application.",
+  "invitationCodeOptional": "Invitation code (optional)",
+  "fareEstimatedTitle": "Estimated fare",
+  "fareBookedTitle": "Estimated fare when requested",
+  "fareDisclaimer": "Estimated and paid directly to the driver. No payments are processed in the app.",
+  "fareNotSet": "No estimated fare has been set for this route yet.",
+  "farePerSeat": "Per seat",
+  "fareSeatsLine": "Seats × {count}",
+  "fareParcelLine": "Parcel {size}",
+  "fareTotal": "Total",
+  "notifDriverApproachingTitle": "Your driver is approaching",
+  "notifDriverApproachingBody": "Your driver is near your pickup point. Please get ready.",
+  "ratingPromptTitle": "How was your trip?",
+  "ratingPromptBody": "Rate your driver from 1 to 5 stars. Your rating is private: the driver never sees it or who gave it.",
+  "ratingStarLabel": "{count} stars",
+  "@ratingStarLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingSubmit": "Send rating",
+  "ratingThanks": "Thanks for rating your trip.",
+  "ratingFailed": "The rating could not be sent. Try again.",
+  "ratingAlreadyRated": "You already rated this trip.",
+  "renewalTitle": "Renew your documents",
+  "renewalOpen": "Renew documents",
+  "renewalBannerTitle": "Your documents have expired",
+  "renewalBannerBody": "You cannot go online or accept new trips until you send renewed documents and they are approved.",
+  "renewalBannerSubmittedTitle": "Renewal under review",
+  "renewalBannerSubmittedBody": "Your renewed documents are waiting for review.",
+  "renewalIntro": "Upload clear photos or PDFs of your renewed driving licence, vehicle registration and insurance, then send them for review. Trips you already accepted are not affected.",
+  "renewalUploaded": "Uploaded documents",
+  "renewalNoDocuments": "No renewed documents uploaded yet.",
+  "renewalSubmit": "Send for review",
+  "renewalSubmittedTitle": "Waiting for review",
+  "renewalSubmittedBody": "We received your renewed documents. You will be notified once the review team approves them.",
+  "renewalDocumentsRequired": "Upload at least one renewed document before sending.",
+  "renewalStateConflict": "Your renewal status changed. Pull to refresh and try again.",
+  "renewalLoadError": "Could not load your renewal status.",
+  "renewalNothingToRenew": "Your documents are up to date. Nothing to renew."
 }

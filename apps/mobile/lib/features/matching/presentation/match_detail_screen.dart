@@ -1,4 +1,5 @@
-import 'dart:async';
+import '../../../core/widgets/foreground_refresh.dart';
+import '../../auth/application/auth_actor_binding.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,8 +16,18 @@ import '../../../core/widgets/state_views.dart';
 import '../../passenger/application/passenger_controller.dart';
 import '../data/matching_repository.dart';
 
-final matchDetailProvider = FutureProvider.autoDispose.family((ref, String id) {
-  return ref.watch(matchingRepositoryProvider).detail(id);
+final matchDetailProvider = FutureProvider.autoDispose.family((
+  ref,
+  String id,
+) async {
+  final binding = ref.read(authenticatedActorBindingProvider);
+  final revision = binding.revision;
+  if (binding.actorId == null) throw StateError('session_changed');
+  final match = await ref.watch(matchingRepositoryProvider).detail(id);
+  if (!ref.mounted || binding.revision != revision) {
+    throw StateError('session_changed');
+  }
+  return match;
 });
 
 class MatchDetailScreen extends ConsumerStatefulWidget {
@@ -28,93 +39,95 @@ class MatchDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _MatchDetailScreenState extends ConsumerState<MatchDetailScreen> {
-  Timer? _pollTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) ref.invalidate(matchDetailProvider(widget.matchId));
-    });
-  }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final detail = ref.watch(matchDetailProvider(widget.matchId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.matchResult),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => ErrorStateView(
-            title: _matchDetailErrorLabel(l10n, error),
-            retryLabel: l10n.retry,
-            onRetry: () => ref.invalidate(matchDetailProvider(widget.matchId)),
-          ),
-          data: (match) => ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppTokens.marginMobile,
-              AppTokens.spaceMedium,
-              AppTokens.marginMobile,
-              AppTokens.spaceExtraLarge,
+    return ForegroundRefresh(
+      refresh: () async {
+        // Visibility may resume during a dependency build; defer invalidation.
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted || !context.mounted) return;
+        final lifecycle = WidgetsBinding.instance.lifecycleState;
+        if ((lifecycle != null && lifecycle != AppLifecycleState.resumed) ||
+            !TickerMode.valuesOf(context).enabled ||
+            !(ModalRoute.isCurrentOf(context) ?? true)) {
+          return;
+        }
+        final pending = ref.refresh(matchDetailProvider(widget.matchId).future);
+        await pending;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.matchResult),
+          actions: const [
+            LanguageSwitch(),
+            SizedBox(width: AppTokens.spaceSmall),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: detail.when(
+            skipError: detail.hasValue && _isRetryableMatchRead(detail.error),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => ErrorStateView(
+              title: _matchDetailErrorLabel(l10n, error),
+              retryLabel: l10n.retry,
+              onRetry: () =>
+                  ref.invalidate(matchDetailProvider(widget.matchId)),
             ),
-            children: [
-              MasariInfoCard(
-                title: match.driverName,
-                subtitle: l10n.selectedDriver,
-                icon: Icons.person_outline,
-                statusLabel: localizedMatchStatus(l10n, match.status),
-                statusTone: statusToneFor(match.status),
-                body: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DetailRow(
-                      label: l10n.selectedRoute,
-                      value: match.routeLabel,
-                      icon: Icons.route_outlined,
-                    ),
-                    DetailRow(
-                      label: l10n.seatsAvailable,
-                      value: '${match.seatsAvailable}',
-                      icon: Icons.event_seat_outlined,
-                    ),
-                  ],
-                ),
+            data: (match) => ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.marginMobile,
+                AppTokens.spaceMedium,
+                AppTokens.marginMobile,
+                AppTokens.spaceExtraLarge,
               ),
-              const SizedBox(height: AppTokens.spaceLarge),
-              if (match.passengerRequestId != null)
-                _PassengerMatchLifecycleActions(
-                  matchStatus: match.status,
-                  requestId: match.passengerRequestId!,
+              children: [
+                MasariInfoCard(
+                  title: match.driverName,
+                  subtitle: l10n.selectedDriver,
+                  icon: Icons.person_outline,
+                  statusLabel: localizedMatchStatus(l10n, match.status),
+                  statusTone: statusToneFor(match.status),
+                  body: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DetailRow(
+                        label: l10n.selectedRoute,
+                        value: match.routeLabel,
+                        icon: Icons.route_outlined,
+                      ),
+                      DetailRow(
+                        label: l10n.seatsAvailable,
+                        value: '${match.seatsAvailable}',
+                        icon: Icons.event_seat_outlined,
+                      ),
+                    ],
+                  ),
                 ),
-              const SizedBox(height: AppTokens.spaceLarge),
-              DefaultTextStyle.merge(
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.onSurfaceVariant,
+                const SizedBox(height: AppTokens.spaceLarge),
+
+                if (match.passengerRequestId != null)
+                  _PassengerMatchLifecycleActions(
+                    matchStatus: match.status,
+                    requestId: match.passengerRequestId!,
+                  ),
+                const SizedBox(height: AppTokens.spaceLarge),
+                DefaultTextStyle.merge(
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppTheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: SelectableText(match.id),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: SelectableText(match.id),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -187,3 +200,13 @@ String localizedMatchStatus(AppLocalizations l10n, String status) =>
       'invalidated' => l10n.statusExpired,
       _ => status,
     };
+
+// Keep records through temporary read failures, while genuine access/session
+// failures continue to render the existing error state.
+bool _isRetryableMatchRead(Object? error) =>
+    error is ApiException &&
+    {
+      ApiErrorType.network,
+      ApiErrorType.timeout,
+      ApiErrorType.server,
+    }.contains(error.type);

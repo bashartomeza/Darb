@@ -10,6 +10,7 @@ import 'package:masari_mobile/features/passenger/data/passenger_repository.dart'
 import 'package:masari_mobile/features/trips/data/trip_repository.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/booking_recovery_test_support.dart';
 
 void main() {
   test(
@@ -115,6 +116,7 @@ void main() {
 
   test('match run and scoring breakdown parsing', () async {
     final repo = MatchingRepository(
+      mutation: testBookingMutation(),
       apiClient: _client((request) async => http.Response(_matchResponse, 201)),
     );
 
@@ -131,6 +133,7 @@ void main() {
 
   test('persisted passenger match can be recovered after reopening', () async {
     final repo = MatchingRepository(
+      mutation: testBookingMutation(),
       apiClient: _client(
         (request) async => http.Response(
           '{"matches":[${_matchSummaryJson("accepted")}]}',

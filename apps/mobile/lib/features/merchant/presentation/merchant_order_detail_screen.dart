@@ -1,3 +1,4 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/masari_section.dart';
 import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/status_chip.dart';
+import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
 import 'merchant_ui.dart';
@@ -33,31 +35,38 @@ class _MerchantOrderDetailScreenState
     final l10n = AppLocalizations.of(context);
     final detail = ref.watch(merchantOrderProvider(widget.orderId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.orderDetails),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () => ref
-              .read(merchantOrderProvider(widget.orderId).notifier)
-              .refresh(),
-          child: detail.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => ErrorStateView(
-              title: merchantErrorLabel(l10n, error),
-              retryLabel: l10n.retry,
-              onRetry: () => ref
-                  .read(merchantOrderProvider(widget.orderId).notifier)
-                  .refresh(),
+    return ForegroundRefresh(
+      refresh: () async {
+        await ref
+            .read(merchantOrderProvider(widget.orderId).notifier)
+            .refresh();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.orderDetails),
+          actions: const [
+            LanguageSwitch(),
+            SizedBox(width: AppTokens.spaceSmall),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: () => ref
+                .read(merchantOrderProvider(widget.orderId).notifier)
+                .refresh(),
+            child: detail.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => ErrorStateView(
+                title: merchantErrorLabel(l10n, error),
+                retryLabel: l10n.retry,
+                onRetry: () => ref
+                    .read(merchantOrderProvider(widget.orderId).notifier)
+                    .refresh(),
+              ),
+              data: (state) => _content(l10n, state),
             ),
-            data: (state) => _content(l10n, state),
           ),
         ),
       ),
@@ -112,6 +121,16 @@ class _MerchantOrderDetailScreenState
           ),
         ),
         const SizedBox(height: AppTokens.spaceLarge),
+
+        // ------------------------------------------------------------------
+        // Receiver hand-over code: what the receiver tells the driver at delivery.
+        // ------------------------------------------------------------------
+        if (order.status != 'cancelled' &&
+            order.status != 'failed' &&
+            order.status != 'expired') ...[
+          HandoverCodeCard(orderId: order.id, initial: order.handover),
+          const SizedBox(height: AppTokens.spaceLarge),
+        ],
 
         // ------------------------------------------------------------------
         // Batch: consolidating parcels into one corridor trip.
@@ -286,7 +305,7 @@ class _MatchCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final match = state.latestMatch;
 
-    if (match == null) {
+    if (match == null || state.canRunMatch) {
       return MasariInfoCard(
         title: l10n.runMatching,
         subtitle: state.canRunMatch ? null : l10n.matchingUnavailable,

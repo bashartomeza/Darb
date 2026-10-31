@@ -18,7 +18,8 @@
 /// | [trustScore]     | `DriverProfile.trust_score` (0–100)             |
 /// | [departureAt]    | `DriverRoute.departure_at`                      |
 /// | [remainingSeats] | `DriverRoute.remaining_seats`                   |
-/// | [priceLabel]     | **none** — no fare column exists                |
+/// | [fareSeatMinor]  | `RouteFare` (display-only estimate, agorot)     |
+/// | [priceLabel]     | **none** — superseded by [fareSeatMinor]        |
 /// | [completedTrips] | **none** — not tracked                          |
 /// | [photoUrl]       | **none** — no avatar column                     |
 /// | [ratingOutOfFive]| **none** — only a 0–100 trust score is stored   |
@@ -35,6 +36,8 @@ class TripOffer {
     this.trustScore,
     this.matchScore,
     this.priceLabel,
+    this.fareSeatMinor,
+    this.fareCurrency,
     this.departureAt,
     this.remainingSeats,
     this.isSample = false,
@@ -63,6 +66,11 @@ class TripOffer {
 
   /// Already formatted with its currency by the caller.
   final String? priceLabel;
+
+  /// Estimated price of one seat in minor units; formatted by the card for
+  /// the active locale. Display-only: paid directly to the driver.
+  final int? fareSeatMinor;
+  final String? fareCurrency;
 
   final DateTime? departureAt;
   final int? remainingSeats;

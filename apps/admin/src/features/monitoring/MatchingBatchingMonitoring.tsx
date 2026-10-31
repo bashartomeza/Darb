@@ -6,9 +6,10 @@ import type { Overview } from "./contracts";
 import { createObservationGate, type ObservationState } from "./monitoringState";
 import { MatchingResults } from "./MatchingResults";
 import { LegacyBatches } from "./LegacyBatches";
+import { SimulationComparison } from "../comparison/SimulationComparison";
 
-type Tab = "overview" | "matching" | "batches";
-const tabs: Tab[] = ["overview", "matching", "batches"];
+type Tab = "overview" | "matching" | "batches" | "simulation";
+const tabs: Tab[] = ["overview", "matching", "batches", "simulation"];
 const matchStatuses = ["proposed", "sent_to_driver", "accepted", "rejected", "expired", "invalidated"] as const;
 const batchStatuses = ["created", "proposed", "assigned", "picked_up", "in_transit", "delivered", "cancelled", "failed", "expired"] as const;
 
@@ -131,7 +132,7 @@ export function MatchingBatchingMonitoring({ api, token }: { api: ApiClient; tok
         {tabs.map((tab, index) => (
           <button key={tab} type="button" role="tab" id={`monitoring-tab-${tab}`} aria-controls={`monitoring-tabpanel-${tab}`} aria-selected={activeTab === tab} tabIndex={activeTab === tab ? 0 : -1}
             onClick={() => setActiveTab(tab)} onKeyDown={(event) => moveTab(event, index)}>
-            {t(tab === "overview" ? "monitoringTabOverview" : tab === "matching" ? "monitoringTabMatching" : "monitoringTabBatches")}
+            {t(tab === "overview" ? "monitoringTabOverview" : tab === "matching" ? "monitoringTabMatching" : tab === "batches" ? "monitoringTabBatches" : "monitoringTabSimulation")}
           </button>
         ))}
       </div>
@@ -139,6 +140,7 @@ export function MatchingBatchingMonitoring({ api, token }: { api: ApiClient; tok
         {activeTab === "overview" && <OverviewPanel api={api} token={token} />}
         {activeTab === "matching" && <MatchingResults api={api} token={token} />}
         {activeTab === "batches" && <LegacyBatches api={api} token={token} />}
+        {activeTab === "simulation" && <SimulationComparison api={api} token={token} />}
       </div>
     </section>
   );

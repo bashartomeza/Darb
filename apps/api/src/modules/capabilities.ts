@@ -1,12 +1,13 @@
 import { Router } from "express";
 import type { AppConfig } from "../config.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { evaluateDemoResetSafety } from "../lib/demoResetSafety.js";
+import type { CheckpointDirectoryService } from "../services/checkpointDirectory.js";
 
-export function createCapabilitiesRouter(appConfig: AppConfig) {
+export function createCapabilitiesRouter(appConfig: AppConfig, directory?: CheckpointDirectoryService) {
   const router = Router();
 
-  router.get("/capabilities", requireAuth, (_req, res) => {
+  router.get("/capabilities", requireAuth, (req, res) => {
     const canonicalEntryAvailable =
       appConfig.routeManagementEnabled && appConfig.multiRouteEntryEnabled;
     const canonicalMatchingAvailable =
@@ -31,6 +32,14 @@ export function createCapabilitiesRouter(appConfig: AppConfig) {
       // catalog, so the map gate is the catalog gate plus the maps flag.
       maps_available: appConfig.mapsEnabled && appConfig.routeManagementEnabled,
       checkpoints_available: appConfig.checkpointsEnabled,
+      // Existing Flutter versions reject unknown fields. New directory clients
+      // explicitly opt into this extension; legacy responses stay byte-shaped.
+      ...(req.query.include === "checkpoint-directory" ? {
+        checkpoint_directory_available: appConfig.checkpointDirectoryEnabled && directory?.available() === true
+      } : {}),
+      ...(req.query.include === "limited-checkpoint-directory" ? {
+        limited_checkpoint_directory_available: appConfig.limitedCheckpointDirectoryEnabled && ["passenger", "driver"].includes((req as AuthenticatedRequest).user?.role ?? "")
+      } : {}),
       live_tracking_available: false,
       demo_reset_available: evaluateDemoResetSafety(appConfig).allowed
     });

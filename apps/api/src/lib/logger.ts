@@ -3,6 +3,14 @@ import type { AppConfig } from "../config.js";
 
 const AUTH_CREDENTIAL_FIELD_NAMES = [
   "authorization",
+  "apikey",
+  "apiKey",
+  "CHECKPOINTS_API_KEY",
+  "SMTP_PASSWORD",
+  "smtp_password",
+  "AWEENRAYEH_PARTNER_API_KEY",
+  "x-api-key",
+  "X-Api-Key",
   "cookie",
   "token",
   "raw_action_token",
@@ -26,7 +34,7 @@ const AUTH_CREDENTIAL_FIELD_NAMES = [
 // recursive wildcard. Masari supports structured operational log contexts to
 // five object levels, so generate every safe path through that depth.
 const AUTH_CREDENTIAL_REDACTION_PATHS = AUTH_CREDENTIAL_FIELD_NAMES.flatMap((field) =>
-  Array.from({ length: 6 }, (_, depth) => `${Array(depth).fill("*").join(".")}${depth ? "." : ""}${field}`)
+  Array.from({ length: 6 }, (_, depth) => `${Array(depth).fill("*").join(".")}${field.includes("-") ? `["${field}"]` : `${depth ? "." : ""}${field}`}`)
 );
 
 const REDACTED_PATHS = [...new Set([

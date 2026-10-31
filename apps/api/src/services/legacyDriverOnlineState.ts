@@ -39,7 +39,11 @@ async function lockEligibleProfile(
   `;
   const profile = rows[0];
   if (!profile) throw new HttpError(403, "driver_unavailable");
-  if (!profile.verified) throw new HttpError(403, "driver_not_approved");
+  if (!profile.verified) {
+    const verification = await tx.driverVerification.findUnique({ where: { user_id: userId }, select: { status: true } });
+    if (verification?.status === "documents_expired") throw new HttpError(403, "driver_documents_expired");
+    throw new HttpError(403, "driver_not_approved");
+  }
   return profile;
 }
 

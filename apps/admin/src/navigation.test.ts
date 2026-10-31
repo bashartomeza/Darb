@@ -21,6 +21,7 @@ describe("admin navigation", () => {
       "overview",
       "users",
       "drivers",
+      "invitations",
       "trips",
       "routes",
       "deliveries",
@@ -44,6 +45,7 @@ describe("admin navigation", () => {
       ["overview", "main"],
       ["users", "people"],
       ["drivers", "people"],
+      ["invitations", "people"],
       ["trips", "operations"],
       ["routes", "operations"],
       ["deliveries", "operations"],
@@ -72,8 +74,8 @@ describe("admin navigation", () => {
     expect(isModuleAvailable("routes", allOff)).toBe(false);
     expect(isModuleAvailable("matchingBatching", allOn)).toBe(true);
     expect(isModuleAvailable("matchingBatching", allOff)).toBe(true);
-    expect(isModuleAvailable("incidentsSafety", allOn)).toBe(false);
-    expect(isModuleAvailable("reports", allOn)).toBe(false);
+    expect(isModuleAvailable("incidentsSafety", allOn)).toBe(true);
+    expect(isModuleAvailable("reports", allOn)).toBe(true);
   });
 
   it("keeps API-backed people modules available", () => {

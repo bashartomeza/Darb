@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_error.dart';
 import '../application/auth_controller.dart';
@@ -32,6 +33,12 @@ class _CredentialActionDialogState
   Object? _error;
   bool get _authenticated => ['set', 'link'].contains(widget.action);
   bool get _passwordAction => ['set', 'reset'].contains(widget.action);
+  bool get _codeComplete => RegExp(r'^\d{6}$').hasMatch(_proof.text.trim());
+  // Resetting or verifying always needs the emailed code; changing a password
+  // can instead be proven with the current password.
+  bool get _canConfirm => widget.action == 'set'
+      ? _codeComplete || _current.text.isNotEmpty
+      : _codeComplete;
   @override
   void dispose() {
     _email.dispose();
@@ -86,6 +93,7 @@ class _CredentialActionDialogState
       await repo.linkGoogle(googleToken, _current.text, _proof.text.trim());
     } else {
       await repo.emailActionConfirm(
+        _email.text.trim().toLowerCase(),
         _proof.text.trim(),
         _password.text,
         reset: widget.action == 'reset',
@@ -163,6 +171,7 @@ class _CredentialActionDialogState
                     ),
                     TextField(
                       controller: _current,
+                      onChanged: (_) => setState(() {}),
                       obscureText: true,
                       autofillHints: const [AutofillHints.password],
                       decoration: InputDecoration(
@@ -196,16 +205,24 @@ class _CredentialActionDialogState
                       ),
                     ),
                   TextField(
+                    key: const ValueKey('credentialCode'),
                     controller: _proof,
                     focusNode: _proofFocus,
                     textDirection: TextDirection.ltr,
                     autocorrect: false,
                     enableSuggestions: false,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(6),
+                    ],
+                    autofillHints: const [AutofillHints.oneTimeCode],
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: authText(
                         context,
-                        'Proof token from email',
-                        'رمز الإثبات من البريد',
+                        'Six-digit code from your email',
+                        'الرمز المكون من ستة أرقام من بريدك الإلكتروني',
                       ),
                     ),
                   ),
@@ -266,7 +283,8 @@ class _CredentialActionDialogState
           ),
           if (!_done && widget.action != 'link')
             FilledButton(
-              onPressed: _busy ? null : _confirm,
+              key: const ValueKey('credentialConfirm'),
+              onPressed: _busy || !_canConfirm ? null : _confirm,
               child: Text(authText(context, 'Confirm', 'تأكيد')),
             ),
         ],

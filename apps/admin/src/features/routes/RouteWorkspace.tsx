@@ -17,6 +17,8 @@ export type RouteWorkspaceProps = {
   overview: ReactNode;
   versions: ReactNode;
   stops: ReactNode;
+  /** Optional: the fares tab only appears when a panel is supplied. */
+  fares?: ReactNode;
 };
 
 const copy = {
@@ -44,7 +46,8 @@ export function RouteWorkspace({
   onSelectTab,
   overview,
   versions,
-  stops
+  stops,
+  fares
 }: RouteWorkspaceProps) {
   const shared = translations[locale];
   const text = copy[locale];
@@ -54,7 +57,8 @@ export function RouteWorkspace({
   const tabs: Array<{ id: RouteWorkspaceTab; label: string; panel: ReactNode }> = [
     { id: "overview", label: shared.routeTabOverview, panel: overview },
     { id: "versions", label: shared.routeTabVersions, panel: versions },
-    { id: "stops", label: shared.routeTabStops, panel: stops }
+    { id: "stops", label: shared.routeTabStops, panel: stops },
+    ...(fares ? [{ id: "fares" as const, label: shared.routeTabFares, panel: fares }] : [])
   ];
   const active = tabs.find((item) => item.id === tab) ?? tabs[0];
 

@@ -5,6 +5,7 @@ import { auditEvent } from "../lib/audit.js";
 import { claimIdempotency, completeIdempotency } from "../lib/idempotency.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../middleware/error.js";
+import { routeFareService } from "./routeFares.js";
 import {
   requireEligibleOperationalRoute,
   requireMerchantStops,
@@ -47,7 +48,8 @@ async function claimCreate(
     keyDigest: digest(actor.idempotencyKey),
     keyVersion: 1,
     requestDigest: digest(JSON.stringify({ actor_id: actor.id, payload })),
-    expiresAt: new Date(Date.now() + 86_400_000)
+    expiresAt: new Date(Date.now() + 86_400_000),
+    retainCompleted: true,
   });
   if (claim.kind === "conflict") throw new HttpError(409, "idempotency_conflict");
   if (claim.kind === "in_progress") throw new HttpError(409, "idempotency_in_progress");
@@ -70,6 +72,26 @@ export type CanonicalMerchantInput = {
   requestedDepartureFrom: Date;
   requestedDepartureUntil: Date;
   parcels: Array<{ destinationStopId: string; size: "S" | "M" | "L"; priority: "low" | "normal" | "high" }>;
+};
+
+/**
+ * Extension points for callers that create a parcel order on behalf of a
+ * different kind of sender (for example an ordinary passenger). The order,
+ * parcels and dispatch row are still created by this one code path; the hooks
+ * run inside the same transaction, only for a new (non-replayed) creation.
+ */
+export type CanonicalMerchantOrderOptions = {
+  /** Idempotency operation name; defaults to the merchant operation. */
+  operation?: string;
+  /** Extra values folded into the idempotency request digest. */
+  digestExtension?: unknown;
+  beforeCreate?: (tx: Prisma.TransactionClient) => Promise<void>;
+  afterCreate?: (
+    tx: Prisma.TransactionClient,
+    created: { orderId: string; parcelIds: string[]; routeVersionId: string }
+  ) => Promise<void>;
+  /** Extra audit metadata for the creation event. */
+  auditMetadata?: Record<string, string | number | boolean>;
 };
 
 export type AvailableDepartureQuery = {
@@ -128,7 +150,6 @@ export function createCanonicalDemandService(db: PrismaClient = prisma) {
       if (!Number.isInteger(input.passengerCount) || input.passengerCount < 1 || input.passengerCount > CANONICAL_ENTRY_LIMITS.maximumPassengerCount) {
         throw new HttpError(400, "invalid_passenger_count");
       }
-      validateDepartureWindow(input.requestedDepartureFrom, input.requestedDepartureUntil);
       return db.$transaction(async (tx) => {
         const payload = {
           route_version_id: input.routeVersionId,
@@ -149,12 +170,15 @@ export function createCanonicalDemandService(db: PrismaClient = prisma) {
           if (!resource) throw new HttpError(409, "idempotency_replay_unavailable");
           return { resource, replayed: true };
         }
+        validateDepartureWindow(input.requestedDepartureFrom, input.requestedDepartureUntil);
         const route = await requireEligibleOperationalRoute(tx, input.routeVersionId, {
           requiredStopIds: [input.pickupStopId, input.dropoffStopId],
           lockForUpdate: true
         });
         const { pickup, dropoff } = requirePassengerStopPair(route, input.pickupStopId, input.dropoffStopId);
         const now = new Date();
+        // Frozen now: later tariff edits must not change this request.
+        const fare = await routeFareService.passengerSnapshot(tx, route.route.id, input.passengerCount, now);
         const resource = await tx.passengerRequest.create({
           data: {
             passenger_id: actor.id,
@@ -175,7 +199,8 @@ export function createCanonicalDemandService(db: PrismaClient = prisma) {
             requested_departure_from: input.requestedDepartureFrom,
             requested_departure_until: input.requestedDepartureUntil,
             canonical_created_at: now,
-            operational_mode: CANONICAL_ENTRY_VERSION
+            operational_mode: CANONICAL_ENTRY_VERSION,
+            ...fare
           }
         });
         await tx.canonicalDemandDispatch.create({
@@ -209,11 +234,10 @@ export function createCanonicalDemandService(db: PrismaClient = prisma) {
       }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
     },
 
-    async createMerchantOrder(input: CanonicalMerchantInput, actor: Actor) {
+    async createMerchantOrder(input: CanonicalMerchantInput, actor: Actor, options: CanonicalMerchantOrderOptions = {}) {
       if (input.parcels.length < 1 || input.parcels.length > CANONICAL_ENTRY_LIMITS.maximumParcels) {
         throw new HttpError(400, "invalid_parcel_count");
       }
-      validateDepartureWindow(input.requestedDepartureFrom, input.requestedDepartureUntil);
       return db.$transaction(async (tx) => {
         const payload = {
           route_version_id: input.routeVersionId,
@@ -226,7 +250,12 @@ export function createCanonicalDemandService(db: PrismaClient = prisma) {
             priority: parcel.priority
           }))
         };
-        const claim = await claimCreate(tx, "canonical_merchant_order_create", actor, payload);
+        const claim = await claimCreate(
+          tx,
+          options.operation ?? "canonical_merchant_order_create",
+          actor,
+          options.digestExtension === undefined ? payload : { ...payload, extension: options.digestExtension }
+        );
         if (claim.kind === "replay") {
           if (claim.record.resource_type !== "MerchantOrder" || !claim.record.resource_id) {
             throw new HttpError(409, "idempotency_replay_unavailable");
@@ -238,13 +267,21 @@ export function createCanonicalDemandService(db: PrismaClient = prisma) {
           if (!resource) throw new HttpError(409, "idempotency_replay_unavailable");
           return { resource, replayed: true };
         }
+        validateDepartureWindow(input.requestedDepartureFrom, input.requestedDepartureUntil);
         const destinationIds = input.parcels.map((parcel) => parcel.destinationStopId);
         const route = await requireEligibleOperationalRoute(tx, input.routeVersionId, {
           requiredStopIds: [input.pickupStopId, ...destinationIds],
           lockForUpdate: true
         });
         const { pickup, destinations } = requireMerchantStops(route, input.pickupStopId, destinationIds);
+        await options.beforeCreate?.(tx);
         const now = new Date();
+        const fares = await routeFareService.parcelSnapshots(
+          tx,
+          route.route.id,
+          input.parcels.map((parcel) => parcel.size),
+          now
+        );
         const createdOrder = await tx.merchantOrder.create({
           data: {
             merchant_id: actor.id,
@@ -273,12 +310,18 @@ export function createCanonicalDemandService(db: PrismaClient = prisma) {
             route_version_id: route.id,
             destination_stop_id: destinations[index].stopId,
             canonical_entry_version: CANONICAL_ENTRY_VERSION,
-            operational_mode: CANONICAL_ENTRY_VERSION
+            operational_mode: CANONICAL_ENTRY_VERSION,
+            ...fares[index]
           }))
         });
         const resource = await tx.merchantOrder.findUniqueOrThrow({
           where: { id: createdOrder.id },
           include: { parcels: true }
+        });
+        await options.afterCreate?.(tx, {
+          orderId: resource.id,
+          parcelIds: resource.parcels.map((parcel) => parcel.id),
+          routeVersionId: route.id
         });
         await tx.canonicalDemandDispatch.create({
           data: {
@@ -297,7 +340,8 @@ export function createCanonicalDemandService(db: PrismaClient = prisma) {
             route_version_id: route.id,
             parcel_count: resource.parcels.length,
             schema_version: CANONICAL_ENTRY_VERSION,
-            request_id: actor.requestId
+            request_id: actor.requestId,
+            ...options.auditMetadata
           }
         });
         await completeIdempotency(tx, {

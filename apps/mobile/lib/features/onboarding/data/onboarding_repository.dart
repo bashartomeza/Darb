@@ -65,13 +65,18 @@ class OnboardingRepository {
     required String invitationCode,
     required OnboardingRole role,
     required String phone,
+    String email = '',
     required String locale,
     required String idempotencyKey,
   }) async {
     final json = await _post(
       '/onboarding/attempts',
       body: {
-        'invitation_code': invitationCode.trim(),
+        if (invitationCode.trim().isNotEmpty)
+          'invitation_code': invitationCode.trim()
+        else
+          // Open sign-up only: the one-time code is emailed (Masari sends no SMS).
+          'email': email.trim(),
         'role': role.apiValue,
         'phone': phone.trim(),
         'locale': locale,
@@ -198,6 +203,77 @@ class OnboardingRepository {
     }
   }
 
+  /// Sends the complete application for admin review. The server refuses with
+  /// `documents_required` until every required document is uploaded.
+  Future<void> submitApplication(String onboardingToken) async {
+    final json = await _post(
+      '/onboarding/application/submit',
+      body: const {},
+      onboardingToken: onboardingToken,
+    );
+    if (json['onboarding_status'] != 'pending_review') {
+      throw const ApiException(ApiErrorType.validation, 'invalid_response');
+    }
+  }
+
+  String _documentsPath(bool merchant) => merchant
+      ? '/onboarding/merchant-documents'
+      : '/onboarding/driver-documents';
+
+  Future<DriverDocumentList> driverDocuments(
+    String onboardingToken, {
+    bool merchant = false,
+  }) async {
+    final json = await _get(
+      _documentsPath(merchant),
+      onboardingToken: onboardingToken,
+    );
+    try {
+      return DriverDocumentList.fromJson(json);
+    } on FormatException {
+      throw const ApiException(ApiErrorType.validation, 'invalid_response');
+    }
+  }
+
+  Future<DriverDocument> uploadDriverDocument(
+    String onboardingToken, {
+    required String kind,
+    required List<int> bytes,
+    bool merchant = false,
+  }) async {
+    final json = await _send(() {
+      final headers = _headers(onboardingToken);
+      headers[HttpHeaders.contentTypeHeader] = 'application/octet-stream';
+      return client.post(
+        _uri('${_documentsPath(merchant)}?kind=$kind'),
+        headers: headers,
+        body: bytes,
+      );
+    });
+    final document = json['document'];
+    try {
+      if (document is! Map<String, dynamic>) {
+        throw const FormatException('Missing document');
+      }
+      return DriverDocument.fromJson(document);
+    } on FormatException {
+      throw const ApiException(ApiErrorType.validation, 'invalid_response');
+    }
+  }
+
+  Future<void> deleteDriverDocument(
+    String onboardingToken,
+    String id, {
+    bool merchant = false,
+  }) async {
+    await _send(() {
+      return client.delete(
+        _uri('${_documentsPath(merchant)}/${Uri.encodeComponent(id)}'),
+        headers: _headers(onboardingToken),
+      );
+    });
+  }
+
   Future<Map<String, dynamic>> _get(String path, {String? onboardingToken}) {
     return _send(() {
       return client.get(_uri(path), headers: _headers(onboardingToken));
@@ -275,6 +351,7 @@ class OnboardingRepository {
       400 || 422 => ApiErrorType.validation,
       401 => ApiErrorType.unauthorized,
       403 => ApiErrorType.forbidden,
+      413 || 415 => ApiErrorType.validation,
       >= 500 => ApiErrorType.server,
       _ => ApiErrorType.unknown,
     };

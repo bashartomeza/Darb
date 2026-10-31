@@ -528,12 +528,13 @@ async function main() {
   const createResponse = await fetch(`${api}/api/v1/admin/invitations`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ role: "merchant", phone: "+970590000004", region: "PS", campaign: privateCampaign })
+    body: JSON.stringify({ role: "merchant", phone: "+970590000004", contact_email: "Invitee@Example.com", region: "PS", campaign: privateCampaign })
   });
   const created = await json(createResponse);
   assert(createResponse.status === 201 && typeof created.code === "string", "Admin invitation creation failed");
   assert(Boolean(createResponse.headers.get("x-request-id")), "Admin invitation response omitted request ID");
   assert(!JSON.stringify(created).includes("digest"), "Admin invitation create response exposed a digest");
+  assert(created.invitation.contact_email === "i***@example.com" && !JSON.stringify(created).includes("invitee@example.com"), "Admin invitation response must mask the contact email");
   const createAudit = await prisma.auditEvent.findFirstOrThrow({
     where: { action: "invitation_created", entity_id: created.invitation.id },
     orderBy: { created_at: "desc" }

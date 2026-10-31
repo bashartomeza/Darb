@@ -1,3 +1,5 @@
+import '../../../core/fares/fare.dart';
+
 enum CanonicalOfferStatus { offered, accepted, rejected, expired }
 
 enum CanonicalDemandType { passenger, merchantOrder }
@@ -150,6 +152,8 @@ class CanonicalOfferDemand {
     required this.requestedDepartureUntil,
     required this.passengerCount,
     required this.parcelCount,
+    this.fare,
+    this.parcelSizes = const [],
   });
 
   final String pickupStopId;
@@ -158,6 +162,13 @@ class CanonicalOfferDemand {
   final DateTime requestedDepartureUntil;
   final int? passengerCount;
   final int? parcelCount;
+
+  /// Estimate frozen when the demand was created, shown before accepting.
+  /// Display-only: the driver is paid directly, not through the app.
+  final FareSnapshot? fare;
+
+  /// Parcel size classes (`S`/`M`/`L`) of a merchant order, when reported.
+  final List<String> parcelSizes;
 
   factory CanonicalOfferDemand.fromJson(
     Map<String, dynamic> json,
@@ -183,6 +194,8 @@ class CanonicalOfferDemand {
       parcelCount: type == CanonicalDemandType.merchantOrder
           ? _integer(json, 'parcel_count')
           : null,
+      fare: FareSnapshot.tryParse(json['fare']),
+      parcelSizes: _parcelSizes(json['parcels']),
     );
   }
 }
@@ -301,6 +314,7 @@ class CanonicalAssignment {
     required this.destinationStopIds,
     required this.createdAt,
     required this.updatedAt,
+    this.fare,
   });
 
   final String id;
@@ -318,6 +332,9 @@ class CanonicalAssignment {
   final List<String> destinationStopIds;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Estimate frozen when this request/order was created (null if none).
+  final FareSnapshot? fare;
 
   factory CanonicalAssignment.fromJson(Map<String, dynamic> json) {
     final status = CanonicalAssignmentStatus.values
@@ -356,6 +373,7 @@ class CanonicalAssignment {
           : const [],
       createdAt: _date(json, 'created_at'),
       updatedAt: _date(json, 'updated_at'),
+      fare: FareSnapshot.tryParse(json['fare']),
     );
   }
 }
@@ -373,6 +391,15 @@ class CanonicalOfferEnvelope {
   const CanonicalOfferEnvelope({required this.offer, required this.serverNow});
   final CanonicalDriverOffer offer;
   final DateTime serverNow;
+}
+
+List<String> _parcelSizes(Object? value) {
+  if (value is! List) return const [];
+  return List.unmodifiable([
+    for (final item in value)
+      if (item is Map && fareParcelSizes.contains(item['size']))
+        item['size'] as String,
+  ]);
 }
 
 CanonicalTripSummary? _trip(Map<String, dynamic> json) {

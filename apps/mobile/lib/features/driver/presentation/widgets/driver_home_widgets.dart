@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
+import '../../../notifications/presentation/notification_bell.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/semantic_colors.dart';
 import '../../../../core/widgets/entity_cards.dart';
-import '../../../../core/widgets/masari_bottom_nav.dart';
 import '../../../../core/widgets/masari_card.dart';
-import '../../../../core/widgets/state_views.dart';
 import '../../../../core/widgets/trust_score_ring.dart';
 import '../../domain/driver_home_stats.dart';
 
@@ -23,28 +23,10 @@ class DriverTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
     return Row(
       textDirection: TextDirection.ltr,
       children: [
-        IconButton(
-          key: const ValueKey('driverNotifications'),
-          tooltip: l10n.notifications,
-          onPressed: () => showMasariBottomSheet<void>(
-            context: context,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: AppTokens.spaceMedium),
-              child: EmptyState(
-                title: l10n.notifications,
-                message: l10n.noNotifications,
-                icon: Icons.notifications_none,
-              ),
-            ),
-          ),
-          icon: const Icon(Icons.notifications_none, size: 28),
-          color: AppTheme.primary,
-        ),
+        const NotificationBell(key: ValueKey('driverNotifications')),
         Expanded(
           child: Text(
             title,

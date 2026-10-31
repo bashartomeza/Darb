@@ -15,13 +15,19 @@ import {
   summarizeOverviewResults
 } from "./features/overview/overviewState";
 import { RequestsBoard } from "./features/requests/RequestsBoard";
+import { PassengerParcelsPanel } from "./features/requests/PassengerParcelsPanel";
 import { TripsManagement } from "./features/trips/TripsManagement";
 import { MatchingBatchingMonitoring } from "./features/monitoring/MatchingBatchingMonitoring";
+import { InvitationsPage } from "./features/invitations/InvitationsPage";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { DriverDirectory } from "./features/verification/DriverDirectory";
 import { UsersDirectory } from "./features/users/UsersDirectory";
 import { DemoControl } from "./features/demo/DemoControl";
 import { ModuleUnavailable } from "./features/placeholder/ModuleUnavailable";
+import { ReportsPanel } from "./features/reports/ReportsPanel";
+import { SuccessMetricsPanel } from "./features/reports/SuccessMetricsPanel";
+import { IncidentsPanel } from "./features/incidents/IncidentsPanel";
+import { UncertainAiRequests } from "./features/incidents/UncertainAiRequests";
 import { ProfilePanel } from "./features/profile/ProfilePanel";
 import {
   hashForModule,
@@ -558,7 +564,12 @@ export function App({
         );
 
       case "deliveries":
-        return <RequestsBoard requests={requests} orders={orders} search={search} />;
+        return (
+          <>
+            <RequestsBoard requests={requests} orders={orders} search={search} />
+            <PassengerParcelsPanel api={api} token={token} search={search} />
+          </>
+        );
 
       case "matchingBatching":
         return <MatchingBatchingMonitoring api={api} token={token} />;
@@ -579,6 +590,9 @@ export function App({
       case "profile":
         return <ProfilePanel admin={admin} />;
 
+      case "invitations":
+        return <InvitationsPage api={api} token={token} />;
+
       case "users":
         return <UsersDirectory api={api} token={token} admin={admin} search={search} canAct={canAct} />;
 
@@ -597,10 +611,20 @@ export function App({
         );
 
       case "incidentsSafety":
-        return <ModuleUnavailable icon="emergency" reason="no-api" />;
+        return (
+          <>
+            <IncidentsPanel api={api} token={token} />
+            <UncertainAiRequests api={api} token={token} />
+          </>
+        );
 
       case "reports":
-        return <ModuleUnavailable icon="assessment" reason="no-api" />;
+        return (
+          <>
+            <ReportsPanel api={api} token={token} />
+            <SuccessMetricsPanel api={api} token={token} />
+          </>
+        );
 
       default:
         return null;
@@ -613,7 +637,10 @@ export function App({
     matchingBatching: t("matchingDescription"),
     trips: t("tripsDescription"),
     users: t("usersDescription"),
+    invitations: t("invitationsDescription"),
     drivers: t("verificationDescription"),
+    reports: t("reportsDescription"),
+    incidentsSafety: t("incidentsDescription"),
     settings: t("settingsDescription"),
     profile: t("profileDescription")
   };

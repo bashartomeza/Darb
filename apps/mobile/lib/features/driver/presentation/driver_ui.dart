@@ -68,7 +68,8 @@ Widget technicalText(String value, {Key? key, bool selectable = false}) {
 }
 
 String localizedOrigin(BuildContext context, String fallback) {
-  return Localizations.localeOf(context).languageCode == 'ar'
+  return Localizations.localeOf(context).languageCode == 'ar' &&
+          fallback == lockedDriverOriginLabel
       ? 'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية'
       : fallback;
 }

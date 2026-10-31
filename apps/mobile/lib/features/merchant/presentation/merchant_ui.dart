@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../data/merchant_order_operation_storage.dart';
 
 String merchantStatusLabel(AppLocalizations l10n, String status) =>
     switch (status) {
@@ -27,6 +28,14 @@ String merchantStatusLabel(AppLocalizations l10n, String status) =>
     };
 
 String merchantErrorLabel(AppLocalizations l10n, Object error) {
+  if (error is MerchantOrderRecoveryException) {
+    return switch (error.code) {
+      'merchant_order_recovery_expired' => l10n.merchantOrderRecoveryExpired,
+      'merchant_order_pending' ||
+      'merchant_order_in_progress' => l10n.merchantOrderUncertain,
+      _ => l10n.merchantOrderRecoveryUnavailable,
+    };
+  }
   if (error is! ApiException) return l10n.requestFailed;
   if (error.type == ApiErrorType.network) return l10n.networkUnavailable;
   if (error.type == ApiErrorType.timeout) return l10n.requestTimedOut;

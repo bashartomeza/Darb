@@ -1,6 +1,6 @@
 import type { RouteStopDraft, RouteVersionDraft, ServiceRoute } from "../../api";
 
-export type RouteWorkspaceTab = "overview" | "versions" | "stops";
+export type RouteWorkspaceTab = "overview" | "versions" | "stops" | "fares";
 export type RouteStopPermission = keyof Pick<
   RouteStopDraft,
   "passenger_pickup_allowed" | "passenger_dropoff_allowed" | "parcel_pickup_allowed" | "parcel_dropoff_allowed"

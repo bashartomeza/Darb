@@ -14,11 +14,15 @@ export const eligiblePassenger = {
   passenger: { is: { demo_account: false } }
 } satisfies Prisma.PassengerRequestWhereInput;
 
-export const eligibleOrder = {
+const orderProvenance = {
   operational_mode: "legacy",
   canonical_entry_version: null,
   route_version_id: null,
-  merchant: { is: { demo_account: false } },
+  merchant: { is: { demo_account: false } }
+} satisfies Prisma.MerchantOrderWhereInput;
+
+export const eligibleOrder = {
+  ...orderProvenance,
   parcels: { every: eligibleParcel }
 } satisfies Prisma.MerchantOrderWhereInput;
 
@@ -51,8 +55,13 @@ export const eligibleMatch = {
   ],
   AND: [
     { OR: [{ passenger_request_id: null }, { passenger_request: { is: eligiblePassenger } }] },
-    { OR: [{ merchant_order_id: null }, { merchant_order: { is: eligibleOrder } }] },
-    { OR: [{ parcel_batch_id: null }, { parcel_batch: { is: eligibleBatch } }] }
+    { OR: [{ merchant_order_id: null }, { merchant_order: { is: orderProvenance } }] },
+    { OR: [{ parcel_batch_id: null }, { parcel_batch: { is: { ...eligibleBatch, merchant_order: { is: orderProvenance } } } }] },
+    // Keep each order's parcel exclusion outside the nullable relation OR.
+    // MySQL otherwise repeats its correlated scan at multiple left-join stages.
+    // The direct order and batch order are independent and both remain checked.
+    { NOT: { merchant_order: { is: { parcels: { some: { NOT: eligibleParcel } } } } } },
+    { NOT: { parcel_batch: { is: { merchant_order: { is: { parcels: { some: { NOT: eligibleParcel } } } } } } } }
   ]
 } satisfies Prisma.MatchWhereInput;
 

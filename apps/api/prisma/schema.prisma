@@ -25,6 +25,7 @@ enum DriverVerificationStatus {
   pending
   approved
   rejected
+  documents_expired
 }
 
 enum AuthClientType {
@@ -49,6 +50,13 @@ enum RouteDirection {
 enum ServiceRouteStatus {
   active
   retired
+}
+
+enum RouteFareItem {
+  passenger_seat
+  parcel_s
+  parcel_m
+  parcel_l
 }
 
 enum ServiceRouteVersionStatus {
@@ -397,13 +405,18 @@ model User {
   status_updated_at DateTime      @default(now())
   last_login_at     DateTime?
   demo_account      Boolean       @default(false)
+  // Set when a driver or shop owner sent a complete application for admin review.
+  // Open-signup applicants stay unset until every required document is uploaded.
+  review_submitted_at DateTime?
   created_at        DateTime      @default(now())
 
   driver_profile                   DriverProfile?
   driver_verification              DriverVerification?  @relation("DriverVerificationApplicant")
+  merchant_application_documents   MerchantApplicationDocument[]
   driver_verification_reviews      DriverVerification[]  @relation("DriverVerificationReviewer")
   passenger_requests               PassengerRequest[]
   merchant_orders                  MerchantOrder[]
+  passenger_parcels                PassengerParcelDetail[]
   audit_events                     AuditEvent[]
   auth_sessions                    AuthSession[]
   invitations_created              Invitation[]           @relation("InvitationCreator")
@@ -420,8 +433,15 @@ model User {
   service_route_versions_published ServiceRouteVersion[]  @relation("ServiceRouteVersionPublisher")
   service_route_versions_paused    ServiceRouteVersion[]  @relation("ServiceRouteVersionPauser")
   service_route_versions_retired   ServiceRouteVersion[]  @relation("ServiceRouteVersionRetirer")
+  route_fares_created              RouteFare[]            @relation("RouteFareCreator")
   stops_created                    Stop[]                 @relation("StopCreator")
   stops_retired                    Stop[]                 @relation("StopRetirer")
+  notifications                    Notification[]
+  driver_verification_decisions    DriverVerificationDecision[]
+  driver_verification_evidence     DriverVerificationEvidence[]
+  incidents_reported                Incident[]             @relation("IncidentReporter")
+  incidents_reviewed               Incident[]             @relation("IncidentReviewer")
+  trip_ratings                     TripRating[]
 
   @@map("users")
 }
@@ -452,12 +472,16 @@ model AuthActionToken {
   token_digest      String            @unique @db.Char(64)
   token_key_version Int
   payload           Json?
+  // Short emailed code (registration only); kept as a keyed digest, with a wrong-guess counter.
+  code_digest       String?           @db.Char(64)
+  failed_attempts   Int               @default(0)
   expires_at        DateTime
   consumed_at       DateTime?
   created_at        DateTime          @default(now())
 
   user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
+  @@index([subject_digest, purpose])
   @@index([purpose, expires_at, consumed_at])
   @@index([user_id, purpose, expires_at])
   @@map("auth_action_tokens")
@@ -471,6 +495,8 @@ model Invitation {
   intended_phone_digest String         @db.Char(64)
   phone_digest_version  Int
   phone_last4           String         @db.Char(4)
+  /// Where the one-time code is emailed (Masari sends no SMS). Null only on pre-email invitations.
+  contact_email         String?        @db.VarChar(191)
   campaign              String?        @db.VarChar(100)
   source                String?        @db.VarChar(100)
   metadata              Json?
@@ -513,12 +539,14 @@ model InvitationRedemption {
 
 model OnboardingAttempt {
   id                             String                  @id @default(cuid())
-  invitation_id                  String                  @unique
+  invitation_id                  String?                 @unique
   intended_role                  OnboardingRole
   phone_e164                     String                  @db.VarChar(32)
   phone_digest                   String                  @db.Char(64)
   phone_digest_version           Int
   phone_last4                    String                  @db.Char(4)
+  /// Address the one-time code is emailed to (admin-entered for invited, user-entered for open sign-up).
+  delivery_email                 String?                 @db.VarChar(191)
   status                         OnboardingAttemptStatus @default(created)
   current_challenge_id           String?                 @unique
   completed_user_id              String?
@@ -536,7 +564,7 @@ model OnboardingAttempt {
   created_at                     DateTime                @default(now())
   updated_at                     DateTime                @updatedAt
 
-  invitation        Invitation            @relation(fields: [invitation_id], references: [id], onDelete: Cascade)
+  invitation        Invitation?           @relation(fields: [invitation_id], references: [id], onDelete: Cascade)
   current_challenge OtpChallenge?         @relation("CurrentOtpChallenge", fields: [current_challenge_id], references: [id], onDelete: SetNull)
   otp_challenges    OtpChallenge[]        @relation("AttemptOtpChallenges")
   completed_user    User?                 @relation("CompletedOnboardingUser", fields: [completed_user_id], references: [id], onDelete: SetNull)
@@ -754,10 +782,13 @@ model DriverProfile {
   parcel_capacity Int
   verified        Boolean  @default(false)
   trust_score     Int      @default(70)
+  trust_components  Json?
+  trust_computed_at DateTime?
   created_at      DateTime @default(now())
 
-  user   User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  routes DriverRoute[]
+  user    User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  routes  DriverRoute[]
+  ratings TripRating[]
 
   @@map("driver_profiles")
 }
@@ -771,14 +802,27 @@ model DriverVerification {
   submitted_at     DateTime                 @default(now())
   reviewed_at      DateTime?
   reviewed_by_id   String?
+  /// Last valid day of each document (inclusive, UTC calendar date). Null: no expiry tracked.
+  licence_expires_at              DateTime? @db.Date
+  vehicle_registration_expires_at DateTime? @db.Date
+  insurance_expires_at            DateTime? @db.Date
+  contract_ends_at                DateTime? @db.Date
+  /// Set when the expiry job restricted the driver; cleared when re-approved.
+  documents_expired_at            DateTime?
+  /// Set when the driver sent renewed documents for re-review; cleared on the decision.
+  renewal_submitted_at            DateTime?
   created_at       DateTime                 @default(now())
   updated_at       DateTime                 @updatedAt
 
   user        User  @relation("DriverVerificationApplicant", fields: [user_id], references: [id], onDelete: Cascade)
   reviewed_by User? @relation("DriverVerificationReviewer", fields: [reviewed_by_id], references: [id], onDelete: SetNull)
+  decisions   DriverVerificationDecision[]
+  evidence    DriverVerificationEvidence[]
+  documents   DriverVerificationDocument[]
 
   @@index([status, submitted_at])
   @@index([reviewed_by_id])
+  @@index([status, licence_expires_at], map: "dv_status_licence_expiry_idx")
   @@map("driver_verifications")
 }
 
@@ -881,6 +925,7 @@ model ServiceRoute {
   retired_by      User?                 @relation("ServiceRouteRetirer", fields: [retired_by_user_id], references: [id], onDelete: SetNull)
   versions        ServiceRouteVersion[] @relation("ServiceRouteVersions")
   current_version ServiceRouteVersion?  @relation("CurrentServiceRouteVersion", fields: [id, current_version_id], references: [service_route_id, id], onDelete: Restrict)
+  fares           RouteFare[]
 
   @@unique([id, current_version_id], map: "service_routes_owned_current_key")
   @@index([route_group_key, direction])
@@ -949,6 +994,27 @@ model ServiceRouteVersion {
   @@map("service_route_versions")
 }
 
+/// Append-only tariff history, display only (payments are not processed in the
+/// app). One row per admin change: the fare in force for an item at time T is
+/// the newest row with effective_from <= T. A null amount withdraws the fare.
+model RouteFare {
+  id                 String        @id @default(cuid())
+  service_route_id   String
+  item               RouteFareItem
+  amount_minor       Int?
+  currency           String        @default("ILS") @db.Char(3)
+  effective_from     DateTime
+  reason             String?       @db.VarChar(500)
+  created_by_user_id String
+  created_at         DateTime      @default(now())
+
+  service_route ServiceRoute @relation(fields: [service_route_id], references: [id], onDelete: Restrict)
+  created_by    User         @relation("RouteFareCreator", fields: [created_by_user_id], references: [id], onDelete: Restrict)
+
+  @@index([service_route_id, item, effective_from])
+  @@map("route_fares")
+}
+
 model RouteVersionStop {
   id                          String   @id @default(cuid())
   service_route_version_id    String
@@ -994,6 +1060,10 @@ model PassengerRequest {
   requested_departure_until     DateTime?
   canonical_created_at          DateTime?
   operational_mode              String     @default("legacy") @db.VarChar(50)
+  fare_id                       String?    @db.VarChar(191)
+  fare_unit_minor               Int?
+  fare_total_minor              Int?
+  fare_currency                 String?    @db.Char(3)
 
   passenger    User                 @relation(fields: [passenger_id], references: [id], onDelete: Cascade)
   route_version ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -1034,6 +1104,8 @@ model MerchantOrder {
   trips          Trip[]
   canonical_dispatch CanonicalDemandDispatch?
   canonical_manifest_members CanonicalTripManifestMember[]
+  passenger_parcel PassengerParcelDetail?
+  delivery_handover DeliveryHandover?
 
   @@unique([id, route_version_id], map: "merchant_orders_route_ownership_key")
   @@unique([id, operational_mode], map: "merchant_orders_mode_ownership_key")
@@ -1056,12 +1128,36 @@ model Parcel {
   destination_stop_id String?
   canonical_entry_version String? @db.VarChar(50)
   operational_mode       String @default("legacy") @db.VarChar(50)
+  fare_id                String? @db.VarChar(191)
+  fare_minor             Int?
+  fare_currency          String? @db.Char(3)
 
   order         MerchantOrder        @relation(fields: [order_id, operational_mode], references: [id, operational_mode], onDelete: Restrict, onUpdate: Restrict)
   route_version ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([route_version_id, destination_stop_id])
   @@map("parcels")
+}
+
+model PassengerParcelDetail {
+  id                      String    @id @default(cuid())
+  order_id                String    @unique
+  sender_id               String
+  size                    String    @db.VarChar(1)
+  note                    String?   @db.VarChar(200)
+  receiver_name           String?   @db.VarChar(80)
+  receiver_phone          String?   @db.VarChar(32)
+  forbidden_items_ack_at  DateTime
+  retention_expires_at    DateTime
+  receiver_purged_at      DateTime?
+  created_at              DateTime  @default(now())
+
+  order  MerchantOrder @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  sender User          @relation(fields: [sender_id], references: [id], onDelete: Cascade)
+
+  @@index([sender_id, created_at], map: "ppd_sender_created_idx")
+  @@index([retention_expires_at, receiver_purged_at], map: "ppd_retention_idx")
+  @@map("passenger_parcel_details")
 }
 
 model ParcelBatch {
@@ -1197,6 +1293,7 @@ model Trip {
   status               TripStatus @default(created)
   started_at           DateTime?
   completed_at         DateTime?
+  cancelled_by_user_id String?    @db.VarChar(191)
   created_at           DateTime   @default(now())
   route_version_id     String?
   canonical_trip_version String?  @db.VarChar(50)
@@ -1210,6 +1307,8 @@ model Trip {
   canonical_availability_key String? @unique @db.VarChar(191)
   legacy_assignment_key String? @unique @db.VarChar(191)
 
+  incidents         Incident[]
+  ratings           TripRating[]
   driver_route      DriverRoute       @relation(fields: [driver_route_id], references: [id], onDelete: Restrict)
   mode_driver_route DriverRoute       @relation("TripAvailabilityMode", fields: [driver_route_id, operational_mode], references: [id, operational_mode], onDelete: Restrict, onUpdate: Restrict)
   passenger_request PassengerRequest? @relation(fields: [passenger_request_id], references: [id], onDelete: Restrict)
@@ -1470,4 +1569,220 @@ model AuditEvent {
   @@index([action])
   @@index([user_id])
   @@map("audit_events")
+}
+
+/// In-app inbox entry. Rows are written best-effort by the same code paths that
+/// commit the underlying event; clients localize from `type` and `params`.
+model Notification {
+  id          String    @id @default(cuid())
+  user_id     String
+  type        String    @db.VarChar(60)
+  entity_type String?   @db.VarChar(60)
+  entity_id   String?   @db.VarChar(191)
+  dedupe_key  String    @db.VarChar(191)
+  params      Json?
+  read_at     DateTime?
+  created_at  DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, dedupe_key])
+  @@index([user_id, created_at])
+  @@index([user_id, read_at])
+  @@map("notifications")
+}
+
+enum IncidentCategory {
+  safety
+  delay
+  parcel_damage
+  behavior
+  other
+}
+
+enum IncidentStatus {
+  open
+  reviewing
+  resolved
+}
+
+/// A user-filed problem report, optionally tied to a trip they took part in.
+/// Admins triage it; this is a record for follow-up, not an emergency channel.
+model Incident {
+  id             String           @id @default(cuid())
+  reporter_id    String
+  trip_id        String?
+  category       IncidentCategory
+  description    String           @db.VarChar(1000)
+  status         IncidentStatus   @default(open)
+  admin_note     String?          @db.VarChar(1000)
+  revision       Int              @default(1)
+  reviewed_by_id String?
+  reviewed_at    DateTime?
+  resolved_at    DateTime?
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @updatedAt
+
+  reporter    User  @relation("IncidentReporter", fields: [reporter_id], references: [id], onDelete: Cascade)
+  reviewed_by User? @relation("IncidentReviewer", fields: [reviewed_by_id], references: [id], onDelete: SetNull)
+  trip        Trip? @relation(fields: [trip_id], references: [id], onDelete: SetNull)
+
+  @@index([status, created_at])
+  @@index([reporter_id, created_at])
+  @@index([trip_id])
+  @@map("incidents")
+}
+
+/// Assistant requests the parser was not confident about, kept for admin review.
+/// PII-minimised: redacted text only, no user id, retention-limited by expires_at.
+model UncertainAiRequest {
+  id              String                   @id @default(cuid())
+  locale          String                   @db.VarChar(5)
+  text            String                   @db.VarChar(400)
+  intent_type     String                   @db.VarChar(16)
+  confidence      Decimal                  @db.Decimal(3, 2)
+  source          String                   @db.VarChar(16)
+  reason          String                   @db.VarChar(40)
+  pickup_key      String?                  @db.VarChar(80)
+  dropoff_key     String?                  @db.VarChar(80)
+  status          UncertainAiRequestStatus @default(open)
+  resolution_note String?                  @db.VarChar(500)
+  resolved_by_id  String?                  @db.VarChar(191)
+  resolved_at     DateTime?
+  revision        Int                      @default(1)
+  created_at      DateTime                 @default(now())
+  expires_at      DateTime
+
+  @@index([status, created_at])
+  @@index([expires_at])
+  @@map("uncertain_ai_requests")
+}
+
+enum UncertainAiRequestStatus {
+  open
+  resolved
+}
+
+enum DeliveryConfirmationMethod {
+  receiver_code
+  receiver_unavailable
+  admin_override
+}
+
+/// How a parcel order is handed to its receiver. The sender is shown a six-digit
+/// code to give the receiver; the driver enters what the receiver reads out. Only
+/// a keyed digest of the code is stored. One row per parcel order, whoever created it.
+model DeliveryHandover {
+  id                  String                      @id @default(cuid())
+  merchant_order_id   String                      @unique
+  code_digest         String?                     @db.Char(64)
+  key_version         Int                         @default(1)
+  failed_attempts     Int                         @default(0)
+  expires_at          DateTime?
+  confirmed_at        DateTime?
+  confirmation_method DeliveryConfirmationMethod?
+  confirmed_by_id     String?
+  confirmed_trip_id   String?
+  unavailable_reason  String?                     @db.VarChar(300)
+  created_at          DateTime                    @default(now())
+  updated_at          DateTime                    @updatedAt
+
+  merchant_order MerchantOrder @relation(fields: [merchant_order_id], references: [id], onDelete: Cascade)
+
+  @@index([confirmation_method, confirmed_at])
+  @@map("delivery_handovers")
+}
+
+/// Append-only history of verification outcomes, so a re-review never erases
+/// what was decided before it.
+model DriverVerificationDecision {
+  id              String   @id @default(cuid())
+  verification_id String
+  /// The verification revision this decision was taken against.
+  revision        Int
+  decision        String   @db.VarChar(20)
+  reason          String?  @db.VarChar(500)
+  decided_by_id   String?
+  created_at      DateTime @default(now())
+
+  verification DriverVerification @relation(fields: [verification_id], references: [id], onDelete: Cascade)
+  decided_by   User?              @relation(fields: [decided_by_id], references: [id], onDelete: SetNull)
+
+  @@index([verification_id, created_at])
+  @@map("driver_verification_decisions")
+}
+
+/// What an Admin sighted while reviewing one verification revision. A record of
+/// the review, not a stored document: no files and no document numbers.
+model DriverVerificationEvidence {
+  id              String   @id @default(cuid())
+  verification_id String
+  revision        Int
+  kind            String   @db.VarChar(30)
+  note            String?  @db.VarChar(200)
+  recorded_by_id  String?
+  created_at      DateTime @default(now())
+
+  verification DriverVerification @relation(fields: [verification_id], references: [id], onDelete: Cascade)
+  recorded_by  User?              @relation(fields: [recorded_by_id], references: [id], onDelete: SetNull)
+
+  @@index([verification_id, revision, created_at], map: "dve_verification_revision_idx")
+  @@map("driver_verification_evidence")
+}
+
+/// A document the applicant uploaded for one verification revision. The bytes
+/// live on server storage under `storage_key`; the row holds only metadata.
+model DriverVerificationDocument {
+  id              String   @id @default(cuid())
+  verification_id String
+  revision        Int
+  kind            String   @db.VarChar(30)
+  mime_type       String   @db.VarChar(40)
+  size_bytes      Int
+  sha256          String   @db.VarChar(64)
+  storage_key     String   @unique @db.VarChar(64)
+  created_at      DateTime @default(now())
+
+  verification DriverVerification @relation(fields: [verification_id], references: [id], onDelete: Cascade)
+
+  @@index([verification_id, revision, created_at], map: "dvd_verification_revision_idx")
+  @@map("driver_verification_documents")
+}
+
+/// Documents a shop owner uploads while the account waits for Admin review. The
+/// file bytes live on server storage under `storage_key`, never in the database.
+model MerchantApplicationDocument {
+  id          String   @id @default(cuid())
+  user_id     String
+  kind        String   @db.VarChar(30)
+  mime_type   String   @db.VarChar(40)
+  size_bytes  Int
+  sha256      String   @db.VarChar(64)
+  storage_key String   @unique @db.VarChar(64)
+  created_at  DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at], map: "mad_user_created_idx")
+  @@map("merchant_application_documents")
+}
+
+/// A passenger's 1-5 rating of a completed trip. One per passenger per trip.
+/// Individual rows are never shown to drivers; only the aggregate feeds the
+/// driver trust score.
+model TripRating {
+  id           String   @id @default(cuid())
+  trip_id      String
+  passenger_id String
+  driver_id    String
+  stars        Int
+  created_at   DateTime @default(now())
+
+  trip      Trip          @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  passenger User          @relation(fields: [passenger_id], references: [id], onDelete: Cascade)
+  driver    DriverProfile @relation(fields: [driver_id], references: [id], onDelete: Cascade)
+
+  @@unique([trip_id, passenger_id], map: "trip_ratings_trip_passenger_key")
+  @@index([driver_id, passenger_id])
+  @@map("trip_ratings")
 }

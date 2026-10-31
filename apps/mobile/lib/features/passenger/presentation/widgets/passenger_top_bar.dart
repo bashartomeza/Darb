@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
+import '../../../notifications/presentation/notification_bell.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/entity_cards.dart';
-import '../../../../core/widgets/masari_bottom_nav.dart';
-import '../../../../core/widgets/state_views.dart';
 
 /// The home screen's top bar: avatar, centred wordmark, notifications.
 ///
@@ -27,8 +27,6 @@ class PassengerTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
     return Row(
       textDirection: TextDirection.ltr,
       children: [
@@ -50,30 +48,8 @@ class PassengerTopBar extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        IconButton(
-          key: const ValueKey('passengerNotifications'),
-          tooltip: l10n.notifications,
-          onPressed: () => _showNotifications(context, l10n),
-          icon: const Icon(Icons.notifications_none, size: 28),
-          color: AppTheme.primary,
-        ),
+        const NotificationBell(key: ValueKey('passengerNotifications')),
       ],
-    );
-  }
-
-  /// There is no notifications backend, so this opens an honest empty state
-  /// rather than a dead button or a fabricated list.
-  void _showNotifications(BuildContext context, AppLocalizations l10n) {
-    showMasariBottomSheet<void>(
-      context: context,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: AppTokens.spaceMedium),
-        child: EmptyState(
-          title: l10n.notifications,
-          message: l10n.noNotifications,
-          icon: Icons.notifications_none,
-        ),
-      ),
     );
   }
 }

@@ -29,11 +29,17 @@ void main() {
       );
       await repository.emailActionStart('a@example.com', 'en', reset: true);
       await repository.emailActionConfirm(
-        'reset-proof',
+        'a@example.com',
+        '123456',
         'new-long-password',
         reset: true,
       );
-      await repository.emailActionConfirm('verify-proof', '', reset: false);
+      await repository.emailActionConfirm(
+        'a@example.com',
+        '654321',
+        '',
+        reset: false,
+      );
       await repository.setPassword('new-long-password', 'current-password', '');
       await repository.linkGoogle('ephemeral-google', '', 'reauth-proof');
       expect(sent['/api/v1/auth/password/reset/start'], {
@@ -41,15 +47,22 @@ void main() {
         'locale': 'en',
       });
       expect(sent['/api/v1/auth/password/reset/confirm'], {
-        'action_token': 'reset-proof',
+        'email': 'a@example.com',
+        'code': '123456',
         'password': 'new-long-password',
       });
       expect(sent['/api/v1/auth/email/verify/confirm'], {
-        'action_token': 'verify-proof',
+        'email': 'a@example.com',
+        'code': '654321',
       });
       expect(sent['/api/v1/auth/password/set'], {
         'password': 'new-long-password',
         'current_password': 'current-password',
+      });
+      await repository.setPassword('new-long-password', '', '246810');
+      expect(sent['/api/v1/auth/password/set'], {
+        'password': 'new-long-password',
+        'reauthentication_code': '246810',
       });
       expect(sent['/api/v1/auth/identities/google/link'], {
         'id_token': 'ephemeral-google',

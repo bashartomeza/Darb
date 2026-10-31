@@ -1,7 +1,7 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import type { AuthActionPurpose } from "../generated/prisma/enums.js";
-import { keyedDigest, type VersionedKey } from "./keyedDigest.js";
+import { hexDigestMatches, keyedDigest, type VersionedKey } from "./keyedDigest.js";
 
 type ActionTransaction = Pick<Prisma.TransactionClient, "authActionToken">;
 type ActionDatabase = PrismaClient | Prisma.TransactionClient;
@@ -92,6 +92,17 @@ export function generateAuthActionToken() {
   return randomBytes(32).toString("base64url");
 }
 
+/** Wrong guesses allowed per emailed code before it is burned. */
+export const AUTH_ACTION_CODE_MAX_ATTEMPTS = 5;
+
+function actionCodeDigest(code: string, key: VersionedKey) {
+  return keyedDigest("masari:auth-action-code", code, key);
+}
+
+export function generateAuthActionCode() {
+  return randomInt(0, 1_000_000).toString().padStart(6, "0");
+}
+
 export async function issueAuthAction(
   db: ActionDatabase,
   input: {
@@ -100,11 +111,15 @@ export async function issueAuthAction(
     userId?: string;
     subject?: string;
     payload?: Prisma.InputJsonValue;
+    /** Also issue a short numeric code, only valid together with `subject`. */
+    withCode?: boolean;
     now?: Date;
   }
 ) {
   assertSafePayload(input.purpose, input.payload);
+  if (input.withCode && !input.subject) throw new AuthActionError("auth_action_subject_required");
   const rawToken = generateAuthActionToken();
+  const code = input.withCode ? generateAuthActionCode() : undefined;
   const now = input.now ?? new Date();
   const expiresAt = new Date(now.getTime() + AUTH_ACTION_TTL_SECONDS[input.purpose] * 1_000);
   const action = await db.authActionToken.create({
@@ -115,10 +130,53 @@ export async function issueAuthAction(
       token_digest: actionTokenDigest(rawToken, input.key),
       token_key_version: input.key.version,
       payload: input.payload,
+      code_digest: code ? actionCodeDigest(code, input.key) : undefined,
       expires_at: expiresAt
     }
   });
-  return { action, rawToken, expiresAt };
+  return { action, rawToken, code, expiresAt };
+}
+
+/**
+ * Checks an emailed short code against the newest open action for this subject and returns that
+ * action. Every check spends one of AUTH_ACTION_CODE_MAX_ATTEMPTS atomically, so a 6-digit code
+ * cannot be brute-forced; the counter is saved even when the caller's transaction later rolls back,
+ * which is why this runs on its own, before the caller's transaction.
+ */
+export async function checkAuthActionCode(
+  db: ActionDatabase,
+  input: { code: unknown; subject: string; purpose: AuthActionPurpose; key: VersionedKey; now?: Date }
+) {
+  if (typeof input.code !== "string" || !/^\d{6}$/.test(input.code)) throw new AuthActionError();
+  const now = input.now ?? new Date();
+  const action = await db.authActionToken.findFirst({
+    where: {
+      subject_digest: actionSubjectDigest(input.subject, input.key),
+      purpose: input.purpose,
+      token_key_version: input.key.version,
+      code_digest: { not: null },
+      consumed_at: null,
+      expires_at: { gt: now }
+    },
+    orderBy: { created_at: "desc" }
+  });
+  if (!action) throw new AuthActionError();
+  const spent = await db.authActionToken.updateMany({
+    where: { id: action.id, consumed_at: null, failed_attempts: { lt: AUTH_ACTION_CODE_MAX_ATTEMPTS } },
+    data: { failed_attempts: { increment: 1 } }
+  });
+  if (spent.count !== 1) throw new AuthActionError();
+  if (!action.code_digest || !hexDigestMatches(action.code_digest, actionCodeDigest(input.code, input.key))) throw new AuthActionError();
+  return action;
+}
+
+/** Consumes an action found by checkAuthActionCode (used inside the caller's transaction). */
+export async function consumeCheckedAuthAction(db: ActionDatabase, actionId: string, now = new Date()) {
+  const consumed = await db.authActionToken.updateMany({
+    where: { id: actionId, consumed_at: null, expires_at: { gt: now } },
+    data: { consumed_at: now }
+  });
+  if (consumed.count !== 1) throw new AuthActionError();
 }
 
 export async function consumeAuthAction(

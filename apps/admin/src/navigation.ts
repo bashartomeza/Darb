@@ -6,6 +6,7 @@ export const MODULE_IDS = [
   "overview",
   "users",
   "drivers",
+  "invitations",
   "trips",
   "routes",
   "deliveries",
@@ -49,6 +50,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "overview", icon: "dashboard", labelKey: "navOverview", group: "main", backing: "api" },
   { id: "users", icon: "account_circle", labelKey: "navUsers", group: "people", backing: "api" },
   { id: "drivers", icon: "verified_user", labelKey: "navDrivers", group: "people", backing: "api" },
+  { id: "invitations", icon: "person_pin_circle", labelKey: "navInvitations", group: "people", backing: "api" },
   { id: "trips", icon: "local_shipping", labelKey: "navTrips", group: "operations", backing: "api" },
   { id: "routes", icon: "edit_road", labelKey: "navRoutes", group: "operations", backing: "flag" },
   { id: "deliveries", icon: "inventory_2", labelKey: "navDeliveries", group: "operations", backing: "api" },
@@ -64,9 +66,9 @@ export const NAV_ITEMS: NavItem[] = [
     icon: "emergency",
     labelKey: "navIncidentsSafety",
     group: "safety",
-    backing: "none"
+    backing: "api"
   },
-  { id: "reports", icon: "assessment", labelKey: "navReports", group: "insights", backing: "none" },
+  { id: "reports", icon: "assessment", labelKey: "navReports", group: "insights", backing: "api" },
   { id: "settings", icon: "settings", labelKey: "navSettings", group: "system", backing: "api" }
 ];
 
@@ -93,6 +95,7 @@ const HASH_BY_MODULE: Record<AdminRouteId, string> = {
   overview: "#/overview",
   users: "#/users",
   drivers: "#/drivers",
+  invitations: "#/invitations",
   trips: "#/trips",
   routes: "#/routes",
   deliveries: "#/deliveries-orders",

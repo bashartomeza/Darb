@@ -247,6 +247,8 @@ class WidgetDriverController extends AuthController {
 }
 
 class WidgetOperationStorage implements CanonicalOperationStorage {
+  @override
+  String get namespace => CanonicalOperationStorage.bundleKey;
   CanonicalOperationBundle? bundle;
 
   @override

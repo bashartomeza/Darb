@@ -300,6 +300,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get selectedDriver => 'السائق المختار';
 
   @override
+  String get selectedDriverUnavailable =>
+      'مسار السائق المختار لم يعد متاحاً. اختر رحلة أخرى.';
+
+  @override
   String get selectedRoute => 'المسار المختار';
 
   @override
@@ -787,6 +791,34 @@ class AppLocalizationsAr extends AppLocalizations {
       'يبقى الحساب قيد المراجعة حتى الموافقة';
 
   @override
+  String get registerChooseTitle => 'كيف ستستخدم مساري؟';
+
+  @override
+  String get registerChooseSubtitle =>
+      'اختر ما يناسبك وسنأخذك عبر الخطوات الصحيحة.';
+
+  @override
+  String get registerPassengerTitle => 'مستخدم عادي';
+
+  @override
+  String get registerPassengerHelp =>
+      'اطلب رحلات وتوصيلات. يصبح حسابك جاهزاً مباشرة بعد التسجيل.';
+
+  @override
+  String get registerDriverTitle => 'سائق';
+
+  @override
+  String get registerDriverHelp =>
+      'انقل الرحلات والتوصيلات. ترفع مستنداتك ويوافق المشرف على حسابك.';
+
+  @override
+  String get registerMerchantTitle => 'صاحب متجر';
+
+  @override
+  String get registerMerchantHelp =>
+      'أرسل طلبات من متجرك. ترفع مستنداتك ويوافق المشرف على حسابك.';
+
+  @override
   String get invitationCode => 'رمز الدعوة';
 
   @override
@@ -794,6 +826,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get sendVerificationCode => 'إرسال رمز التحقق';
+
+  @override
+  String get emailForCode => 'البريد الإلكتروني (نرسل الرمز إليه)';
+
+  @override
+  String get codeSentToEmail =>
+      'أرسلنا رمزاً من ستة أرقام إلى بريدك الإلكتروني. تحقق من بريدك، بما في ذلك مجلد الرسائل غير المرغوبة.';
 
   @override
   String get enterVerificationCode => 'أدخل رمز التحقق';
@@ -839,7 +878,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pendingReviewBody =>
-      'تم إنشاء حسابك وهو قيد المراجعة. ستتمكن من تسجيل الدخول بعد الموافقة على الحساب.';
+      'تم إنشاء حسابك وهو الآن قيد الانتظار. سيراجعه المشرف وغالباً يستغرق ذلك حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.';
+
+  @override
+  String get merchantDocumentsHint =>
+      'للحصول على الموافقة، ارفع صوراً واضحة أو ملفات PDF للسجل التجاري (أو رخصة المتجر) والهوية الوطنية وصورة للمتجر. تُحفظ الملفات على خادمنا ولا يفتحها إلا فريق المراجعة.';
+
+  @override
+  String get documentKindCommercialRegister => 'السجل التجاري';
+
+  @override
+  String get documentKindShopPhoto => 'صورة المتجر';
 
   @override
   String get checkApplicationStatus => 'متابعة حالة طلب سابق';
@@ -1878,4 +1927,571 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get mapSelectRoute => 'اختر مساراً لعرضه على الخريطة.';
+
+  @override
+  String get recoverMerchantOrder => 'استعادة الطلب';
+
+  @override
+  String get merchantOrderUncertain =>
+      'قد يكون الطلب قد حُفظ. استعده قبل إنشاء طلب آخر.';
+
+  @override
+  String get merchantOrderRecoveryExpired =>
+      'انتهت مهلة إعادة المحاولة. يُسمح فقط بالتحقق من الطلب المحفوظ. تواصل مع الدعم إذا لم تُحسم نتيجة الطلب.';
+
+  @override
+  String get merchantOrderRecoveryUnavailable =>
+      'استعادة الطلب غير متاحة. سجّل الدخول إلى حساب التاجر الأصلي أو تواصل مع الدعم. لا ترسل طلباً بديلاً.';
+
+  @override
+  String get bookingTimePassed => 'وقت المغادرة هذا قد مضى. اختر وقتاً قادماً.';
+
+  @override
+  String get bookingOutcomeUnknown =>
+      'قد يكون الحجز محفوظًا بالفعل. سنتحقق منه عند عودة الاتصال. لا تنشئ حجزًا آخر.';
+
+  @override
+  String get verifyBooking => 'التحقق من الحجز';
+
+  @override
+  String get checkpointDirectoryTitle => 'دليل الحواجز';
+
+  @override
+  String get checkpointDirectoryDisabled => 'دليل الحواجز غير مفعّل.';
+
+  @override
+  String get checkpointDirectoryLoadFailed => 'تعذر تحميل دليل الحواجز.';
+
+  @override
+  String get checkpointDirectorySearch => 'ابحث عن حاجز أو مدينة';
+
+  @override
+  String get checkpointDirectoryNoResults => 'لا توجد حواجز مطابقة';
+
+  @override
+  String get checkpointDirectoryTrafficUnavailable => 'حالة المرور غير متاحة';
+
+  @override
+  String get checkpointDirectoryLimitedNotice =>
+      'بيانات محدودة من المزود: حتى سبع نقاط في كل مدينة. هذه ليست القائمة الكاملة.';
+
+  @override
+  String get checkpointDirectoryGenerated => 'وقت إنشاء استجابة المزود';
+
+  @override
+  String get checkpointDirectoryEnteringUpdated =>
+      'آخر تغيير لحالة الدخول (الحالة غير متاحة)';
+
+  @override
+  String get checkpointDirectoryLeavingUpdated =>
+      'آخر تغيير لحالة الخروج (الحالة غير متاحة)';
+
+  @override
+  String get checkpointDirectoryTimezoneUnspecified =>
+      'المنطقة الزمنية غير محددة';
+
+  @override
+  String get notifMatchOfferedTitle => 'عرض مطابقة جديد';
+
+  @override
+  String get notifMatchOfferedBody => 'لديك طلب جديد بانتظار ردّك.';
+
+  @override
+  String get notifMatchAcceptedTitle => 'تم قبول طلبك';
+
+  @override
+  String get notifMatchAcceptedBody => 'قَبِل أحد السائقين طلبك.';
+
+  @override
+  String get notifMatchRejectedTitle => 'اعتذر السائق';
+
+  @override
+  String get notifMatchRejectedBody =>
+      'اعتذر السائق عن الطلب. يمكنك البحث عن مطابقة أخرى.';
+
+  @override
+  String get notifTripStatusTitle => 'تحديث على الرحلة';
+
+  @override
+  String notifTripStatusBody(String status) {
+    return 'حالة الرحلة الآن: $status';
+  }
+
+  @override
+  String get notifVerificationApprovedTitle => 'تمت الموافقة على حسابك';
+
+  @override
+  String get notifVerificationApprovedBody =>
+      'تمت الموافقة على حساب السائق. يمكنك الآن البدء بالعمل.';
+
+  @override
+  String get notifVerificationRejectedTitle => 'تم رفض طلب التحقق';
+
+  @override
+  String get notifVerificationRejectedBody =>
+      'لم تتم الموافقة على طلب التحقق من حسابك.';
+
+  @override
+  String notifVerificationRejectedReason(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get notifUnknownTitle => 'إشعار جديد';
+
+  @override
+  String get notificationsMarkAllRead => 'تعليم الكل كمقروء';
+
+  @override
+  String get notificationsLoadError => 'تعذّر تحميل الإشعارات.';
+
+  @override
+  String notificationsUnreadCount(int count) {
+    return '$count غير مقروءة';
+  }
+
+  @override
+  String get reportsDeliveries => 'التوصيلات';
+
+  @override
+  String get reportsLoadError => 'تعذّر تحميل التقرير.';
+
+  @override
+  String get reportsOrdersByStatus => 'الطلبات حسب الحالة';
+
+  @override
+  String get reportsDeliveriesByStatus => 'التوصيلات حسب الحالة';
+
+  @override
+  String get reportsNoRecords => 'لا توجد سجلات بعد.';
+
+  @override
+  String get incidentReportAction => 'الإبلاغ عن مشكلة';
+
+  @override
+  String get incidentReportTitle => 'الإبلاغ عن مشكلة';
+
+  @override
+  String get incidentReportNotice =>
+      'يُسجَّل بلاغك لتراجعه الإدارة. هذه ليست خدمة طوارئ؛ في حال الخطر اتصل بالجهات المختصة مباشرة.';
+
+  @override
+  String get incidentDescriptionLabel => 'صف المشكلة';
+
+  @override
+  String get incidentSubmit => 'إرسال البلاغ';
+
+  @override
+  String get incidentSubmitted => 'تم إرسال البلاغ.';
+
+  @override
+  String get incidentSubmitFailed => 'تعذّر إرسال البلاغ. حاول مرة أخرى.';
+
+  @override
+  String get incidentTooMany =>
+      'لديك عدة بلاغات قيد المراجعة. انتظر معالجتها قبل إرسال بلاغ جديد.';
+
+  @override
+  String get incidentCategorySafety => 'السلامة';
+
+  @override
+  String get incidentCategoryDelay => 'تأخير';
+
+  @override
+  String get incidentCategoryParcelDamage => 'تلف طرد';
+
+  @override
+  String get incidentCategoryBehavior => 'سلوك';
+
+  @override
+  String get incidentCategoryOther => 'أخرى';
+
+  @override
+  String get notifIncidentUpdatedTitle => 'تحديث على بلاغك';
+
+  @override
+  String get notifIncidentReviewingBody => 'بلاغك قيد المراجعة.';
+
+  @override
+  String get notifIncidentResolvedBody => 'تمت معالجة بلاغك.';
+
+  @override
+  String get verificationDocuments => 'مستندات التوثيق';
+
+  @override
+  String get verificationDocumentsHint =>
+      'للحصول على الموافقة، ارفع صوراً واضحة أو ملفات PDF لرخصة القيادة وتسجيل المركبة والهوية الوطنية. تُحفظ الملفات على خادمنا ولا يفتحها إلا فريق المراجعة.';
+
+  @override
+  String get documentKind => 'نوع المستند';
+
+  @override
+  String get documentKindDriverLicence => 'رخصة القيادة';
+
+  @override
+  String get documentKindVehicleRegistration => 'ترخيص المركبة';
+
+  @override
+  String get documentKindNationalId => 'الهوية الوطنية';
+
+  @override
+  String get documentKindInsurance => 'التأمين';
+
+  @override
+  String get documentKindOther => 'مستند آخر';
+
+  @override
+  String get addDocument => 'إضافة مستند';
+
+  @override
+  String get removeDocument => 'إزالة المستند';
+
+  @override
+  String get documentTooLarge => 'الملف كبير جدًا. الحد الأقصى 5 ميغابايت.';
+
+  @override
+  String get documentTypeUnsupported =>
+      'يمكن رفع ملفات JPEG أو PNG أو PDF فقط.';
+
+  @override
+  String get documentLimitReached => 'وصلت إلى الحد الأقصى لعدد المستندات.';
+
+  @override
+  String get acceptanceRateTitle => 'نسبة القبول';
+
+  @override
+  String acceptanceRateValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String acceptanceRateDetail(int accepted, int responded) {
+    return 'تم قبول $accepted من $responded عرضًا أجبت عنها. العروض التي انتهت دون رد لا تُحتسب.';
+  }
+
+  @override
+  String acceptanceRateNeedMore(int needed, int responded) {
+    return 'تظهر نسبتك بعد $needed عروض تم الرد عليها ($responded حتى الآن).';
+  }
+
+  @override
+  String get emailOrPhone => 'البريد الإلكتروني أو رقم الهاتف';
+
+  @override
+  String get emailOrPhoneRequired => 'أدخل بريدك الإلكتروني أو رقم هاتفك.';
+
+  @override
+  String get emailOrPhoneInvalid =>
+      'أدخل بريدًا إلكترونيًا صحيحًا، أو رقم هاتف يبدأ بـ + ورمز الدولة.';
+
+  @override
+  String get mapLegendStart => 'البداية';
+
+  @override
+  String get mapLegendDestination => 'الوصول';
+
+  @override
+  String get sendParcelTitle => 'إرسال طرد';
+
+  @override
+  String get sendParcelEntryBody =>
+      'أرسل طردًا صغيرًا مع سائق يسير أصلًا على مسار معتمد.';
+
+  @override
+  String get sendParcelIntro =>
+      'اختر المسار والمحطتين ثم أخبرنا من سيستلم الطرد. سيحمله سائق متجه في هذا الاتجاه.';
+
+  @override
+  String get sendParcelPickupHint => 'سلّم الطرد للسائق عند هذه المحطة.';
+
+  @override
+  String get parcelSizeSmallHint => 'S - صغير، يكفي لحقيبة';
+
+  @override
+  String get parcelSizeMediumHint => 'M - متوسط، بحجم علبة حذاء تقريبًا';
+
+  @override
+  String get parcelSizeLargeNotAllowed =>
+      'الطرود الكبيرة مخصصة للمتاجر ولا يمكن إرسالها من حساب شخصي.';
+
+  @override
+  String get receiverNameLabel => 'اسم المستلم';
+
+  @override
+  String get receiverPhoneLabel => 'هاتف المستلم';
+
+  @override
+  String get receiverPrivacyNote =>
+      'المستلم لا يحتاج إلى التطبيق. يُستخدم اسمه ورقمه لهذا التوصيل فقط، ولا يظهران لأي مستخدم آخر، ويُمسحان بعد انتهاء المدة.';
+
+  @override
+  String get parcelNoteLabel => 'ملاحظة للسائق (اختياري)';
+
+  @override
+  String get forbiddenItemsAck =>
+      'أقرّ بأن الطرد لا يحتوي على نقود أو أشياء ثمينة أو أدوية أو أسلحة أو مواد قابلة للاشتعال أو ممنوعة أو سريعة التلف.';
+
+  @override
+  String get sendParcelSubmit => 'إرسال الطرد';
+
+  @override
+  String get sendParcelRecorded => 'تم تسجيل طلب الطرد.';
+
+  @override
+  String get sendParcelRecordedBody =>
+      'نبحث عن سائق على هذا المسار. يمكنك الإلغاء ما لم يُعرض الطرد على سائق.';
+
+  @override
+  String get myParcelsTitle => 'طرودي';
+
+  @override
+  String get myParcelsEmpty => 'لم ترسل أي طرد بعد.';
+
+  @override
+  String get parcelTrackSearching => 'جارٍ البحث عن سائق';
+
+  @override
+  String get parcelTrackAssigned => 'تم تعيين سائق';
+
+  @override
+  String get parcelTrackPickedUp => 'تم استلامه منك';
+
+  @override
+  String get parcelTrackInTransit => 'في الطريق';
+
+  @override
+  String get parcelTrackDelivered => 'تم التسليم';
+
+  @override
+  String get parcelTrackCancelled => 'ملغى';
+
+  @override
+  String get parcelTrackFailed => 'تعذّر التوصيل';
+
+  @override
+  String get parcelTrackExpired => 'انتهت المهلة';
+
+  @override
+  String get parcelCancelAction => 'إلغاء الطرد';
+
+  @override
+  String get parcelCancelConfirm =>
+      'هل تريد إلغاء هذا الطرد؟ سيتم مسح بيانات المستلم.';
+
+  @override
+  String get parcelCancelledNotice => 'تم إلغاء الطرد.';
+
+  @override
+  String get parcelCannotCancel =>
+      'عُرض الطرد على سائق بالفعل، لذلك لم يعد الإلغاء ممكنًا.';
+
+  @override
+  String parcelReceiverLine(String name, String phone) {
+    return 'المستلم: $name ($phone)';
+  }
+
+  @override
+  String get parcelReceiverRemoved => 'تم مسح بيانات المستلم.';
+
+  @override
+  String get parcelLimitReached =>
+      'لديك الحد الأقصى من الطرود قيد التوصيل. انتظر انتهاء أحدها أو ألغِ واحدًا.';
+
+  @override
+  String get parcelDailyLimit => 'تم بلوغ حد الطرود اليومي. حاول غدًا.';
+
+  @override
+  String get invalidReceiverPhone => 'أدخل رقم هاتف صحيحًا للمستلم.';
+
+  @override
+  String get receiverNameInvalid => 'أدخل اسم المستلم.';
+
+  @override
+  String get parcelAckRequired =>
+      'أكّد الإقرار الخاص بالمواد الممنوعة للمتابعة.';
+
+  @override
+  String get keepParcel => 'إبقاء الطرد';
+
+  @override
+  String get mapOfflineSaved => 'بدون اتصال - تُعرض الخريطة المحفوظة';
+
+  @override
+  String get clearMapCache => 'مسح الخريطة المحفوظة';
+
+  @override
+  String get clearMapCacheHint =>
+      'يحذف مربعات الخريطة المحفوظة على هذا الجهاز. تُحفظ من جديد أثناء التصفح.';
+
+  @override
+  String get mapCacheCleared => 'تم مسح الخريطة المحفوظة';
+
+  @override
+  String get mapCacheClearFailed => 'تعذّر مسح الخريطة المحفوظة';
+
+  @override
+  String get notifDocsExpiringTitle => 'مستند على وشك الانتهاء';
+
+  @override
+  String notifDocsExpiringBody(String document, String date) {
+    return 'ينتهي $document بتاريخ $date. أرسل مستندات مجددة قبل ذلك لتواصل العمل دون انقطاع.';
+  }
+
+  @override
+  String get notifDocsExpiredTitle => 'انتهت صلاحية مستنداتك';
+
+  @override
+  String get notifDocsExpiredBody =>
+      'تم تقييد حسابك ولا يمكنك الاتصال أو قبول رحلات جديدة حتى تُرسل مستندات مجددة وتتم الموافقة عليها. رحلاتك المقبولة سابقاً لا تتأثر.';
+
+  @override
+  String get notifDocsRenewalSubmittedTitle => 'تم إرسال مستندات التجديد';
+
+  @override
+  String get notifDocsRenewalSubmittedBody =>
+      'سيراجعها فريقنا وتصلك رسالة عند اتخاذ القرار.';
+
+  @override
+  String get documentKindContract => 'العقد';
+
+  @override
+  String get availabilityDocumentsExpired =>
+      'انتهت صلاحية مستنداتك. أرسل مستندات مجددة لاستعادة الوصول.';
+
+  @override
+  String get applicationDocumentsRequiredTitle => 'ارفع مستنداتك';
+
+  @override
+  String get applicationDocumentsRequiredBody =>
+      'تم إنشاء حسابك لكنه ليس قيد المراجعة بعد. ارفع كل المستندات المطلوبة ثم أرسل طلبك. تستغرق المراجعة عادةً حتى 24 ساعة.';
+
+  @override
+  String documentsStillNeeded(String documents) {
+    return 'ما زال مطلوباً: $documents';
+  }
+
+  @override
+  String get submitApplication => 'إرسال للمراجعة';
+
+  @override
+  String get documentsRequiredError =>
+      'ارفع كل المستندات المطلوبة قبل إرسال طلبك.';
+
+  @override
+  String get invitationCodeOptional => 'رمز الدعوة (اختياري)';
+
+  @override
+  String get fareEstimatedTitle => 'الأجرة التقديرية';
+
+  @override
+  String get fareBookedTitle => 'الأجرة التقديرية عند الطلب';
+
+  @override
+  String get fareDisclaimer =>
+      'تقديرية، وتُدفع مباشرة إلى السائق. لا تتم معالجة أي مدفوعات داخل التطبيق.';
+
+  @override
+  String get fareNotSet => 'لم تُحدَّد أجرة تقديرية لهذا المسار بعد.';
+
+  @override
+  String get farePerSeat => 'للمقعد الواحد';
+
+  @override
+  String fareSeatsLine(int count) {
+    return 'المقاعد × $count';
+  }
+
+  @override
+  String fareParcelLine(String size) {
+    return 'طرد $size';
+  }
+
+  @override
+  String get fareTotal => 'الإجمالي';
+
+  @override
+  String get notifDriverApproachingTitle => 'سائقك يقترب';
+
+  @override
+  String get notifDriverApproachingBody =>
+      'سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.';
+
+  @override
+  String get ratingPromptTitle => 'كيف كانت رحلتك؟';
+
+  @override
+  String get ratingPromptBody =>
+      'قيّم السائق من 1 إلى 5 نجوم. تقييمك سري: لا يرى السائق التقييم ولا من قدّمه.';
+
+  @override
+  String ratingStarLabel(int count) {
+    return '$count نجوم';
+  }
+
+  @override
+  String get ratingSubmit => 'إرسال التقييم';
+
+  @override
+  String get ratingThanks => 'شكرًا لتقييمك الرحلة.';
+
+  @override
+  String get ratingFailed => 'تعذّر إرسال التقييم. حاول مرة أخرى.';
+
+  @override
+  String get ratingAlreadyRated => 'لقد قيّمت هذه الرحلة من قبل.';
+
+  @override
+  String get renewalTitle => 'جدّد مستنداتك';
+
+  @override
+  String get renewalOpen => 'تجديد المستندات';
+
+  @override
+  String get renewalBannerTitle => 'انتهت صلاحية مستنداتك';
+
+  @override
+  String get renewalBannerBody =>
+      'لا يمكنك الاتصال بالإنترنت أو قبول رحلات جديدة حتى ترسل مستنداتك المجدَّدة وتتم الموافقة عليها.';
+
+  @override
+  String get renewalBannerSubmittedTitle => 'التجديد قيد المراجعة';
+
+  @override
+  String get renewalBannerSubmittedBody =>
+      'مستنداتك المجدَّدة بانتظار المراجعة.';
+
+  @override
+  String get renewalIntro =>
+      'ارفع صوراً واضحة أو ملفات PDF لرخصة القيادة وترخيص المركبة والتأمين المجدَّدة، ثم أرسلها للمراجعة. الرحلات التي قبلتها سابقاً لا تتأثر.';
+
+  @override
+  String get renewalUploaded => 'المستندات المرفوعة';
+
+  @override
+  String get renewalNoDocuments => 'لم يتم رفع أي مستندات مجدَّدة بعد.';
+
+  @override
+  String get renewalSubmit => 'إرسال للمراجعة';
+
+  @override
+  String get renewalSubmittedTitle => 'بانتظار المراجعة';
+
+  @override
+  String get renewalSubmittedBody =>
+      'استلمنا مستنداتك المجدَّدة. سيتم إشعارك عندما يوافق فريق المراجعة عليها.';
+
+  @override
+  String get renewalDocumentsRequired =>
+      'ارفع مستنداً مجدَّداً واحداً على الأقل قبل الإرسال.';
+
+  @override
+  String get renewalStateConflict =>
+      'تغيّرت حالة التجديد. اسحب للتحديث وحاول مرة أخرى.';
+
+  @override
+  String get renewalLoadError => 'تعذّر تحميل حالة التجديد.';
+
+  @override
+  String get renewalNothingToRenew =>
+      'مستنداتك محدّثة. لا يوجد ما يتطلب التجديد.';
 }

@@ -169,7 +169,7 @@ void main() {
         final runner = CanonicalMutationRunner(storage: storage);
         var persistedBeforeSend = false;
 
-        await runner.run<void>(
+        final receipt = await runner.runWithReceipt<void>(
           operation: 'driver_canonical_offer_accept',
           scope: 'driver',
           actorId: 'driver_1',
@@ -186,6 +186,7 @@ void main() {
         await runner.acknowledge(
           actorId: 'driver_1',
           operation: 'driver_canonical_offer_accept',
+          idempotencyKey: receipt.bundle.idempotencyKey,
         );
         expect(storage.bundle, isNull);
       },
@@ -551,6 +552,8 @@ http.Response _jsonResponse(Map<String, dynamic> body) => http.Response.bytes(
 );
 
 class _MemoryCanonicalStorage implements CanonicalOperationStorage {
+  @override
+  String get namespace => CanonicalOperationStorage.bundleKey;
   _MemoryCanonicalStorage({this.saveError});
 
   CanonicalOperationBundle? bundle;

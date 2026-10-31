@@ -13,6 +13,7 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_card.dart';
 import '../application/onboarding_controller.dart';
 import '../domain/onboarding_models.dart';
+import 'driver_documents_card.dart';
 
 class OnboardingFlowScreen extends ConsumerStatefulWidget {
   const OnboardingFlowScreen({super.key});
@@ -25,6 +26,7 @@ class OnboardingFlowScreen extends ConsumerStatefulWidget {
 class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   final _invitation = TextEditingController();
   final _phone = TextEditingController();
+  final _email = TextEditingController();
   final _otp = TextEditingController();
   final _displayName = TextEditingController();
   final _password = TextEditingController();
@@ -34,6 +36,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   bool _adult = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
+  Set<String> _uploadedKinds = const {};
   Timer? _timer;
   DateTime _now = DateTime.now().toUtc();
 
@@ -41,9 +44,15 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(onboardingControllerProvider.notifier).refreshAvailability();
+      if (!mounted) return;
+      // Arriving from the register screen with a role already chosen: keep it.
+      final current = ref.read(onboardingControllerProvider).value;
+      if (current?.enabled == true &&
+          current?.stage == OnboardingStage.enteringInvitation &&
+          current?.selectedRole != null) {
+        return;
       }
+      ref.read(onboardingControllerProvider.notifier).refreshAvailability();
     });
   }
 
@@ -52,6 +61,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     _timer?.cancel();
     _invitation.dispose();
     _phone.dispose();
+    _email.dispose();
     _otp.dispose();
     _displayName.dispose();
     _password.dispose();
@@ -112,7 +122,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           leading: warnBeforeLeaving
               ? BackButton(onPressed: () => Navigator.of(context).maybePop())
               : null,
-          title: Text(l10n.createInvitedAccount),
+          title: Text(l10n.createAccount),
           actions: const [LanguageSwitch()],
         ),
         body: SafeArea(
@@ -222,7 +232,16 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
               key: const ValueKey('invitationCodeField'),
               controller: _invitation,
               textInputAction: TextInputAction.next,
-              decoration: InputDecoration(labelText: l10n.invitationCode),
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText:
+                    state.config?.openRegistrationRoles.contains(
+                          state.selectedRole,
+                        ) ==
+                        true
+                    ? l10n.invitationCodeOptional
+                    : l10n.invitationCode,
+              ),
             ),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
@@ -243,6 +262,22 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
               ),
             ),
           ),
+          if (_invitation.text.trim().isEmpty) ...[
+            const SizedBox(height: AppTokens.spaceMedium),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: TextField(
+                key: const ValueKey('onboardingEmailField'),
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.done,
+                autocorrect: false,
+                enableSuggestions: false,
+                inputFormatters: [LengthLimitingTextInputFormatter(191)],
+                decoration: InputDecoration(labelText: l10n.emailForCode),
+              ),
+            ),
+          ],
           const SizedBox(height: AppTokens.spaceLarge),
           FilledButton(
             key: const ValueKey('sendVerificationCodeButton'),
@@ -281,6 +316,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             l10n.enterVerificationCode,
             style: Theme.of(context).textTheme.titleLarge,
           ),
+          const SizedBox(height: AppTokens.spaceSmall),
+          Text(l10n.codeSentToEmail, key: const ValueKey('codeSentToEmail')),
           if (state.maskedPhone != null) ...[
             const SizedBox(height: AppTokens.spaceSmall),
             Directionality(
@@ -523,18 +560,60 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   Widget _pendingCard(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
     _clearSecrets();
-    return MasariCard(
+    final role = state.selectedRole;
+    final isApplicant =
+        role == OnboardingRole.driver || role == OnboardingRole.merchant;
+    final needsDocuments = isApplicant && !state.applicationSubmitted;
+    final required = role == OnboardingRole.merchant
+        ? merchantRequiredDocumentKinds
+        : driverRequiredDocumentKinds;
+    final missing = required
+        .where((kind) => !_uploadedKinds.contains(kind))
+        .toList(growable: false);
+    final card = MasariCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            l10n.applicationUnderReview,
+            needsDocuments
+                ? l10n.applicationDocumentsRequiredTitle
+                : l10n.applicationUnderReview,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: AppTokens.spaceMedium),
-          Text(l10n.pendingReviewBody),
-          if (state.selectedRole != null)
-            Text(_roleLabel(l10n, state.selectedRole!)),
+          Text(
+            needsDocuments
+                ? l10n.applicationDocumentsRequiredBody
+                : l10n.pendingReviewBody,
+          ),
+          if (role != null) Text(_roleLabel(l10n, role)),
+          if (needsDocuments) ...[
+            const SizedBox(height: AppTokens.spaceMedium),
+            if (missing.isNotEmpty)
+              Text(
+                l10n.documentsStillNeeded(
+                  missing
+                      .map((kind) => documentKindLabel(l10n, kind))
+                      .join(', '),
+                ),
+                key: const ValueKey('documentsStillNeeded'),
+              ),
+            const SizedBox(height: AppTokens.spaceSmall),
+            FilledButton(
+              key: const ValueKey('submitApplicationButton'),
+              onPressed: state.busy || missing.isNotEmpty
+                  ? null
+                  : () => ref
+                        .read(onboardingControllerProvider.notifier)
+                        .submitApplication(),
+              child: state.busy
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.submitApplication),
+            ),
+          ],
           const SizedBox(height: AppTokens.spaceMedium),
           OutlinedButton(
             onPressed: () => ref
@@ -551,6 +630,20 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           ),
         ],
       ),
+    );
+    if (!isApplicant) return card;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        card,
+        const SizedBox(height: AppTokens.spaceMedium),
+        DriverDocumentsCard(
+          merchant: role == OnboardingRole.merchant,
+          onKindsChanged: (kinds) {
+            if (mounted) setState(() => _uploadedKinds = kinds);
+          },
+        ),
+      ],
     );
   }
 
@@ -603,12 +696,14 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         .start(
           invitationCode: _invitation.text,
           phone: _phone.text,
+          email: _email.text,
           locale: locale == 'en' ? 'en' : 'ar',
         );
     final result = ref.read(onboardingControllerProvider).value;
     if (result?.stage == OnboardingStage.otpSent) {
       _invitation.clear();
       _phone.clear();
+      _email.clear();
     }
   }
 
@@ -624,6 +719,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     _confirmPassword.clear();
     _invitation.clear();
     _phone.clear();
+    _email.clear();
     _displayName.clear();
     _terms = false;
     _privacy = false;
@@ -789,6 +885,7 @@ String _safeError(AppLocalizations l10n, String? code) => switch (code) {
   'verification_temporarily_unavailable' => l10n.requestFailed,
   'registration_grant_invalid' => l10n.requestFailed,
   'registration_conflict' => l10n.requestFailed,
+  'documents_required' => l10n.documentsRequiredError,
   _ => l10n.requestFailed,
 };
 

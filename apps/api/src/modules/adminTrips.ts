@@ -5,6 +5,8 @@ import { TripStatus } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
+import { adminDeliveryConfirmations } from "../services/deliveryHandover.js";
+import { recomputeTrustForTrip } from "../services/driverTrust.js";
 import { ADMIN_FORWARD_TRIP_TRANSITION, advanceLegacyTrip } from "../services/tripLifecycle.js";
 
 const tripStatuses = ["created", "accepted", "pickup_started", "picked_up", "in_transit", "delivered", "completed", "cancelled"] as const;
@@ -210,7 +212,13 @@ adminTripsRouter.get("/admin/trips", async (req, res, next) => {
       }),
       prisma.trip.count({ where }),
     ], { isolationLevel: "RepeatableRead" });
-    res.json({ trips: trips.map(serializeTrip), page: input.page, limit: input.limit, total });
+    const confirmations = await adminDeliveryConfirmations(prisma, trips);
+    res.json({
+      trips: trips.map((trip) => ({ ...serializeTrip(trip), delivery_confirmation: confirmations.get(trip.id) ?? null })),
+      page: input.page,
+      limit: input.limit,
+      total
+    });
   } catch (error) {
     next(error);
   }
@@ -223,7 +231,8 @@ adminTripsRouter.get("/admin/trips/:id", async (req, res, next) => {
       select: tripDetailSelect,
     });
     if (!trip) throw new HttpError(404, "trip_not_found");
-    res.json({ trip: serializeTripDetail(trip) });
+    const confirmations = await adminDeliveryConfirmations(prisma, [trip]);
+    res.json({ trip: { ...serializeTripDetail(trip), delivery_confirmation: confirmations.get(trip.id) ?? null } });
   } catch (error) {
     next(error);
   }
@@ -257,9 +266,11 @@ adminTripsRouter.post("/admin/trips/:id/status", async (req: AuthenticatedReques
       const updated = await advanceLegacyTrip(tx, current, input.status as TripStatus, {
         actorId: req.user!.id,
         expectedStatus: input.expected_status as TripStatus,
+        adminOverride: true,
       });
       return { id: updated.id, status: updated.status };
     }, { isolationLevel: "Serializable" });
+    if (trip.status === TripStatus.completed) await recomputeTrustForTrip(prisma, trip.id);
     res.json({ trip });
   } catch (error) {
     next(error);

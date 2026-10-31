@@ -47,6 +47,25 @@ export function createApiClient(apiBaseUrl: string, clientOptions: ApiClientOpti
     return data as T;
   }
 
+  async function downloadCsv(path: string, token: string) {
+    const response = await fetch(`${apiBaseUrl}/api/v1${path}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) {
+      const error = new Error(`Export failed with ${response.status}`) as ApiError;
+      error.status = response.status;
+      clientOptions.onSessionEnded?.(error, token);
+      throw error;
+    }
+    return response.blob();
+  }
+
+  function reportQuery(range: ReportRange, extra: Record<string, string> = {}) {
+    const query = new URLSearchParams(extra);
+    if (range.from) query.set("from", range.from);
+    if (range.to) query.set("to", range.to);
+    const text = query.toString();
+    return text ? `?${text}` : "";
+  }
+
   function withQuery(path: string, values: Record<string, string | number | undefined>) {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(values)) {
@@ -57,12 +76,38 @@ export function createApiClient(apiBaseUrl: string, clientOptions: ApiClientOpti
   }
 
 return {
+  incidents: (token: string, query: { status?: IncidentStatus; page?: number; limit?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (query.status) params.set("status", query.status);
+    if (query.page) params.set("page", String(query.page));
+    if (query.limit) params.set("limit", String(query.limit));
+    const text = params.toString();
+    return apiRequest<IncidentPage>(`/admin/incidents${text ? `?${text}` : ""}`, { token });
+  },
+  updateIncident: (token: string, id: string, body: { status: Exclude<IncidentStatus, "open">; expected_revision: number; note?: string }) =>
+    apiRequest<{ incident: IncidentRecord }>(`/admin/incidents/${encodeURIComponent(id)}`, { method: "PATCH", token, body }),
+  uncertainAiRequests: (token: string, query: { status?: UncertainAiStatus; page?: number; limit?: number } = {}) => {
+    const params = new URLSearchParams();
+    if (query.status) params.set("status", query.status);
+    if (query.page) params.set("page", String(query.page));
+    if (query.limit) params.set("limit", String(query.limit));
+    const text = params.toString();
+    return apiRequest<UncertainAiPage>(`/admin/ai-uncertain-requests${text ? `?${text}` : ""}`, { token });
+  },
+  resolveUncertainAiRequest: (token: string, id: string, body: { expected_revision: number; note?: string }) =>
+    apiRequest<{ request: UncertainAiRecord }>(`/admin/ai-uncertain-requests/${encodeURIComponent(id)}`, { method: "PATCH", token, body }),
+  reportSummary: (token: string, range: ReportRange) => apiRequest<ReportSummary>(`/admin/reports/summary${reportQuery(range)}`, { token }),
+  reportExport: (token: string, dataset: ReportDataset, range: ReportRange) => downloadCsv(`/admin/reports/export${reportQuery(range, { dataset })}`, token),
+  successMetrics: (token: string, range: ReportRange) => apiRequest<SuccessMetricsResponse>(`/admin/success-metrics${reportQuery(range)}`, { token }),
+  successMetricsExport: (token: string, range: ReportRange) => downloadCsv(`/admin/success-metrics/export${reportQuery(range)}`, token),
   login: (email: string, password: string) => apiRequest<LoginResponse>("/auth/admin/login", { method: "POST", body: { email, password } }),
   googleLogin: (id_token: string) => apiRequest<LoginResponse>("/auth/admin/google", { method: "POST", body: { id_token } }),
   authCapabilities: () => apiRequest<{ google_admin_login_available: boolean; google_admin_client_id: string | null }>("/auth/capabilities"),
   me: (token: string) => apiRequest<MeResponse>("/me", { token }),
   capabilities: (token: string) => apiRequest<CapabilitiesResponse>("/capabilities", { token }),
   dashboard: (token: string) => apiRequest<DashboardResponse>("/admin/dashboard", { token }),
+  comparisonSimulation: (token: string, query?: { seed?: number; manual_response_delay_min?: number }) =>
+    apiRequest<{ simulation: ComparisonSimulation }>(withQuery("/compare/simulation", query ?? {}), { token }),
   monitoringOverview: (token: string, query?: Range) =>
     apiRequest<Observed<Overview>>(withQuery("/admin/matching-batching/overview", query ?? {}), { token }),
   monitoringMatches: (token: string, query: MatchQueryInput) =>
@@ -114,17 +159,58 @@ return {
     token: string,
     userId: string,
     expectedRevision: number,
-    profile?: DriverProfileDraft
+    profile?: DriverProfileDraft,
+    expiry?: DriverExpiryInput
   ) =>
     apiRequest<{ verification: DriverVerification }>(
       `/admin/driver-verifications/${encodeURIComponent(userId)}/approve`,
-      { method: "POST", token, body: profile ? { expected_revision: expectedRevision, profile } : { expected_revision: expectedRevision } }
+      { method: "POST", token, body: { expected_revision: expectedRevision, ...(profile ? { profile } : {}), ...(expiry && Object.keys(expiry).length ? { expiry } : {}) } }
+    ),
+  driverVerificationsExpiring: (token: string, withinDays = 30, kind?: DriverExpiryKind, page = 1, limit = 50) =>
+    apiRequest<DriverVerificationPage>(
+      `/admin/driver-verifications/expiring?within_days=${withinDays}${kind ? `&kind=${kind}` : ""}&page=${page}&limit=${limit}`,
+      { token }
+    ),
+  driverVerificationsReReview: (token: string, state: DriverReReviewState = "submitted", page = 1, limit = 50) =>
+    apiRequest<DriverVerificationPage>(
+      `/admin/driver-verifications/re-review?state=${state}&page=${page}&limit=${limit}`,
+      { token }
     ),
   rejectDriverVerification: (token: string, userId: string, expectedRevision: number, reason: string) =>
     apiRequest<{ verification: DriverVerification }>(
       `/admin/driver-verifications/${encodeURIComponent(userId)}/reject`,
       { method: "POST", token, body: { expected_revision: expectedRevision, reason } }
     ),
+  reopenDriverVerification: (token: string, userId: string, expectedRevision: number, reason: string) =>
+    apiRequest<{ verification: DriverVerification }>(
+      `/admin/driver-verifications/${encodeURIComponent(userId)}/reopen`,
+      { method: "POST", token, body: { expected_revision: expectedRevision, reason } }
+    ),
+  downloadDriverDocument: (token: string, userId: string, documentId: string) =>
+    downloadCsv(`/admin/driver-verifications/${encodeURIComponent(userId)}/documents/${encodeURIComponent(documentId)}`, token),
+  recordDriverEvidence: (token: string, userId: string, expectedRevision: number, kind: EvidenceKind, note?: string) =>
+    apiRequest<{ verification: DriverVerification }>(
+      `/admin/driver-verifications/${encodeURIComponent(userId)}/evidence`,
+      { method: "POST", token, body: note ? { expected_revision: expectedRevision, kind, note } : { expected_revision: expectedRevision, kind } }
+    ),
+  merchantDocuments: (token: string, userId: string) =>
+    apiRequest<{ documents: Array<{ id: string; kind: string; mime_type: string; size_bytes: number; created_at: string }> }>(
+      `/admin/merchant-approvals/${encodeURIComponent(userId)}/documents`,
+      { token }
+    ),
+  downloadMerchantDocument: (token: string, userId: string, documentId: string) =>
+    downloadCsv(`/admin/merchant-approvals/${encodeURIComponent(userId)}/documents/${encodeURIComponent(documentId)}`, token),
+  decideMerchantApproval: (token: string, userId: string, decision: "approve" | "reject", reason?: string) =>
+    apiRequest<{ user: AdminUser }>(
+      `/admin/merchant-approvals/${encodeURIComponent(userId)}/${decision}`,
+      { method: "POST", token, body: reason ? { reason } : {} }
+    ),
+  adminInvitations: (token: string, query: { page?: number; limit?: number } = {}) =>
+    apiRequest<InvitationPage>(withQuery("/admin/invitations", query), { token }),
+  createAdminInvitation: (token: string, body: { role: InvitationRole; phone: string; contact_email: string }) =>
+    apiRequest<{ invitation: InvitationRecord; code: string }>("/admin/invitations", { method: "POST", token, body }),
+  revokeAdminInvitation: (token: string, id: string, reason: string) =>
+    apiRequest<{ invitation: InvitationRecord }>(`/admin/invitations/${encodeURIComponent(id)}/revoke`, { method: "POST", token, body: { reason } }),
   consentReleases: (token: string) =>
     apiRequest<{ releases: ConsentRelease[] }>("/admin/consent-releases", { token }),
   currentConsentRelease: (token: string) =>
@@ -172,6 +258,7 @@ return {
   },
   requests: (token: string) => apiRequest<{ requests: PassengerRequest[] }>("/admin/requests", { token }),
   orders: (token: string) => apiRequest<{ orders: MerchantOrder[] }>("/admin/orders", { token }),
+  passengerParcels: (token: string) => apiRequest<{ parcels: PassengerParcelRow[] }>("/admin/passenger-parcels", { token }),
   routes: (token: string) => apiRequest<{ routes: DriverRoute[] }>("/admin/routes", { token }),
   adminTrips: (
     token: string,
@@ -211,6 +298,10 @@ return {
     body: RouteVersionActionPayload[Action],
     key: string
   ) => apiRequest<{ version: ServiceRouteVersion }>(`/admin/route-versions/${id}/${action}`, { method: "POST", token, body, idempotencyKey: key }),
+  routeFares: (token: string, routeId: string) =>
+    apiRequest<RouteFaresResponse>(`/admin/service-routes/${encodeURIComponent(routeId)}/fares`, { token }),
+  setRouteFares: (token: string, routeId: string, body: RouteFaresUpdate) =>
+    apiRequest<RouteFaresResponse>(`/admin/service-routes/${encodeURIComponent(routeId)}/fares`, { method: "PUT", token, body }),
   retireServiceRoute: (token: string, id: string, body: RouteRetirementPayload, key: string) => apiRequest<{ route: ServiceRoute }>(`/admin/service-routes/${id}/retire`, { method: "POST", token, body, idempotencyKey: key }),
   canonicalStops: (token: string, query = "") => apiRequest<StopPage>(`/admin/stops${query}`, { token }),
   createCanonicalStop: (token: string, body: CanonicalStopDraft, key: string) => apiRequest<{ stop: CanonicalStop }>("/admin/stops", { method: "POST", token, body, idempotencyKey: key }),
@@ -273,8 +364,10 @@ export type UserRoleContextDriver = {
   driver_profile_exists: boolean;
   driver_profile_verified: boolean;
   driver_verification_status: DriverVerificationStatus | "none";
+  /** False while an open-signup applicant has not sent the required documents for review. */
+  application_submitted?: boolean;
 };
-export type UserRoleContextMerchant = { kind: "merchant"; merchant_approval_connected: boolean };
+export type UserRoleContextMerchant = { kind: "merchant"; merchant_approval_connected: boolean; application_submitted?: boolean };
 export type UserRoleContextPassenger = { kind: "passenger" };
 export type UserRoleContextAdmin = { kind: "admin" };
 export type UserRoleContext = UserRoleContextDriver | UserRoleContextMerchant | UserRoleContextPassenger | UserRoleContextAdmin;
@@ -314,6 +407,11 @@ export type UserDetail = {
   merchant_order_count: number;
 };
 
+export const TRUST_COMPONENT_KEYS = ["experience", "cancellation", "departure", "arrival", "rating"] as const;
+export type TrustComponentKey = (typeof TRUST_COMPONENT_KEYS)[number];
+/** value is 0..1 after damping; sample is the number of observations behind it. */
+export type TrustComponents = Record<TrustComponentKey, { value: number; sample: number; weight: number }>;
+
 /**
  * A driver profile from `GET /admin/drivers`.
  *
@@ -327,11 +425,20 @@ export type DriverProfile = {
   parcel_capacity: number;
   verified: boolean;
   trust_score: number;
+  /** Per-component breakdown of the trust score; null until first computed. */
+  trust_components?: TrustComponents | null;
+  trust_computed_at?: string | null;
   created_at: string;
   user?: AdminUser;
   routes?: DriverRoute[];
 };
-export type DriverVerificationStatus = "pending" | "approved" | "rejected";
+export type DriverVerificationStatus = "pending" | "approved" | "rejected" | "documents_expired";
+export const EXPIRY_KINDS = ["licence", "vehicle_registration", "insurance", "contract"] as const;
+export type DriverExpiryKind = (typeof EXPIRY_KINDS)[number];
+/** YYYY-MM-DD, the last valid day; null clears a recorded date. */
+export type DriverExpiryInput = Partial<Record<DriverExpiryKind, string | null>>;
+export type DriverReReviewState = "submitted" | "awaiting_driver" | "all";
+export type DriverExpiry = Record<DriverExpiryKind, { expires_on: string; days_left: number } | null>;
 export type DriverProfileDraft = {
   vehicle_type: string;
   seats_total: number;
@@ -341,13 +448,32 @@ export type DriverVerification = {
   id: string;
   revision: number;
   status: DriverVerificationStatus;
+  expiry?: DriverExpiry;
+  documents_expired_at?: string | null;
+  renewal_submitted_at?: string | null;
   rejection_reason: string | null;
   submitted_at: string;
   reviewed_at: string | null;
   reviewer: { id: string; name: string } | null;
   candidate: AdminUser;
   driver_profile: DriverProfile | null;
-  evidence: { status: "not_collected" };
+  history: DriverVerificationHistoryEntry[];
+  evidence: DriverVerificationEvidence;
+};
+export const EVIDENCE_KINDS = ["driver_licence", "vehicle_registration", "national_id", "insurance", "other"] as const;
+export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
+export type DriverVerificationEvidence = {
+  status: "not_collected" | "recorded";
+  items: { id: string; kind: EvidenceKind; note: string | null; recorded_by: { id: string; name: string } | null; created_at: string }[];
+  documents: { id: string; kind: EvidenceKind; mime_type: string; size_bytes: number; created_at: string }[];
+};
+export type DriverVerificationHistoryEntry = {
+  id: string;
+  revision: number;
+  decision: "approved" | "rejected" | "reopened" | "documents_expired" | "renewal_submitted";
+  reason: string | null;
+  decided_by: { id: string; name: string } | null;
+  created_at: string;
 };
 export type DriverVerificationPage = {
   verifications: DriverVerification[];
@@ -370,6 +496,18 @@ export type ConsentReleaseDocument = {
   legal_approved_at: string | null;
   legal_approved_by: string | null;
 };
+export type InvitationRole = "passenger" | "driver" | "merchant";
+export type InvitationRecord = {
+  id: string;
+  role: InvitationRole;
+  /** Already masked by the API. */
+  phone: string | null;
+  contact_email: string | null;
+  status: "unused" | "used" | "expired" | "revoked";
+  expires_at: string;
+  created_at: string;
+};
+export type InvitationPage = { invitations: InvitationRecord[]; page: number; limit: number; total: number };
 export type ConsentRelease = {
   id: string;
   version: string;
@@ -410,6 +548,9 @@ export type DashboardResponse = {
     passenger_requests: number;
     merchant_orders: number;
     parcels: number;
+    active_drivers: number;
+    pending_driver_approvals: number;
+    open_incidents: number;
   };
 };
 
@@ -431,6 +572,30 @@ export type PassengerRequest = {
   destination_label: string;
   passenger_count: number;
   passenger?: User;
+};
+
+export type PassengerParcelTrackingState =
+  | "searching"
+  | "assigned"
+  | "picked_up"
+  | "in_transit"
+  | "delivered"
+  | "cancelled"
+  | "failed"
+  | "expired";
+
+/** Receiver details are deliberately absent from this shape. */
+export type PassengerParcelRow = {
+  id: string;
+  sender: { id: string; name: string };
+  size: string;
+  pickup_label: string;
+  dropoff_label: string | null;
+  tracking_state: PassengerParcelTrackingState;
+  dispatch_status: string | null;
+  requested_departure_from: string | null;
+  requested_departure_until: string | null;
+  created_at: string;
 };
 
 export type MerchantOrder = {
@@ -455,6 +620,39 @@ export type Match = {
 
 export type MatchRunResponse = { match: Match; scoringBreakdown: Record<string, number>; candidatesConsidered: number };
 export type BatchResponse = { batch: { id: string; status: string; estimated_distance_saved: string; explanation: string; merchant_order?: MerchantOrder } };
+export type SimulationMethodKey = "manual" | "nearest" | "masari";
+export type SimulationDistribution = { avg: number; median: number; p90: number };
+export type SimulationMetrics = {
+  requests: number;
+  matched: number;
+  unmatched: number;
+  unmatchedPct: number;
+  waitingMin: SimulationDistribution;
+  matchingMin: SimulationDistribution;
+  routeDeviationKm: number;
+  routeDeviationKmPerMatched: number;
+  vehiclesUsed: number;
+  vehiclesTotal: number;
+  vehicleUtilisationPct: number;
+  seatUtilisationPct: number;
+  parcelUtilisationPct: number;
+};
+export type ComparisonSimulation = {
+  simulated: true;
+  version: string;
+  params: { seed: number; manualResponseDelayMin: number; nearestMatchDelayMin: number; masariOfferDelayMin: number; masariBatchWindowMin: number };
+  aggregate: Record<SimulationMethodKey, SimulationMetrics>;
+  scenarios: Array<{
+    key: string;
+    label: string;
+    origin: "hand_written" | "generated";
+    requests: number;
+    passengerRequests: number;
+    parcelOrders: number;
+    drivers: number;
+    methods: Record<SimulationMethodKey, SimulationMetrics>;
+  }>;
+};
 export type Comparison = {
   id: string;
   winner: string;
@@ -536,6 +734,15 @@ export type AdminTripListItem = {
   has_stored_location: boolean;
   demo_context: boolean;
   supported_admin_transition: AdminForwardTripStatus | null;
+  delivery_confirmation?: AdminTripDeliveryConfirmation | null;
+};
+export type AdminTripDeliveryConfirmation = {
+  required: boolean;
+  total_orders: number;
+  confirmed_orders: number;
+  methods: Array<"receiver_code" | "receiver_unavailable" | "admin_override">;
+  flagged: boolean;
+  reasons: string[];
 };
 export type AdminTripDetail = AdminTripListItem & {
   latest_stored_location: {
@@ -609,6 +816,89 @@ export type ServiceRoute = RouteIdentityDraft & {
   version_count: number;
   created_at: string;
   updated_at: string;
+};
+export type IncidentStatus = "open" | "reviewing" | "resolved";
+export type IncidentRecord = {
+  id: string;
+  trip_id: string | null;
+  category: string;
+  description: string;
+  status: IncidentStatus;
+  admin_note: string | null;
+  revision: number;
+  reviewed_at: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  reporter?: { id: string; name: string; role: string };
+};
+export type IncidentPage = { incidents: IncidentRecord[]; page: number; limit: number; total: number; open_total: number };
+export type UncertainAiStatus = "open" | "resolved";
+export type UncertainAiRecord = {
+  id: string;
+  locale: string;
+  text: string;
+  intent_type: string;
+  confidence: number;
+  source: string;
+  reason: string;
+  pickup_key: string | null;
+  dropoff_key: string | null;
+  status: UncertainAiStatus;
+  resolution_note: string | null;
+  resolved_at: string | null;
+  revision: number;
+  created_at: string;
+  expires_at: string;
+};
+export type UncertainAiPage = { requests: UncertainAiRecord[]; page: number; limit: number; total: number; open_total: number };
+export type ReportRange = { from?: string; to?: string };
+export type SuccessMetricKey = "matching_time" | "ai_understanding" | "status_continuity" | "batch_efficiency" | "driver_utilization" | "user_satisfaction" | "driver_verification" | "pickup_clarity" | "route_deviation";
+export type SuccessMetric = {
+  key: SuccessMetricKey;
+  unit: "seconds" | "percent" | "ratio" | "score";
+  target: string;
+  value: number | null;
+  status: "pass" | "fail" | "no_data";
+  sample_size: number;
+  previous_value: number | null;
+  trend: "improving" | "worsening" | "flat" | "none";
+};
+export type SuccessMetricsResponse = { range: { from: string; to: string }; generated_at: string; metrics: SuccessMetric[] };
+export type ReportDataset = "requests" | "orders" | "trips";
+type StatusCounts = Record<string, number>;
+export type ReportSummary = {
+  range: { from: string | null; to: string | null };
+  generated_at: string;
+  passenger_requests: { total: number; by_status: StatusCounts };
+  merchant_orders: { total: number; by_status: StatusCounts; parcels: number };
+  trips: { total: number; by_status: StatusCounts };
+  matches: { total: number; by_status: StatusCounts };
+  drivers: { total: number; verified: number; pending_verification: number };
+};
+export type RouteFareItem = "passenger_seat" | "parcel_s" | "parcel_m" | "parcel_l";
+export type RouteFareCurrent = { fare_id: string; amount_minor: number; currency: string; effective_from: string } | null;
+export type RouteFareHistoryRow = {
+  id: string;
+  item: RouteFareItem;
+  amount_minor: number | null;
+  currency: string;
+  effective_from: string;
+  reason: string | null;
+  created_at: string;
+  created_by: { id: string; name: string } | null;
+};
+export type RouteFaresResponse = {
+  route_id: string;
+  currency: string;
+  display_only: true;
+  current: Record<RouteFareItem, RouteFareCurrent>;
+  history: RouteFareHistoryRow[];
+  server_now: string;
+};
+export type RouteFaresUpdate = {
+  changes: Array<{ item: RouteFareItem; amount_minor: number | null }>;
+  effective_from?: string;
+  reason: string;
 };
 export type RoutePage = { routes: ServiceRoute[]; page: number; limit: number; total: number };
 export type StopPage = { stops: CanonicalStop[]; page: number; limit: number; total: number };

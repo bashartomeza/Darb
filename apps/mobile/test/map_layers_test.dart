@@ -186,6 +186,8 @@ void main() {
         'checkpoints': [
           {
             'id': 'checkpoint_1',
+            'latitude': 31.7,
+            'longitude': 35.2,
             'checkpoint': checkpointName,
             'city': checkpointCity,
             'entering_status_last_updated': enteringTime.toIso8601String(),
@@ -217,6 +219,8 @@ void main() {
         'checkpoints': [
           {
             'id': 'checkpoint_2',
+            'latitude': 31.7,
+            'longitude': 35.2,
             'checkpoint': 'Checkpoint Test',
             'city': 'City Test',
           },
@@ -243,7 +247,7 @@ void main() {
     test('uses empty strings when checkpoint name or city is missing', () {
       final snapshot = CheckpointSnapshot.fromJson({
         'checkpoints': [
-          {'id': 'checkpoint_3'},
+          {'id': 'checkpoint_3', 'latitude': 31.7, 'longitude': 35.2},
         ],
       });
 
@@ -265,6 +269,8 @@ void main() {
         'checkpoints': [
           {
             'id': 'checkpoint_4',
+            'latitude': 31.7,
+            'longitude': 35.2,
             'checkpoint': 'Checkpoint Test',
             'city': 'City Test',
             'entering_status_last_updated': null,
@@ -288,6 +294,8 @@ void main() {
         'checkpoints': [
           {
             'id': 'checkpoint_5',
+            'latitude': 31.7,
+            'longitude': 35.2,
             'checkpoint': 'Checkpoint Test',
             'city': 'City Test',
             'entering_status_last_updated': 'invalid-date',
@@ -308,10 +316,10 @@ void main() {
 
     test('rejects a checkpoint without a valid id', () {
       expect(
-        () => CheckpointSnapshot.fromJson({
-          'checkpoints': [
-            {'id': '', 'checkpoint': 'Checkpoint Test', 'city': 'City Test'},
-          ],
+        () => Checkpoint.fromJson({
+          'id': '',
+          'latitude': 31.7,
+          'longitude': 35.2,
         }),
         throwsFormatException,
       );
@@ -319,10 +327,10 @@ void main() {
 
     test('rejects a checkpoint with a non-string id', () {
       expect(
-        () => CheckpointSnapshot.fromJson({
-          'checkpoints': [
-            {'id': 123, 'checkpoint': 'Checkpoint Test', 'city': 'City Test'},
-          ],
+        () => Checkpoint.fromJson({
+          'id': 123,
+          'latitude': 31.7,
+          'longitude': 35.2,
         }),
         throwsFormatException,
       );
@@ -342,12 +350,12 @@ void main() {
       );
     });
 
-    test('rejects an invalid checkpoint item', () {
+    test('omits an invalid checkpoint item', () {
       expect(
-        () => CheckpointSnapshot.fromJson({
+        CheckpointSnapshot.fromJson({
           'checkpoints': ['invalid'],
-        }),
-        throwsFormatException,
+        }).checkpoints,
+        isEmpty,
       );
     });
 

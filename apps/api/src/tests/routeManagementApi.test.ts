@@ -8,7 +8,8 @@ const prismaMock = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
   authSession: { findUnique: vi.fn(), update: vi.fn() },
   auditEvent: { create: vi.fn() },
-  driverRoute: { findMany: vi.fn() }
+  driverRoute: { findMany: vi.fn() },
+  routeFare: { findMany: vi.fn().mockResolvedValue([]) }
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
 

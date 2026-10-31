@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
+import '../../../../core/fares/fare.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/semantic_colors.dart';
@@ -23,6 +24,7 @@ class TripOfferCard extends StatelessWidget {
     this.actionLabel,
     this.busy = false,
     this.enabled = true,
+    this.verifyingBooking = false,
     super.key,
   });
 
@@ -34,10 +36,16 @@ class TripOfferCard extends StatelessWidget {
   final bool busy;
   final bool enabled;
 
+  /// Reconcile an existing request identity; this never authorizes a new booking.
+  final bool verifyingBooking;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    final departurePassed =
+        offer.departureAt != null &&
+        !offer.departureAt!.isAfter(DateTime.now());
 
     return MasariCard(
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
@@ -72,7 +80,34 @@ class TripOfferCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (offer.priceLabel != null) ...[
+              if (offer.fareSeatMinor != null) ...[
+                const SizedBox(width: AppTokens.spaceSmall),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      formatFare(
+                        offer.fareSeatMinor!,
+                        offer.fareCurrency ?? 'ILS',
+                        Localizations.localeOf(context).languageCode,
+                      ),
+                      key: const ValueKey('tripOfferFare'),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                    ),
+                    Text(
+                      l10n.perPassenger,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ] else if (offer.priceLabel != null) ...[
                 const SizedBox(width: AppTokens.spaceSmall),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -131,7 +166,10 @@ class TripOfferCard extends StatelessWidget {
                 const SizedBox(width: AppTokens.spaceSmall),
                 FilledButton(
                   key: ValueKey('bookOffer-${offer.id}'),
-                  onPressed: busy || !enabled ? null : onBook,
+                  onPressed:
+                      busy || !enabled || (departurePassed && !verifyingBooking)
+                      ? null
+                      : onBook,
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(0, AppTokens.minTouchTarget),
                     padding: const EdgeInsets.symmetric(
@@ -148,6 +186,18 @@ class TripOfferCard extends StatelessWidget {
               ],
             ],
           ),
+          if (offer.fareSeatMinor != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppTokens.spaceSmall),
+              child: Text(
+                l10n.fareDisclaimer,
+                key: const ValueKey('tripOfferFareDisclaimer'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppTheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          if (departurePassed && onBook != null) Text(l10n.bookingTimePassed),
         ],
       ),
     );

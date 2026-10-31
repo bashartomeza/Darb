@@ -6,7 +6,7 @@ These endpoints exist only when `INVITATIONS_ENABLED=true`. They require an acti
 
 `POST /api/v1/admin/invitations`
 
-Body: `role` (`passenger|driver|merchant`), `phone`, optional two-letter `region`, optional `expires_in_days` (1–30), `campaign`, and `source`. International phone input beginning with `+` needs no region. Local-format input requires an explicit region. Unknown fields are rejected so arbitrary operator input cannot become a hidden PII or secret store. The phone is mandatory. A `201` response returns a safe invitation summary plus `code`; this is the only response that can contain the raw code. No SMS, account, password, or session is created.
+Body: `role` (`passenger|driver|merchant`), `phone`, `contact_email` (required: the address the one-time code is emailed to; Masari sends no SMS), optional two-letter `region`, optional `expires_in_days` (1–30), `campaign`, and `source`. International phone input beginning with `+` needs no region. Local-format input requires an explicit region. Unknown fields are rejected so arbitrary operator input cannot become a hidden PII or secret store. The phone is mandatory. A `201` response returns a safe invitation summary plus `code`; this is the only response that can contain the raw code. The response and list show the email masked (`a***@example.com`). No message, account, password, or session is created. The admin vouches for the phone/email pair, so a phone registered through an invitation counts as verified.
 
 ## List
 

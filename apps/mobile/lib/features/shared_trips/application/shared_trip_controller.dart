@@ -150,13 +150,16 @@ class SharedDriverOfferDetailNotifier
   @override
   Future<SharedOfferDetailState> build() => _load(reconcile: true);
 
-  Future<SharedOfferDetailState> _load({required bool reconcile}) async {
+  Future<SharedOfferDetailState> _load({
+    required bool reconcile,
+    CanonicalOperationBundle? expectedBundle,
+  }) async {
     await requireFreshSharedCapability(ref);
     final actorId = _actorId();
+    final pending = expectedBundle ?? await _pendingForActor(actorId);
     final envelope = await ref
         .read(sharedTripRepositoryProvider)
         .driverOffer(offerId);
-    final pending = await _pendingForActor(actorId);
     final belongs =
         pending != null &&
         pending.payload['offer_id'] == offerId &&
@@ -166,7 +169,11 @@ class SharedDriverOfferDetailNotifier
         _terminalResultMatches(pending, envelope.offer)) {
       await ref
           .read(canonicalMutationRunnerProvider)
-          .acknowledge(actorId: actorId, operation: pending.operation);
+          .acknowledge(
+            actorId: actorId,
+            operation: pending.operation,
+            idempotencyKey: pending.idempotencyKey,
+          );
     }
     return SharedOfferDetailState(
       offer: envelope.offer,
@@ -261,13 +268,18 @@ class SharedDriverOfferDetailNotifier
     state = AsyncData(current.copyWith(mutating: true, uncertain: false));
     final actorId = _actorId();
     try {
+      final previousPending = await _pendingForActor(actorId);
       final fresh = await _freshOffer();
       if (!fresh.offer.actionableAt(fresh.serverNow)) {
-        final pending = await _pendingForActor(actorId);
+        final pending = previousPending;
         if (pending != null && _terminalResultMatches(pending, fresh.offer)) {
           await ref
               .read(canonicalMutationRunnerProvider)
-              .acknowledge(actorId: actorId, operation: pending.operation);
+              .acknowledge(
+                actorId: actorId,
+                operation: pending.operation,
+                idempotencyKey: pending.idempotencyKey,
+              );
           state = AsyncData(
             SharedOfferDetailState(
               offer: fresh.offer,
@@ -290,9 +302,9 @@ class SharedDriverOfferDetailNotifier
               : 'shared_offer_not_actionable',
         );
       }
-      await ref
+      final receipt = await ref
           .read(canonicalMutationRunnerProvider)
-          .run<SharedOfferEnvelope>(
+          .runWithReceipt<SharedOfferEnvelope>(
             operation: operation,
             scope: 'driver',
             actorId: actorId,
@@ -300,7 +312,10 @@ class SharedDriverOfferDetailNotifier
             send: (bundle) =>
                 send(ref.read(sharedTripRepositoryProvider), bundle),
           );
-      final reconciled = await _load(reconcile: true);
+      final reconciled = await _load(
+        reconcile: true,
+        expectedBundle: receipt.bundle,
+      );
       state = AsyncData(reconciled);
       ref.invalidate(sharedDriverOffersProvider);
       ref.invalidate(driverCanonicalOffersProvider);

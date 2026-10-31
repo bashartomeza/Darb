@@ -15,6 +15,17 @@ class PassengerRepository {
 
   final AuthenticatedApiClient apiClient;
 
+  Future<Map<String, dynamic>> createPayload(
+    Map<String, dynamic> payload,
+    String key,
+    Future<void> Function() beforeRetry,
+  ) => apiClient.postJson(
+    '/passenger/requests',
+    body: payload,
+    headers: {'Idempotency-Key': key},
+    beforeRetry: beforeRetry,
+  );
+
   // --------------------------------------------------------------------------
   // LIST REQUESTS
   // --------------------------------------------------------------------------
@@ -73,8 +84,14 @@ class PassengerRepository {
   // REQUEST DETAIL
   // --------------------------------------------------------------------------
 
-  Future<PassengerRequest> requestDetail(String id) async {
-    final json = await apiClient.getJson('/passenger/requests/$id');
+  Future<PassengerRequest> requestDetail(
+    String id, {
+    void Function()? beforeSend,
+  }) async {
+    final json = await apiClient.getJson(
+      '/passenger/requests/$id',
+      beforeSend: beforeSend,
+    );
 
     return PassengerRequest.fromJson(json['request'] as Map<String, dynamic>);
   }
@@ -135,8 +152,14 @@ class PassengerRepository {
   // CANCEL REQUEST
   // --------------------------------------------------------------------------
 
-  Future<PassengerRequest> cancelRequest(String id) async {
-    final json = await apiClient.patchJson('/passenger/requests/$id/cancel');
+  Future<PassengerRequest> cancelRequest(
+    String id, {
+    void Function()? beforeSend,
+  }) async {
+    final json = await apiClient.patchJson(
+      '/passenger/requests/$id/cancel',
+      beforeSend: beforeSend,
+    );
 
     return PassengerRequest.fromJson(json['request'] as Map<String, dynamic>);
   }

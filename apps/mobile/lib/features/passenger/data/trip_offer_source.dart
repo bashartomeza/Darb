@@ -16,7 +16,8 @@ abstract interface class TripOfferSource {
 /// are the driver's own record, and the departure time and remaining seats are
 /// the live availability the canonical matcher would actually consider.
 ///
-/// The fields the schema genuinely cannot supply — fare, star rating, completed
+/// The fare is the route's display-only estimate (null until an admin sets
+/// one). The fields the schema genuinely cannot supply — star rating, completed
 /// trips, photo — are left null, and [TripOfferCard] omits those rows rather
 /// than inventing them.
 class ApiTripOfferSource implements TripOfferSource {
@@ -40,6 +41,8 @@ class ApiTripOfferSource implements TripOfferSource {
       trustScore: departure.trustScore,
       departureAt: departure.departureAt,
       remainingSeats: departure.remainingSeats,
+      fareSeatMinor: departure.fares?.passengerSeatMinor,
+      fareCurrency: departure.fares?.currency,
     );
   }
 }

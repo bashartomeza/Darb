@@ -176,7 +176,6 @@ async function restoreCapacity(
 export function createCapacityReservationService(db: PrismaClient = prisma) {
   return {
     async hold(input: HoldInput, actor: Actor) {
-      validateHold(input);
       return db.$transaction(async (tx) => {
         const payload = {
           driver_route_id: input.driverRouteId,
@@ -197,8 +196,13 @@ export function createCapacityReservationService(db: PrismaClient = prisma) {
         if (claim.kind === "replay") {
           return { resource: await replayReservation(tx, claim.record.resource_type, claim.record.resource_id), replayed: true };
         }
+        validateHold(input);
         const availability = await lockAvailability(tx, input.driverRouteId);
-        const now = new Date();
+        await requireEligibleOperationalRoute(tx, input.routeVersionId, { lockForUpdate: true });
+        const [clock] = await tx.$queryRaw<Array<{ now: Date }>>`SELECT UTC_TIMESTAMP(3) AS now`;
+        const now = clock!.now;
+        validateHold(input, now);
+        await requireEligibleOperationalRoute(tx, input.routeVersionId, { now });
         if (
           availability.route_version_id !== input.routeVersionId ||
           availability.canonical_availability_version !== "canonical_route_v1" ||
@@ -210,7 +214,6 @@ export function createCapacityReservationService(db: PrismaClient = prisma) {
           availability.driver_account_status !== "active" ||
           !availability.departure_at || availability.departure_at <= now
         ) throw new HttpError(409, "availability_not_reservable");
-        await requireEligibleOperationalRoute(tx, input.routeVersionId, { now, lockForUpdate: true });
         if (input.matchId) {
           const match = await tx.match.findUnique({
             where: { id: input.matchId },

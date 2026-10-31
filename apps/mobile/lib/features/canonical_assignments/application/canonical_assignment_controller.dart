@@ -168,12 +168,15 @@ class DriverCanonicalOfferDetailNotifier
   @override
   Future<DriverOfferDetailState> build() => _load(reconcile: true);
 
-  Future<DriverOfferDetailState> _load({required bool reconcile}) async {
+  Future<DriverOfferDetailState> _load({
+    required bool reconcile,
+    CanonicalOperationBundle? expectedBundle,
+  }) async {
     final actorId = _actorId();
+    final pending = expectedBundle ?? await _pendingForActor(actorId);
     final envelope = await ref
         .read(canonicalAssignmentRepositoryProvider)
         .driverOffer(offerId);
-    final pending = await _pendingForActor(actorId);
     final belongsToOffer =
         pending != null &&
         pending.payload['offer_id'] == offerId &&
@@ -181,7 +184,11 @@ class DriverCanonicalOfferDetailNotifier
     if (reconcile && belongsToOffer && !envelope.offer.actionable) {
       await ref
           .read(canonicalMutationRunnerProvider)
-          .acknowledge(actorId: actorId, operation: pending.operation);
+          .acknowledge(
+            actorId: actorId,
+            operation: pending.operation,
+            idempotencyKey: pending.idempotencyKey,
+          );
     }
     return DriverOfferDetailState(
       offer: envelope.offer,
@@ -285,9 +292,9 @@ class DriverCanonicalOfferDetailNotifier
           fresh.offer.actionable ? 'offer_expired' : 'offer_not_actionable',
         );
       }
-      await ref
+      final receipt = await ref
           .read(canonicalMutationRunnerProvider)
-          .run<CanonicalDriverOffer>(
+          .runWithReceipt<CanonicalDriverOffer>(
             operation: operation,
             scope: 'driver',
             actorId: actorId,
@@ -295,7 +302,10 @@ class DriverCanonicalOfferDetailNotifier
             send: (bundle) =>
                 send(ref.read(canonicalAssignmentRepositoryProvider), bundle),
           );
-      final reconciled = await _load(reconcile: true);
+      final reconciled = await _load(
+        reconcile: true,
+        expectedBundle: receipt.bundle,
+      );
       state = AsyncData(reconciled);
       ref.invalidate(driverCanonicalOffersProvider);
       ref.invalidate(passengerCanonicalAssignmentsProvider);

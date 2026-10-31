@@ -7,9 +7,9 @@ import { verifyGoogleIdentity, type GoogleVerifier, type VerifiedGoogleIdentity 
 import { hexDigestMatches, keyedDigest, type VersionedKey } from "../lib/keyedDigest.js";
 import { HttpError } from "../middleware/error.js";
 import { ConsentReleaseService } from "./consentReleases.js";
-import { canonicalEmail, emailCompleteSchema } from "./emailAuth.js";
+import { canonicalEmail, emailCompleteBase } from "./emailAuth.js";
 
-export const googleCompleteSchema = emailCompleteSchema.omit({ email_verification_token: true }).extend({ name: z.string().trim().min(1).max(120) });
+export const googleCompleteSchema = emailCompleteBase.omit({ email_verification_token: true, email_verification_code: true }).extend({ name: z.string().trim().min(1).max(120) });
 const grantSchema = z.strictObject({ action: z.string().regex(/^[A-Za-z0-9_-]{43}$/), sub: z.string().min(1).max(191), email: canonicalEmail, expires: z.number() });
 const AAD = Buffer.from("masari:google-registration:v1");
 function envelopeKey(key: VersionedKey) { return createHmac("sha256", key.secret).update(`masari:google-registration-envelope:v${key.version}`).digest(); }

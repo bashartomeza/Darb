@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { assertMonitoringIntegrationTarget } from "./adminMatchingMonitoringIntegrationSafety.js";
 import type { Prisma } from "../generated/prisma/client.js";
@@ -33,9 +33,12 @@ const prefix = `c7${randomUUID().replaceAll("-", "")}`;
 const id = (suffix: string) => `${prefix}_${suffix}`;
 const owned = { id: { startsWith: `${prefix}_` } };
 const marker = `PRIVATE-${prefix}`;
+const phonePrefix = `+1202${randomInt(200, 1000)}`;
+let phoneSequence = randomInt(0, 9_991);
 const origin = (process.env.API_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
 const base = `${origin}/api/v1/admin/matching-batching`;
 const created = new Date(Date.now() - 86_400_000);
+const preferredTime = new Date(Date.now() + 86_400_000);
 const old = new Date(Date.now() - 40 * 86_400_000);
 const range = { from: new Date(created.getTime() - 1_000).toISOString(), until: new Date(created.getTime() + 1_000).toISOString() };
 const query = (values: Record<string, string | number>) => `?${new URLSearchParams(Object.entries(values).map(([key, value]) => [key, String(value)]))}`;
@@ -46,7 +49,22 @@ const readBudgetMs = 10_000;
 
 async function get<T>(path: string, token = adminToken, status = 200): Promise<T> {
   const start = performance.now();
-  const response = await fetch(`${base}${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {}, signal: AbortSignal.timeout(readBudgetMs) });
+  const signal = AbortSignal.timeout(readBudgetMs);
+  let response: Response;
+  try {
+    response = await fetch(`${base}${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {}, signal });
+  } catch (error) {
+    const pathname = path.split("?")[0]!;
+    const fixedPath = pathname === "/overview" || pathname === "/matches" || pathname === "/batches" ? pathname
+      : /^\/matches\/[^/]+$/.test(pathname) ? "/matches/:id"
+      : /^\/batches\/[^/]+\/parcels$/.test(pathname) ? "/batches/:id/parcels"
+      : /^\/batches\/[^/]+$/.test(pathname) ? "/batches/:id" : "/unknown";
+    const name = error instanceof Error && ["TimeoutError", "AbortError", "TypeError", "Error"].includes(error.name)
+      ? error.name : "UnknownError";
+    console.error(JSON.stringify({ phase, pathname: fixedPath, error_name: name,
+      elapsed_ms: Math.round(performance.now() - start), timed_out: signal.aborted }));
+    throw error;
+  }
   const body: unknown = await response.json();
   assert.equal(response.status, status, `${phase}: ${path.split("?")[0]} HTTP status`);
   assert(!JSON.stringify(body).includes(marker), "Private fixture marker escaped projection");
@@ -88,16 +106,22 @@ function safePage<T>(page: Page<T>, inspect: (row: T) => void) {
 }
 async function session(role: "admin" | "passenger" | "driver" | "merchant", suffix: string = role, state?: "expired" | "revoked") {
   const userId = id(`user_${suffix}`);
-  await prisma.user.create({ data: { id: userId, name: marker, phone: `${prefix}-${suffix}`, password_hash: marker, role } });
+  await prisma.user.create({ data: userData(`user_${suffix}`, role) });
   const sessionId = id(`session_${suffix}`);
   await prisma.authSession.create({ data: { id: sessionId, user_id: userId, client_type: "admin", security_version_at_issue: 1,
     expires_at: new Date(Date.now() + (state === "expired" ? -60_000 : 3_600_000)), revoked_at: state === "revoked" ? new Date() : null } });
   return signAuthToken({ id: userId, role, sessionId, securityVersion: 1 });
 }
+function userData(suffix: string, role: "admin" | "passenger" | "driver" | "merchant") {
+  // The auth gate requires completed, verified profiles. Keep random row IDs out of the bounded phone column.
+  return { id: id(suffix), name: marker, phone: `${phonePrefix}${String(phoneSequence++).padStart(4, "0")}`,
+    email: `${id(suffix)}@example.invalid`, password_hash: marker, role,
+    profile_state: "complete" as const, phone_verified_at: created, email_verified_at: created };
+}
 const location = { destination_label: marker, destination_lat: "31.7", destination_lng: "35.2" };
 const pickup = { pickup_label: marker, pickup_lat: "31.5", pickup_lng: "35.1" };
 function requestData(suffix: string, extra: Partial<Prisma.PassengerRequestUncheckedCreateInput> = {}): Prisma.PassengerRequestUncheckedCreateInput {
-  return { id: id(suffix), passenger_id: id("user_passenger"), ...pickup, ...location, preferred_time: created, passenger_count: 2, source: "manual", created_at: created, ...extra };
+  return { id: id(suffix), passenger_id: id("user_passenger"), ...pickup, ...location, preferred_time: preferredTime, passenger_count: 2, source: "manual", created_at: created, ...extra };
 }
 function orderData(suffix: string, extra: Partial<Prisma.MerchantOrderUncheckedCreateInput> = {}): Prisma.MerchantOrderUncheckedCreateInput {
   return { id: id(suffix), merchant_id: id("user_merchant"), ...pickup, created_at: created, ...extra };
@@ -150,7 +174,7 @@ try {
   const expired = await session("admin", "expired", "expired");
   const revoked = await session("admin", "revoked", "revoked");
   for (const role of ["passenger", "driver", "merchant"] as const) {
-    await prisma.user.create({ data: { id: id(`demo_${role}`), name: marker, phone: `${prefix}-demo-${role}`, password_hash: marker, role, demo_account: true } });
+    await prisma.user.create({ data: { ...userData(`demo_${role}`, role), demo_account: true } });
   }
   await prisma.driverProfile.createMany({ data: [
     { id: id("profile"), user_id: id("user_driver"), vehicle_type: marker, seats_total: 4, parcel_capacity: 30 },
@@ -175,8 +199,9 @@ try {
   await prisma.merchantOrder.create({ data: orderData("canonical_order", canonical) });
   await prisma.parcel.create({ data: { id: id("canonical_parcel"), order_id: id("canonical_order"), ...location, size: marker, priority: marker, operational_mode: "canonical_route_v1", canonical_entry_version: "canonical_route_v1", route_version_id: id("version"), destination_stop_id: id("stop1"), batch_id: id("batch_00") } });
   const batchStatuses = Object.values(ParcelBatchStatus);
+  const expectedBatchCounts = { created: 7, proposed: 7, assigned: 7, picked_up: 7, in_transit: 7, delivered: 7, cancelled: 6, failed: 6, expired: 6 };
   const matchStatuses = Object.values(MatchStatus);
-  await prisma.parcelBatch.createMany({ data: Array.from({ length: 60 }, (_, index) => batchData(`batch_${String(index).padStart(2, "0")}`, { status: batchStatuses[index % 6] })) });
+  await prisma.parcelBatch.createMany({ data: Array.from({ length: 60 }, (_, index) => batchData(`batch_${String(index).padStart(2, "0")}`, { status: batchStatuses[index % batchStatuses.length] })) });
   await prisma.parcelBatch.createMany({ data: [batchData("old_batch", { created_at: old }), batchData("empty_batch", { merchant_order_id: id("empty_order"), driver_route_id: null, created_at: old }),
     batchData("excluded_demo_batch", { merchant_order_id: id("demo_order") }), batchData("excluded_driver_batch", { driver_route_id: id("demo_route") }), batchData("excluded_canonical_batch", { merchant_order_id: id("canonical_order") })] });
   await prisma.match.createMany({ data: Array.from({ length: 60 }, (_, index) => matchData(`match_${String(index).padStart(2, "0")}`, {
@@ -191,8 +216,41 @@ try {
     await prisma.match.create({ data: matchData(`excluded_${suffix}`, extra) });
     excludedMatches.push(id(`excluded_${suffix}`));
   }
+  // Keep this cohort outside the existing volume/default date ranges. Match
+  // order and batch order are independent; neither may weaken the other's gate.
+  const relationCreated = new Date(created.getTime() - 8 * 86_400_000);
+  const relationRange = { from: new Date(relationCreated.getTime() - 1).toISOString(), until: new Date(relationCreated.getTime() + 1).toISOString() };
+  const optionalRelations = [
+    ["passenger_null_batch", { merchant_order_id: null, parcel_batch_id: null }],
+    ["merchant_null_batch", { passenger_request_id: null, parcel_batch_id: null }],
+    ["combined_null_batch", { parcel_batch_id: null }],
+    ["different_orders", { parcel_batch_id: id("empty_batch") }],
+    ["empty_direct_order", { merchant_order_id: id("empty_order") }],
+    ["empty_order_null_batch", { passenger_request_id: null, merchant_order_id: id("empty_order"), parcel_batch_id: null }]
+  ] satisfies [string, Partial<Prisma.MatchUncheckedCreateInput>][];
+  await prisma.match.createMany({ data: optionalRelations.map(([suffix, extra]) => matchData(`relation_${suffix}`, { ...extra, created_at: relationCreated })) });
+  for (const [suffix, extra] of [
+    ["direct_demo", { merchant_order_id: id("demo_order") }],
+    ["batch_demo", { parcel_batch_id: id("excluded_demo_batch") }],
+    ["direct_canonical", { merchant_order_id: id("canonical_order") }],
+    ["batch_canonical", { parcel_batch_id: id("excluded_canonical_batch") }],
+    ["batch_driver", { parcel_batch_id: id("excluded_driver_batch") }],
+    ["no_demand_null_batch", { passenger_request_id: null, merchant_order_id: null, parcel_batch_id: null }]
+  ] satisfies [string, Partial<Prisma.MatchUncheckedCreateInput>][]) {
+    await prisma.match.create({ data: matchData(`relation_${suffix}`, { ...extra, created_at: relationCreated }) });
+    excludedMatches.push(id(`relation_${suffix}`));
+  }
   phase = "HTTP contract";
   const snapshot = await domainSnapshot();
+  const relationPage = await get<Page<MatchRow>>(`/matches${query({ ...relationRange, search: id("route"), limit: 50 })}`);
+  safePage(relationPage, safeMatch);
+  assert.equal(relationPage.data.total, optionalRelations.length);
+  assert.deepEqual(relationPage.data.items.map(row => row.id).sort(), optionalRelations.map(([suffix]) => id(`relation_${suffix}`)).sort());
+  for (const [suffix, extra] of optionalRelations) {
+    const detail = await get<Observed<MatchRow>>(`/matches/${id(`relation_${suffix}`)}`);
+    safeMatch(detail.data);
+    if ("parcel_batch_id" in extra && extra.parcel_batch_id === null) assert.equal(detail.data.parcel_batch, null);
+  }
   const paths = ["/overview", "/matches", `/matches/${id("match_02")}`, "/batches", `/batches/${id("batch_00")}`, `/batches/${id("batch_00")}/parcels`];
   for (const path of paths) {
     await get(path, "", 401);
@@ -228,8 +286,8 @@ try {
     safePage(result, inspect); assert.equal(result.data.items.length, 50); assert.equal(result.data.total, 60);
     assert.equal((await get<Page<unknown>>(`${path}${query({ ...range, search: prefix })}`)).data.total, 0, "Search is exact, not prefix");
   }
-  for (const status of matchStatuses) assert.equal((await get<Page<MatchRow>>(`/matches${query({ ...range, search: id("route"), status })}`)).data.total, 10);
-  for (const status of batchStatuses) assert.equal((await get<Page<BatchRow>>(`/batches${query({ ...range, search: id("route"), status })}`)).data.total, 10);
+  for (const status of matchStatuses) assert.equal((await get<Page<MatchRow>>(`/matches${query({ ...range, search: id("route"), status })}`)).data.total, 10, `Match count for ${status}`);
+  for (const status of batchStatuses) assert.equal((await get<Page<BatchRow>>(`/batches${query({ ...range, search: id("route"), status })}`)).data.total, expectedBatchCounts[status], `Batch count for ${status}`);
   for (const demand_kind of ["passenger_only", "merchant_only", "combined"]) assert.equal((await get<Page<MatchRow>>(`/matches${query({ ...range, search: id("route"), demand_kind })}`)).data.total, 20);
   for (const [search, total] of [[id("request"), 40], [id("order"), 40], [id("batch_00"), 60], [id("match_02"), 1]] as const) {
     assert.equal((await get<Page<MatchRow>>(`/matches${query({ ...range, search })}`)).data.total, total);
@@ -281,8 +339,8 @@ try {
   assert.equal(overview.pending_passenger_requests - baseline.pending_passenger_requests, 2);
   assert.equal(overview.submitted_merchant_orders - baseline.submitted_merchant_orders, 2);
   for (const status of matchStatuses) assert.equal(overview.match_results_by_status[status] - baseline.match_results_by_status[status], 10);
-  for (const status of batchStatuses) assert.equal(overview.batches_by_status[status] - baseline.batches_by_status[status], status === "created" ? 12 : 10);
-  assert.equal(overview.active_batches - baseline.active_batches, 42, "Only created + assigned + picked_up + in_transit are active");
+  for (const status of batchStatuses) assert.equal(overview.batches_by_status[status] - baseline.batches_by_status[status], expectedBatchCounts[status] + (status === "created" ? 2 : 0), `Overview batch count for ${status}`);
+  assert.equal(overview.active_batches - baseline.active_batches, 30, "Only created + assigned + picked_up + in_transit are active");
   assert.equal(await domainSnapshot(), snapshot, "Monitoring GET sequence wrote fixture domain rows");
 
   phase = "concurrency";
@@ -321,6 +379,8 @@ try {
   // Measure real HTTP before instrumented service calls so profiling cannot warm these reads first.
   for (let iteration = 0; iteration < 3; iteration++) {
     await get(`/overview${query(range)}`);
+    const unfiltered = await get<Page<MatchRow>>(`/matches${query({ ...range, search: id("route"), limit: 25 })}`);
+    assert.equal(unfiltered.data.total, 10_060); safePage(unfiltered, safeMatch);
     const result = await get<Page<MatchRow>>(`/matches${query({ ...range, search: id("route"), status: "accepted", page: 2, limit: 50 })}`);
     assert.equal(result.data.total, 10_010); safePage(result, safeMatch);
     assert.equal((await get<Page<MatchRow>>(`/matches${query({ ...range, search: id("bulk_00000") })}`)).data.total, 1);
@@ -382,8 +442,11 @@ try {
   console.log("Monitoring MySQL integration passed: auth, six HTTP endpoints, exclusions, safe keys, dates/status, pagination, read-only snapshots, concurrency, 10,000-match volume");
 } catch (error) {
   // Prisma errors may contain connection information: emit only the failing phase and safe assertion text.
-  if (error instanceof assert.AssertionError) console.error(`Monitoring integration ${phase}: ${error.message}`);
-  else console.error(`Monitoring integration failed during ${phase}; details suppressed to protect connection information`);
+  const frame = error instanceof Error ? error.stack?.match(/adminMatchingMonitoringIntegration\.js:\d+:\d+/)?.[0] : undefined;
+  if (error instanceof assert.AssertionError) console.error(`Monitoring integration ${phase}${frame ? ` at ${frame}` : ""}: ${error.message}`);
+  else {
+    console.error(`Monitoring integration failed during ${phase}${frame ? ` at ${frame}` : ""}; details suppressed to protect connection information`);
+  }
   process.exitCode = 1;
 } finally {
   try { await cleanup(); } catch { console.error(`Monitoring fixture cleanup failed; inspect only disposable rows with prefix ${prefix}_`); process.exitCode = 1; }

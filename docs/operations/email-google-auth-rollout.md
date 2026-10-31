@@ -17,7 +17,7 @@ on 2026-09-15. Unit fixtures alone never satisfy this gate.
 | `GOOGLE_PASSENGER_ALLOWLIST_HMACS` | Exact comma-separated lower-case SHA-256 HMACs of canonical email with domain `masari:google-passenger-allowlist`, using the auth action key. Nonempty in allowlist mode. Never publish entries through capabilities. |
 | `AUTH_ACTION_TOKEN_PEPPER` | Separate random server-only secret, at least 32 characters; never reuse JWT/refresh pepper. |
 | `AUTH_ACTION_TOKEN_KEY_VERSION` | Positive version, default 1. Rotating the sole active key intentionally invalidates pending proofs; tell users to restart the flow. |
-| `OTP_PROVIDER` | Existing invitation/public-onboarding setting. `fake` remains forbidden in staging/production and does not supply the new profile provider. |
+| `OTP_PROVIDER` | Existing invitation/public-onboarding setting. `fake` remains forbidden in staging/production. `email` is the production value: it also supplies the profile phone-step provider (the code goes to the account's verified email; the phone stays unverified). |
 
 The deprecated `GOOGLE_OAUTH_CLIENT_IDS` never supplies either new endpoint's
 audience. Admin reads its public client ID from `/api/v1/auth/capabilities`.

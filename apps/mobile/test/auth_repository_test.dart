@@ -91,6 +91,31 @@ void main() {
     );
   });
 
+  test('login sends a phone number as phone and an email as email', () async {
+    final bodies = <String>[];
+    final repository = _repository((request) async {
+      bodies.add(request.body);
+      return http.Response(
+        '{"token":"jwt-token","access_token":"jwt-token","access_token_expires_in":900,"refresh_token":"refresh-value","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:00:00.000Z","expires_at":"2026-07-17T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"user_1","name":"Invited","phone":"+970590003001","role":"passenger","demo_account":false}}',
+        200,
+      );
+    });
+
+    await repository.login(
+      email: '+970590003001',
+      password: 'a-long-passphrase',
+    );
+    await repository.login(
+      email: 'a@example.com',
+      password: 'a-long-passphrase',
+    );
+
+    expect(bodies[0], contains('"phone":"+970590003001"'));
+    expect(bodies[0], isNot(contains('"email"')));
+    expect(bodies[1], contains('"email":"a@example.com"'));
+    expect(bodies[1], isNot(contains('"phone"')));
+  });
+
   test('failed login error mapping', () async {
     final repository = _repository((request) async {
       return http.Response('{"error":"invalid_credentials"}', 401);

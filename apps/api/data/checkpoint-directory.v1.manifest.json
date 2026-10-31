@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "version": "aweenrayeh-public-research-2026-10-23-v1",
+  "sha256": "5e06473172e2be9486c1d25be622fd8feffba72bedfbbf0b3a5e2a688554bbfa",
+  "count": 173,
+  "city_counts": {
+    "أريحا": 5,
+    "الخليل": 35,
+    "القدس": 14,
+    "بيت لحم": 20,
+    "جنين": 4,
+    "رام الله": 22,
+    "سلفيت": 16,
+    "طوباس": 4,
+    "طولكرم": 17,
+    "قلقيلية": 10,
+    "نابلس": 26
+  },
+  "publication": "BLOCKED_PENDING_PROVIDER_PERMISSION",
+  "dataset_in_git": false,
+  "provider_dataset_completeness": "UNVERIFIED",
+  "provider_api_ids_verified": false,
+  "coordinates_verified": false,
+  "traffic_status_available": false,
+  "source": "AweenRayeh public city directory pages",
+  "source_csv_sha256": "7a95e6b3b32a41a48250a2b6c7e94af6e05edc95f2bccd66ed3cdcce137fc527",
+  "captured_date": "2026-10-23"
+}

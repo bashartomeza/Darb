@@ -1,3 +1,4 @@
+import { hasVerifiedContact } from "../lib/contactVerification.js";
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "../config.js";
@@ -75,7 +76,7 @@ export async function authenticateAuthToken(token: string, options: { allowRevok
   }
   // profile_state is non-null in the database. The fallback only supports
   // narrow legacy test doubles that predate this schema field.
-  return { ...claims, profileState: session.user.profile_state ?? "complete", emailVerified: Boolean(session.user.email_verified_at) };
+  return { ...claims, profileState: session.user.profile_state ?? "complete", emailVerified: hasVerifiedContact(session.user) };
 }
 
 function authMiddleware(options: { allowRevoked?: boolean } = {}) {

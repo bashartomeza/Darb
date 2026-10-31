@@ -1,3 +1,4 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../security/presentation/security_actions.dart';
 import '../../security/presentation/session_status_banner.dart';
+import '../../driver_renewal/presentation/driver_renewal_banner.dart';
 import '../application/driver_controller.dart';
 import '../data/driver_stats_source.dart';
 import '../domain/driver_home_stats.dart';
@@ -48,137 +50,144 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
     final route = dashboard.value?.currentRoute;
     final isOnline = route?.isOperational ?? false;
 
-    return Column(
-      key: const ValueKey('driverHome'),
-      children: [
-        Expanded(
-          child: SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-              onRefresh: () =>
-                  ref.read(driverDashboardProvider.notifier).refresh(),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppTokens.marginMobile,
-                  AppTokens.spaceSmall,
-                  AppTokens.marginMobile,
-                  AppTokens.spaceLarge,
-                ),
-                children: [
-                  DriverTopBar(title: l10n.appTitle, name: user?.name),
-                  const SizedBox(height: AppTokens.spaceMedium),
-
-                  DriverStatusCard(
-                    greeting: _greeting(l10n, user?.name),
-                    // Keeps the role visible alongside the operating area.
-                    subtitle:
-                        '${l10n.driver} • '
-                        '${localizedCorridorPlace(context, 'Hebron / PPU / Bab Al-Zawiya')}',
-                    isOnline: isOnline,
-                    busy: _busy || dashboard.isLoading,
-                    onChanged: (value) => _toggleOnline(l10n, value),
+    return ForegroundRefresh(
+      refresh: () async {
+        await ref.read(driverDashboardProvider.notifier).refresh();
+      },
+      child: Column(
+        key: const ValueKey('driverHome'),
+        children: [
+          Expanded(
+            child: SafeArea(
+              bottom: false,
+              child: RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(driverDashboardProvider.notifier).refresh(),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTokens.marginMobile,
+                    AppTokens.spaceSmall,
+                    AppTokens.marginMobile,
+                    AppTokens.spaceLarge,
                   ),
-
-                  if (_error != null) ...[
+                  children: [
+                    DriverTopBar(title: l10n.appTitle, name: user?.name),
                     const SizedBox(height: AppTokens.spaceMedium),
-                    OfflineBanner(message: _error!, tone: BannerTone.error),
-                  ],
 
-                  const SizedBox(height: AppTokens.spaceMedium),
-                  const SessionStatusBanner(),
-                  const SizedBox(height: AppTokens.spaceMedium),
-
-                  _StatsRow(stats: stats),
-
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  FilledButton.icon(
-                    key: const ValueKey('openDriverRoute'),
-                    onPressed: () => context.go('/driver/route'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: SemanticColors.action,
-                      foregroundColor: SemanticColors.onAction,
-                      minimumSize: const Size.fromHeight(64),
+                    DriverStatusCard(
+                      greeting: _greeting(l10n, user?.name),
+                      // Keeps the role visible alongside the operating area.
+                      subtitle:
+                          '${l10n.driver} • '
+                          '${localizedCorridorPlace(context, 'Hebron / PPU / Bab Al-Zawiya')}',
+                      isOnline: isOnline,
+                      busy: _busy || dashboard.isLoading,
+                      onChanged: (value) => _toggleOnline(l10n, value),
                     ),
-                    icon: const Icon(Icons.route_outlined),
-                    label: Text(
-                      isOnline ? l10n.viewRoute : l10n.activateYourRoute,
-                    ),
-                  ),
-                  const SizedBox(height: AppTokens.spaceSmall),
-                  Text(
-                    l10n.activateRouteHint,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.onSurfaceVariant,
-                    ),
-                  ),
 
-                  const SizedBox(height: AppTokens.spaceMedium),
-                  // No driver position is published to this screen yet, so the
-                  // map renders its empty state rather than a decorative one.
-                  MasariMap(
-                    emptyLabel: l10n.mapNoLocation,
-                    attributionLabel: l10n.mapAttribution,
-                    height: 190,
-                  ),
+                    if (_error != null) ...[
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      OfflineBanner(message: _error!, tone: BannerTone.error),
+                    ],
 
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  _InboxSection(dashboard: dashboard),
+                    const SizedBox(height: AppTokens.spaceMedium),
+                    const SessionStatusBanner(),
+                    const SizedBox(height: AppTokens.spaceMedium),
+                    const DriverRenewalBanner(),
 
-                  if (canonicalEntry) ...[
+                    _StatsRow(stats: stats),
+
                     const SizedBox(height: AppTokens.spaceLarge),
-                    MasariSection(
-                      title: l10n.canonicalRoutes,
-                      child: MasariInfoCard(
-                        title: l10n.driverAvailabilities,
-                        subtitle: l10n.canonicalRoutesBody,
-                        icon: Icons.alt_route_outlined,
-                        primaryAction: CardAction(
-                          key: const ValueKey('openCanonicalAvailabilities'),
-                          label: l10n.driverAvailabilities,
-                          onPressed: () => context.go('/driver/availabilities'),
-                        ),
-                        secondaryAction: canonicalOffers
-                            ? CardAction(
-                                key: const ValueKey(
-                                  'openCanonicalDriverOffers',
-                                ),
-                                label: l10n.canonicalDriverOffers,
-                                filled: false,
-                                onPressed: () =>
-                                    context.go('/driver/canonical-offers'),
-                              )
-                            : null,
+                    FilledButton.icon(
+                      key: const ValueKey('openDriverRoute'),
+                      onPressed: () => context.go('/driver/route'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: SemanticColors.action,
+                        foregroundColor: SemanticColors.onAction,
+                        minimumSize: const Size.fromHeight(64),
+                      ),
+                      icon: const Icon(Icons.route_outlined),
+                      label: Text(
+                        isOnline ? l10n.viewRoute : l10n.activateYourRoute,
                       ),
                     ),
-                  ],
+                    const SizedBox(height: AppTokens.spaceSmall),
+                    Text(
+                      l10n.activateRouteHint,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                    ),
 
-                  if (sharedOffers) ...[
                     const SizedBox(height: AppTokens.spaceMedium),
-                    MasariInfoCard(
-                      title: l10n.sharedOffers,
-                      icon: Icons.groups_outlined,
-                      primaryAction: CardAction(
-                        key: const ValueKey('openSharedDriverOffers'),
-                        label: l10n.sharedOffers,
-                        onPressed: () => context.go('/driver/shared-offers'),
+                    // No driver position is published to this screen yet, so the
+                    // map renders its empty state rather than a decorative one.
+                    MasariMap(
+                      emptyLabel: l10n.mapNoLocation,
+                      attributionLabel: l10n.mapAttribution,
+                      height: 190,
+                    ),
+
+                    const SizedBox(height: AppTokens.spaceLarge),
+                    _InboxSection(dashboard: dashboard),
+
+                    if (canonicalEntry) ...[
+                      const SizedBox(height: AppTokens.spaceLarge),
+                      MasariSection(
+                        title: l10n.canonicalRoutes,
+                        child: MasariInfoCard(
+                          title: l10n.driverAvailabilities,
+                          subtitle: l10n.canonicalRoutesBody,
+                          icon: Icons.alt_route_outlined,
+                          primaryAction: CardAction(
+                            key: const ValueKey('openCanonicalAvailabilities'),
+                            label: l10n.driverAvailabilities,
+                            onPressed: () =>
+                                context.go('/driver/availabilities'),
+                          ),
+                          secondaryAction: canonicalOffers
+                              ? CardAction(
+                                  key: const ValueKey(
+                                    'openCanonicalDriverOffers',
+                                  ),
+                                  label: l10n.canonicalDriverOffers,
+                                  filled: false,
+                                  onPressed: () =>
+                                      context.go('/driver/canonical-offers'),
+                                )
+                              : null,
+                        ),
                       ),
+                    ],
+
+                    if (sharedOffers) ...[
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      MasariInfoCard(
+                        title: l10n.sharedOffers,
+                        icon: Icons.groups_outlined,
+                        primaryAction: CardAction(
+                          key: const ValueKey('openSharedDriverOffers'),
+                          label: l10n.sharedOffers,
+                          onPressed: () => context.go('/driver/shared-offers'),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: AppTokens.spaceLarge),
+                    const Divider(),
+                    const RoleSecurityActions(),
+                    const Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: LanguageSwitch(),
                     ),
                   ],
-
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  const Divider(),
-                  const RoleSecurityActions(),
-                  const Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: LanguageSwitch(),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -262,6 +271,7 @@ class _InboxSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return dashboard.when(
+      skipError: dashboard.hasValue,
       loading: () => const LoadingSkeleton.card(),
       error: (error, _) => ErrorStateView(
         title: driverErrorLabel(l10n, error),

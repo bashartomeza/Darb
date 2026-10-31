@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/application/auth_actor_binding.dart';
 import '../../trips/data/trip_models.dart';
 import '../../trips/data/trip_repository.dart';
 import '../data/passenger_models.dart';
@@ -67,15 +68,43 @@ class PassengerDashboardController
 }
 
 final passengerRequestDetailProvider = FutureProvider.autoDispose
-    .family<PassengerRequest, String>((ref, id) {
-      return ref.watch(passengerRepositoryProvider).requestDetail(id);
+    .family<PassengerRequest, String>((ref, id) async {
+      final requireCurrent = _passengerActorGuard(ref);
+      final request = await ref
+          .watch(passengerRepositoryProvider)
+          .requestDetail(id, beforeSend: requireCurrent);
+      requireCurrent();
+      return request;
     });
 
 final passengerTripForRequestProvider = FutureProvider.autoDispose
     .family<PassengerTrip?, String>((ref, requestId) async {
-      final trips = await ref.watch(tripRepositoryProvider).listTrips();
+      final requireCurrent = _passengerActorGuard(ref);
+      // A refreshed request must not retain its independently cached trip.
+      // FutureProvider discards an older generation when this dependency changes.
+      await ref.watch(passengerRequestDetailProvider(requestId).future);
+      requireCurrent();
+      final trips = await ref
+          .watch(tripRepositoryProvider)
+          .listTrips(beforeSend: requireCurrent);
+      requireCurrent();
       for (final trip in trips) {
         if (trip.passengerRequestId == requestId) return trip;
       }
       return null;
     });
+
+void Function() _passengerActorGuard(Ref ref) {
+  final binding = ref.read(authenticatedActorBindingProvider);
+  final revision = binding.revision;
+  void requireCurrent() {
+    if (!ref.mounted ||
+        binding.actorId == null ||
+        binding.revision != revision) {
+      throw StateError('session_changed');
+    }
+  }
+
+  requireCurrent();
+  return requireCurrent;
+}

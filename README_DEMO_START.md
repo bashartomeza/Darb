@@ -36,7 +36,7 @@ $env:PORT = "3000"
 5. Copy `apps/mobile/config/demo.example.json` to the ignored `demo.local.json`, replace its placeholders with the matching local demo values, and run `flutter build apk --debug --dart-define-from-file=config/demo.local.json` from `apps/mobile`.
 6. Cold-boot AVD `Medium_Phone_API_36.0` and install the resulting `app-debug.apk`.
 7. Run `npm run demo:preflight` and require every check to pass.
-8. Run `npm run demo:smoke` and require `"ok":true`.
+8. Run `npm run demo:smoke` and require `"ok":true`. Then run `npm run demo:features` (notifications, incident reports, reports/export and dashboard counts, end to end over HTTP) and require `"ok":true`; it resets the disposable database first.
 9. Run one protected reset and open `JUDGE_SCRIPT.md`.
 
 ## Fast recovery

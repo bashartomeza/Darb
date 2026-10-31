@@ -28,9 +28,16 @@ class AuthRepository {
     required String password,
     String deviceName = _deviceName,
   }) async {
+    // The first argument is an email address, or an international phone number
+    // for accounts created through an invitation.
+    final byEmail = email.contains('@');
     return _authRequest(
       '/auth/mobile/login',
-      body: {'email': email, 'password': password, 'device_name': deviceName},
+      body: {
+        if (byEmail) 'email': email else 'phone': email,
+        'password': password,
+        'device_name': deviceName,
+      },
     );
   }
 
@@ -117,7 +124,7 @@ class AuthRepository {
       'adult_self_attestation': true,
       'device_name': _deviceName,
       if (grant['next_action'] == 'verify_email')
-        'email_verification_token': emailToken
+        'email_verification_code': emailToken
       else
         'name': name,
     },
@@ -134,14 +141,16 @@ class AuthRepository {
     );
   }
 
+  /// Confirms the six-digit code from the email for the account with [email].
   Future<void> emailActionConfirm(
-    String token,
+    String email,
+    String code,
     String password, {
     required bool reset,
   }) async {
     await apiClient.postJson(
       reset ? '/auth/password/reset/confirm' : '/auth/email/verify/confirm',
-      body: {'action_token': token, if (reset) 'password': password},
+      body: {'email': email, 'code': code, if (reset) 'password': password},
     );
   }
 
@@ -155,14 +164,14 @@ class AuthRepository {
   Future<void> setPassword(
     String password,
     String currentPassword,
-    String proof,
+    String code,
   ) async {
     await authenticatedApiClient.postJson(
       '/auth/password/set',
       body: {
         'password': password,
         if (currentPassword.isNotEmpty) 'current_password': currentPassword,
-        if (proof.isNotEmpty) 'reauthentication_token': proof,
+        if (code.isNotEmpty) 'reauthentication_code': code,
       },
     );
   }

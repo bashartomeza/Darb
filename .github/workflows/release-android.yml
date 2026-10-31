@@ -1,0 +1,79 @@
+name: Android signed release (manual)
+
+# Optional, manual only. Never runs on pull requests and nothing depends on it.
+# The OWNER must add these repository (or environment) secrets before use:
+#   ANDROID_KEYSTORE_BASE64   base64 of the upload keystore (.jks)
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+# See docs/mobile/ANDROID_RELEASE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: API origin (the app appends /api/v1)
+        required: true
+        default: https://masari.aynur.ps
+      build_number:
+        description: Android versionCode (must increase for every Play upload)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Read canonical mobile toolchain versions
+        id: versions
+        shell: bash
+        run: |
+          echo "java=$(cat .java-version)" >> "$GITHUB_OUTPUT"
+          echo "flutter=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          distribution: temurin
+          java-version: ${{ steps.versions.outputs.java }}
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ steps.versions.outputs.flutter }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: apps/mobile
+      - run: flutter gen-l10n
+        working-directory: apps/mobile
+      - name: Decode keystore
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_B64" || { echo "Secret ANDROID_KEYSTORE_BASE64 is not set"; exit 1; }
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "MASARI_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+      - name: Build signed app bundle
+        working-directory: apps/mobile
+        env:
+          MASARI_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          MASARI_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          MASARI_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          API_BASE_URL: ${{ inputs.api_base_url }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+        run: >-
+          flutter build appbundle --release
+          --build-number="$BUILD_NUMBER"
+          --dart-define=APP_ENV=production
+          --dart-define=ENABLE_DEMO_FEATURES=false
+          --dart-define=API_BASE_URL="$API_BASE_URL"
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: masari-release-aab
+          path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7

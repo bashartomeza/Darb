@@ -114,15 +114,7 @@ class _DriverAvailabilityFormScreenState
           bundle?.actorId != actorId) {
         return;
       }
-      if (bundle!.recoveryWindowExpired(DateTime.now())) {
-        setState(
-          () => _error = const CanonicalOperationBlocked(
-            'canonical_recovery_expired',
-          ),
-        );
-        return;
-      }
-      final payload = bundle.payload;
+      final payload = bundle!.payload;
       setState(() {
         _restoredRouteVersionId = payload['route_version_id'] as String?;
         _departure =
@@ -279,12 +271,7 @@ class _DriverAvailabilityFormScreenState
   }
 
   Future<void> _submit() async {
-    final l10n = AppLocalizations.of(context);
-    if (!_departure.isAfter(DateTime.now()) ||
-        (_windowEnd != null && !_windowEnd!.isAfter(_departure))) {
-      setState(() => _error = l10n.invalidDepartureWindow);
-      return;
-    }
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -298,15 +285,38 @@ class _DriverAvailabilityFormScreenState
           statusCode: 401,
         );
       }
+      CanonicalOperationBundle? sent;
+      final runner = ref.read(canonicalMutationRunnerProvider);
       final value = await ref
           .read(driverAvailabilitiesProvider.notifier)
-          .create({
-            'route_version_id': _route!.versionId,
-            'departure_at': _departure.toUtc().toIso8601String(),
-            'availability_window_end': _windowEnd?.toUtc().toIso8601String(),
-            'total_seats': _seats,
-            'total_parcel_capacity': _parcels,
-          }, actorId: actorId);
+          .create(
+            {
+              'route_version_id': _route!.versionId,
+              'departure_at': _departure.toUtc().toIso8601String(),
+              'availability_window_end': _windowEnd?.toUtc().toIso8601String(),
+              'total_seats': _seats,
+              'total_parcel_capacity': _parcels,
+            },
+            actorId: actorId,
+            onBundle: (bundle) => sent = bundle,
+          );
+      if (!mounted ||
+          ref.read(authControllerProvider).value?.user?.id != actorId) {
+        return;
+      }
+      final completed = sent;
+      if (completed == null) {
+        throw const FormatException('Missing creation receipt');
+      }
+      await runner.acknowledge(
+        actorId: completed.actorId,
+        operation: completed.operation,
+        idempotencyKey: completed.idempotencyKey,
+      );
+      if (!mounted ||
+          ref.read(authControllerProvider).value?.user?.id != actorId) {
+        return;
+      }
       if (mounted) context.pushReplacement('/driver/availability/${value.id}');
     } catch (error) {
       if (error is ApiException && error.statusCode == 404) {
@@ -335,7 +345,6 @@ class DriverAvailabilityDetailScreen extends ConsumerStatefulWidget {
 class _DriverAvailabilityDetailScreenState
     extends ConsumerState<DriverAvailabilityDetailScreen> {
   bool _busy = false;
-  bool _acknowledgementScheduled = false;
   Object? _error;
 
   @override
@@ -360,12 +369,6 @@ class _DriverAvailabilityDetailScreenState
                       .firstOrNull;
                   if (value == null) {
                     return Center(child: Text(l10n.routeCatalogUnavailable));
-                  }
-                  if (!_acknowledgementScheduled) {
-                    _acknowledgementScheduled = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _acknowledgeCreate(value);
-                    });
                   }
                   return ListView(
                     padding: const EdgeInsets.all(AppTokens.spaceLarge),
@@ -451,27 +454,6 @@ class _DriverAvailabilityDetailScreenState
       if (mounted) setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _acknowledgeCreate(DriverAvailability availability) async {
-    final actorId = ref.read(authControllerProvider).value?.user?.id;
-    if (actorId == null) return;
-    try {
-      final pending = await ref.read(canonicalOperationStorageProvider).read();
-      if (pending == null ||
-          pending.actorId != actorId ||
-          !canonicalAvailabilityResultMatches(pending, availability)) {
-        return;
-      }
-      await ref
-          .read(canonicalMutationRunnerProvider)
-          .acknowledge(
-            actorId: actorId,
-            operation: 'driver_availability_create',
-          );
-    } catch (error) {
-      if (mounted) setState(() => _error = error);
     }
   }
 }
@@ -613,6 +595,8 @@ String _safeError(AppLocalizations l10n, Object error) {
         return l10n.availabilityInvalidWindow;
       case 'availability_exceeds_vehicle_capacity':
         return l10n.availabilityExceedsVehicleCapacity;
+      case 'driver_documents_expired':
+        return l10n.availabilityDocumentsExpired;
       case 'driver_not_approved':
         return l10n.availabilityDriverNotApproved;
       case 'route_unavailable':

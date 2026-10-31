@@ -188,6 +188,19 @@ export type TripsManagementViewProps = {
   onCancelStatus: () => void;
 };
 
+function DeliveryConfirmationBadge({ confirmation }: { confirmation: AdminTripListItem["delivery_confirmation"] }) {
+  const { t, number } = useLocale();
+  if (!confirmation || !confirmation.required) return <span className="muted">{t("noData")}</span>;
+  if (confirmation.flagged) {
+    const key = confirmation.methods.includes("receiver_unavailable") ? "deliveryMethod_receiver_unavailable" : "deliveryMethod_admin_override";
+    return <StatusBadge tone="warning">{t(key)}</StatusBadge>;
+  }
+  if (confirmation.confirmed_orders < confirmation.total_orders) {
+    return <StatusBadge tone="neutral">{t("deliveryPending", { done: number(confirmation.confirmed_orders), total: number(confirmation.total_orders) })}</StatusBadge>;
+  }
+  return <StatusBadge tone="success">{t("deliveryMethod_receiver_code")}</StatusBadge>;
+}
+
 const kindKey = (kind: AdminTripKind) => `tripKind_${kind}` as const;
 
 export function TripsManagementView(props: TripsManagementViewProps) {
@@ -199,6 +212,7 @@ export function TripsManagementView(props: TripsManagementViewProps) {
     { key: "status", header: t("columnStatus"), cell: (trip) => <StatusBadge status={trip.status}>{status(trip.status)}</StatusBadge> },
     { key: "route", header: t("columnRoute"), cell: (trip) => <div><p className="cell-stack__title">{trip.driver_route.origin_label} → {trip.driver_route.destination_label}</p><p className="cell-stack__sub">{trip.driver_route.driver.user.name}</p></div> },
     { key: "participants", header: t("tripParticipants"), cell: (trip) => <span>{trip.passenger_request?.passenger.name ?? trip.merchant_order?.merchant.name ?? (trip.canonical_manifest ? number(trip.canonical_manifest.member_count) : t("noData"))}</span> },
+    { key: "delivery", header: t("deliveryConfirmation"), cell: (trip) => <DeliveryConfirmationBadge confirmation={trip.delivery_confirmation} /> },
     { key: "location", header: t("storedLocation"), cell: (trip) => trip.has_stored_location ? t("available") : t("notAvailable") },
     { key: "actions", header: t("columnActions"), align: "end", cell: (trip) => <Button size="sm" variant={selectedId === trip.id ? "secondary" : "ghost"} icon="search" onClick={() => props.onLoadDetail(trip.id)}>{t("reviewDetails")}</Button> },
   ];
@@ -234,6 +248,7 @@ export function TripsManagementView(props: TripsManagementViewProps) {
         <div className="trip-detail-grid">
           <div className="stack stack--tight"><p><strong>{t("columnTrip")}</strong> <TechnicalValue>{detail.id}</TechnicalValue> {detail.demo_context && <StatusBadge tone="warning">{t("demo")}</StatusBadge>}</p><p><strong>{t("tripSource")}</strong> {t(kindKey(detail.kind))}</p><p><strong>{t("columnDriver")}</strong> {detail.driver_route.driver.user.name} · <TechnicalValue>{detail.driver_route.driver.user.phone}</TechnicalValue></p><p>{detail.driver_route.driver.vehicle_type} · {number(detail.driver_route.driver.seats_total)} · {number(detail.driver_route.driver.parcel_capacity)}</p><p><strong>{t("columnRoute")}</strong> {detail.driver_route.origin_label} → {detail.driver_route.destination_label}</p>{detail.route_version && <p>{detail.route_version.name_ar} / {detail.route_version.name_en} · v{number(detail.route_version.version_number)}</p>}<p><strong>{t("createdAt")}</strong> {dateTime(detail.created_at)}</p></div>
           <div className="stack stack--tight"><p><strong>{t("tripParticipants")}</strong></p>{detail.passenger_request && <p>{detail.passenger_request.passenger.name} · {number(detail.passenger_request.passenger_count)}</p>}{detail.merchant_order && <p>{detail.merchant_order.merchant.name} · {number(detail.merchant_order._count.parcels)}</p>}{detail.canonical_manifest && <><p>{t("sharedManifestMembers", { count: number(detail.canonical_manifest.member_count) })}</p>{detail.canonical_manifest.members?.map((member) => <p key={member.id}>{member.passenger_request?.passenger.name ?? member.merchant_order?.merchant.name ?? member.demand_type}</p>)}</>}{!detail.passenger_request && !detail.merchant_order && !detail.canonical_manifest && <p>{t("noData")}</p>}</div>
+          {detail.delivery_confirmation?.required && <div className="stack stack--tight"><p><strong>{t("deliveryConfirmation")}</strong></p><DeliveryConfirmationBadge confirmation={detail.delivery_confirmation} />{detail.delivery_confirmation.reasons.map((reason, index) => <p key={index}>{t("deliveryReasonLabel")}: {reason}</p>)}</div>}
           <div className="stack stack--tight"><p><strong>{t("latestStoredLocation")}</strong></p>{detail.latest_stored_location ? <><TechnicalValue>{`${detail.latest_stored_location.lat}, ${detail.latest_stored_location.lng}`}</TechnicalValue><p>{t("storedLocationSource")}: <TechnicalValue>{detail.latest_stored_location.source}</TechnicalValue></p><p>{dateTime(detail.latest_stored_location.recorded_at)}</p></> : <p>{t("storedLocationUnavailable")}</p>}</div>
         </div>
         {limitation && <AlertItem tone="info" title={t("tripLifecyclePolicy")} description={limitation} />}

@@ -3,7 +3,8 @@ import { HttpError } from "../middleware/error.js";
 /**
  * Server-side proxy for the checkpoint/barrier feed.
  *
- * The upstream is a Supabase PostgREST table. The app never talks to it
+ * The local adapter targets PostgREST; provider compatibility is unverified.
+ * The app never talks to it
  * directly: the key would ship inside the APK, and the mobile client would gain
  * a second network origin outside the session boundary. Keeping the call here
  * means the key lives in server config and the app sees one authenticated API.
@@ -53,8 +54,12 @@ const STATUS_KEYS = ["status", "state", "condition"] as const;
 const UPDATED_KEYS = ["updated_at", "last_updated", "modified_at", "created_at"] as const;
 
 const CLOSED_MARKERS = ["closed", "blocked", "shut", "مغلق", "مغلقة"];
-const CONGESTED_MARKERS = ["congested", "busy", "slow", "delay", "crowded", "ازدحام", "مزدحم"];
+const CONGESTED_MARKERS = ["congested", "busy", "slow", "delay", "crowded", "ازدحام", "مزدحم", "أزمة", "ازمة", "أزمة متوسطة"];
 const OPEN_MARKERS = ["open", "clear", "flowing", "مفتوح", "مفتوحة", "سالك"];
+
+// Same server resource budget as maps/http.ts, not a provider feed-size or
+// pagination contract. Reject the whole feed; never truncate it into success.
+const MAX_CHECKPOINT_JSON_BYTES = 1_000_000;
 
 function pick(row: Record<string, unknown>, keys: readonly string[]) {
   for (const key of keys) {
@@ -65,6 +70,8 @@ function pick(row: Record<string, unknown>, keys: readonly string[]) {
 }
 
 function toCoordinate(value: unknown, limit: number) {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && value.trim() === "") return null;
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric) || Math.abs(numeric) > limit) return null;
   // Six decimals matches the catalog's stop precision (~0.1 m).
@@ -74,9 +81,11 @@ function toCoordinate(value: unknown, limit: number) {
 function toStatus(value: unknown): CheckpointStatus {
   if (typeof value !== "string") return "unknown";
   const normalized = value.trim().toLowerCase();
-  if (CLOSED_MARKERS.some((marker) => normalized.includes(marker))) return "closed";
-  if (CONGESTED_MARKERS.some((marker) => normalized.includes(marker))) return "congested";
-  if (OPEN_MARKERS.some((marker) => normalized.includes(marker))) return "open";
+  const matches = (markers: string[]) => markers.some((marker) =>
+    normalized === marker || normalized.startsWith(`${marker} `));
+  if (matches(CLOSED_MARKERS)) return "closed";
+  if (matches(CONGESTED_MARKERS)) return "congested";
+  if (matches(OPEN_MARKERS)) return "open";
   return "unknown";
 }
 
@@ -145,8 +154,17 @@ export class CheckpointService {
 
   private async fetchUpstream(): Promise<Checkpoint[]> {
     const controller = new AbortController();
+    const deadline = performance.now() + this.config.timeoutMs;
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
-    let response: Response;
+    let response: Response | undefined;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let completed = false;
+    const checkDeadline = () => {
+      // Timers cannot preempt synchronous JSON parsing/normalization. Bound its
+      // input and check elapsed monotonic time before publishing any result.
+      if (performance.now() >= deadline) controller.abort();
+      controller.signal.throwIfAborted();
+    };
     try {
       const url = new URL(this.config.url);
       if (!url.searchParams.has("select")) url.searchParams.set("select", "*");
@@ -156,33 +174,70 @@ export class CheckpointService {
           authorization: `Bearer ${this.config.apiKey}`,
           accept: "application/json"
         },
+        redirect: "manual",
         signal: controller.signal
       });
-    } catch {
-      // Upstream hostname, key, and error body stay server-side.
+      checkDeadline();
+      if (!response.ok) {
+        // Includes redirects: never send either credential to another endpoint.
+        throw new HttpError(503, "checkpoints_upstream_rejected");
+      }
+      const declaredLength = Number(response.headers.get("content-length"));
+      if (declaredLength > MAX_CHECKPOINT_JSON_BYTES || !response.body) {
+        throw new HttpError(502, "checkpoints_upstream_invalid");
+      }
+      reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let bytes = 0;
+      let body = "";
+      while (true) {
+        const chunk = await reader.read();
+        checkDeadline();
+        if (chunk.done) break;
+        // Fetch yields decoded bytes, including for compressed/chunked bodies.
+        bytes += chunk.value.byteLength;
+        if (bytes > MAX_CHECKPOINT_JSON_BYTES) {
+          throw new HttpError(502, "checkpoints_upstream_invalid");
+        }
+        body += decoder.decode(chunk.value, { stream: true });
+      }
+      body += decoder.decode();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(body);
+      } catch {
+        throw new HttpError(502, "checkpoints_upstream_invalid");
+      }
+      checkDeadline();
+      if (!Array.isArray(payload)) {
+        throw new HttpError(502, "checkpoints_upstream_invalid");
+      }
+      const checkpoints = payload
+        .map((row, index) => normalizeRow(row, index))
+        .filter((checkpoint): checkpoint is Checkpoint => checkpoint !== null);
+      if (payload.length > 0 && checkpoints.length === 0) {
+        throw new HttpError(502, "checkpoints_upstream_invalid");
+      }
+      checkDeadline();
+      completed = true;
+      return checkpoints;
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+      // Upstream hostname, key, and error body stay server-side, including body
+      // transport/abort errors. Malformed JSON retains the existing 502 above.
       throw new HttpError(503, "checkpoints_upstream_unreachable");
     } finally {
       clearTimeout(timer);
+      if (!completed) controller.abort();
+      // Do not await cancellation: an uncooperative source must not extend the
+      // request deadline. Consume cancellation rejection and release ownership.
+      if (reader) {
+        void reader.cancel().catch(() => undefined);
+        reader.releaseLock();
+      } else if (response?.body) {
+        void response.body.cancel().catch(() => undefined);
+      }
     }
-
-    if (!response.ok) {
-      // 401/403 here means the upstream grant is missing, which is an
-      // operational problem for us, not a client error — hence 503 either way.
-      throw new HttpError(503, "checkpoints_upstream_rejected");
-    }
-
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      throw new HttpError(502, "checkpoints_upstream_invalid");
-    }
-    if (!Array.isArray(payload)) {
-      throw new HttpError(502, "checkpoints_upstream_invalid");
-    }
-    return payload
-      .map((row, index) => normalizeRow(row, index))
-      .filter((checkpoint): checkpoint is Checkpoint => checkpoint !== null);
   }
 }
 

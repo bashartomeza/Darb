@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
+import '../../features/notifications/presentation/notification_bell.dart';
+
 import '../theme/app_theme.dart';
-import '../theme/app_tokens.dart';
 import 'entity_cards.dart';
-import 'masari_bottom_nav.dart';
-import 'state_views.dart';
 
 /// The top bar shared by every role's home screen: avatar, centred wordmark,
 /// notifications.
@@ -39,8 +38,6 @@ class HomeTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
     final avatar = RoleAvatar(
       name: name ?? '',
       role: role,
@@ -48,13 +45,7 @@ class HomeTopBar extends StatelessWidget {
       size: 44,
     );
 
-    final bell = IconButton(
-      key: notificationsKey,
-      tooltip: l10n.notifications,
-      onPressed: () => _showNotifications(context, l10n),
-      icon: const Icon(Icons.notifications_none, size: 28),
-      color: AppTheme.primary,
-    );
+    final bell = NotificationBell(key: notificationsKey);
 
     return Row(
       textDirection: TextDirection.ltr,
@@ -74,22 +65,6 @@ class HomeTopBar extends StatelessWidget {
         ),
         avatarLeading ? bell : avatar,
       ],
-    );
-  }
-
-  /// There is no notifications backend, so this opens an honest empty state
-  /// rather than a dead button or a fabricated list.
-  void _showNotifications(BuildContext context, AppLocalizations l10n) {
-    showMasariBottomSheet<void>(
-      context: context,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: AppTokens.spaceMedium),
-        child: EmptyState(
-          title: l10n.notifications,
-          message: l10n.noNotifications,
-          icon: Icons.notifications_none,
-        ),
-      ),
     );
   }
 }

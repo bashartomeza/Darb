@@ -99,7 +99,22 @@ test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secre
       "20260915130100_backfill_legacy_google_external_identities",
       "20261006110000_complete_passenger_trip_lifecycle",
       "20261008190000_complete_capacity_batching_failure_states",
-      "20261012165000_allow_legacy_offer_lifecycle_timestamps"
+      "20261012165000_allow_legacy_offer_lifecycle_timestamps",
+      "20261025120000_in_app_notifications",
+      "20261025140000_incident_reports",
+      "20261025160000_driver_verification_history",
+      "20261026120000_driver_verification_evidence",
+      "20261026140000_driver_verification_documents",
+      "20261028120000_merchant_application_documents",
+      "20261028150000_auth_action_short_codes",
+      "20261029110000_driver_trust_score",
+      "20261029120000_delivery_handover_confirmation",
+      "20261029120000_open_driver_merchant_signup",
+      "20261029130000_passenger_parcels",
+      "20261029140000_route_fares",
+      "20261029150000_ai_uncertain_requests",
+      "20261029190000_driver_document_expiry",
+      "20261029200000_email_otp_contact"
     ]
   );
   rmSync(directory, { recursive: true, force: true });

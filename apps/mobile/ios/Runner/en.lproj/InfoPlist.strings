@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "Masari";
+"NSCameraUsageDescription" = "Masari uses the camera so you can photograph your driver documents for verification.";
+"NSLocationWhenInUseUsageDescription" = "Masari uses your location to show nearby routes and your position on the map.";
+"NSPhotoLibraryUsageDescription" = "Masari needs access to your photos so you can choose a driver document to upload.";

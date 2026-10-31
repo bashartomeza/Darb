@@ -39,6 +39,7 @@ try {
   if (!roots.length) throw new Error("Provide --admin-dir <path> and/or --apk <path>");
 
   const rules = [
+    ["checkpoint partner credential", /\bar_partner_[A-Za-z0-9_]{20,}\b/],
     ["demo reset endpoint", /\/api\/v1\/demo\/reset/i],
     ["demo reset header", /x-demo-reset-key/i],
     ["full demo sequence", /Full Demo Sequence/],
@@ -48,6 +49,7 @@ try {
     ["Flutter background location dependency", /\b(?:background_locator|flutter_background_geolocation)\b/i]
   ];
   const rawNeedles = new Map([
+    ["checkpoint partner credential", ["ar_partner_"]],
     ["demo reset endpoint", ["/api/v1/demo/reset"]],
     ["demo reset header", ["x-demo-reset-key"]],
     ["full demo sequence", ["Full Demo Sequence"]],

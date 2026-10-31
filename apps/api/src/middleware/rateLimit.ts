@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import type { Request, Response } from "express";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import type { AppConfig } from "../config.js";
+import { normalizeEmailForAbuse } from "../lib/contactEmail.js";
 import type { AuthenticatedRequest } from "./auth.js";
 
 function safeIpKey(req: Request) {
@@ -13,7 +14,7 @@ function loginKey(req: Request, secret: string) {
   // Valid identities share a keyed bucket across IPs and spelling variants.
   // Credential-only actions use an IP bucket, never a raw credential key.
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 191) return safeIpKey(req);
-  return createHmac("sha256", secret).update(`masari:auth-rate-limit:${email}`).digest("hex");
+  return createHmac("sha256", secret).update(`masari:auth-rate-limit:${normalizeEmailForAbuse(email)}`).digest("hex");
 }
 
 function handler(req: Request, res: Response) {

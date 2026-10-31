@@ -1,4 +1,6 @@
+import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
+import '../../canonical_routes/domain/canonical_route_models.dart';
 
 const lockedDriverOriginLabel = 'Hebron / PPU / Bab Al-Zawiya';
 const lockedDriverOriginLat = 31.5326;
@@ -55,11 +57,11 @@ class DriverRoute {
     return DriverRoute(
       id: _string(json, 'id'),
       originLabel: _string(json, 'origin_label'),
-      originLat: _double(json, 'origin_lat'),
-      originLng: _double(json, 'origin_lng'),
+      originLat: _coordinate(json['origin_lat']),
+      originLng: _coordinate(json['origin_lng']),
       destinationLabel: _string(json, 'destination_label'),
-      destinationLat: _double(json, 'destination_lat'),
-      destinationLng: _double(json, 'destination_lng'),
+      destinationLat: _coordinate(json['destination_lat']),
+      destinationLng: _coordinate(json['destination_lng']),
       corridorKey: _string(json, 'corridor_key'),
       seatsAvailable: _int(json, 'seats_available'),
       parcelCapacityAvailable: _int(json, 'parcel_capacity_available'),
@@ -109,6 +111,8 @@ class DriverPassengerSummary {
     required this.destinationLabel,
     required this.passengerCount,
     required this.status,
+    this.pickup,
+    this.destination,
   });
 
   final String id;
@@ -116,6 +120,8 @@ class DriverPassengerSummary {
   final String destinationLabel;
   final int passengerCount;
   final String status;
+  final GeoPoint? pickup;
+  final GeoPoint? destination;
 
   factory DriverPassengerSummary.fromJson(Map<String, dynamic> json) {
     return DriverPassengerSummary(
@@ -124,6 +130,8 @@ class DriverPassengerSummary {
       destinationLabel: _string(json, 'destination_label'),
       passengerCount: _int(json, 'passenger_count'),
       status: _string(json, 'status'),
+      pickup: _point(json['pickup_lat'], json['pickup_lng']),
+      destination: _point(json['destination_lat'], json['destination_lng']),
     );
   }
 }
@@ -134,19 +142,46 @@ class DriverMerchantSummary {
     required this.pickupLabel,
     required this.status,
     required this.parcelCount,
+    this.pickup,
+    this.destination,
+    this.destinationLabel,
   });
 
   final String id;
   final String pickupLabel;
   final String status;
   final int parcelCount;
+  final GeoPoint? pickup;
+  final GeoPoint? destination;
+  final String? destinationLabel;
 
   factory DriverMerchantSummary.fromJson(Map<String, dynamic> json) {
     final parcels = json['parcels'];
+    final destinations = parcels is List
+        ? parcels
+              .whereType<Map>()
+              .map(
+                (parcel) => (
+                  point: _point(
+                    parcel['destination_lat'],
+                    parcel['destination_lng'],
+                  ),
+                  label: parcel['destination_label'] as String?,
+                ),
+              )
+              .toList()
+        : const <({GeoPoint? point, String? label})>[];
+    final first = destinations.firstOrNull;
+    final singleDestination =
+        first?.point != null &&
+        destinations.every((value) => value.point == first!.point);
     return DriverMerchantSummary(
       id: _string(json, 'id'),
       pickupLabel: _string(json, 'pickup_label'),
       status: _string(json, 'status'),
+      pickup: _point(json['pickup_lat'], json['pickup_lng']),
+      destination: singleDestination ? first!.point : null,
+      destinationLabel: singleDestination ? first!.label : null,
       parcelCount: json['parcel_count'] is num
           ? (json['parcel_count'] as num).toInt()
           : parcels is List
@@ -162,15 +197,18 @@ class DriverParcelBatchSummary {
     required this.status,
     required this.estimatedDistanceSaved,
     required this.explanation,
+    this.parcelCount,
   });
 
   final String id;
   final String status;
   final double estimatedDistanceSaved;
   final String explanation;
+  final int? parcelCount;
 
   factory DriverParcelBatchSummary.fromJson(Map<String, dynamic> json) {
     return DriverParcelBatchSummary(
+      parcelCount: (json['parcel_count'] as num?)?.toInt(),
       id: _string(json, 'id'),
       status: _string(json, 'status'),
       estimatedDistanceSaved: _double(json, 'estimated_distance_saved'),
@@ -268,6 +306,7 @@ class DriverTrip {
     required this.passengerRequest,
     required this.merchantOrder,
     required this.parcelBatch,
+    this.deliveryConfirmation,
   });
 
   final String id;
@@ -279,6 +318,34 @@ class DriverTrip {
   final DriverPassengerSummary? passengerRequest;
   final DriverMerchantSummary? merchantOrder;
   final DriverParcelBatchSummary? parcelBatch;
+
+  /// Receiver confirmation state for the parcel orders on this trip, when known.
+  final TripDeliveryConfirmation? deliveryConfirmation;
+
+  /// A parcel trip cannot be delivered until its receivers have confirmed.
+  bool get needsReceiverConfirmation =>
+      status == 'in_transit' &&
+      (deliveryConfirmation?.needsReceiverConfirmation ?? false);
+
+  GeoPoint? get mapOrigin => passengerRequest != null
+      ? passengerRequest!.pickup
+      : merchantOrder != null
+      ? merchantOrder!.pickup
+      : _point(route.originLat, route.originLng);
+  GeoPoint? get mapDestination => passengerRequest != null
+      ? passengerRequest!.destination
+      : merchantOrder != null
+      ? merchantOrder!.destination
+      : _point(route.destinationLat, route.destinationLng);
+  String get mapOriginLabel =>
+      passengerRequest?.pickupLabel ??
+      merchantOrder?.pickupLabel ??
+      route.originLabel;
+  String get mapDestinationLabel =>
+      passengerRequest?.destinationLabel ??
+      (merchantOrder != null
+          ? merchantOrder!.destinationLabel ?? ''
+          : route.destinationLabel);
 
   bool get isActive =>
       status != 'completed' && status != 'cancelled' && status != 'failed';
@@ -311,9 +378,40 @@ class DriverTrip {
       parcelBatch: batch is Map<String, dynamic>
           ? DriverParcelBatchSummary.fromJson(batch)
           : null,
+      deliveryConfirmation:
+          json['delivery_confirmation'] is Map<String, dynamic>
+          ? TripDeliveryConfirmation.fromJson(
+              json['delivery_confirmation'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 }
+
+GeoPoint? _point(Object? latitude, Object? longitude) {
+  final lat = latitude is num
+      ? latitude.toDouble()
+      : double.tryParse('$latitude');
+  final lng = longitude is num
+      ? longitude.toDouble()
+      : double.tryParse('$longitude');
+  if (lat == null ||
+      lng == null ||
+      !lat.isFinite ||
+      !lng.isFinite ||
+      lat < -90 ||
+      lat > 90 ||
+      lng < -180 ||
+      lng > 180) {
+    return null;
+  }
+  return GeoPoint(lat, lng);
+}
+
+// A missing route coordinate cannot masquerade as a real geographic zero.
+// The map's endpoint validation omits invalid positions without losing the trip.
+double _coordinate(Object? value) =>
+    value is num ? value.toDouble() : double.tryParse('$value') ?? double.nan;
 
 String _string(Map<String, dynamic> json, String key) {
   final value = json[key];

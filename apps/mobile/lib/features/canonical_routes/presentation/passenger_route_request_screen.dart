@@ -31,6 +31,7 @@ class _PassengerRouteRequestScreenState
   int _passengers = 1;
   bool _busy = false;
   Object? _error;
+  CanonicalOperationBundle? _completedOperation;
   CanonicalPassengerRequest? _result;
 
   @override
@@ -52,15 +53,7 @@ class _PassengerRouteRequestScreenState
           bundle?.actorId != actorId) {
         return;
       }
-      if (bundle!.recoveryWindowExpired(DateTime.now())) {
-        setState(
-          () => _error = const CanonicalOperationBlocked(
-            'canonical_recovery_expired',
-          ),
-        );
-        return;
-      }
-      final payload = bundle.payload;
+      final payload = bundle!.payload;
       setState(() {
         _routeVersionId = payload['route_version_id'] as String?;
         _pickupId = payload['pickup_stop_id'] as String?;
@@ -96,6 +89,11 @@ class _PassengerRouteRequestScreenState
               OperationStatusCard(
                 title: l10n.requestRecorded,
                 body: l10n.matchingDisabledNotice,
+              ),
+              fareSnapshotBox(
+                context,
+                _result!.fare,
+                passengers: _result!.passengerCount,
               ),
               if (_error != null) Text(_errorLabel(l10n, _error!)),
               FilledButton(
@@ -217,6 +215,11 @@ class _PassengerRouteRequestScreenState
                             ),
                           ],
                         ),
+                        passengerFareEstimate(
+                          context,
+                          route.fares,
+                          _passengers,
+                        ),
                       ],
                       if (_error != null) Text(_errorLabel(l10n, _error!)),
                       const SizedBox(height: AppTokens.spaceLarge),
@@ -261,12 +264,7 @@ class _PassengerRouteRequestScreenState
   }
 
   Future<void> _submit() async {
-    if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
-      setState(
-        () => _error = AppLocalizations.of(context).invalidDepartureWindow,
-      );
-      return;
-    }
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -294,11 +292,22 @@ class _PassengerRouteRequestScreenState
           .run<CanonicalPassengerRequest>(
             operation: 'passenger_route_request_create',
             scope: 'passenger',
+            allowExpiredReplay: true,
+            onBundle: (bundle) => _completedOperation = bundle,
             actorId: actorId,
             payload: payload,
-            preflight: () => ref
-                .read(canonicalRouteRepositoryProvider)
-                .requireFreshRoute(_routeVersionId!),
+            preflight: () async {
+              if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
+                throw const ApiException(
+                  ApiErrorType.validation,
+                  'invalid_departure_window',
+                  statusCode: 400,
+                );
+              }
+              await ref
+                  .read(canonicalRouteRepositoryProvider)
+                  .requireFreshRoute(_routeVersionId!);
+            },
             send: (bundle) => ref
                 .read(canonicalRouteRepositoryProvider)
                 .createPassengerRequest(
@@ -321,12 +330,15 @@ class _PassengerRouteRequestScreenState
   Future<void> _acknowledgeResult() async {
     final actorId = ref.read(authControllerProvider).value?.user?.id;
     if (actorId == null) return;
+    final completed = _completedOperation;
+    if (completed == null || completed.actorId != actorId) return;
     try {
       await ref
           .read(canonicalMutationRunnerProvider)
           .acknowledge(
             actorId: actorId,
             operation: 'passenger_route_request_create',
+            idempotencyKey: completed.idempotencyKey,
           );
       if (mounted) context.go('/passenger');
     } catch (error) {
@@ -406,6 +418,9 @@ class _CatalogError extends StatelessWidget {
 }
 
 String _errorLabel(AppLocalizations l10n, Object error) {
+  if (error is ApiException && error.message == 'invalid_departure_window') {
+    return l10n.invalidDepartureWindow;
+  }
   if (error is String) return error;
   if (error is CanonicalOperationBlocked ||
       error is CanonicalOperationStorageException) {

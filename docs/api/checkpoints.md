@@ -7,7 +7,9 @@ gets a `404` rather than an empty list it might read as "no barriers".
 
 ## Why this is a proxy, not a direct call
 
-The upstream is a Supabase PostgREST table. The mobile app does **not** call it
+The current local adapter targets a PostgREST table; its relationship to the
+historical partner endpoint and compatibility with the authoritative provider
+are **unverified**. The mobile app does **not** call it
 directly. Doing so would ship the upstream key inside the APK, put a second
 network origin outside the session boundary, and leave the app parsing a schema
 owned by another team. The key lives in server config; the app sees one
@@ -20,7 +22,7 @@ authenticated Masari endpoint.
 | `CHECKPOINTS_ENABLED` | — | Requires `MAPS_ENABLED` |
 | `CHECKPOINTS_URL` | when enabled | Must be HTTPS |
 | `CHECKPOINTS_API_KEY` | when enabled | Never leaves the server |
-| `CHECKPOINTS_TIMEOUT_MS` | no | 500–15000, default 6000 |
+| `CHECKPOINTS_TIMEOUT_MS` | no | 500–15000, default 6000; includes response-body consumption |
 | `CHECKPOINTS_CACHE_TTL_SECONDS` | no | 0–3600, default 60 |
 
 ## Response
@@ -58,27 +60,65 @@ accepts several spellings (`lat`/`latitude`, `name_en`/`title_en`/`name`,
 that still yields no usable coordinate is **dropped**, not placed at a default
 position.
 
+A genuinely empty array remains a valid local response. A nonempty array with
+no usable rows is rejected; it must not replace good cached data with a fresh
+empty success. These are local adapter rules, not an approved upstream contract.
+
+## Transport resource safeguards
+
+Automatic redirects are disabled, including same-origin redirects. A redirect
+is rejected without following its location or forwarding either authentication
+header. Operators must obtain owner approval for the exact backend endpoint.
+
+The deadline stays active through response-body consumption. The adapter also
+rejects JSON exceeding **1,000,000 decoded bytes**, checking declared length
+early and counting streamed bytes independently (including chunked/compressed
+responses). This adopts the existing server JSON resource budget in
+`apps/api/src/maps/http.ts`; it is not a provider-specific feed-size, row-count,
+or pagination assumption. Nothing is truncated. Real-feed compatibility with
+this bound still requires owner-approved evidence before activation.
+
+Timers are cleared and response readers/bodies are cancelled on rejection;
+cancellation completion cannot extend the deadline. JavaScript cannot preempt
+synchronous JSON parsing; bounded input limits that work and elapsed monotonic
+time is checked before returning a successful snapshot.
+
 ## Failure
 
 | Condition | Status | Body `error` |
 | --- | --- | --- |
 | Upstream unreachable / timed out | 503 | `checkpoints_upstream_unreachable` |
-| Upstream returned non-2xx (including a missing grant) | 503 | `checkpoints_upstream_rejected` |
-| Upstream returned a non-array or unparseable body | 502 | `checkpoints_upstream_invalid` |
+| Upstream returned non-2xx, including redirects | 503 | `checkpoints_upstream_rejected` |
+| Upstream returned a non-array, unparseable/oversized body, or entirely unusable nonempty array | 502 | `checkpoints_upstream_invalid` |
 
 The upstream hostname, key, and error text never reach the client. A failure is
 never converted into an empty barrier list.
 
-## Known operational blocker
+## Historical observation — unverified; not operational authorization
 
-As of 2026-09-01 the configured anon key is rejected by the upstream table:
+An earlier note dated 2026-09-01 reported this upstream rejection:
 
 ```
 GET .../rest/v1/checkpoints  ->  401
 {"code":"42501","message":"permission denied for table checkpoints"}
 ```
 
-The key authenticates to PostgREST, but the `anon` role has no `SELECT` grant or
-RLS policy on `checkpoints`. Until that grant is added upstream, this endpoint
-answers `503` and the map shows its barrier-unavailable state. No client change
-is needed when it is fixed.
+That historical observation does not establish current authentication, grants,
+RLS behavior, the authoritative data source, or the provider contract. It is
+not a recommendation to grant anonymous/public reads or weaken RLS.
+
+Keep checkpoint capability disabled and fail-closed. The provider/security owner
+must approve the exact endpoint, a least-privilege backend principal with only
+the necessary authorized reads, authentication/header requirements, and redacted
+response/coordinate/status/freshness/failure documentation. Any permission change
+requires separate owner approval; this task authorizes none.
+
+`CHECKPOINT_PROVIDER = UNVERIFIED_BLOCKED`
+
+`CREDENTIAL_ROTATION = PENDING_OWNER_CONFIRMATION`
+
+The owner must independently confirm historical credential revocation/rotation
+without supplying credentials. Neither synthetic tests nor source removal prove
+live provider compatibility or revocation. Replacement credentials belong only
+in approved backend secret storage; never include them in mobile artifacts,
+documentation, logs, or review evidence.

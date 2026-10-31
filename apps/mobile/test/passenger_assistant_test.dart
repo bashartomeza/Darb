@@ -15,6 +15,7 @@ import 'package:masari_mobile/features/assistant/presentation/passenger_assistan
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/booking_recovery_test_support.dart';
 
 void main() {
   group('assistant repository', () {
@@ -42,6 +43,7 @@ void main() {
         );
         final repository = ApiPassengerAssistantRepository(
           apiClient: auth.client,
+          mutation: testBookingMutation(),
         );
         final draft = PassengerAssistantTripDraft(
           pickupKey: 'bab_al_zawiya',
@@ -124,6 +126,7 @@ void main() {
         );
         final repository = ApiPassengerAssistantRepository(
           apiClient: auth.client,
+          mutation: testBookingMutation(),
         );
         final draft = PassengerAssistantTripDraft(
           pickupKey: 'bab_al_zawiya',
@@ -607,6 +610,44 @@ void main() {
 
       expect(find.text('match: match_1'), findsOneWidget);
     });
+
+    testWidgets(
+      'an unknown booking can be verified after its displayed departure passes',
+      (tester) async {
+        final state = PassengerAssistantState(
+          phase: PassengerAssistantPhase.result,
+          draft: _tripDraft(),
+          selectionFailure: PassengerAssistantFailure.unknownBooking,
+          tripOptions: [
+            PassengerAssistantTripOption(
+              id: 'route_1',
+              driverName: 'Driver',
+              fromLabel: 'Origin',
+              toLabel: 'Destination',
+              departureAt: DateTime.now().subtract(const Duration(minutes: 1)),
+              seatsAvailable: 1,
+              score: 0.9,
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          _routerTestApp(
+            override: passengerAssistantControllerProvider.overrideWith(
+              () => _SelectingAssistantController(state, 'existing'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final button = tester.widget<FilledButton>(
+          find.byKey(const ValueKey('bookOffer-route_1')),
+        );
+        expect(button.onPressed, isNotNull);
+        expect(find.text('التحقق من الحجز'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('bookOffer-route_1')));
+        await tester.pumpAndSettle();
+        expect(find.text('match: existing'), findsOneWidget);
+      },
+    );
   });
 }
 

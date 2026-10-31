@@ -136,14 +136,21 @@ class CanonicalOperationBundle {
 }
 
 class CanonicalOperationStorage {
-  const CanonicalOperationStorage(this._storage);
+  const CanonicalOperationStorage(
+    this._storage, {
+    String storageKey = bundleKey,
+    // Keep the established public named argument while hiding the backing field.
+    // ignore: prefer_initializing_formals
+  }) : _storageKey = storageKey;
 
   static const bundleKey = 'masari_canonical_operation_v1';
   static const maximumEncodedBytes = 60 * 1024;
   final FlutterSecureStorage _storage;
+  final String _storageKey;
+  String get namespace => _storageKey;
 
   Future<CanonicalOperationBundle?> read() async {
-    final encoded = await _storage.read(key: bundleKey);
+    final encoded = await _storage.read(key: _storageKey);
     if (encoded == null || encoded.isEmpty) return null;
     try {
       final decoded = jsonDecode(encoded);
@@ -167,10 +174,10 @@ class CanonicalOperationStorage {
         'canonical_recovery_too_large',
       );
     }
-    return _storage.write(key: bundleKey, value: encoded);
+    return _storage.write(key: _storageKey, value: encoded);
   }
 
-  Future<void> clear() => _storage.delete(key: bundleKey);
+  Future<void> clear() => _storage.delete(key: _storageKey);
 }
 
 class CanonicalOperationStorageException implements Exception {

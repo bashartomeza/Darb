@@ -1,3 +1,5 @@
+import '../../../core/fares/fare.dart';
+
 class PassengerRequest {
   const PassengerRequest({
     required this.id,
@@ -96,7 +98,8 @@ class PickupPreset {
 /// Mirrors `GET /passenger/available-departures`.
 ///
 /// The API deliberately exposes only the driver's display name,
-/// vehicle type and trust score — there is no fare, rating or
+/// vehicle type and trust score, plus the route's display-only estimated
+/// fare when an admin has published one. There is no rating or
 /// completed-trip count in the schema, so those stay absent
 /// rather than being invented here.
 class AvailableDeparture {
@@ -110,10 +113,14 @@ class AvailableDeparture {
     required this.driverName,
     this.vehicleType,
     this.trustScore,
+    this.fares,
   });
 
   final String id;
   final String routeVersionId;
+
+  /// Display-only tariff of the departure's route (null if none published).
+  final RouteFares? fares;
 
   final String originLabel;
   final String destinationLabel;
@@ -151,6 +158,10 @@ class AvailableDeparture {
       vehicleType: driverMap['vehicle_type'] as String?,
 
       trustScore: (driverMap['trust_score'] as num?)?.toInt(),
+
+      fares: RouteFares.tryParse(
+        json['route'] is Map ? (json['route'] as Map)['fares'] : null,
+      ),
     );
   }
 }

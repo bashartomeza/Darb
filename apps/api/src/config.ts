@@ -1,3 +1,4 @@
+import { isAbsolute } from "node:path";
 import { z } from "zod";
 
 export const APP_ENVIRONMENTS = ["local", "test", "demo", "staging", "production"] as const;
@@ -41,6 +42,11 @@ const optionalGroqApiKey = z.preprocess(
   z.string().trim().min(20).optional()
 );
 
+const optionalText = (max: number) => z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().trim().max(max).optional()
+);
+
 const rawSchema = z.object({
   APP_ENV: z.enum(APP_ENVIRONMENTS),
   DATABASE_URL: z.string().min(1),
@@ -61,6 +67,11 @@ const rawSchema = z.object({
   CANONICAL_SHARED_TRIP_MOBILE_ENABLED: z.string().optional(),
   MAPS_ENABLED: z.string().optional(),
   CHECKPOINTS_ENABLED: z.string().optional(),
+  AWEENRAYEH_LIMITED_DIRECTORY_ENABLED: z.string().optional(),
+  AWEENRAYEH_PARTNER_API_KEY: z.string().trim().min(20).optional(),
+  AWEENRAYEH_PARTNER_TIMEOUT_MS: z.coerce.number().int().min(500).max(15_000).default(6_000),
+  CHECKPOINT_DIRECTORY_ENABLED: z.string().optional(),
+  CHECKPOINT_DIRECTORY_FILE: z.string().min(1).optional(),
   CHECKPOINTS_URL: z.string().url().optional(),
   CHECKPOINTS_API_KEY: z.string().min(20).optional(),
   CHECKPOINTS_TIMEOUT_MS: z.coerce.number().int().min(500).max(15_000).default(6_000),
@@ -83,14 +94,32 @@ const rawSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
   TRUST_PROXY: z.string().optional(),
+  APPROACH_ALERT_RADIUS_KM: z.coerce.number().min(0.05).max(25).default(1),
+  APPROACH_ALERT_ETA_MINUTES: z.coerce.number().min(0).max(120).default(0),
+  APPROACH_ALERT_ASSUMED_SPEED_KMH: z.coerce.number().min(5).max(120).default(30),
   READINESS_TIMEOUT_MS: z.coerce.number().int().min(10).max(10_000).default(2_000),
   RATE_LIMIT_GLOBAL_WINDOW_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(900_000),
   RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().min(1).max(10_000).optional(),
   RATE_LIMIT_LOGIN_WINDOW_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(900_000),
   RATE_LIMIT_LOGIN_MAX: z.coerce.number().int().min(1).max(500).optional(),
+  EMAIL_CODE_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().min(0).max(3600).default(60),
+  EMAIL_CODE_MAX_PER_EMAIL_PER_DAY: z.coerce.number().int().min(1).max(100).default(10),
   INVITATIONS_ENABLED: z.string().optional(),
   PUBLIC_ONBOARDING_ENABLED: z.string().optional(),
-  OTP_PROVIDER: z.enum(["disabled", "fake"]).default("disabled"),
+  OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: z.string().optional(),
+  OPEN_SIGNUP_MAX_STARTS_PER_HOUR: z.coerce.number().int().min(1).max(10_000).default(200),
+  DRIVER_DOCUMENTS_ENABLED: z.string().optional(),
+  DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
+  DRIVER_DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  OTP_PROVIDER: z.enum(["disabled", "fake", "email"]).default("disabled"),
+  EMAIL_DELIVERY: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.enum(["disabled", "smtp"]).default("disabled")),
+  SMTP_HOST: optionalText(255),
+  SMTP_PORT: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.coerce.number().int().min(1).max(65_535).optional()),
+  SMTP_SECURE: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.enum(["starttls", "tls"]).default("starttls")),
+  SMTP_USER: optionalText(255),
+  SMTP_PASSWORD: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.string().max(512).optional()),
+  EMAIL_FROM_ADDRESS: optionalText(255),
+  EMAIL_FROM_NAME: optionalText(100),
   SUPPORTED_PHONE_REGIONS: z.string().default("PS"),
   GOOGLE_OAUTH_CLIENT_IDS: z.string().optional(),
   GOOGLE_MOBILE_SERVER_CLIENT_ID: z.string().trim().min(1).refine((v) => !v.includes(",")).optional(),
@@ -197,14 +226,31 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   );
   const mapsEnabled = parseBoolean("MAPS_ENABLED", raw.MAPS_ENABLED);
   const checkpointsEnabled = parseBoolean("CHECKPOINTS_ENABLED", raw.CHECKPOINTS_ENABLED);
+  const checkpointDirectoryEnabled = parseBoolean("CHECKPOINT_DIRECTORY_ENABLED", raw.CHECKPOINT_DIRECTORY_ENABLED);
   const routeMapsEnabled = parseBoolean("ROUTE_MAPS_ENABLED", raw.ROUTE_MAPS_ENABLED);
   const invitationsEnabled = parseBoolean("INVITATIONS_ENABLED", raw.INVITATIONS_ENABLED);
+  const driverDocumentsEnabled = parseBoolean("DRIVER_DOCUMENTS_ENABLED", raw.DRIVER_DOCUMENTS_ENABLED);
   const publicOnboardingEnabled = parseBoolean("PUBLIC_ONBOARDING_ENABLED", raw.PUBLIC_ONBOARDING_ENABLED);
+  const openSignupEnabled = parseBoolean("OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED", raw.OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED);
   const testLegalFixturesEnabled = parseBoolean(
     "ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED",
     raw.ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED
   );
+  const limitedCheckpointDirectoryEnabled = parseBoolean("AWEENRAYEH_LIMITED_DIRECTORY_ENABLED", raw.AWEENRAYEH_LIMITED_DIRECTORY_ENABLED);
   const problems: string[] = [];
+  if (limitedCheckpointDirectoryEnabled && (!raw.AWEENRAYEH_PARTNER_API_KEY || isUnsafeRouteProviderSecret(raw.AWEENRAYEH_PARTNER_API_KEY))) {
+    problems.push("AWEENRAYEH_PARTNER_API_KEY is required and must be securely configured");
+  }
+  // Demo reset removes abuse counters; it must never reset a real provider budget.
+  if (limitedCheckpointDirectoryEnabled && demoFeaturesEnabled) {
+    problems.push("Limited provider directory cannot run with demo reset features");
+  }
+  if (driverDocumentsEnabled && (!raw.DRIVER_DOCUMENTS_DIR || !isAbsolute(raw.DRIVER_DOCUMENTS_DIR))) {
+    problems.push("DRIVER_DOCUMENTS_DIR must be an absolute path when driver documents are enabled");
+  }
+  if (checkpointDirectoryEnabled && !raw.CHECKPOINT_DIRECTORY_FILE) {
+    problems.push("CHECKPOINT_DIRECTORY_FILE is required when the directory is enabled");
+  }
   const demoResetAllowedDatabases = (raw.DEMO_RESET_ALLOWED_DATABASES ?? "")
     .split(",")
     .map((name) => name.trim())
@@ -280,14 +326,23 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (raw.CHECKPOINTS_API_KEY && isUnsafeSecret(raw.CHECKPOINTS_API_KEY)) {
     problems.push("CHECKPOINTS_API_KEY uses a known placeholder or default value");
   }
-  if (publicOnboardingEnabled && productionLike) {
-    problems.push("PUBLIC_ONBOARDING_ENABLED cannot be enabled in staging or production without an approved provider");
+  if (publicOnboardingEnabled && productionLike && raw.OTP_PROVIDER !== "email") {
+    problems.push("PUBLIC_ONBOARDING_ENABLED in staging or production requires OTP_PROVIDER=email");
+  }
+  if (raw.OTP_PROVIDER === "email" && raw.EMAIL_DELIVERY !== "smtp") {
+    problems.push("OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp (and the SMTP_* settings)");
+  }
+  if (openSignupEnabled && !publicOnboardingEnabled) {
+    problems.push("OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED requires PUBLIC_ONBOARDING_ENABLED");
+  }
+  if (openSignupEnabled && !driverDocumentsEnabled) {
+    problems.push("OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED requires DRIVER_DOCUMENTS_ENABLED so applicants can upload their documents");
   }
   if (publicOnboardingEnabled && !invitationsEnabled) {
     problems.push("PUBLIC_ONBOARDING_ENABLED requires INVITATIONS_ENABLED");
   }
-  if (publicOnboardingEnabled && raw.OTP_PROVIDER !== "fake") {
-    problems.push("PUBLIC_ONBOARDING_ENABLED requires the fake provider in local, test, or demo");
+  if (publicOnboardingEnabled && raw.OTP_PROVIDER !== "fake" && raw.OTP_PROVIDER !== "email") {
+    problems.push("PUBLIC_ONBOARDING_ENABLED requires OTP_PROVIDER=email (or fake in local, test, or demo)");
   }
   if (productionLike && testLegalFixturesEnabled) {
     problems.push("ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED is forbidden in staging and production");
@@ -416,6 +471,43 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     problems.push("AUTH_ACTION_TOKEN_PEPPER must be distinct from JWT and refresh-token secrets");
   }
 
+  // Production email delivery over SMTP. Problems name variables only, never values.
+  let email: { delivery: "disabled" | "smtp"; smtp?: { host: string; port: number; secure: "starttls" | "tls"; user?: string; password?: string; fromAddress: string; fromName: string } } = { delivery: raw.EMAIL_DELIVERY };
+  if (raw.EMAIL_DELIVERY === "smtp") {
+    const missing: string[] = [];
+    if (!raw.SMTP_HOST) missing.push("SMTP_HOST");
+    if (!raw.EMAIL_FROM_ADDRESS) missing.push("EMAIL_FROM_ADDRESS");
+    if (productionLike) {
+      if (!raw.SMTP_USER) missing.push("SMTP_USER");
+      if (!raw.SMTP_PASSWORD) missing.push("SMTP_PASSWORD");
+    } else if (Boolean(raw.SMTP_USER) !== Boolean(raw.SMTP_PASSWORD)) {
+      problems.push("SMTP_USER and SMTP_PASSWORD must be set together");
+    }
+    if (missing.length) problems.push(`EMAIL_DELIVERY=smtp requires ${missing.join(", ")}`);
+    if (raw.SMTP_HOST && !/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$|^\[[0-9A-Fa-f:.]+\]$/.test(raw.SMTP_HOST)) {
+      problems.push("SMTP_HOST must be a bare host name or IP address");
+    }
+    if (raw.SMTP_HOST && productionLike && ["localhost", "127.0.0.1", "[::1]"].includes(raw.SMTP_HOST.toLowerCase())) {
+      problems.push("SMTP_HOST must not be a loopback address in staging and production");
+    }
+    if (raw.EMAIL_FROM_ADDRESS && !z.string().email().safeParse(raw.EMAIL_FROM_ADDRESS).success) {
+      problems.push("EMAIL_FROM_ADDRESS must be a valid email address");
+    }
+    if (raw.EMAIL_FROM_NAME && /[\u0000-\u001f]/.test(raw.EMAIL_FROM_NAME)) {
+      problems.push("EMAIL_FROM_NAME must not contain control characters");
+    }
+    if (raw.SMTP_USER && /[\u0000-\u001f]/.test(raw.SMTP_USER)) problems.push("SMTP_USER must not contain control characters");
+    if (raw.SMTP_PASSWORD && /[\u0000-\u001f]/.test(raw.SMTP_PASSWORD)) problems.push("SMTP_PASSWORD must not contain control characters");
+    if (raw.SMTP_PASSWORD && productionLike && isUnsafeSecret(raw.SMTP_PASSWORD)) problems.push("SMTP_PASSWORD uses a known placeholder value");
+    if (productionLike && !raw.AUTH_ACTION_TOKEN_PEPPER) problems.push("EMAIL_DELIVERY=smtp requires AUTH_ACTION_TOKEN_PEPPER");
+    if (!missing.length) {
+      email = { delivery: "smtp", smtp: {
+        host: raw.SMTP_HOST!, port: raw.SMTP_PORT ?? (raw.SMTP_SECURE === "tls" ? 465 : 587), secure: raw.SMTP_SECURE,
+        user: raw.SMTP_USER, password: raw.SMTP_PASSWORD, fromAddress: raw.EMAIL_FROM_ADDRESS!, fromName: raw.EMAIL_FROM_NAME ?? "Masari"
+      } };
+    }
+  }
+
   const accessTokenTtlSeconds = raw.ACCESS_TOKEN_TTL_SECONDS ?? (productionLike ? 900 : 28_800);
   const refreshTokenTtlDays = raw.REFRESH_TOKEN_TTL_DAYS ?? 30;
   if (
@@ -509,6 +601,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           }
         }
       : undefined,
+    email,
     corsOrigins,
     appRelease: raw.APP_RELEASE ?? "unreleased",
     port: raw.PORT,
@@ -545,6 +638,10 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     },
     mapsEnabled,
     checkpointsEnabled,
+    limitedCheckpointDirectoryEnabled,
+    limitedCheckpointDirectory: limitedCheckpointDirectoryEnabled ? { apiKey: raw.AWEENRAYEH_PARTNER_API_KEY!, timeoutMs: raw.AWEENRAYEH_PARTNER_TIMEOUT_MS } : undefined,
+    checkpointDirectoryEnabled,
+    checkpointDirectoryFile: raw.CHECKPOINT_DIRECTORY_FILE,
     checkpoints: checkpointsEnabled
       ? {
           url: raw.CHECKPOINTS_URL!,
@@ -567,7 +664,13 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
       }
     },
     invitationsEnabled,
+    otpProvider: raw.OTP_PROVIDER,
     publicOnboardingEnabled,
+    openSignupEnabled,
+    openSignupMaxStartsPerHour: raw.OPEN_SIGNUP_MAX_STARTS_PER_HOUR,
+    driverDocuments: driverDocumentsEnabled
+      ? { dir: raw.DRIVER_DOCUMENTS_DIR!, retentionDays: raw.DRIVER_DOCUMENT_RETENTION_DAYS }
+      : undefined,
     publicRegistration: publicOnboardingEnabled
       ? {
           attemptTtlSeconds: raw.ONBOARDING_ATTEMPT_TTL_SECONDS,
@@ -609,11 +712,17 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     googleOAuthClientIds,
     googleAuth: { mobileClientIds: googleMobileClientIds, adminClientIds: googleAdminClientIds, passengerSignupMode: raw.GOOGLE_PASSENGER_SIGNUP_MODE, passengerAllowlist: googlePassengerAllowlist },
     trustProxy,
+    approachingAlert: {
+      radiusKm: raw.APPROACH_ALERT_RADIUS_KM,
+      etaMinutes: raw.APPROACH_ALERT_ETA_MINUTES,
+      assumedSpeedKmh: raw.APPROACH_ALERT_ASSUMED_SPEED_KMH
+    },
     readinessTimeoutMs: raw.READINESS_TIMEOUT_MS,
     rateLimits: {
       global: { windowMs: raw.RATE_LIMIT_GLOBAL_WINDOW_MS, max: globalRateLimitMax },
       login: { windowMs: raw.RATE_LIMIT_LOGIN_WINDOW_MS, max: loginRateLimitMax }
     },
+    emailCodeLimits: { resendCooldownSeconds: raw.EMAIL_CODE_RESEND_COOLDOWN_SECONDS, maxPerDay: raw.EMAIL_CODE_MAX_PER_EMAIL_PER_DAY },
     demo: demoFeaturesEnabled
       ? {
           resetKey: demoValues.resetKey!,

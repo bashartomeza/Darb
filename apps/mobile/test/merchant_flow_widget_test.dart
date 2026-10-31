@@ -69,11 +69,70 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('submitMerchantOrder')));
     await tester.pumpAndSettle();
+    expect(handler.createKey, matches(RegExp(r'^[A-Za-z0-9._:-]{8,128}$')));
     expect(handler.createBody?['pickup_lat'], 31.5326);
     expect(handler.createBody?['pickup_lng'], 35.0998);
     expect(handler.createBody?['parcels'], hasLength(3));
     expect(find.byKey(const ValueKey('merchantOrderId')), findsOneWidget);
   });
+
+  testWidgets(
+    'lost order response recovers after app restart without another POST',
+    (tester) async {
+      final handler = _MerchantHandler(hasOrder: false)
+        ..loseNextResponse = true;
+      await _pumpMerchant(tester, handler);
+      GoRouter.of(
+        tester.element(find.byKey(const ValueKey('merchantHome'))),
+      ).go('/merchant/order/new');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('addParcelButton')));
+      await tester.pump();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('submitMerchantOrder')),
+      );
+      await tester.tap(find.byKey(const ValueKey('submitMerchantOrder')));
+      await tester.pumpAndSettle();
+      expect(handler.createCalls, 1);
+      final persisted = await const FlutterSecureStorage().readAll();
+      expect(
+        persisted.values.any(
+          (value) =>
+              value.contains('idempotency_key') &&
+              value.contains('Bethlehem Market'),
+        ),
+        isTrue,
+      );
+      final originalKey = handler.createKey;
+      GoRouter.of(
+        tester.element(find.byKey(const ValueKey('merchantCreateOrder'))),
+      ).go('/merchant');
+      await tester.pumpAndSettle();
+      expect(handler.createCalls, 1);
+      expect(
+        (await const FlutterSecureStorage().readAll()).values.any(
+          (value) => value.contains('idempotency_key'),
+        ),
+        isTrue,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await _pumpMerchant(tester, handler, resetStorage: false);
+      GoRouter.of(
+        tester.element(find.byKey(const ValueKey('merchantHome'))),
+      ).go('/merchant/order/new');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('merchantOrderId')), findsOneWidget);
+      expect(handler.createCalls, 1);
+      expect(handler.lookupKeys, [originalKey]);
+      expect(
+        (await const FlutterSecureStorage().readAll()).values.any(
+          (value) => value.contains('idempotency_key'),
+        ),
+        isFalse,
+      );
+    },
+  );
 
   testWidgets('merchant batches, matches, and sees read-only scoring', (
     tester,
@@ -160,21 +219,58 @@ void main() {
     expect(find.text('تسجيل الدخول'), findsWidgets);
     expect(find.text('إنشاء طلب'), findsNothing);
   });
+  testWidgets(
+    'waiting merchant match reconciles driver decision without refresh',
+    (tester) async {
+      final handler = _MerchantHandler()..matched = true;
+      await _pumpMerchant(tester, handler);
+      GoRouter.of(
+        tester.element(find.byKey(const ValueKey('merchantHome'))),
+      ).go('/merchant/match/match_1');
+      await tester.pumpAndSettle();
+      handler.matchStatus = 'accepted';
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pumpAndSettle();
+      expect(find.text('مقبول'), findsWidgets);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets('rejected merchant order exposes existing manual match action', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(initiallyBatched: true)
+      ..matched = true
+      ..matchStatus = 'rejected';
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/order_1');
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('runMerchantMatchButton')),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }
 
 Future<void> _pumpMerchant(
   WidgetTester tester,
   _MerchantHandler handler, {
   bool authenticated = true,
+  bool resetStorage = true,
 }) async {
   tester.view.physicalSize = const Size(900, 2200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  SharedPreferences.setMockInitialValues({});
-  FlutterSecureStorage.setMockInitialValues(
-    authenticated ? {TokenStorage.tokenKey: 'merchant-token'} : {},
-  );
+  if (resetStorage) {
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues(
+      authenticated ? {TokenStorage.tokenKey: 'merchant-token'} : {},
+    );
+  }
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -199,17 +295,49 @@ class _MerchantHandler {
   final bool initiallyBatched;
   bool batched;
   bool matched = false;
+  String matchStatus = 'proposed';
   int batchCalls = 0;
   int matchCalls = 0;
   Map<String, dynamic>? createBody;
+  String? createKey;
+  bool loseNextResponse = false;
+  int createCalls = 0;
+  final lookupKeys = <String?>[];
+
+  String _createdOrderJson() => jsonEncode({
+    ...jsonDecode(_orderJson(false)) as Map<String, dynamic>,
+    'parcels': [
+      for (final entry in (createBody!['parcels'] as List).indexed)
+        {
+          'id': 'parcel_${entry.$1}',
+          ...entry.$2 as Map<String, dynamic>,
+          'status': 'pending',
+        },
+    ],
+  });
 
   Future<http.Response> call(http.Request request) async {
     final path = request.url.path;
     if (path.endsWith('/me')) return http.Response(_meJson, 200);
+    if (path.endsWith('/merchant/order-operation')) {
+      lookupKeys.add(request.headers['idempotency-key']);
+      return hasOrder
+          ? http.Response('{"order":${_createdOrderJson()}}', 200)
+          : http.Response(
+              '{"error":"merchant_order_operation_not_found"}',
+              404,
+            );
+    }
     if (path.endsWith('/merchant/orders') && request.method == 'POST') {
+      createCalls++;
+      createKey = request.headers['idempotency-key'];
       createBody = jsonDecode(request.body) as Map<String, dynamic>;
       hasOrder = true;
-      return http.Response('{"order":${_orderJson(false)}}', 201);
+      if (loseNextResponse) {
+        loseNextResponse = false;
+        throw http.ClientException('synthetic response loss after commit');
+      }
+      return http.Response('{"order":${_createdOrderJson()}}', 201);
     }
     if (path.endsWith('/merchant/orders')) {
       return http.Response(
@@ -223,7 +351,10 @@ class _MerchantHandler {
       return http.Response('{"batch":$_batchJson}', 201);
     }
     if (path.endsWith('/merchant/orders/order_1')) {
-      return http.Response('{"order":${_orderJson(batched)}}', 200);
+      return http.Response(
+        '{"order":${createBody == null ? _orderJson(batched) : _createdOrderJson()}}',
+        200,
+      );
     }
     if (path.endsWith('/matches/run')) {
       matchCalls += 1;
@@ -234,11 +365,16 @@ class _MerchantHandler {
       );
     }
     if (path.endsWith('/matches/match_1')) {
-      return http.Response('{"match":$_matchJson}', 200);
+      return http.Response(
+        '{"match":${_matchJson.replaceFirst('"proposed"', '"$matchStatus"')}}',
+        200,
+      );
     }
     if (path.endsWith('/matches')) {
       return http.Response(
-        matched ? '{"matches":[$_matchJson]}' : '{"matches":[]}',
+        matched
+            ? '{"matches":[${_matchJson.replaceFirst('"proposed"', '"$matchStatus"')}]}'
+            : '{"matches":[]}',
         200,
       );
     }

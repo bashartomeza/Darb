@@ -1,9 +1,10 @@
 import request from "supertest";
 import jwt from "jsonwebtoken";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
+  $queryRaw: vi.fn(),
   user: { findUnique: vi.fn(), count: vi.fn() },
   authSession: { findUnique: vi.fn(), update: vi.fn() },
   auditEvent: { create: vi.fn() },
@@ -15,7 +16,10 @@ const prismaMock = vi.hoisted(() => ({
   parcel: { count: vi.fn(), updateMany: vi.fn() },
   trip: { findFirst: vi.fn() },
   driverProfile: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
-  driverRoute: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
+  driverRoute: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn(), groupBy: vi.fn() },
+  driverVerification: { count: vi.fn() },
+  incident: { count: vi.fn() },
+  deliveryHandover: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -67,8 +71,12 @@ const merchantBody = {
 };
 
 describe("manual role APIs", () => {
+  afterEach(() => vi.useRealTimers());
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-02T08:00:00.000Z"));
     vi.clearAllMocks();
+    prismaMock.$queryRaw.mockResolvedValue([{ id: "req_1" }]);
     prismaMock.user.findUnique.mockImplementation(({ where }: { where: { id?: string } }) => {
       if (!where.id) return null;
       const user = users[where.id];
@@ -100,6 +108,10 @@ describe("manual role APIs", () => {
     prismaMock.merchantOrder.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.merchantOrder.findUniqueOrThrow.mockImplementation(({ where }: { where: { id: string } }) => ({ id: where.id, merchant_id: "merchant_1", status: "cancelled", parcels: [], parcel_batches: [], batch_members: [] }));
     prismaMock.$transaction.mockImplementation((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
+    prismaMock.deliveryHandover.findUnique.mockResolvedValue(null);
+    prismaMock.deliveryHandover.create.mockResolvedValue({});
+    prismaMock.$queryRaw.mockResolvedValue([{ id: "profile_1" }]);
+    prismaMock.driverRoute.findFirst.mockResolvedValue(null);
   });
 
   it("passenger can create request", async () => {
@@ -113,6 +125,13 @@ describe("manual role APIs", () => {
 
     expect(response.body.request.status).toBe("pending");
     expect(prismaMock.passengerRequest.create).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a past passenger departure before inserting a request", async () => {
+    prismaMock.passengerRequest.create.mockResolvedValue({ id: "must_not_exist", status: "pending" });
+    await request(createApp()).post("/api/v1/passenger/requests").set(auth("passenger_1"))
+      .send({ ...passengerBody, preferred_time: new Date(Date.now() - 1_000).toISOString() }).expect(400);
+    expect(prismaMock.passengerRequest.create).not.toHaveBeenCalled();
   });
 
   it("accepts valid coordinate boundaries and existing numeric-string inputs", async () => {
@@ -233,6 +252,7 @@ describe("manual role APIs", () => {
   });
 
   it("merchant can cancel a matched batched order and releases reserved parcel capacity", async () => {
+    prismaMock.merchantOrder.updateMany.mockResolvedValue({ count: 2 });
     prismaMock.merchantOrder.findFirst.mockResolvedValue({
       id: "order_1",
       merchant_id: "merchant_1",
@@ -281,6 +301,41 @@ describe("manual role APIs", () => {
       .expect(201);
 
     expect(response.body.route.status).toBe("active");
+  });
+
+  it("rolls driver route creation back when its audit fails", async () => {
+    let routes: unknown[] = [];
+    prismaMock.driverProfile.findUnique.mockResolvedValue({ id: "profile_1", user_id: "driver_1" });
+    prismaMock.driverRoute.create.mockImplementation(async ({ data }) => {
+      const row = { id: "route_1", ...data }; routes.push(row); return row;
+    });
+    prismaMock.auditEvent.create.mockRejectedValueOnce(new Error("audit unavailable"));
+    prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => unknown) => {
+      const before = [...routes];
+      try { return await callback(prismaMock); } catch (error) { routes = before; throw error; }
+    });
+    await request(createApp()).post("/api/v1/driver/routes").set(auth("driver_1"))
+      .send({ seats_available: 2, parcel_capacity_available: 5 }).expect(500);
+    expect(routes).toHaveLength(0);
+  });
+
+  it("recovers an exact driver route creation retry without another operational route", async () => {
+    prismaMock.driverProfile.findUnique.mockResolvedValue({ id: "profile_1", user_id: "driver_1" });
+    prismaMock.driverRoute.findFirst.mockResolvedValue({ id: "original_route", status: "active", seats_available: 2, parcel_capacity_available: 5 });
+    const response = await request(createApp()).post("/api/v1/driver/routes").set(auth("driver_1"))
+      .send({ seats_available: 2, parcel_capacity_available: 5 }).expect(201);
+    expect(response.body.route.id).toBe("original_route");
+    expect(prismaMock.driverRoute.create).not.toHaveBeenCalled();
+    expect(prismaMock.auditEvent.create).not.toHaveBeenCalled();
+    expect(prismaMock.$queryRaw).toHaveBeenCalledOnce();
+  });
+
+  it("does not create another route while a driver has a different operational route", async () => {
+    prismaMock.driverProfile.findUnique.mockResolvedValue({ id: "profile_1", user_id: "driver_1" });
+    prismaMock.driverRoute.findFirst.mockResolvedValue({ id: "existing_route", status: "active", seats_available: 1, parcel_capacity_available: 0 });
+    await request(createApp()).post("/api/v1/driver/routes").set(auth("driver_1"))
+      .send({ seats_available: 2, parcel_capacity_available: 5 }).expect(409);
+    expect(prismaMock.driverRoute.create).not.toHaveBeenCalled();
   });
 
   it("non-driver cannot create route", async () => {
@@ -390,6 +445,21 @@ describe("manual role APIs", () => {
     expect(response.body.order.parcels).toHaveLength(1);
   });
 
+  it("a new merchant order hands the sender a six-digit receiver code and stores only its digest", async () => {
+    prismaMock.merchantOrder.create.mockResolvedValue({ id: "order_1", status: "submitted", parcels: [{ id: "parcel_1", status: "pending" }] });
+    prismaMock.deliveryHandover.findUnique.mockResolvedValueOnce(null).mockResolvedValue({
+      code_digest: "a".repeat(64), failed_attempts: 0, expires_at: new Date(Date.now() + 1000), confirmed_at: null, confirmation_method: null, unavailable_reason: null
+    });
+
+    const response = await request(createApp()).post("/api/v1/merchant/orders").set(auth("merchant_1")).send(merchantBody).expect(201);
+
+    expect(response.body.order.handover.code).toMatch(/^\d{6}$/);
+    expect(response.body.order.handover).toMatchObject({ issued: true, confirmed: false, attempts_remaining: 5 });
+    const stored = prismaMock.deliveryHandover.create.mock.calls[0][0].data;
+    expect(stored.code_digest).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.stringify(stored)).not.toContain(response.body.order.handover.code);
+  });
+
   it("rejects out-of-range and non-finite merchant pickup and parcel coordinates", async () => {
     const invalidBodies = [
       { ...merchantBody, pickup_lat: -90.0001 },
@@ -473,12 +543,22 @@ describe("manual role APIs", () => {
     prismaMock.passengerRequest.count.mockResolvedValue(1);
     prismaMock.merchantOrder.count.mockResolvedValue(1);
     prismaMock.parcel.count.mockResolvedValue(5);
+    prismaMock.driverRoute.groupBy.mockResolvedValue([{ driver_id: "d1" }, { driver_id: "d2" }]);
+    prismaMock.driverVerification.count.mockResolvedValue(3);
+    prismaMock.incident.count.mockResolvedValue(4);
     prismaMock.passengerRequest.findMany.mockResolvedValue([{ id: "req_1" }]);
     prismaMock.merchantOrder.findMany.mockResolvedValue([{ id: "order_1", parcels: [] }]);
     prismaMock.driverRoute.findMany.mockResolvedValue([{ id: "route_1" }]);
 
     const response = await request(createApp()).get("/api/v1/admin/dashboard").set(auth("admin_1")).expect(200);
     expect(response.body.counts.users).toBe(5);
+    expect(response.body.counts.active_drivers).toBe(2);
+    expect(prismaMock.driverRoute.groupBy.mock.calls[0][0].where).toEqual({
+      status: { in: ["active", "assigned", "on_trip"] },
+      driver: { verified: true }
+    });
+    expect(response.body.counts.pending_driver_approvals).toBe(3);
+    expect(response.body.counts.open_incidents).toBe(4);
   });
 
   it("non-admin cannot read dashboard", async () => {

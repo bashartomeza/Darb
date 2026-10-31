@@ -19,6 +19,9 @@
     "test:admin": "npm run test -w @masari/admin",
     "demo:preflight": "node scripts/demo-preflight.mjs",
     "demo:smoke": "node scripts/demo-smoke.mjs",
+    "demo:features": "node scripts/feature-smoke.mjs",
+    "demo:seed-approvals": "node --env-file=apps/api/.env --import tsx apps/api/src/scripts/seedApprovalsDemo.ts",
+    "demo:approvals": "node scripts/approvals-smoke.mjs",
     "demo:package": "pwsh -NoProfile -File scripts/package-demo.ps1",
     "validate": "node scripts/run-validation.mjs standard",
     "validate:backend": "node scripts/run-validation.mjs backend",
@@ -29,6 +32,12 @@
     "security:scan": "node scripts/security-scan.mjs",
     "security:audit": "node scripts/audit-policy.mjs",
     "security:artifacts": "node scripts/scan-production-artifacts.mjs",
+    "test:integration:capacity": "node apps/api/dist/scripts/capacityIntegrityIntegration.js",
+    "test:integration:canonical-capacity": "node apps/api/dist/scripts/canonicalCapacityIntegrityIntegration.js",
+    "test:integration:passenger-trip-sync": "node apps/api/dist/scripts/passengerTripSyncIntegration.js",
+    "test:integration:cargo": "node scripts/legacy-cargo-batch-integrity.mjs",
+    "test:integration:merchant-matching": "node apps/api/dist/scripts/merchantMatchingIntegration.js",
+    "test:integration:merchant-orders": "node apps/api/dist/scripts/merchantOrderIntegration.js",
     "test:integration:mysql": "node scripts/ci-mysql-integration.mjs",
     "test:integration:auth-migration": "node scripts/local-auth-mysql-rehearsal.mjs",
     "test:integration:sessions": "node scripts/session-integration-smoke.mjs",
@@ -66,13 +75,15 @@
       "mariadb": "3.5.4"
     },
     "deepmerge-ts": "8.0.1",
-    "fast-uri": "3.1.8",
+    "body-parser": "2.4.0",
+    "fast-uri": "3.1.9",
     "mariadb": "3.5.4",
     "mysql2": "3.23.1",
     "prisma": {
       "mysql2": "3.23.1"
     },
-    "qs": "6.16.0"
+    "qs": "6.16.1",
+    "vite": "8.1.6"
   },
   "packageManager": "npm@10.9.2",
   "devDependencies": {

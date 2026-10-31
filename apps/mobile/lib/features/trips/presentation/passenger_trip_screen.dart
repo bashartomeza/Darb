@@ -1,3 +1,4 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +15,9 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_map.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../checkpoints/application/checkpoint_controller.dart';
+import '../../incidents/presentation/report_incident_sheet.dart';
 import '../application/passenger_trip_controller.dart';
+import 'trip_rating_prompt.dart';
 
 class PassengerTripScreen extends ConsumerStatefulWidget {
   const PassengerTripScreen({required this.tripId, super.key});
@@ -26,8 +29,7 @@ class PassengerTripScreen extends ConsumerStatefulWidget {
       _PassengerTripScreenState();
 }
 
-class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen>
-    with WidgetsBindingObserver {
+class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   Future<OsrmRouteResult>? _routeFuture;
   String? _routeKey;
 
@@ -56,34 +58,6 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen>
   // ============================================================
   // LIFECYCLE
   // ============================================================
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final controller = ref.read(
-      passengerTripControllerProvider(widget.tripId).notifier,
-    );
-
-    if (state == AppLifecycleState.resumed) {
-      controller.resumePolling();
-    }
-
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      controller.pausePolling();
-    }
-  }
 
   // ============================================================
   // ROUTE
@@ -171,35 +145,13 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen>
   // ============================================================
 
   String _originCity(PassengerTripState data) {
-    final route = data.trip.routeLabel.trim();
-
-    if (route.isEmpty) {
-      return 'Origin';
-    }
-
-    final parts = route.split(RegExp(r'\s*(?:→|->|-)\s*'));
-
-    if (parts.length >= 2 && parts.first.trim().isNotEmpty) {
-      return parts.first.trim();
-    }
-
-    return route;
+    final label = data.trip.originDisplayLabel;
+    return label.trim().isEmpty ? 'Origin' : label;
   }
 
   String _destinationCity(PassengerTripState data) {
-    final route = data.trip.routeLabel.trim();
-
-    if (route.isEmpty) {
-      return 'Destination';
-    }
-
-    final parts = route.split(RegExp(r'\s*(?:→|->|-)\s*'));
-
-    if (parts.length >= 2 && parts.last.trim().isNotEmpty) {
-      return parts.last.trim();
-    }
-
-    return route;
+    final label = data.trip.destinationDisplayLabel;
+    return label.trim().isEmpty ? 'Destination' : label;
   }
 
   String _localizedPlace(String value, String languageCode) {
@@ -227,12 +179,14 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen>
   }
 
   String _displayOrigin(BuildContext context, PassengerTripState data) {
+    if (data.trip.originLabel != null) return _originCity(data);
     final language = Localizations.localeOf(context).languageCode;
 
     return _localizedPlace(_originCity(data), language);
   }
 
   String _displayDestination(BuildContext context, PassengerTripState data) {
+    if (data.trip.destinationLabel != null) return _destinationCity(data);
     final language = Localizations.localeOf(context).languageCode;
 
     return _localizedPlace(_destinationCity(data), language);
@@ -256,15 +210,20 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen>
 
     final checkpointSnapshot = checkpoints.value ?? CheckpointSnapshot.empty;
 
-    return Scaffold(
-      backgroundColor: _background,
-      body: state.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: _orange, strokeWidth: 2.5),
+    return ForegroundRefresh(
+      refresh: () => ref
+          .read(passengerTripControllerProvider(widget.tripId).notifier)
+          .refresh(),
+      child: Scaffold(
+        backgroundColor: _background,
+        body: state.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: _orange, strokeWidth: 2.5),
+          ),
+          error: (_, _) => _buildErrorState(context, l10n),
+          data: (data) =>
+              _buildImmersiveContent(context, l10n, data, checkpointSnapshot),
         ),
-        error: (_, _) => _buildErrorState(context, l10n),
-        data: (data) =>
-            _buildImmersiveContent(context, l10n, data, checkpointSnapshot),
       ),
     );
   }
@@ -397,6 +356,11 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen>
   // ============================================================
 
   Widget _buildLanguageButton() {
+    // Inside the shell the app bar already carries the language control, and the
+    // switch renders nothing; skip its pill so no empty white sliver is left.
+    if (ShellLanguageControl.isProvided(context)) {
+      return const SizedBox.shrink();
+    }
     return Container(
       height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -639,6 +603,11 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen>
                 // REFRESH
                 // ==================================================
                 _buildRefreshButton(context, l10n),
+
+                if (data.trip.status.toLowerCase() == 'completed')
+                  TripRatingPrompt(tripId: widget.tripId),
+
+                ReportIncidentButton(tripId: widget.tripId),
               ],
             ),
           ),

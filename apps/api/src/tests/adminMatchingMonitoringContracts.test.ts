@@ -121,6 +121,10 @@ describe("admin matching monitoring eligibility policy", () => {
   });
 
   it("independently authorizes every optional match relation and requires demand", () => {
+    const orderProvenance = {
+      operational_mode: "legacy", canonical_entry_version: null, route_version_id: null,
+      merchant: { is: { demo_account: false } }
+    };
     expect(eligibleMatch).toEqual({
       operational_mode: "legacy",
       canonical_match_version: null,
@@ -135,8 +139,10 @@ describe("admin matching monitoring eligibility policy", () => {
       ],
       AND: [
         { OR: [{ passenger_request_id: null }, { passenger_request: { is: eligiblePassenger } }] },
-        { OR: [{ merchant_order_id: null }, { merchant_order: { is: eligibleOrder } }] },
-        { OR: [{ parcel_batch_id: null }, { parcel_batch: { is: eligibleBatch } }] }
+        { OR: [{ merchant_order_id: null }, { merchant_order: { is: orderProvenance } }] },
+        { OR: [{ parcel_batch_id: null }, { parcel_batch: { is: { ...eligibleBatch, merchant_order: { is: orderProvenance } } } }] },
+        { NOT: { merchant_order: { is: { parcels: { some: { NOT: eligibleParcel } } } } } },
+        { NOT: { parcel_batch: { is: { merchant_order: { is: { parcels: { some: { NOT: eligibleParcel } } } } } } } }
       ]
     });
   });

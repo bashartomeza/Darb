@@ -181,6 +181,7 @@ void main() {
       await runner.acknowledge(
         actorId: 'passenger-1',
         operation: 'passenger_route_request_create',
+        idempotencyKey: result,
       );
       expect(storage.bundle, isNull);
       expect(storage.clearCount, 1);

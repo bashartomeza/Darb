@@ -1,0 +1,2169 @@
+{
+ "version": 1,
+ "now": "2026-10-28T08:00:00+02:00",
+ "timezone": "Asia/Hebron",
+ "stops": [
+  {
+   "id": "demo-ppu-main-gate",
+   "name_ar": "بوابة جامعة بوليتكنك فلسطين",
+   "name_en": "PPU Main Gate"
+  },
+  {
+   "id": "demo-bab-al-zawiya",
+   "name_ar": "باب الزاوية",
+   "name_en": "Bab Al-Zawiya"
+  },
+  {
+   "id": "demo-bethlehem-center",
+   "name_ar": "وسط بيت لحم",
+   "name_en": "Bethlehem Center"
+  }
+ ],
+ "cases": [
+  {
+   "id": "c001",
+   "category": "basic",
+   "text": "بدي مشوار من باب الزاوية لوسط بيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c002",
+   "category": "basic",
+   "text": "بدي أروح من جامعة البوليتكنك على بيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c003",
+   "category": "basic",
+   "text": "بدي واصلة من بوابة البوليتكنك لبيت لحم هلأ",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c004",
+   "category": "basic",
+   "text": "ممكن مقعد من باب الزاوية لبيت لحم الساعة 7 الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "07:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c005",
+   "category": "basic",
+   "text": "بدي مقعدين من البوليتكنك لوسط بيت لحم بكرا الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow morning",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c006",
+   "category": "basic",
+   "text": "بدنا 3 مقاعد من باب الزاوية لبيت لحم الساعة 5 العصر",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "17:00",
+    "seats": 3,
+    "size": null
+   }
+  },
+  {
+   "id": "c007",
+   "category": "basic",
+   "text": "شو في سيارة من باب الزاوية لبيت لحم هلق؟",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c008",
+   "category": "basic",
+   "text": "بدي أنزل على بيت لحم من الجامعة الساعة 8 ونص",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "08:30",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c009",
+   "category": "basic",
+   "text": "بدي أروح بيت لحم من باب الزاوية الساعة 9 الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "09:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c010",
+   "category": "basic",
+   "text": "حاجز مقعد واحد من البوليتكنك لبيت لحم بعد العصر",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "afternoon",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c011",
+   "category": "basic",
+   "text": "بدي توصيلة لبيت لحم من باب الزاوية الساعة 6 المسا",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "18:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c012",
+   "category": "basic",
+   "text": "نفر واحد من بوابة جامعة بوليتكنك فلسطين إلى وسط بيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c013",
+   "category": "basic",
+   "text": "بدنا اربع مقاعد من باب الزاوية لوسط البلد في بيت لحم بكرا الساعة 7",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow 07:00",
+    "seats": 4,
+    "size": null
+   }
+  },
+  {
+   "id": "c014",
+   "category": "basic",
+   "text": "أريد مقعدين من بوابة الجامعة إلى بيت لحم الساعة ٧ صباحاً",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "07:00",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c015",
+   "category": "basic",
+   "text": "بدي اروح عبيت لحم من باب الزاوية بعد شوي",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c016",
+   "category": "basic",
+   "text": "ابغى مشوار من باب الزاوية لبيت لحم الساعة ١٠ الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "10:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c017",
+   "category": "basic",
+   "text": "في مكان فاضي من البوليتكنك لبيت لحم الليلة؟",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tonight",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c018",
+   "category": "basic",
+   "text": "بدي أحجز مقعد لبيت لحم من باب الزاوية بكرا الساعة 6 الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow 06:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c019",
+   "category": "basic",
+   "text": "بدي أروح ع بيت لحم من الجامعة الظهر",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "noon",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c020",
+   "category": "basic",
+   "text": "طلبية سيارة من باب الزاوية لبيت لحم الساعة 12",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "12:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c021",
+   "category": "reverse",
+   "text": "بدي أرجع من وسط بيت لحم لباب الزاوية الساعة 4 العصر",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": "16:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c022",
+   "category": "reverse",
+   "text": "بدي أرجع على الجامعة من بيت لحم هلأ",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-ppu-main-gate",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c023",
+   "category": "reverse",
+   "text": "مقعدين من بيت لحم لبوابة البوليتكنك بكرا الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-ppu-main-gate",
+    "time": "tomorrow morning",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c024",
+   "category": "reverse",
+   "text": "من وسط بيت لحم لباب الزاوية بدي مقعد",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c025",
+   "category": "reverse",
+   "text": "راجع من بيت لحم على باب الزاوية الساعة 3",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": "15:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c026",
+   "category": "reverse",
+   "text": "بدنا نرجع من بيت لحم للبوليتكنك ٣ اشخاص المسا",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-ppu-main-gate",
+    "time": "evening",
+    "seats": 3,
+    "size": null
+   }
+  },
+  {
+   "id": "c027",
+   "category": "reverse",
+   "text": "رجعني من بيت لحم لباب الزاوية",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c028",
+   "category": "english",
+   "text": "I need a ride from Bab Al-Zawiya to Bethlehem Center",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c029",
+   "category": "english",
+   "text": "Two seats from PPU main gate to Bethlehem tomorrow at 7am",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow 07:00",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c030",
+   "category": "english",
+   "text": "Can I get a seat to Bethlehem from PPU now?",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c031",
+   "category": "english",
+   "text": "ride from Bethlehem Center to Bab Al-Zawiya at 5 pm",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": "17:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c032",
+   "category": "english",
+   "text": "Looking for 3 seats PPU to Bethlehem this evening",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "evening",
+    "seats": 3,
+    "size": null
+   }
+  },
+  {
+   "id": "c033",
+   "category": "english",
+   "text": "Pick me up at Bab Al-Zawiya and take me to Bethlehem at 8:30",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "08:30",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c034",
+   "category": "english",
+   "text": "one seat Bethlehem Center to PPU gate tomorrow morning",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-ppu-main-gate",
+    "time": "tomorrow morning",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c035",
+   "category": "english",
+   "text": "I want to go to Bethlehem from the university gate at noon",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "noon",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c036",
+   "category": "english",
+   "text": "need a taxi from Bab al Zawiya to Bethlehem asap",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c037",
+   "category": "english",
+   "text": "Book 2 seats Bethlehem to Bab Al-Zawiya at 6 pm tomorrow",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": "tomorrow 18:00",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c038",
+   "category": "arabizi",
+   "text": "baddi mishwar min bab el zawiya la bethlehem",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c039",
+   "category": "arabizi",
+   "text": "baddi arooh 3a beit lahem min el polytechnic el sa3a 7",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "07:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c040",
+   "category": "arabizi",
+   "text": "fi mak3ad min PPU la beit lahem halla2?",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c041",
+   "category": "arabizi",
+   "text": "baddi maq3adeen min bab el zawiya la wasat beit lahem bukra el sobeh",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow morning",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c042",
+   "category": "arabizi",
+   "text": "ba3d el 3asr baddi arja3 min beit lahem la el jam3a",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-ppu-main-gate",
+    "time": "afternoon",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c043",
+   "category": "arabizi",
+   "text": "baddna 3 maqa3ed min el bolitekhnik la beit lahem el sa3a 5 el 3asr",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "17:00",
+    "seats": 3,
+    "size": null
+   }
+  },
+  {
+   "id": "c044",
+   "category": "arabizi",
+   "text": "mishwar la bethlehem min bab el zawye bukra el sa3a 6",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow 06:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c045",
+   "category": "arabizi",
+   "text": "baddi arja3 min beit lahem la bab el zawiya el yom",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c046",
+   "category": "mixed",
+   "text": "بدي ride من باب الزاوية to Bethlehem",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c047",
+   "category": "mixed",
+   "text": "I need مقعدين من PPU لبيت لحم tomorrow الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow morning",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c048",
+   "category": "mixed",
+   "text": "بدي seat من البوليتكنك لـ Bethlehem الساعة 4",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "16:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c049",
+   "category": "mixed",
+   "text": "hi بدي روح بيت لحم from باب الزاوية now",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c050",
+   "category": "mixed",
+   "text": "ممكن ride هلأ من Bethlehem Center لباب الزاوية",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c051",
+   "category": "mixed",
+   "text": "حابب أحجز 2 seats PPU to وسط بيت لحم بكرا",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c052",
+   "category": "typo",
+   "text": "بدي مشوار من باب الزاويه لبيت لحمم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c053",
+   "category": "typo",
+   "text": "بدي اروح من البولتكنك لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c054",
+   "category": "typo",
+   "text": "بدى مقعد من باب الزاوية الى بيت لحم الساعه 7",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "07:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c055",
+   "category": "typo",
+   "text": "بدي مشاور من باب الزاويا لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c056",
+   "category": "typo",
+   "text": "مقعدين من الجامعه لبيت لحم بكره الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow morning",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c057",
+   "category": "typo",
+   "text": "بدي سياره من باب الزاويه ل بيت لحم هلا",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c058",
+   "category": "typo",
+   "text": "bdi mshwar men bab el zawia la bethlehm",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c059",
+   "category": "typo",
+   "text": "I need a rdie from PPU to Bethlhem",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c060",
+   "category": "typo",
+   "text": "بدي أروح بيتلحم من باب الزاويه الساعة تسعه",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "09:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c061",
+   "category": "typo",
+   "text": "بدي مقعد من البوليتكنيك لبيت لحم الساعه 5 عصر",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "17:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c062",
+   "category": "typo",
+   "text": "بدي أحجز مكعد من باب الزاوية لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c063",
+   "category": "typo",
+   "text": "ريد رايد من باب الزاوية لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c064",
+   "category": "numbers",
+   "text": "بدي ثلاث مقاعد من باب الزاوية لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 3,
+    "size": null
+   }
+  },
+  {
+   "id": "c065",
+   "category": "numbers",
+   "text": "بدنا خمس اشخاص من الجامعة لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 5,
+    "size": null
+   }
+  },
+  {
+   "id": "c066",
+   "category": "numbers",
+   "text": "مقعد وحيد من بيت لحم لباب الزاوية الساعة وحدة",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": "13:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c067",
+   "category": "numbers",
+   "text": "بدي أحجز لإلي وللأولاد، ٤ أشخاص من باب الزاوية لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 4,
+    "size": null
+   }
+  },
+  {
+   "id": "c068",
+   "category": "numbers",
+   "text": "احنا اثنين بدنا نروح بيت لحم من البوليتكنك",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c069",
+   "category": "numbers",
+   "text": "I am travelling with my wife, 2 seats Bab Al-Zawiya to Bethlehem",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c070",
+   "category": "time",
+   "text": "بدي مشوار لبيت لحم من باب الزاوية الفجر الساعة 5",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "05:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c071",
+   "category": "time",
+   "text": "من البوليتكنك لبيت لحم بعد الظهر",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "afternoon",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c072",
+   "category": "time",
+   "text": "بدي مقعد من باب الزاوية لبيت لحم بعد بكرا الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "day-after-tomorrow morning",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c073",
+   "category": "time",
+   "text": "من باب الزاوية لبيت لحم الساعة 7 ونص المسا",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "19:30",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c074",
+   "category": "time",
+   "text": "بدي مقعد من البوليتكنك لبيت لحم الساعة 2 الظهر",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "14:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c075",
+   "category": "time",
+   "text": "بدي مشوار بيت لحم من باب الزاوية هسا",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c076",
+   "category": "time",
+   "text": "بدي سيارة الليلة من باب الزاوية لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tonight",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c077",
+   "category": "time",
+   "text": "ride from PPU to Bethlehem at 14:30",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "14:30",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c078",
+   "category": "time",
+   "text": "bukra el 9 el sobeh baddi seat min bab el zawiya la beit lahem",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow 09:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c079",
+   "category": "missing_dest",
+   "text": "بدي مشوار من باب الزاوية",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": null,
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c080",
+   "category": "missing_dest",
+   "text": "بدي سيارة من البوليتكنك هلأ",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": null,
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c081",
+   "category": "missing_dest",
+   "text": "I need a ride from PPU",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": null,
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c082",
+   "category": "missing_dest",
+   "text": "baddi mishwar min bab el zawiya",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": null,
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c083",
+   "category": "missing_dest",
+   "text": "مقعدين من باب الزاوية بكرا الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": null,
+    "time": "tomorrow morning",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c084",
+   "category": "missing_dest",
+   "text": "بدي أروح مشوار الساعة 5 العصر",
+   "expected": {
+    "type": "ride",
+    "pickup": null,
+    "dropoff": null,
+    "time": "17:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c085",
+   "category": "missing_pickup",
+   "text": "بدي أروح بيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": null,
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c086",
+   "category": "missing_pickup",
+   "text": "بدي مقعد لوسط بيت لحم بكرا الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": null,
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow morning",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c087",
+   "category": "missing_pickup",
+   "text": "I need to get to Bethlehem Center at 5pm",
+   "expected": {
+    "type": "ride",
+    "pickup": null,
+    "dropoff": "demo-bethlehem-center",
+    "time": "17:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c088",
+   "category": "missing_pickup",
+   "text": "baddi arooh 3a beit lahem",
+   "expected": {
+    "type": "ride",
+    "pickup": null,
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c089",
+   "category": "missing_pickup",
+   "text": "مقعدين لبيت لحم هلأ",
+   "expected": {
+    "type": "ride",
+    "pickup": null,
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c090",
+   "category": "missing_pickup",
+   "text": "بدي أرجع من بيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": null,
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c091",
+   "category": "missing_pickup",
+   "text": "Two seats from Bethlehem tomorrow",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": null,
+    "time": "tomorrow",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c092",
+   "category": "ambiguous",
+   "text": "بدي مشوار من الخليل لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "ambiguous",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c093",
+   "category": "ambiguous",
+   "text": "بدي أروح من الخليل على بيت لحم الساعة 8",
+   "expected": {
+    "type": "ride",
+    "pickup": "ambiguous",
+    "dropoff": "demo-bethlehem-center",
+    "time": "08:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c094",
+   "category": "ambiguous",
+   "text": "I need a ride from Hebron to Bethlehem",
+   "expected": {
+    "type": "ride",
+    "pickup": "ambiguous",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c095",
+   "category": "ambiguous",
+   "text": "بدي أرجع من بيت لحم للخليل",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "ambiguous",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c096",
+   "category": "ambiguous",
+   "text": "baddi mishwar min el khalil la beit lahem",
+   "expected": {
+    "type": "ride",
+    "pickup": "ambiguous",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c097",
+   "category": "ambiguous",
+   "text": "مقعدين من الجامعة لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c098",
+   "category": "ambiguous",
+   "text": "بدي أروح من الباب لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "ambiguous",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c099",
+   "category": "ambiguous",
+   "text": "ride from Hebron University gate to Bethlehem",
+   "expected": {
+    "type": "ride",
+    "pickup": "ambiguous",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c100",
+   "category": "unsupported",
+   "text": "بدي مشوار من باب الزاوية لنابلس",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "unsupported",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c101",
+   "category": "unsupported",
+   "text": "بدي أروح رام الله من البوليتكنك",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "unsupported",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c102",
+   "category": "unsupported",
+   "text": "I need a ride from PPU to Ramallah",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "unsupported",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c103",
+   "category": "unsupported",
+   "text": "baddi mishwar min bab el zawiya la nablus",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "unsupported",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c104",
+   "category": "unsupported",
+   "text": "بدي أروح من القدس لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "unsupported",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c105",
+   "category": "unsupported",
+   "text": "مقعد من جنين لباب الزاوية",
+   "expected": {
+    "type": "ride",
+    "pickup": "unsupported",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c106",
+   "category": "unsupported",
+   "text": "I need to get from Bethlehem Center to Jerusalem tomorrow",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "unsupported",
+    "time": "tomorrow",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c107",
+   "category": "unsupported",
+   "text": "بدي أروح غزة",
+   "expected": {
+    "type": "ride",
+    "pickup": null,
+    "dropoff": "unsupported",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c108",
+   "category": "negation",
+   "text": "مش بدي أروح بيت لحم، بدي أروح من باب الزاوية للخليل",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "ambiguous",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c109",
+   "category": "negation",
+   "text": "لا تحجزلي من البوليتكنك، بدي من باب الزاوية لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c110",
+   "category": "negation",
+   "text": "ما بدي مقعدين، بدي مقعد واحد بس من باب الزاوية لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c111",
+   "category": "negation",
+   "text": "مش الساعة 7، خليها الساعة 9 من باب الزاوية لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "09:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c112",
+   "category": "negation",
+   "text": "I don't want to go to PPU, take me from Bab Al-Zawiya to Bethlehem",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c113",
+   "category": "negation",
+   "text": "not tomorrow, today at 5pm from PPU to Bethlehem",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "17:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c114",
+   "category": "negation",
+   "text": "ألغي الطلب",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c115",
+   "category": "negation",
+   "text": "cancel my ride please",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c116",
+   "category": "negation",
+   "text": "لا شكرا ما بدي مشوار",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c117",
+   "category": "negation",
+   "text": "mish baddi arooh 3a beit lahem",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c118",
+   "category": "multi_intent",
+   "text": "بدي مقعد من باب الزاوية لبيت لحم الساعة 7 وكمان بدي أبعت طرد لبيت لحم",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "07:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c119",
+   "category": "multi_intent",
+   "text": "بدي أبعت طرد صغير من باب الزاوية لبيت لحم وبعدين مقعد للرجعة",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": null,
+    "size": "small"
+   }
+  },
+  {
+   "id": "c120",
+   "category": "multi_intent",
+   "text": "I need a ride to Bethlehem from PPU and also what are your prices?",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c121",
+   "category": "multi_intent",
+   "text": "مقعد من البوليتكنك لبيت لحم الصبح ومقعد من بيت لحم للبوليتكنك المسا",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "morning",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c122",
+   "category": "multi_intent",
+   "text": "بدي أحجز مشوار من باب الزاوية لبيت لحم وبدي أعرف شو سعر الطرد",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c123",
+   "category": "multi_intent",
+   "text": "baddi mishwar min bab el zawiya la beit lahem w kaman tard",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c124",
+   "category": "parcel",
+   "text": "بدي أبعت طرد صغير من باب الزاوية لوسط بيت لحم",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": null,
+    "size": "small"
+   }
+  },
+  {
+   "id": "c125",
+   "category": "parcel",
+   "text": "عندي كرتونة كبيرة بدي أوصلها من البوليتكنك لبيت لحم",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": null,
+    "size": "large"
+   }
+  },
+  {
+   "id": "c126",
+   "category": "parcel",
+   "text": "I want to send a small package from Bab Al-Zawiya to Bethlehem",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": null,
+    "size": "small"
+   }
+  },
+  {
+   "id": "c127",
+   "category": "parcel",
+   "text": "بدي أبعت أغراض لبيت لحم من باب الزاوية بكرا الصبح",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow morning",
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c128",
+   "category": "parcel",
+   "text": "baddi ab3at tard sgheer min bab el zawiya la beit lahem",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": null,
+    "size": "small"
+   }
+  },
+  {
+   "id": "c129",
+   "category": "parcel",
+   "text": "ظرف أوراق من البوليتكنك لبيت لحم هلأ",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": null,
+    "size": "small"
+   }
+  },
+  {
+   "id": "c130",
+   "category": "parcel",
+   "text": "بدي أبعت شنطة متوسطة من بيت لحم لباب الزاوية",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-bab-al-zawiya",
+    "time": null,
+    "seats": null,
+    "size": "medium"
+   }
+  },
+  {
+   "id": "c131",
+   "category": "parcel",
+   "text": "send a large box from Bethlehem Center to PPU tomorrow",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bethlehem-center",
+    "dropoff": "demo-ppu-main-gate",
+    "time": "tomorrow",
+    "seats": null,
+    "size": "large"
+   }
+  },
+  {
+   "id": "c132",
+   "category": "parcel",
+   "text": "بدي أبعت طرد من باب الزاوية",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c133",
+   "category": "parcel",
+   "text": "بدي أرسل طرد لبيت لحم",
+   "expected": {
+    "type": "parcel",
+    "pickup": null,
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c134",
+   "category": "parcel",
+   "text": "وصللي هالكيس لبيت لحم من الجامعة الساعة 3",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "15:00",
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c135",
+   "category": "parcel",
+   "text": "بدي أبعت طرد صغير من باب الزاوية لرام الله",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "unsupported",
+    "time": null,
+    "seats": null,
+    "size": "small"
+   }
+  },
+  {
+   "id": "c136",
+   "category": "parcel",
+   "text": "parcel delivery PPU to Bethlehem medium size at 4pm",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "16:00",
+    "seats": null,
+    "size": "medium"
+   }
+  },
+  {
+   "id": "c137",
+   "category": "parcel",
+   "text": "بدي أبعت كرتونة وسط حجم من الخليل لبيت لحم",
+   "expected": {
+    "type": "parcel",
+    "pickup": "ambiguous",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": null,
+    "size": "medium"
+   }
+  },
+  {
+   "id": "c138",
+   "category": "parcel",
+   "text": "tard kbeer min el jam3a la beit lahem bukra",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow",
+    "seats": null,
+    "size": "large"
+   }
+  },
+  {
+   "id": "c139",
+   "category": "parcel",
+   "text": "ممكن توصل لي علبة صغيرة لبيت لحم من باب الزاوية؟",
+   "expected": {
+    "type": "parcel",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": null,
+    "seats": null,
+    "size": "small"
+   }
+  },
+  {
+   "id": "c140",
+   "category": "non_request",
+   "text": "مرحبا",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c141",
+   "category": "non_request",
+   "text": "شو أخبارك",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c142",
+   "category": "non_request",
+   "text": "hello",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c143",
+   "category": "non_request",
+   "text": "كم سعر المشوار؟",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c144",
+   "category": "non_request",
+   "text": "how does Masari work?",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c145",
+   "category": "non_request",
+   "text": "وين السواق؟",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c146",
+   "category": "non_request",
+   "text": "شكرا كتير يعطيك العافية",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c147",
+   "category": "non_request",
+   "text": "ما وصل السواق وين الحجز تبعي",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c148",
+   "category": "non_request",
+   "text": "what is the weather in Bethlehem today",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c149",
+   "category": "non_request",
+   "text": "بيت لحم مدينة حلوة كتير",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c150",
+   "category": "non_request",
+   "text": "asdkjh qwe 123",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c151",
+   "category": "non_request",
+   "text": "بدي أعمل حساب سائق كيف",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c152",
+   "category": "non_request",
+   "text": "ya3tik el 3afye, shukran",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c153",
+   "category": "non_request",
+   "text": "اكتبلي قصيدة عن الخليل",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c154",
+   "category": "non_request",
+   "text": "رقم الدعم الفني شو؟",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c155",
+   "category": "non_request",
+   "text": "ما بدي اروح لبيت لحم اليوم",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c156",
+   "category": "non_request",
+   "text": "what time is the last ride from PPU",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c157",
+   "category": "non_request",
+   "text": "",
+   "expected": {
+    "type": "unknown",
+    "pickup": null,
+    "dropoff": null,
+    "time": null,
+    "seats": null,
+    "size": null
+   }
+  },
+  {
+   "id": "c158",
+   "category": "noisy",
+   "text": "السلام عليكم، لو سمحت بدي مقعد من البوليتكنك على بيت لحم الصبح بكير يعني الساعة 6 ونص، شكرا",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "06:30",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c159",
+   "category": "noisy",
+   "text": "يا زلمة بدي أوصل بيت لحم ضروري هلأ من باب الزاوية!!",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "now",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c160",
+   "category": "noisy",
+   "text": "اخوي ممكن تدبرلي سيارة مني لبيت لحم من باب الزاوية بكرا الساعة 7 ضروري",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow 07:00",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c161",
+   "category": "noisy",
+   "text": "hey! need ride PPU -> Bethlehem, 2 people, 8am tomorrow pls",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "tomorrow 08:00",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c162",
+   "category": "noisy",
+   "text": "يعطيكم العافية، بدي أحجز لشخصين من باب الزاوية لوسط بيت لحم بعد العصر",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "afternoon",
+    "seats": 2,
+    "size": null
+   }
+  },
+  {
+   "id": "c163",
+   "category": "noisy",
+   "text": "ana fil jam3a w baddi arooh 3a beit lahem 3an jad el yom el 3asr",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "afternoon",
+    "seats": 1,
+    "size": null
+   }
+  },
+  {
+   "id": "c164",
+   "category": "noisy",
+   "text": "بدي أنزل من الجامعة لوسط البلد ببيت لحم، 3 أشخاص، الساعة 11 الصبح",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-ppu-main-gate",
+    "dropoff": "demo-bethlehem-center",
+    "time": "11:00",
+    "seats": 3,
+    "size": null
+   }
+  },
+  {
+   "id": "c165",
+   "category": "noisy",
+   "text": "ممكن حد يوصلني من باب الزاوية لبيت لحم؟ عندي موعد الساعة 10",
+   "expected": {
+    "type": "ride",
+    "pickup": "demo-bab-al-zawiya",
+    "dropoff": "demo-bethlehem-center",
+    "time": "10:00",
+    "seats": 1,
+    "size": null
+   }
+  }
+ ]
+}

@@ -2,6 +2,12 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../api/api_client.dart';
+
+final osrmRouteServiceProvider = Provider<OsrmRouteService>(
+  (ref) => OsrmRouteService(client: ref.watch(httpClientProvider)),
+);
 
 class OsrmRouteResult {
   const OsrmRouteResult({
@@ -40,12 +46,21 @@ class OsrmRouteResult {
 }
 
 class OsrmRouteService {
-  const OsrmRouteService();
+  const OsrmRouteService({
+    this.client,
+    this.timeout = const Duration(seconds: 10),
+  });
+
+  final http.Client? client;
+  final Duration timeout;
 
   Future<OsrmRouteResult> getRoute({
     required LatLng start,
     required LatLng end,
   }) async {
+    if (!_valid(start) || !_valid(end)) {
+      throw const FormatException('Invalid route endpoints');
+    }
     final url = Uri.parse(
       'https://router.project-osrm.org/route/v1/driving/'
       '${start.longitude},${start.latitude};'
@@ -53,7 +68,7 @@ class OsrmRouteService {
       '?overview=full&geometries=geojson',
     );
 
-    final response = await http.get(url);
+    final response = await (client?.get(url) ?? http.get(url)).timeout(timeout);
 
     if (response.statusCode != 200) {
       throw Exception('OSRM request failed: ${response.statusCode}');
@@ -68,18 +83,16 @@ class OsrmRouteService {
     final routes = data['routes'] as List<dynamic>;
 
     if (routes.isEmpty) {
-      return const OsrmRouteResult(
-        points: [],
-        durationSeconds: 0,
-        distanceMeters: 0,
-      );
+      throw const FormatException('No road route available');
     }
 
     final route = routes.first as Map<String, dynamic>;
 
-    final durationSeconds = (route['duration'] as num?)?.toDouble() ?? 0;
-
-    final distanceMeters = (route['distance'] as num?)?.toDouble() ?? 0;
+    if (route['duration'] is! num || route['distance'] is! num) {
+      throw const FormatException('Missing road travel metadata');
+    }
+    final durationSeconds = (route['duration'] as num).toDouble();
+    final distanceMeters = (route['distance'] as num).toDouble();
 
     final geometry = route['geometry'] as Map<String, dynamic>;
 
@@ -96,10 +109,26 @@ class OsrmRouteService {
         })
         .toList(growable: false);
 
+    if (points.length < 2 ||
+        !points.every(_valid) ||
+        !durationSeconds.isFinite ||
+        durationSeconds < 0 ||
+        !distanceMeters.isFinite ||
+        distanceMeters < 0) {
+      throw const FormatException('Invalid road route');
+    }
     return OsrmRouteResult(
       points: points,
       durationSeconds: durationSeconds,
       distanceMeters: distanceMeters,
     );
   }
+
+  bool _valid(LatLng point) =>
+      point.latitude.isFinite &&
+      point.longitude.isFinite &&
+      point.latitude >= -90 &&
+      point.latitude <= 90 &&
+      point.longitude >= -180 &&
+      point.longitude <= 180;
 }

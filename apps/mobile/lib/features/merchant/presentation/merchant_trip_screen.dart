@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
+import '../../incidents/presentation/report_incident_sheet.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/presentation/localized_labels.dart';
@@ -8,6 +9,7 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_back_button.dart';
 import '../../../core/widgets/masari_card.dart';
 import '../../security/presentation/session_status_banner.dart';
+import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
 import 'merchant_ui.dart';
@@ -66,6 +68,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
             padding: const EdgeInsets.all(AppTokens.spaceLarge),
             children: [
               Text(l10n.waitingReadOnly),
+              ReportIncidentButton(tripId: widget.tripId),
               const SizedBox(height: AppTokens.spaceLarge),
               const SessionStatusBanner(),
               const SizedBox(height: AppTokens.spaceMedium),
@@ -131,6 +134,10 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
           ),
         ),
         const SizedBox(height: AppTokens.spaceMedium),
+        if (state.trip.isActive && state.trip.status != "delivered") ...[
+          HandoverCodeCard(orderId: state.order.id),
+          const SizedBox(height: AppTokens.spaceMedium),
+        ],
         MasariCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

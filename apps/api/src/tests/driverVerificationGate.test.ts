@@ -5,6 +5,7 @@ describe("driver verification operational gate", () => {
   it("keeps a rejected or unverified driver blocked from availability", async () => {
     const db = {
       driverProfile: { findUnique: vi.fn().mockResolvedValue({ id: "profile_1", verified: false }) },
+      driverVerification: { findUnique: vi.fn().mockResolvedValue({ status: "rejected" }) },
       driverRoute: { findMany: vi.fn() }
     };
     const service = createDriverAvailabilityService(db as never);

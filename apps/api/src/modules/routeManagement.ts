@@ -9,6 +9,7 @@ import {
   type RouteManagementService,
   type VersionStopInput
 } from "../services/routeManagement.js";
+import { routeFareService, type RouteFareService } from "../services/routeFares.js";
 
 const cleanText = (maximum: number) =>
   z.string().trim().min(1).max(maximum).regex(/^[^\u0000-\u001f\u007f]+$/).transform((value) => value.normalize("NFC"));
@@ -534,7 +535,11 @@ export function createAdminRouteManagementRouter(
   return router;
 }
 
-export function createRouteCatalogRouter(appConfig: AppConfig, service: RouteManagementService = routeManagementService) {
+export function createRouteCatalogRouter(
+  appConfig: AppConfig,
+  service: RouteManagementService = routeManagementService,
+  fareService: RouteFareService = routeFareService
+) {
   const router = Router();
   const maps = appConfig.mapsEnabled && appConfig.routeManagementEnabled;
   router.use(["/routes", "/route-versions"], requireAuth);
@@ -547,7 +552,16 @@ export function createRouteCatalogRouter(appConfig: AppConfig, service: RouteMan
         return;
       }
       const result = await service.listPublishedRoutes(input.page, input.limit);
-      res.json({ ...result, enabled: true, routes: result.routes.map((route) => serializeRoute(route as unknown as Record<string, unknown>, false, true, maps)) });
+      // Display-only estimate; null until an admin publishes a tariff for the route.
+      const fares = await fareService.fareViewsForRoutes(result.routes.map((route) => route.id));
+      res.json({
+        ...result,
+        enabled: true,
+        routes: result.routes.map((route) => ({
+          ...serializeRoute(route as unknown as Record<string, unknown>, false, true, maps),
+          fares: fares.get(route.id) ?? null
+        }))
+      });
     } catch (error) {
       next(error);
     }
@@ -557,7 +571,13 @@ export function createRouteCatalogRouter(appConfig: AppConfig, service: RouteMan
     try {
       if (!appConfig.routeManagementEnabled) throw new HttpError(404, "route_not_found");
       const route = await service.getPublishedRoute(pathId(req));
-      res.json({ route: serializeRoute(route as unknown as Record<string, unknown>, false, true, maps) });
+      const fares = await fareService.fareViewsForRoutes([route.id]);
+      res.json({
+        route: {
+          ...serializeRoute(route as unknown as Record<string, unknown>, false, true, maps),
+          fares: fares.get(route.id) ?? null
+        }
+      });
     } catch (error) {
       next(error);
     }

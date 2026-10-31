@@ -37,6 +37,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _googleBusy = false;
   bool _openingOnboarding = false;
   bool _restorationNavigationScheduled = false;
+  bool _showAttemptError = false;
   String? _googleErrorKey;
 
   @override
@@ -55,7 +56,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _googleBusy ||
         _openingOnboarding ||
         auth.value?.status == AuthStatus.authenticating;
-    final error = auth.error;
+    final loginFailure = ref.read(authControllerProvider.notifier).loginFailure;
+    final error = _showAttemptError || identical(loginFailure, auth.error)
+        ? auth.error
+        : null;
     final sessionEndReason = auth.value?.sessionEndReason;
     final demoAccounts = demoAccountsFor(ref.watch(appConfigProvider));
     final onboarding = ref.watch(onboardingControllerProvider).value;
@@ -135,6 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         TextFormField(
                           key: const ValueKey('emailField'),
                           controller: _emailController,
+                          onChanged: (_) => _clearAttemptError(),
                           keyboardType: TextInputType.emailAddress,
                           autofillHints: const [AutofillHints.email],
                           inputFormatters: [
@@ -142,13 +147,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             LengthLimitingTextInputFormatter(191),
                           ],
                           textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(labelText: l10n.email),
-                          validator: (value) => _validateEmail(l10n, value),
+                          decoration: InputDecoration(
+                            labelText: l10n.emailOrPhone,
+                          ),
+                          validator: (value) =>
+                              _validateIdentifier(l10n, value),
                         ),
                         const SizedBox(height: AppTokens.spaceMedium),
                         TextFormField(
                           key: const ValueKey('passwordField'),
                           controller: _passwordController,
+                          onChanged: (_) => _clearAttemptError(),
                           obscureText: !_showPassword,
                           autofillHints: const [AutofillHints.password],
                           onFieldSubmitted: (_) => _login(),
@@ -256,13 +265,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         if (onboardingEnabled) ...[
                           const Divider(height: AppTokens.spaceLarge),
-                          OutlinedButton(
-                            key: const ValueKey('createInvitedAccountButton'),
-                            onPressed: loading
-                                ? null
-                                : () => _openOnboarding('/onboarding'),
-                            child: Text(l10n.createInvitedAccount),
-                          ),
                           TextButton(
                             key: const ValueKey('checkApplicationStatusButton'),
                             onPressed: loading
@@ -338,15 +340,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _fillDemo(DemoAccount account) {
+    _clearAttemptError();
     _emailController.text = account.email;
     _passwordController.text = account.password;
   }
 
   Future<void> _login() async {
     if (_submitting) return;
-    setState(() => _googleErrorKey = null);
+    _clearAttemptError();
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _showAttemptError = true;
+    });
     await ref
         .read(authControllerProvider.notifier)
         .login(
@@ -357,9 +363,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _loginWithGoogle(String idToken) async {
+    _clearAttemptError();
     setState(() {
-      _googleErrorKey = null;
       _googleBusy = true;
+      _showAttemptError = true;
     });
     await ref
         .read(authControllerProvider.notifier)
@@ -371,14 +378,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     setState(() {
       _googleBusy = false;
+      _showAttemptError = false;
       _googleErrorKey = 'failed';
     });
+  }
+
+  void _clearAttemptError() {
+    setState(() {
+      _showAttemptError = false;
+      _googleErrorKey = null;
+    });
+    ref.read(authControllerProvider.notifier).clearError();
   }
 
   Future<void> _openSignUp() async {
     setState(() => _googleErrorKey = null);
     ref.read(authControllerProvider.notifier).clearError();
-    await context.push<void>('/signup');
+    await context.push<void>('/register');
     if (!mounted) return;
     ref.read(authControllerProvider.notifier).clearError();
   }
@@ -410,6 +426,16 @@ String _demoLabel(AppLocalizations l10n, DemoAccount account) {
     _ => account.labelKey,
   };
   return '$role  ${account.email}';
+}
+
+/// An email address, or an international phone number such as +970591234567.
+String? _validateIdentifier(AppLocalizations l10n, String? value) {
+  final text = value?.trim() ?? '';
+  if (text.isEmpty) return l10n.emailOrPhoneRequired;
+  if (text.contains('@')) return _validateEmail(l10n, text);
+  return RegExp(r'^\+[0-9]{7,15}$').hasMatch(text)
+      ? null
+      : l10n.emailOrPhoneInvalid;
 }
 
 String? _validateEmail(AppLocalizations l10n, String? value) {

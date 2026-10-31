@@ -4,18 +4,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
+  $queryRaw: vi.fn(),
   user: { findUnique: vi.fn() },
   authSession: { findUnique: vi.fn(), update: vi.fn() },
   auditEvent: { create: vi.fn() },
   match: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findMany: vi.fn() },
-  trip: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+  trip: { findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   driverRoute: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   passengerRequest: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   merchantOrder: { update: vi.fn(), updateMany: vi.fn() },
   parcelBatch: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   parcelBatchOrder: { findMany: vi.fn(), updateMany: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
-  locationEvent: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() }
+  locationEvent: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
+  deliveryHandover: { findMany: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn(), create: vi.fn() }
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -79,6 +81,14 @@ function baseTrip(status = "accepted") {
 describe("trip acceptance, status, and tracking", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    prismaMock.$queryRaw.mockImplementation((parts: TemplateStringsArray) => {
+      const sql = parts.join("?");
+      if (sql.includes("UTC_TIMESTAMP")) return [{ now: new Date() }];
+      if (sql.includes("FROM driver_routes")) return [{ id: "route_1", status: prismaMock.driverRoute.updateMany.mock.calls.some(([args]) => args.data?.status === "assigned") ? "assigned" : "active", verified: true, role: "driver", account_status: "active", departure_at: null, availability_window_end: null }];
+      if (sql.includes("FROM merchant_orders")) return [{ status: "matched" }];
+      if (sql.includes("FROM matches")) return [{ status: "proposed", expires_at: new Date(Date.now() + 60_000) }];
+      throw new Error("unexpected_test_raw_query");
+    });
     prismaMock.user.findUnique.mockImplementation(({ where }: { where: { id?: string } }) => {
       if (!where.id) return null;
       const user = users[where.id];
@@ -108,10 +118,13 @@ describe("trip acceptance, status, and tracking", () => {
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }]);
     prismaMock.parcelBatchOrder.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.parcel.count.mockResolvedValue(1);
+    prismaMock.deliveryHandover.findMany.mockResolvedValue([]);
+    prismaMock.deliveryHandover.findUnique.mockResolvedValue(null);
+    prismaMock.deliveryHandover.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.driverRoute.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.driverRoute.findUnique.mockResolvedValue({ id: "route_1", status: "assigned" });
     prismaMock.passengerRequest.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.trip.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.trip.updateMany.mockImplementation(({ data }) => { prismaMock.trip.findUniqueOrThrow.mockResolvedValue(baseTrip(data.status)); return { count: 1 }; });
     prismaMock.$transaction.mockImplementation((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
   });
 
@@ -135,12 +148,25 @@ describe("trip acceptance, status, and tracking", () => {
       })
     );
     expect(prismaMock.driverRoute.updateMany).toHaveBeenCalledWith({
-      where: { id: "route_1", status: "active" },
+      where: expect.objectContaining({ id: "route_1", status: "active", departed_at: null }),
       data: { status: "assigned" }
     });
     expect(prismaMock.passengerRequest.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: "accepted" } })
     );
+  });
+
+  it.each([
+    { name: "expired offer", match: { expires_at: new Date(0) }, route: {} },
+    { name: "past scheduled departure", match: {}, route: { departure_at: new Date(0) } },
+    { name: "departed route with stale active status", match: {}, route: { departed_at: new Date(0) } },
+    { name: "expired availability with stale active status", match: {}, route: { availability_window_end: new Date(0) } },
+  ])("rejects $name before accepting demand or creating a trip", async ({ match, route }) => {
+    prismaMock.match.findUnique.mockResolvedValue({ ...baseMatch, ...match,
+      driver_route: { ...baseMatch.driver_route, status: "active", ...route } });
+    await request(createApp()).post("/api/v1/matches/match_1/accept").set(auth("driver_1")).expect(409);
+    expect(prismaMock.passengerRequest.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.trip.create).not.toHaveBeenCalled();
   });
 
   it("prevents a duplicate trip for a passenger request even when an older trip used another route", async () => {
@@ -159,6 +185,63 @@ describe("trip acceptance, status, and tracking", () => {
 
     expect(prismaMock.trip.create).not.toHaveBeenCalled();
   });
+
+  it("atomically rejects a passenger deadline that passes while acceptance awaits duplicate lookup", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const initial = new Date("2026-10-16T12:00:00.000Z");
+    vi.setSystemTime(initial);
+    const deadline = new Date(initial.getTime() + 1_000);
+    prismaMock.match.findUnique.mockResolvedValue({ ...baseMatch,
+      passenger_request: { ...baseMatch.passenger_request, preferred_time: deadline } });
+    prismaMock.trip.findFirst.mockImplementation(async () => {
+      vi.setSystemTime(new Date(initial.getTime() + 2_000));
+      return null;
+    });
+    prismaMock.passengerRequest.updateMany.mockImplementation(async ({ where }) => ({
+      count: where.preferred_time?.gt >= deadline ? 0 : 1,
+    }));
+    try {
+      await request(createApp()).post("/api/v1/matches/match_1/accept").set(auth("driver_1")).expect(409);
+      expect(prismaMock.passengerRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({ preferred_time: { gt: new Date(initial.getTime() + 2_000) } }),
+      }));
+      expect(prismaMock.trip.create).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["passengerRequest", "match", "driverRoute"] as const)(
+    "rechecks deadlines after the %s claim waits across its deadline", async claimDelegate => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const initial = new Date("2026-10-16T12:00:00.000Z");
+      vi.setSystemTime(initial);
+      const deadline = new Date(initial.getTime() + 1_000);
+      const preferredTime = claimDelegate === "passengerRequest" ? deadline : new Date(initial.getTime() + 3_600_000);
+      const expiresAt = claimDelegate === "match" ? deadline : new Date(initial.getTime() + 600_000);
+      const departureAt = claimDelegate === "driverRoute" ? deadline : null;
+      prismaMock.match.findUnique.mockResolvedValue({ ...baseMatch, legacy_capacity_held: true, expires_at: expiresAt,
+        passenger_request: { ...baseMatch.passenger_request, preferred_time: preferredTime },
+        driver_route: { ...baseMatch.driver_route, departure_at: departureAt } });
+      prismaMock[claimDelegate].updateMany.mockImplementation(async () => {
+        vi.setSystemTime(new Date(initial.getTime() + 2_000));
+        return { count: 1 };
+      });
+      prismaMock.$queryRaw.mockImplementation((parts: TemplateStringsArray) => {
+        const sql = parts.join("?");
+        if (sql.includes("UTC_TIMESTAMP")) return [{ now: new Date() }];
+        if (sql.includes("FROM merchant_orders")) return [{ status: "matched" }];
+        if (sql.includes("FROM matches")) return [{ status: "proposed", expires_at: expiresAt }];
+        return [{ id: "route_1", status: prismaMock.driverRoute.updateMany.mock.calls.some(([args]) => args.data?.status === "assigned") ? "assigned" : "active", verified: true, role: "driver", account_status: "active", preferred_time: preferredTime, match_expires_at: expiresAt, departure_at: departureAt, departed_at: null, availability_window_end: null }];
+      });
+      try {
+        await request(createApp()).post("/api/v1/matches/match_1/accept").set(auth("driver_1")).expect(409);
+        expect(prismaMock.trip.create).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it("prevents a second concurrent accept after the match claim is lost", async () => {
     prismaMock.match.findUnique.mockResolvedValue(baseMatch);
@@ -313,6 +396,7 @@ describe("trip acceptance, status, and tracking", () => {
 
   it("valid status sequence works", async () => {
     const statuses = ["accepted", "pickup_started", "picked_up", "in_transit", "delivered"];
+    prismaMock.deliveryHandover.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }]);
     prismaMock.trip.findUnique.mockImplementation(() => baseTrip(statuses.shift() ?? "completed"));
     prismaMock.trip.update.mockImplementation(({ data }) => ({ ...baseTrip(data.status), status: data.status }));
 
@@ -321,6 +405,122 @@ describe("trip acceptance, status, and tracking", () => {
     await request(createApp()).post("/api/v1/trips/trip_1/status").set(auth("driver_1")).send({ status: "in_transit" }).expect(200);
     await request(createApp()).post("/api/v1/trips/trip_1/status").set(auth("driver_1")).send({ status: "delivered" }).expect(200);
     await request(createApp()).post("/api/v1/trips/trip_1/status").set(auth("driver_1")).send({ status: "completed" }).expect(200);
+  });
+
+  describe("receiver delivery confirmation", () => {
+    const digestOf = async (code: string, key = { secret: "test-only-jwt-secret-with-at-least-thirty-two-characters", version: 1 }) => {
+      const { handoverCodeDigest } = await import("../services/deliveryHandover.js");
+      return handoverCodeDigest("order_1", code, key);
+    };
+    const handoverRow = async (extra: Record<string, unknown> = {}) => {
+      const { handoverKey } = await import("../services/deliveryHandover.js");
+      return {
+        id: "handover_1",
+        merchant_order_id: "order_1",
+        code_digest: await digestOf("123456", handoverKey()),
+        key_version: handoverKey().version,
+        failed_attempts: 0,
+        expires_at: new Date(Date.now() + 60_000),
+        confirmed_at: null,
+        ...extra
+      };
+    };
+
+    it("a parcel trip cannot be marked delivered through the plain status route without confirmation", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      const response = await request(createApp()).post("/api/v1/trips/trip_1/status").set(auth("driver_1")).send({ status: "delivered" }).expect(409);
+      expect(response.body.error).toBe("delivery_confirmation_required");
+      expect(prismaMock.trip.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("the right receiver code confirms the order and delivers the trip", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      prismaMock.deliveryHandover.findUnique.mockResolvedValue(await handoverRow());
+      prismaMock.deliveryHandover.findMany.mockResolvedValueOnce([]).mockResolvedValue([{ merchant_order_id: "order_1" }]);
+      const response = await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_code", code: "123456" }).expect(200);
+      expect(response.body.delivered).toBe(true);
+      expect(prismaMock.deliveryHandover.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ confirmation_method: "receiver_code", confirmed_by_id: "driver_1", code_digest: null })
+      }));
+    });
+
+    it("a wrong code spends an attempt and leaves the trip in transit", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      prismaMock.deliveryHandover.findUnique.mockResolvedValue(await handoverRow());
+      const response = await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_code", code: "000000" }).expect(422);
+      expect(response.body.error).toBe("invalid_handover_code");
+      expect(prismaMock.deliveryHandover.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: { failed_attempts: { increment: 1 } }
+      }));
+      expect(prismaMock.trip.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("locks after five wrong guesses and refuses even the right code", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      prismaMock.deliveryHandover.findUnique.mockResolvedValue(await handoverRow({ failed_attempts: 5 }));
+      prismaMock.deliveryHandover.updateMany.mockResolvedValue({ count: 0 });
+      const response = await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_code", code: "123456" }).expect(429);
+      expect(response.body.error).toBe("handover_locked");
+    });
+
+    it("an expired code is refused without spending an attempt", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      prismaMock.deliveryHandover.findUnique.mockResolvedValue(await handoverRow({ expires_at: new Date(Date.now() - 1000) }));
+      const response = await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_code", code: "123456" }).expect(409);
+      expect(response.body.error).toBe("handover_expired");
+      expect(prismaMock.deliveryHandover.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("receiver unavailable needs a real reason, is audited and flagged", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_unavailable", reason: "short" }).expect(400);
+
+      prismaMock.deliveryHandover.findMany.mockResolvedValueOnce([]).mockResolvedValue([{ merchant_order_id: "order_1" }]);
+      await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_unavailable", reason: "Nobody answered the door or the phone" }).expect(200);
+      expect(prismaMock.deliveryHandover.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ confirmation_method: "receiver_unavailable", unavailable_reason: "Nobody answered the door or the phone" })
+      }));
+      expect(prismaMock.auditEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({ event: "delivery_confirmed", method: "receiver_unavailable", flagged: true })
+        })
+      });
+    });
+
+    it("only the assigned driver may confirm, and only while in transit", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_2"))
+        .send({ method: "receiver_code", code: "123456" }).expect(403);
+      await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("merchant_1"))
+        .send({ method: "receiver_code", code: "123456" }).expect(403);
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("picked_up"));
+      await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_code", code: "123456" }).expect(409);
+    });
+
+    it("an admin forward move records an admin override instead of blocking", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      prismaMock.deliveryHandover.updateMany.mockResolvedValue({ count: 1 });
+      await request(createApp()).post("/api/v1/trips/trip_1/status").set(auth("admin_1")).send({ status: "delivered" }).expect(200);
+      expect(prismaMock.deliveryHandover.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ confirmation_method: "admin_override", confirmed_by_id: "admin_1" })
+      }));
+    });
   });
 
   it("invalid status jump is rejected", async () => {
@@ -339,7 +539,7 @@ describe("trip acceptance, status, and tracking", () => {
       .send({ status: "pickup_started" })
       .expect(200);
 
-    expect(prismaMock.trip.update).toHaveBeenCalledWith(
+    expect(prismaMock.trip.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: "pickup_started", started_at: expect.any(Date) })
       })
@@ -474,4 +674,23 @@ describe("trip acceptance, status, and tracking", () => {
 
     await request(createApp()).get("/api/v1/trips/trip_1/location").set(auth("merchant_2")).expect(403);
   });
+  it("rejects an expired merchant offer before creating a trip", async () => {
+    prismaMock.match.findUnique.mockResolvedValue(baseMatch);
+    const original = prismaMock.$queryRaw.getMockImplementation()!;
+    prismaMock.$queryRaw.mockImplementation((parts: TemplateStringsArray) => parts.join("?").includes("FROM matches")
+      ? [{ status: "proposed", expires_at: new Date(Date.now() - 1) }] : original(parts));
+    await request(createApp()).post("/api/v1/matches/match_1/accept").set(auth("driver_1")).expect(409);
+    expect(prismaMock.trip.create).not.toHaveBeenCalled();
+    expect(prismaMock.match.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("revalidates driver approval even when an offer already holds capacity", async () => {
+    prismaMock.match.findUnique.mockResolvedValue({ ...baseMatch, legacy_capacity_held: true });
+    const original = prismaMock.$queryRaw.getMockImplementation()!;
+    prismaMock.$queryRaw.mockImplementation((parts: TemplateStringsArray) => parts.join("?").includes("FROM driver_routes")
+      ? [{ status: "active", verified: false, role: "driver", account_status: "active" }] : original(parts));
+    await request(createApp()).post("/api/v1/matches/match_1/accept").set(auth("driver_1")).expect(409);
+    expect(prismaMock.trip.create).not.toHaveBeenCalled();
+  });
+
 });

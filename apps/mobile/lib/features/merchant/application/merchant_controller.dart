@@ -1,3 +1,5 @@
+import '../../../core/api/authoritative_refresh.dart';
+import '../../auth/application/auth_actor_binding.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,26 +45,41 @@ final merchantDashboardProvider =
 
 class MerchantDashboardController
     extends AsyncNotifier<MerchantDashboardState> {
+  late AuthoritativeRefresh<MerchantDashboardState> _reads;
   @override
-  Future<MerchantDashboardState> build() => refresh();
+  Future<MerchantDashboardState> build() {
+    _reads = AuthoritativeRefresh<MerchantDashboardState>();
+    ref.onDispose(_reads.dispose);
+    return refresh();
+  }
 
   Future<MerchantDashboardState> refresh() async {
+    final binding = ref.read(authenticatedActorBindingProvider);
+    final revision = binding.revision;
     try {
-      final repository = ref.read(merchantRepositoryProvider);
-      final results = await Future.wait([
-        repository.listOrders(),
-        repository.listMatches(),
-        repository.listTrips(),
-      ]);
-      final next = MerchantDashboardState(
-        orders: results[0] as List<MerchantOrder>,
-        matches: results[1] as List<MerchantMatch>,
-        trips: results[2] as List<MerchantTrip>,
+      return await _reads.run(
+        load: () async {
+          final repository = ref.read(merchantRepositoryProvider);
+          final results = await Future.wait([
+            repository.listOrders(),
+            repository.listMatches(),
+            repository.listTrips(),
+          ]);
+          final next = MerchantDashboardState(
+            orders: results[0] as List<MerchantOrder>,
+            matches: results[1] as List<MerchantMatch>,
+            trips: results[2] as List<MerchantTrip>,
+          );
+
+          return next;
+        },
+        publish: (next) => state = AsyncData(next),
+        isCurrent: () => ref.mounted && binding.revision == revision,
       );
-      state = AsyncData(next);
-      return next;
     } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
+      if (ref.mounted && binding.revision == revision) {
+        state = AsyncError<MerchantDashboardState>(error, stackTrace);
+      }
       Error.throwWithStackTrace(error, stackTrace);
     }
   }
@@ -77,6 +94,13 @@ final merchantOrderDraftProvider =
 class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
   @override
   List<ParcelDraft> build() => const [ParcelDraft()];
+
+  void restorePending(List<ParcelDraft> parcels) {
+    if (parcels.isEmpty || parcels.length > 10) {
+      throw const FormatException("Invalid parcel count");
+    }
+    state = List.unmodifiable(parcels);
+  }
 
   bool get canAdd => state.length < 10;
   bool get canRemove => state.length > 1;
@@ -120,7 +144,8 @@ class MerchantOrderViewState {
 
   MerchantMatch? get latestMatch => matches.isEmpty ? null : matches.first;
   bool get canRunMatch =>
-      order.latestBatch != null &&
+      order.status == 'batched' &&
+      order.latestBatch?.status == 'created' &&
       !matches.any(
         (match) =>
             match.status == 'proposed' ||
@@ -135,33 +160,54 @@ final merchantOrderProvider = AsyncNotifierProvider.autoDispose
     );
 
 class MerchantOrderController extends AsyncNotifier<MerchantOrderViewState> {
+  late AuthoritativeRefresh<MerchantOrderViewState> _reads;
   MerchantOrderController(this._orderId);
   final String _orderId;
 
   @override
-  Future<MerchantOrderViewState> build() => refresh();
+  Future<MerchantOrderViewState> build() {
+    _reads = AuthoritativeRefresh<MerchantOrderViewState>();
+    ref.onDispose(_reads.dispose);
+    return refresh();
+  }
 
   Future<MerchantOrderViewState> refresh() async {
-    final repository = ref.read(merchantRepositoryProvider);
-    final results = await Future.wait([
-      repository.orderDetail(_orderId),
-      repository.listMatches(),
-      repository.listTrips(),
-    ]);
-    final order = results[0] as MerchantOrder;
-    final matches = (results[1] as List<MerchantMatch>)
-        .where((match) => match.order.id == _orderId)
-        .toList();
-    final trips = (results[2] as List<MerchantTrip>)
-        .where((trip) => trip.order.id == _orderId)
-        .toList();
-    final next = MerchantOrderViewState(
-      order: order,
-      matches: matches,
-      trip: trips.isEmpty ? null : trips.first,
+    final binding = ref.read(authenticatedActorBindingProvider);
+    final revision = binding.revision;
+    return await _reads.run(
+      load: () async {
+        final repository = ref.read(merchantRepositoryProvider);
+        final results = await Future.wait([
+          repository.orderDetail(_orderId),
+          repository.listMatches(),
+          repository.listTrips(),
+        ]);
+        final order = results[0] as MerchantOrder;
+        final matches = (results[1] as List<MerchantMatch>)
+            .where(
+              (match) =>
+                  match.order.id == _orderId ||
+                  order.batches.any((batch) => batch.id == match.batch?.id),
+            )
+            .toList();
+        final trips = (results[2] as List<MerchantTrip>)
+            .where(
+              (trip) =>
+                  trip.order.id == _orderId ||
+                  order.batches.any((batch) => batch.id == trip.batch?.id),
+            )
+            .toList();
+        final next = MerchantOrderViewState(
+          order: order,
+          matches: matches,
+          trip: trips.isEmpty ? null : trips.first,
+        );
+
+        return next;
+      },
+      publish: (next) => state = AsyncData(next),
+      isCurrent: () => ref.mounted && binding.revision == revision,
     );
-    state = AsyncData(next);
-    return next;
   }
 
   Future<void> createBatch() async {
@@ -193,22 +239,57 @@ final merchantMatchInboxProvider =
     >(MerchantMatchInboxController.new);
 
 class MerchantMatchInboxController extends AsyncNotifier<List<MerchantMatch>> {
+  late AuthoritativeRefresh<List<MerchantMatch>> _reads;
   @override
-  Future<List<MerchantMatch>> build() => refresh();
+  Future<List<MerchantMatch>> build() {
+    _reads = AuthoritativeRefresh<List<MerchantMatch>>();
+    ref.onDispose(_reads.dispose);
+    return refresh();
+  }
 
   Future<List<MerchantMatch>> refresh({String? status}) async {
-    final matches = await ref
-        .read(merchantRepositoryProvider)
-        .listMatches(status: status);
-    state = AsyncData(matches);
-    return matches;
+    final binding = ref.read(authenticatedActorBindingProvider);
+    final revision = binding.revision;
+    return await _reads.run(
+      load: () async {
+        final matches = await ref
+            .read(merchantRepositoryProvider)
+            .listMatches(status: status);
+
+        return matches;
+      },
+      publish: (next) => state = AsyncData(next),
+      isCurrent: () => ref.mounted && binding.revision == revision,
+    );
   }
 }
 
-final merchantMatchDetailProvider = FutureProvider.autoDispose
-    .family<MerchantMatch, String>((ref, id) {
-      return ref.read(merchantRepositoryProvider).matchDetail(id);
-    });
+final merchantMatchDetailProvider = AsyncNotifierProvider.autoDispose
+    .family<MerchantMatchDetailController, MerchantMatch, String>(
+      MerchantMatchDetailController.new,
+    );
+
+class MerchantMatchDetailController extends AsyncNotifier<MerchantMatch> {
+  MerchantMatchDetailController(this._matchId);
+  final String _matchId;
+  late AuthoritativeRefresh<MerchantMatch> _reads;
+  @override
+  Future<MerchantMatch> build() {
+    _reads = AuthoritativeRefresh<MerchantMatch>();
+    ref.onDispose(_reads.dispose);
+    return refresh();
+  }
+
+  Future<MerchantMatch> refresh() {
+    final binding = ref.read(authenticatedActorBindingProvider);
+    final revision = binding.revision;
+    return _reads.run(
+      load: () => ref.read(merchantRepositoryProvider).matchDetail(_matchId),
+      publish: (value) => state = AsyncData(value),
+      isCurrent: () => ref.mounted && binding.revision == revision,
+    );
+  }
+}
 
 final merchantTripProvider = AsyncNotifierProvider.autoDispose
     .family<MerchantTripController, MerchantTripViewState, String>(

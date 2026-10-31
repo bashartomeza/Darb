@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../../core/fares/fare.dart';
+
 enum CanonicalRouteDirection { outbound, inbound, loop }
 
 /// A position the server actually reported.
@@ -270,6 +272,7 @@ class CanonicalRoute {
     required this.activeUntil,
     required this.stops,
     this.geometry = RouteGeometry.empty,
+    this.fares,
   });
 
   final String id;
@@ -284,6 +287,9 @@ class CanonicalRoute {
   final DateTime? activeUntil;
   final List<CanonicalStop> stops;
   final RouteGeometry geometry;
+
+  /// Display-only estimated tariff; null until an admin publishes one.
+  final RouteFares? fares;
 
   /// The line to draw for this route.
   ///
@@ -322,10 +328,17 @@ class CanonicalRoute {
     activeUntil: activeUntil,
     stops: _validatedStops(value),
     geometry: geometry,
+    fares: fares,
   );
 
   factory CanonicalRoute.fromJson(Map<String, dynamic> json) {
-    _requireKeys(json, const {'id', 'direction', 'status', 'current_version'});
+    _requireKeys(json, const {
+      'id',
+      'direction',
+      'status',
+      'current_version',
+      'fares',
+    });
     final version = _object(json, 'current_version');
     _requireKeys(version, const {
       'id',
@@ -372,6 +385,7 @@ class CanonicalRoute {
       geometry: version['geometry'] is Map<String, dynamic>
           ? RouteGeometry.fromJson(_object(version, 'geometry'))
           : RouteGeometry.empty,
+      fares: RouteFares.tryParse(json['fares']),
     );
   }
 }
@@ -469,6 +483,7 @@ class CanonicalPassengerRequest {
     required this.departureUntil,
     required this.passengerCount,
     required this.replayed,
+    this.fare,
   });
 
   final String id;
@@ -479,6 +494,9 @@ class CanonicalPassengerRequest {
   final DateTime departureUntil;
   final int passengerCount;
   final bool replayed;
+
+  /// Estimated fare frozen when the request was created (null if none).
+  final FareSnapshot? fare;
 
   factory CanonicalPassengerRequest.fromEnvelope(Map<String, dynamic> json) {
     final value = _object(json, 'request');
@@ -491,6 +509,7 @@ class CanonicalPassengerRequest {
       departureUntil: _date(value, 'requested_departure_until'),
       passengerCount: _integer(value, 'passenger_count'),
       replayed: json['replayed'] == true,
+      fare: FareSnapshot.tryParse(value['fare']),
     );
   }
 }
@@ -516,10 +535,14 @@ class CanonicalMerchantOrder {
     required this.id,
     required this.parcelCount,
     required this.replayed,
+    this.fare,
   });
   final String id;
   final int parcelCount;
   final bool replayed;
+
+  /// Estimated total frozen at creation; null unless every parcel was priced.
+  final FareSnapshot? fare;
 
   factory CanonicalMerchantOrder.fromEnvelope(Map<String, dynamic> json) {
     final order = _object(json, 'order');
@@ -529,6 +552,7 @@ class CanonicalMerchantOrder {
       id: _string(order, 'id'),
       parcelCount: parcels.length,
       replayed: json['replayed'] == true,
+      fare: FareSnapshot.tryParse(order['fare']),
     );
   }
 }

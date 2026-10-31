@@ -4,6 +4,8 @@ import { z } from "zod";
 import { config, type AppConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { auditEvent } from "../lib/audit.js";
+import { hasVerifiedContact } from "../lib/contactVerification.js";
+import { normalizePhoneToE164, PHONE_INPUT_MAX_LENGTH } from "../lib/phone.js";
 import {
   createRefreshToken,
   isRefreshTokenRole,
@@ -32,11 +34,16 @@ import { IdentityProfileService, googleLinkSchema } from "../services/identityPr
 const emailField = canonicalEmail;
 const deviceNameField = z.string().trim().min(1).max(120).optional();
 
-const loginSchema = z.object({
-  email: emailField,
-  password: z.string().min(1).max(200),
-  device_name: deviceNameField
-});
+// Exactly one identifier: an email, or an international phone number for accounts
+// whose phone was verified at an invited sign-up.
+const loginSchema = z
+  .object({
+    email: emailField.optional(),
+    phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH).optional(),
+    password: z.string().min(1).max(200),
+    device_name: deviceNameField
+  })
+  .refine((value) => Boolean(value.email) !== Boolean(value.phone), { message: "one_identifier_required" });
 const googleSchema = z.strictObject({
   id_token: z.string().min(1).max(8192),
   device_name: deviceNameField
@@ -53,6 +60,7 @@ function publicUser(user: {
   demo_account: boolean;
   profile_state?: string;
   email_verified_at?: Date | null;
+  phone_verified_at?: Date | null;
 }) {
   return {
     id: user.id,
@@ -63,7 +71,7 @@ function publicUser(user: {
     account_status: user.account_status,
     demo_account: user.demo_account,
     profile_state: user.profile_state,
-    email_verified: Boolean(user.email_verified_at)
+    email_verified: hasVerifiedContact(user)
   };
 }
 
@@ -263,14 +271,29 @@ authRouter.get("/auth/consents", async (req, res, next) => {
 authRouter.post(["/auth/login", "/auth/mobile/login", "/auth/admin/login"], async (req, res, next) => {
   try {
     const input = loginSchema.parse(req.body);
-    const user = await prisma.user.findUnique({ where: { email: input.email } });
+    // The Admin console signs in with email only.
+    if (input.phone && req.path.toLowerCase().replace(/\/+$/, "") === "/auth/admin/login") throw new HttpError(400, "validation_error");
+    let user = null;
+    if (input.phone) {
+      let phone: string | null = null;
+      try {
+        phone = normalizePhoneToE164(input.phone);
+      } catch {
+        phone = null;
+      }
+      user = phone ? await prisma.user.findUnique({ where: { phone } }) : null;
+      // Phone sign-in is only for non-admin accounts whose phone was verified by a one-time code.
+      if (user && (user.role === "admin" || !user.phone_verified_at)) user = null;
+    } else {
+      user = await prisma.user.findUnique({ where: { email: input.email! } });
+    }
     if (!user || !user.password_hash) throw new HttpError(401, "invalid_credentials");
     const loginPath = req.path.toLowerCase().replace(/\/+$/, "");
     if (loginPath === "/auth/admin/login" && user.role !== "admin") throw new HttpError(401, "invalid_credentials");
 
     const validPassword = await bcrypt.compare(input.password, user.password_hash);
     if (!validPassword) throw new HttpError(401, "invalid_credentials");
-    if (!user.email_verified_at) throw new HttpError(403, "email_verification_required");
+    if (!user.email_verified_at && !(input.phone && hasVerifiedContact(user))) throw new HttpError(403, "email_verification_required");
     if (loginPath === "/auth/mobile/login" && user.role === "admin") throw new HttpError(401, "invalid_credentials");
     if (user.account_status !== "active") {
       await auditEvent(prisma, {

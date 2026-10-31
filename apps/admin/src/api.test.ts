@@ -55,6 +55,22 @@ describe("Admin driver verification API client", () => {
     );
   });
 
+  it("sends expiry dates with an approval and queries the expiring and re-review lists", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => response({ verifications: [], total: 0 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("http://api.test");
+
+    await api.approveDriverVerification("admin-token", "driver_1", 4, undefined, { licence: "2027-10-28", insurance: null });
+    await api.driverVerificationsExpiring("admin-token", 14, "insurance");
+    await api.driverVerificationsReReview("admin-token", "awaiting_driver");
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://api.test/api/v1/admin/driver-verifications/driver_1/approve", expect.objectContaining({
+      body: JSON.stringify({ expected_revision: 4, expiry: { licence: "2027-10-28", insurance: null } })
+    }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "http://api.test/api/v1/admin/driver-verifications/expiring?within_days=14&kind=insurance&page=1&limit=50", expect.anything());
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "http://api.test/api/v1/admin/driver-verifications/re-review?state=awaiting_driver&page=1&limit=50", expect.anything());
+  });
+
   it("sends the required rejection reason and preserves conflict status for stale reloads", async () => {
     const fetchMock = vi.fn().mockResolvedValue(response({ error: "driver_verification_state_conflict" }, 409));
     vi.stubGlobal("fetch", fetchMock);

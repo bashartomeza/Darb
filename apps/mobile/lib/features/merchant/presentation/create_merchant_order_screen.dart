@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +11,8 @@ import '../../../core/widgets/masari_back_button.dart';
 import '../../../core/widgets/masari_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
-import '../data/merchant_repository.dart';
+import '../application/merchant_order_submission.dart';
+import '../data/merchant_order_operation_storage.dart';
 import 'merchant_ui.dart';
 
 class CreateMerchantOrderScreen extends ConsumerStatefulWidget {
@@ -22,7 +25,99 @@ class CreateMerchantOrderScreen extends ConsumerStatefulWidget {
 
 class _CreateMerchantOrderScreenState
     extends ConsumerState<CreateMerchantOrderScreen> {
-  bool _busy = false;
+  bool _busy = true;
+  bool _locked = true;
+  Animation<double>? _navigationAnimation;
+  AnimationStatusListener? _navigationListener;
+  Completer<bool>? _navigationReady;
+
+  @override
+  void dispose() {
+    final listener = _navigationListener;
+    if (listener != null) _navigationAnimation?.removeStatusListener(listener);
+    if (_navigationReady?.isCompleted == false) {
+      _navigationReady!.complete(false);
+    }
+    super.dispose();
+  }
+
+  Future<void> _openOrder(String id) async {
+    // A fast read-only recovery can finish during the full-screen route's
+    // entrance animation. Let that transition settle before returning to its shell.
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation != null && animation.status != AnimationStatus.completed) {
+      final ready = _navigationReady = Completer<bool>();
+      void listener(AnimationStatus status) {
+        if (status == AnimationStatus.completed ||
+            status == AnimationStatus.dismissed) {
+          animation.removeStatusListener(listener);
+          _navigationListener = null;
+          if (!ready.isCompleted) {
+            ready.complete(status == AnimationStatus.completed);
+          }
+        }
+      }
+
+      _navigationAnimation = animation;
+      _navigationListener = listener;
+      animation.addStatusListener(listener);
+      if (!await ready.future) return;
+    }
+    if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+      context.go('/merchant/order/$id');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_restorePending);
+  }
+
+  Future<void> _restorePending() async {
+    final service = ref.read(merchantOrderSubmissionProvider);
+    try {
+      final pending = await service.pending();
+      if (!mounted) return;
+      if (pending == null) {
+        _locked = false;
+        return;
+      }
+      final parcels = (pending.payload['parcels'] as List).map((value) {
+        if (!merchantDestinations.contains(value['destination_label'])) {
+          throw const MerchantOrderRecoveryException(
+            'merchant_order_recovery_unreadable',
+          );
+        }
+        return ParcelDraft(
+          destinationLabel: value['destination_label'] as String,
+          size: value['size'] as String,
+          priority: value['priority'] as String,
+        );
+      }).toList();
+      ref.read(merchantOrderDraftProvider.notifier).restorePending(parcels);
+      final order = await service.recover();
+      if (!mounted) return;
+      if (order != null) {
+        ref.invalidate(merchantDashboardProvider);
+        await _openOrder(order.id);
+      } else {
+        _error = AppLocalizations.of(context).merchantOrderUncertain;
+      }
+    } catch (error) {
+      if (mounted) _error = _recoveryError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String _recoveryError(Object error) {
+    final l10n = AppLocalizations.of(context);
+    return error is MerchantOrderRecoveryException
+        ? merchantErrorLabel(l10n, error)
+        : l10n.merchantOrderUncertain;
+  }
+
   String? _error;
 
   @override
@@ -67,7 +162,9 @@ class _CreateMerchantOrderScreenState
             ),
             OutlinedButton.icon(
               key: const ValueKey('addParcelButton'),
-              onPressed: draft.canAdd ? draft.addParcel : null,
+              onPressed: !_busy && !_locked && draft.canAdd
+                  ? draft.addParcel
+                  : null,
               icon: const Icon(Icons.add),
               label: Text('${l10n.addParcel} (${parcels.length}/10)'),
             ),
@@ -78,6 +175,18 @@ class _CreateMerchantOrderScreenState
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             const SizedBox(height: AppTokens.spaceLarge),
+            TextButton.icon(
+              key: const ValueKey('openBulkOrders'),
+              onPressed: _busy
+                  ? null
+                  : () => context.push('/merchant/order/bulk'),
+              icon: const Icon(Icons.upload_file_outlined),
+              label: Text(
+                Localizations.localeOf(context).languageCode == 'ar'
+                    ? 'رفع طلبات بالجملة (CSV)'
+                    : 'Bulk upload (CSV)',
+              ),
+            ),
             FilledButton(
               key: const ValueKey('submitMerchantOrder'),
               onPressed: _busy ? null : _submit,
@@ -88,7 +197,9 @@ class _CreateMerchantOrderScreenState
                   borderRadius: BorderRadius.circular(AppTokens.radiusAction),
                 ),
               ),
-              child: Text(l10n.submitOrder),
+              child: Text(
+                _locked ? l10n.recoverMerchantOrder : l10n.submitOrder,
+              ),
             ),
           ],
         ),
@@ -118,8 +229,10 @@ class _CreateMerchantOrderScreenState
                   ),
                 )
                 .toList(),
-            onChanged: (value) =>
-                controller.updateParcel(index, destinationLabel: value),
+            onChanged: _busy || _locked
+                ? null
+                : (value) =>
+                      controller.updateParcel(index, destinationLabel: value),
           ),
           DropdownButtonFormField<String>(
             key: ValueKey('parcelSize-$index'),
@@ -130,7 +243,9 @@ class _CreateMerchantOrderScreenState
                   (value) => DropdownMenuItem(value: value, child: Text(value)),
                 )
                 .toList(),
-            onChanged: (value) => controller.updateParcel(index, size: value),
+            onChanged: _busy || _locked
+                ? null
+                : (value) => controller.updateParcel(index, size: value),
           ),
           DropdownButtonFormField<String>(
             key: ValueKey('parcelPriority-$index'),
@@ -144,13 +259,16 @@ class _CreateMerchantOrderScreenState
                   ),
                 )
                 .toList(),
-            onChanged: (value) =>
-                controller.updateParcel(index, priority: value),
+            onChanged: _busy || _locked
+                ? null
+                : (value) => controller.updateParcel(index, priority: value),
           ),
           if (controller.canRemove)
             TextButton.icon(
               key: ValueKey('removeParcel-$index'),
-              onPressed: () => controller.removeParcel(index),
+              onPressed: _busy || _locked
+                  ? null
+                  : () => controller.removeParcel(index),
               icon: const Icon(Icons.remove_circle_outline),
               label: Text(l10n.removeParcel),
             ),
@@ -160,19 +278,31 @@ class _CreateMerchantOrderScreenState
   }
 
   Future<void> _submit() async {
-    final l10n = AppLocalizations.of(context);
+    final service = ref.read(merchantOrderSubmissionProvider);
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final order = await ref
-          .read(merchantRepositoryProvider)
-          .createOrder(ref.read(merchantOrderDraftProvider));
+      final order = _locked
+          ? await service.resume()
+          : await service.submit(ref.read(merchantOrderDraftProvider));
       ref.invalidate(merchantDashboardProvider);
-      if (mounted) context.go('/merchant/order/${order.id}');
+      if (mounted) await _openOrder(order.id);
     } catch (error) {
-      if (mounted) setState(() => _error = merchantErrorLabel(l10n, error));
+      if (!mounted) return;
+      try {
+        _locked = await service.pending() != null;
+      } catch (_) {
+        _locked = true;
+      }
+      if (mounted) {
+        setState(
+          () => _error = _locked
+              ? _recoveryError(error)
+              : merchantErrorLabel(AppLocalizations.of(context), error),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

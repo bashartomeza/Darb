@@ -7,6 +7,7 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/driver_controller.dart';
+import '../data/driver_repository.dart';
 import '../data/driver_stats_source.dart';
 import '../domain/driver_home_stats.dart';
 import 'driver_ui.dart';
@@ -22,9 +23,10 @@ import 'widgets/driver_home_widgets.dart';
 /// - earnings — **nothing**. There is no fare, price or tariff column anywhere
 ///   in the schema, so the card states that instead of showing a figure.
 ///
-/// Acceptance rate is in the flow diagram and is also absent: rejected matches
-/// are not retained per driver in a way that yields a rate, so it is named as
-/// unavailable rather than approximated from the inbox.
+/// Acceptance rate — real, from `GET /driver/performance`: accepted over
+/// accepted-plus-rejected offers the driver answered, withheld until the server
+/// has a minimum sample. Offers that expired unanswered are not counted, and the
+/// card says so. It falls back to "unavailable" if the request fails.
 class DriverPerformanceScreen extends ConsumerWidget {
   const DriverPerformanceScreen({super.key});
 
@@ -117,10 +119,38 @@ class DriverPerformanceScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: AppTokens.spaceMedium),
-              OfflineBanner(
-                message: l10n.acceptanceRateUnavailable,
-                icon: Icons.info_outline,
-              ),
+              ref
+                  .watch(driverPerformanceProvider)
+                  .when(
+                    loading: () => const LoadingSkeleton(height: 90),
+                    error: (_, _) => OfflineBanner(
+                      message: l10n.acceptanceRateUnavailable,
+                      icon: Icons.info_outline,
+                    ),
+                    data: (value) => value == null
+                        ? OfflineBanner(
+                            message: l10n.acceptanceRateUnavailable,
+                            icon: Icons.info_outline,
+                          )
+                        : MasariInfoCard(
+                            title: l10n.acceptanceRateTitle,
+                            icon: Icons.thumb_up_alt_outlined,
+                            subtitle: value.acceptanceRate == null
+                                ? l10n.acceptanceRateNeedMore(
+                                    value.minSample,
+                                    value.responded,
+                                  )
+                                : l10n.acceptanceRateDetail(
+                                    value.accepted,
+                                    value.responded,
+                                  ),
+                            statusLabel: value.acceptanceRate == null
+                                ? null
+                                : l10n.acceptanceRateValue(
+                                    value.acceptanceRate!,
+                                  ),
+                          ),
+                  ),
             ],
           ),
         ),

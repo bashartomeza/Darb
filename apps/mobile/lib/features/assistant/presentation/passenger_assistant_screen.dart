@@ -15,6 +15,7 @@ import '../../../core/widgets/masari_back_button.dart';
 import '../application/passenger_assistant_controller.dart';
 import '../domain/passenger_assistant_models.dart';
 import '../../passenger/data/passenger_models.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../passenger/domain/trip_offer.dart';
 import '../../passenger/presentation/widgets/trip_offer_card.dart';
 
@@ -78,11 +79,37 @@ class _PassengerAssistantScreenState
 
   Future<void> _selectTrip(PassengerAssistantTripOption option) async {
     FocusScope.of(context).unfocus();
+    final actor = ref.read(authControllerProvider).value?.user?.id;
     final matchId = await ref
         .read(passengerAssistantControllerProvider.notifier)
         .selectTrip(option);
+    if (!mounted || actor != ref.read(authControllerProvider).value?.user?.id) {
+      return;
+    }
     if (mounted && matchId != null) {
       context.go('/passenger/match/$matchId');
+    } else if (mounted) {
+      final current = ref.read(passengerAssistantControllerProvider).value;
+      final requestId = current?.selectionRequestId;
+      if (requestId != null &&
+          current?.selectionFailure !=
+              PassengerAssistantFailure.unknownBooking &&
+          current?.selectionFailure != PassengerAssistantFailure.savedBooking) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              current?.selectionFailure == PassengerAssistantFailure.expired
+                  ? l10n.bookingTimePassed
+                  : current?.selectionFailure ==
+                        PassengerAssistantFailure.selectedDriverUnavailable
+                  ? l10n.selectedDriverUnavailable
+                  : l10n.assistantSearchError,
+            ),
+          ),
+        );
+        context.go('/passenger/request/$requestId');
+      }
     }
   }
 
@@ -97,7 +124,13 @@ class _PassengerAssistantScreenState
     final phase = assistant.value?.phase;
     final busy =
         phase == PassengerAssistantPhase.processing ||
-        phase == PassengerAssistantPhase.searching;
+        phase == PassengerAssistantPhase.searching ||
+        assistant.value?.selectingTripId != null;
+    final recoveryPending =
+        assistant.value?.selectionFailure ==
+            PassengerAssistantFailure.unknownBooking ||
+        assistant.value?.selectionFailure ==
+            PassengerAssistantFailure.savedBooking;
 
     return Scaffold(
       key: const ValueKey('passengerAssistantScreen'),
@@ -139,7 +172,7 @@ class _PassengerAssistantScreenState
           ),
           _AssistantComposer(
             controller: _inputController,
-            enabled: !assistant.isLoading && !busy,
+            enabled: !assistant.isLoading && !busy && !recoveryPending,
             busy: busy,
             onSubmit: _submit,
           ),
@@ -363,7 +396,16 @@ class _TripSearchResults extends StatelessWidget {
           for (final option in options) ...[
             TripOfferCard(
               offer: _offerFor(option),
-              actionLabel: l10n.bookSeat,
+              actionLabel:
+                  selectionFailure ==
+                          PassengerAssistantFailure.unknownBooking ||
+                      selectionFailure == PassengerAssistantFailure.savedBooking
+                  ? l10n.verifyBooking
+                  : l10n.bookSeat,
+              verifyingBooking:
+                  selectionFailure ==
+                      PassengerAssistantFailure.unknownBooking ||
+                  selectionFailure == PassengerAssistantFailure.savedBooking,
               busy: selectingTripId == option.id,
               enabled: selectingTripId == null,
               onBook: () {
@@ -374,7 +416,16 @@ class _TripSearchResults extends StatelessWidget {
           ],
           if (selectionFailure != null)
             Text(
-              l10n.assistantSearchError,
+              selectionFailure ==
+                      PassengerAssistantFailure.selectedDriverUnavailable
+                  ? l10n.selectedDriverUnavailable
+                  : selectionFailure == PassengerAssistantFailure.expired
+                  ? l10n.bookingTimePassed
+                  : selectionFailure == PassengerAssistantFailure.unknownBooking
+                  ? l10n.bookingOutcomeUnknown
+                  : selectionFailure == PassengerAssistantFailure.savedBooking
+                  ? l10n.requestRecorded
+                  : l10n.assistantSearchError,
               key: const ValueKey('assistantTripSelectionError'),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: SemanticColors.onErrorContainer,
@@ -468,6 +519,14 @@ class _TripReviewCardState extends State<_TripReviewCard> {
                   value: pickup.key,
                   child: Text(localizedCorridorPlace(context, pickup.label)),
                 ),
+              // The stop the assistant matched, when it is not a preset place.
+              if (!lockedPickupPresets.any(
+                (value) => value.key == widget.draft.pickupKey,
+              ))
+                DropdownMenuItem(
+                  value: widget.draft.pickupKey,
+                  child: Text(widget.draft.pickupLabel),
+                ),
             ],
             onChanged: widget.searching
                 ? null
@@ -475,12 +534,22 @@ class _TripReviewCardState extends State<_TripReviewCard> {
                     final pickup = lockedPickupPresets
                         .where((value) => value.key == key)
                         .firstOrNull;
-                    if (pickup == null) return;
                     setState(() {
-                      _draft = _draft.copyWith(
-                        pickupKey: pickup.key,
-                        pickupLabel: pickup.label,
-                      );
+                      if (pickup != null) {
+                        _draft = _draft.copyWith(
+                          pickupKey: pickup.key,
+                          pickupLabel: pickup.label,
+                          pickupLat: pickup.lat,
+                          pickupLng: pickup.lng,
+                        );
+                      } else if (key == widget.draft.pickupKey) {
+                        _draft = _draft.copyWith(
+                          pickupKey: widget.draft.pickupKey,
+                          pickupLabel: widget.draft.pickupLabel,
+                          pickupLat: widget.draft.pickupLat,
+                          pickupLng: widget.draft.pickupLng,
+                        );
+                      }
                     });
                   },
           ),
@@ -496,16 +565,31 @@ class _TripReviewCardState extends State<_TripReviewCard> {
                   localizedCorridorPlace(context, lockedDestinationLabel),
                 ),
               ),
+              // The stop the assistant matched, when it is not the preset one.
+              if (widget.draft.destinationKey != 'bethlehem')
+                DropdownMenuItem(
+                  value: widget.draft.destinationKey,
+                  child: Text(widget.draft.destinationLabel),
+                ),
             ],
             onChanged: widget.searching
                 ? null
                 : (key) {
                     if (key == null) return;
                     setState(() {
-                      _draft = _draft.copyWith(
-                        destinationKey: key,
-                        destinationLabel: lockedDestinationLabel,
-                      );
+                      _draft = key == 'bethlehem'
+                          ? _draft.copyWith(
+                              destinationKey: key,
+                              destinationLabel: lockedDestinationLabel,
+                              destinationLat: lockedDestinationLat,
+                              destinationLng: lockedDestinationLng,
+                            )
+                          : _draft.copyWith(
+                              destinationKey: widget.draft.destinationKey,
+                              destinationLabel: widget.draft.destinationLabel,
+                              destinationLat: widget.draft.destinationLat,
+                              destinationLng: widget.draft.destinationLng,
+                            );
                     });
                   },
           ),
