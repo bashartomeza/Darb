@@ -19,7 +19,7 @@ const cleanOptional = (maximum: number) =>
 const createSchema = z.strictObject({
   role: z.enum([OnboardingRole.passenger, OnboardingRole.driver, OnboardingRole.merchant]),
   phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH),
-  // Masari sends no SMS: the one-time code is emailed here. The phone number stays the admin-vouched identity.
+  // Darb sends no SMS: the one-time code is emailed here. The phone number stays the admin-vouched identity.
   contact_email: contactEmailSchema,
   region: z.string().trim().regex(/^[A-Za-z]{2}$/).optional(),
   campaign: cleanOptional(100),

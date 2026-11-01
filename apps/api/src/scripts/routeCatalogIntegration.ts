@@ -77,8 +77,8 @@ async function main() {
     where: { route_key: DEMO_SERVICE_ROUTE_KEY },
     include: { current_version: true }
   });
-  assert(demoRoute.current_version?.name_ar.includes("مساري") === false, "Route display name unexpectedly contains a brand suffix");
-  assert(demoRoute.current_version?.description_ar?.includes("مساري"), "Arabic demo route data did not round-trip");
+  assert(demoRoute.current_version?.name_ar.includes("درب") === false, "Route display name unexpectedly contains a brand suffix");
+  assert(demoRoute.current_version?.description_ar?.includes("درب"), "Arabic demo route data did not round-trip");
   assert(demoRoute.current_version?.geometry_status === "available", "Exact demo geometry readiness was not preserved");
 
   const admin = await prisma.user.findFirstOrThrow({ where: { role: "admin", demo_account: true } });

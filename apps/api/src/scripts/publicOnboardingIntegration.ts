@@ -580,8 +580,8 @@ async function main() {
   check(concurrentResends.filter((response) => response.status === 200).length === 1, "concurrent resend has one winner");
   check(concurrentResends.some((response) => response.status === 429), "concurrent resend cannot bypass cooldown");
 
-  const passengerPassword = "مساري secure pass 2026";
-  const passenger = await onboard(admin, "passenger", "+970599111114", "مستخدم مساري", passengerPassword);
+  const passengerPassword = "درب secure pass 2026";
+  const passenger = await onboard(admin, "passenger", "+970599111114", "مستخدم درب", passengerPassword);
   check(passenger.completed.status === 201, "passenger completion succeeds");
   check(passenger.completed.body.account_status === "active" && passenger.completed.body.next_action === "login", "passenger is active and must login");
   check(!passenger.completed.body.token && !passenger.completed.body.refresh_token, "completion issues no operational session");
@@ -635,7 +635,7 @@ async function main() {
   check(phoneLogin.status === 200 && phoneLogin.body.user?.role === "passenger", "a verified invited passenger signs in with the verified phone");
 
   const driverPassword = "driver secure pass 2026";
-  const driver = await onboard(admin, "driver", "+970599111115", "سائق مساري", driverPassword);
+  const driver = await onboard(admin, "driver", "+970599111115", "سائق درب", driverPassword);
   check(driver.completed.status === 201 && driver.completed.body.account_status === "pending", "driver is pending");
   check(Boolean(driver.completed.body.onboarding_status_token), "driver receives narrow status token");
   const driverCompletionReplay = await complete(
@@ -689,7 +689,7 @@ async function main() {
     "suspension revokes pending status token"
   );
 
-  const merchant = await onboard(admin, "merchant", "+970599111116", "تاجر مساري", "merchant secure pass 2026");
+  const merchant = await onboard(admin, "merchant", "+970599111116", "تاجر درب", "merchant secure pass 2026");
   check(merchant.completed.status === 201 && merchant.completed.body.account_status === "pending", "merchant is pending");
   check(!merchant.completed.body.token && Boolean(merchant.completed.body.onboarding_status_token), "merchant receives status token only");
   const merchantCompletionReplay = await complete(

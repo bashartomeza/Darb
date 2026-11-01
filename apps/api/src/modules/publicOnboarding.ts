@@ -59,7 +59,7 @@ const startSchema = z.strictObject({
   invitation_code: z.string().trim().min(20).max(32).optional(),
   role: roleSchema,
   phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH),
-  // Open sign-up only: Masari sends no SMS, so the one-time code goes to this address.
+  // Open sign-up only: Darb sends no SMS, so the one-time code goes to this address.
   // Invited applicants never supply one; their code goes to the address the Admin recorded.
   email: contactEmailSchema.optional(),
   region: z.string().trim().regex(/^[A-Za-z]{2}$/).optional(),

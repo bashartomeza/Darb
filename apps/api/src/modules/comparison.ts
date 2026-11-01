@@ -59,7 +59,7 @@ comparisonRouter.post("/compare/run", requireAuth, requireRole("admin"), async (
     const driverUtilization = round((parcelCount + hasPassenger) / Math.max(1, parcelCount + 1), 2);
     const parcelBatchingBenefit =
       parcelCount > 0
-        ? `${parcelCount} parcels can use 1 Masari corridor trip instead of ${parcelCount} nearest-driver parcel trips.`
+        ? `${parcelCount} parcels can use 1 Darb corridor trip instead of ${parcelCount} nearest-driver parcel trips.`
         : "No merchant parcels in this comparison run.";
     const winner = masariEstimatedCost <= nearestEstimatedCost && masariTrips <= nearestDriverTrips ? "masari" : "nearest_driver";
 
@@ -102,7 +102,7 @@ comparisonRouter.get("/compare/runs/:id", requireAuth, requireRole("admin"), asy
   }
 });
 
-// Simulated comparison of manual dispatch, nearest-driver and Masari matching.
+// Simulated comparison of manual dispatch, nearest-driver and Darb matching.
 // Pure computation: no database reads or writes, nothing is created.
 comparisonRouter.get("/compare/simulation", requireAuth, requireRole("admin"), (req, res, next) => {
   try {

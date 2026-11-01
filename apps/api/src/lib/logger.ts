@@ -31,7 +31,7 @@ const AUTH_CREDENTIAL_FIELD_NAMES = [
 ] as const;
 
 // Pino/fast-redact supports `*` for one object segment, not an unbounded
-// recursive wildcard. Masari supports structured operational log contexts to
+// recursive wildcard. Darb supports structured operational log contexts to
 // five object levels, so generate every safe path through that depth.
 const AUTH_CREDENTIAL_REDACTION_PATHS = AUTH_CREDENTIAL_FIELD_NAMES.flatMap((field) =>
   Array.from({ length: 6 }, (_, depth) => `${Array(depth).fill("*").join(".")}${field.includes("-") ? `["${field}"]` : `${depth ? "." : ""}${field}`}`)

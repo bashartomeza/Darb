@@ -27,7 +27,7 @@ export interface PhoneVerificationProvider {
   send(input: { phoneE164: string; email?: string; code: string; locale: "ar" | "en"; expiresAt: Date; idempotencyKey: string }): Promise<void>;
 }
 
-/** Masari sends no SMS: the code for adding a phone goes to the account's own verified email. */
+/** Darb sends no SMS: the code for adding a phone goes to the account's own verified email. */
 export class EmailPhoneVerificationProvider implements PhoneVerificationProvider {
   readonly kind = "approved" as const;
   readonly provesPhone = false;
