@@ -7,13 +7,13 @@ String localizedLocationSource(AppLocalizations l10n, String source) =>
       _ => source,
     };
 
-/// Arabic names for the fixed corridor's places.
+/// Arabic names for places already stored as English labels.
 ///
-/// The API stores these labels in English (`pickup_label`, `destination_label`
-/// and the `lockedPickupPresets` constants), so rendering them raw leaves Latin
-/// text in an otherwise Arabic screen. The corridor is a closed set, so a
-/// lookup is enough; anything unrecognised falls through unchanged rather than
-/// being hidden.
+/// Legacy records keep only an English `pickup_label` / `destination_label`,
+/// so rendering them raw leaves Latin text in an otherwise Arabic screen. New
+/// choices are shown with the stop's own `name_ar` from the server; this
+/// lookup only covers labels saved by earlier releases. Anything unrecognised
+/// falls through unchanged rather than being hidden.
 String localizedCorridorPlace(BuildContext context, String label) {
   if (Localizations.localeOf(context).languageCode != 'ar') return label;
   return switch (label) {

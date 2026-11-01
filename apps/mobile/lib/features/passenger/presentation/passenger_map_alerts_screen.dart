@@ -386,9 +386,9 @@ class _MapBodyState extends ConsumerState<_MapBody> {
 
           Row(
             children: [
-              const _RoutePoint(
+              _RoutePoint(
                 icon: Icons.trip_origin_rounded,
-                label: 'Hebron',
+                label: localizedCorridorPlace(context, trip.originDisplayLabel),
               ),
               Expanded(
                 child: Padding(
@@ -412,7 +412,13 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                   ),
                 ),
               ),
-              const _RoutePoint(icon: Icons.flag_rounded, label: 'Bethlehem'),
+              _RoutePoint(
+                icon: Icons.flag_rounded,
+                label: localizedCorridorPlace(
+                  context,
+                  trip.destinationDisplayLabel,
+                ),
+              ),
             ],
           ),
         ],
@@ -2065,12 +2071,19 @@ class _RoutePoint extends StatelessWidget {
         const SizedBox(height: 2),
         Icon(icon, color: const Color(0xFFFA5F12), size: 27),
         const SizedBox(height: 5),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF1C1A1A),
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
+        // Real stop names can be long; keep both ends and the car visible.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 120),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF1C1A1A),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ],

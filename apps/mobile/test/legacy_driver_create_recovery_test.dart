@@ -8,8 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
 import 'package:darb_mobile/features/driver/data/driver_repository.dart';
 import 'package:darb_mobile/features/driver/presentation/driver_route_screen.dart';
+import 'package:darb_mobile/features/legacy_corridor/data/legacy_corridor_repository.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 import 'support/auth_test_support.dart';
+import 'support/legacy_corridor_fixture.dart';
 
 void main() {
   testWidgets(
@@ -21,6 +23,9 @@ void main() {
       final rows = <String, Map<String, dynamic>>{};
       var lose = true;
       Future<http.Response> handler(http.Request request) async {
+        if (request.url.path.endsWith('/legacy-corridor')) {
+          return corridorResponse();
+        }
         if (request.method == 'GET') {
           return http.Response(
             jsonEncode({'routes': rows.values.toList()}),
@@ -60,6 +65,9 @@ void main() {
               ),
               driverRepositoryProvider.overrideWithValue(
                 DriverRepository(apiClient: client.client),
+              ),
+              legacyCorridorRepositoryProvider.overrideWithValue(
+                LegacyCorridorRepository(apiClient: client.client),
               ),
             ],
             child: const MaterialApp(
