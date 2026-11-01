@@ -260,6 +260,16 @@ return {
   orders: (token: string) => apiRequest<{ orders: MerchantOrder[] }>("/admin/orders", { token }),
   passengerParcels: (token: string) => apiRequest<{ parcels: PassengerParcelRow[] }>("/admin/passenger-parcels", { token }),
   routes: (token: string) => apiRequest<{ routes: DriverRoute[] }>("/admin/routes", { token }),
+  /** Every predefined route, active and turned off, with how many orders use it. */
+  operatingRoutes: (token: string) => apiRequest<{ routes: AdminOperatingRoute[] }>("/admin/operating-routes", { token }),
+  createOperatingRoute: (token: string, body: OperatingRouteDraft) =>
+    apiRequest<OperatingRouteCreateResponse>("/admin/operating-routes", { method: "POST", token, body }),
+  /** Turning a route off pauses its current version: new orders cannot use it, existing ones continue. */
+  setOperatingRouteActive: (token: string, id: string, active: boolean) =>
+    apiRequest<OperatingRouteCreateResponse>(`/admin/operating-routes/${encodeURIComponent(id)}`, { method: "PATCH", token, body: { active } }),
+  operatingCities: (token: string) => apiRequest<{ cities: OperatingCity[] }>("/admin/cities", { token }),
+  createOperatingCity: (token: string, body: OperatingCityDraft) =>
+    apiRequest<OperatingCityCreateResponse>("/admin/cities", { method: "POST", token, body }),
   adminTrips: (
     token: string,
     status: TripStatus | "all" = "all",
@@ -571,13 +581,43 @@ export type DriverRoute = {
   driver?: { user?: User; trust_score?: number; verified?: boolean };
 };
 
-export type PassengerRequest = {
+/** A city a route starts or ends at (a `Stop` row whose coordinates are the city centre). */
+export type OperatingCity = { id: string; name_ar: string; name_en: string; latitude: number; longitude: number };
+export type OperatingCityDraft = Omit<OperatingCity, "id">;
+/** `POST /admin/cities` returns the new city; accept it bare or wrapped. */
+export type OperatingCityCreateResponse = Partial<OperatingCity> & { city?: OperatingCity };
+export type OperatingRoute = {
+  id: string;
+  route_key: string;
+  name_ar: string;
+  name_en: string;
+  origin: OperatingCity;
+  destination: OperatingCity;
+};
+export type AdminOperatingRoute = OperatingRoute & { active: boolean; orders_count: number };
+export type OperatingRouteDraft = { origin_city_id: string; destination_city_id: string; both_directions: boolean };
+/** The contract does not pin the success body, so the console reloads the list instead of reading it. */
+export type OperatingRouteCreateResponse = { route?: AdminOperatingRoute; routes?: AdminOperatingRoute[] };
+
+/**
+ * Route-based order fields (docs/routes/route-based-orders.md). Optional and
+ * nullable: older API builds omit them and rows created before routes have null.
+ */
+export type OrderRouteFields = {
+  service_route_id?: string | null;
+  route_name_ar?: string | null;
+  route_name_en?: string | null;
+};
+
+export type PassengerRequest = OrderRouteFields & {
   id: string;
   status: string;
   pickup_label: string;
   destination_label: string;
   passenger_count: number;
   passenger?: User;
+  pickup_details?: string | null;
+  dropoff_details?: string | null;
 };
 
 export type PassengerParcelTrackingState =
@@ -591,7 +631,9 @@ export type PassengerParcelTrackingState =
   | "expired";
 
 /** Receiver details are deliberately absent from this shape. */
-export type PassengerParcelRow = {
+export type PassengerParcelRow = OrderRouteFields & {
+  pickup_details?: string | null;
+  dropoff_details?: string | null;
   id: string;
   sender: { id: string; name: string };
   size: string;
@@ -604,12 +646,13 @@ export type PassengerParcelRow = {
   created_at: string;
 };
 
-export type MerchantOrder = {
+export type MerchantOrder = OrderRouteFields & {
   id: string;
   status: string;
   pickup_label: string;
+  pickup_details?: string | null;
   merchant?: User;
-  parcels?: Array<{ id: string; status: string; destination_label: string; size: string; priority: string }>;
+  parcels?: Array<{ id: string; status: string; destination_label: string; size: string; priority: string; dropoff_details?: string | null }>;
 };
 
 export type Match = {
@@ -705,26 +748,29 @@ export type AdminTripListItem = {
   manifest_id: string | null;
   route_version_id: string | null;
   route_version: { id: string; version_number: number; status: string; name_ar: string; name_en: string } | null;
-  driver_route: {
+  driver_route: OrderRouteFields & {
     id: string;
     origin_label: string;
     destination_label: string;
     departure_at: string | null;
     driver: { id: string; vehicle_type: string; seats_total: number; parcel_capacity: number; verified: boolean; trust_score: number; user: AdminTripPerson };
   };
-  passenger_request: {
+  passenger_request: (OrderRouteFields & {
     id: string;
     pickup_label: string;
     destination_label: string;
     passenger_count: number;
     passenger: AdminTripPerson;
-  } | null;
-  merchant_order: {
+    pickup_details?: string | null;
+    dropoff_details?: string | null;
+  }) | null;
+  merchant_order: (OrderRouteFields & {
     id: string;
     pickup_label: string;
+    pickup_details?: string | null;
     merchant: AdminTripPerson;
     _count: { parcels: number };
-  } | null;
+  }) | null;
   parcel_batch: { id: string; status: string } | null;
   canonical_manifest: {
     id: string;

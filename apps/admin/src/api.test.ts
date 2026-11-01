@@ -297,3 +297,39 @@ describe("Admin matching and batching monitoring API client", () => {
     expect(onSessionEnded).toHaveBeenCalledWith(expect.objectContaining({ status }), "admin-token");
   });
 });
+
+describe("Admin operating routes API client", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("uses the route-based order contract endpoints with the Admin bearer token", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => response({ routes: [], cities: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("http://api.test");
+
+    await api.operatingRoutes("admin-token");
+    await api.createOperatingRoute("admin-token", { origin_city_id: "city_a", destination_city_id: "city_b", both_directions: true });
+    await api.setOperatingRouteActive("admin-token", "route/1", false);
+    await api.operatingCities("admin-token");
+    await api.createOperatingCity("admin-token", { name_ar: "جنين", name_en: "Jenin", latitude: 32.4637, longitude: 35.2938 });
+
+    const calls = fetchMock.mock.calls.map(([url, init]) => [url, init.method, init.body ?? null]);
+    expect(calls).toEqual([
+      ["http://api.test/api/v1/admin/operating-routes", "GET", null],
+      ["http://api.test/api/v1/admin/operating-routes", "POST", JSON.stringify({ origin_city_id: "city_a", destination_city_id: "city_b", both_directions: true })],
+      ["http://api.test/api/v1/admin/operating-routes/route%2F1", "PATCH", JSON.stringify({ active: false })],
+      ["http://api.test/api/v1/admin/cities", "GET", null],
+      ["http://api.test/api/v1/admin/cities", "POST", JSON.stringify({ name_ar: "جنين", name_en: "Jenin", latitude: 32.4637, longitude: 35.2938 })]
+    ]);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init.headers).toEqual(expect.objectContaining({ Authorization: "Bearer admin-token" }));
+    }
+  });
+
+  it("surfaces 409 route_exists with its status for the dialog", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ error: "route_exists" }, 409)));
+    const api = createApiClient("http://api.test");
+    await expect(
+      api.createOperatingRoute("admin-token", { origin_city_id: "a", destination_city_id: "b", both_directions: false })
+    ).rejects.toEqual(expect.objectContaining({ message: "route_exists", status: 409 }));
+  });
+});
