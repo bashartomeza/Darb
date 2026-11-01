@@ -241,7 +241,7 @@ async function selfServiceChecks(admin: string, legal: Array<{ id: string; type:
   check(approveEarly.status === 409 && approveEarly.body.error === "application_not_submitted", "admin cannot approve an unsubmitted application");
   const noDocuments = await submitApplication(statusToken);
   check(
-    noDocuments.status === 409 && noDocuments.body.error === "documents_required" && noDocuments.body.missing_documents.length === 3,
+    noDocuments.status === 409 && noDocuments.body.error === "documents_required" && noDocuments.body.missing_documents.length === 4,
     "submission is refused with no documents"
   );
   const statusBefore = await request(app).get("/api/v1/onboarding/status").set("authorization", `Onboarding ${statusToken}`);
