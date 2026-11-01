@@ -385,7 +385,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get routeMatchExplanation =>
-      'اختار درب هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.';
+      'اختار درب هذا السائق لأنه يسلك نفس المسار الذي اخترته، ولديه مقعد متاح لك، ودرجة الثقة لديه مرتفعة.';
 
   @override
   String get passengerTrip => 'رحلة المسافر';

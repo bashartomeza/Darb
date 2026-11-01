@@ -95,3 +95,13 @@ const app = createApp(config, {
   phoneVerificationProvider: loggingPhoneProvider
 });
 app.listen(config.port, "0.0.0.0", () => console.log(`Darb test API on ${config.port} (database ${databaseName})`));
+
+// Same start-up step as src/server.ts: create any missing predefined routes (never edits existing ones).
+const { ensurePredefinedRoutes } = await import(dist("services/operatingRoutes.js"));
+const { prisma } = await import(dist("lib/prisma.js"));
+try {
+  const result = await ensurePredefinedRoutes(prisma);
+  console.log(`predefined routes checked: ${result.createdRoutes} routes and ${result.createdStops} cities created${result.skipped ? ` (skipped: ${result.skipped})` : ""}`);
+} catch (error) {
+  console.error(`predefined routes could not be checked: ${error instanceof Error ? error.message : "unknown"}`);
+}

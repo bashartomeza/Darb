@@ -385,7 +385,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routeMatchExplanation =>
-      'Darb selected this driver because the route matches the active corridor, pickup is near the route, capacity is available, and trust score is high.';
+      'Darb selected this driver because they drive the same route you chose, there is room for you, and their trust score is high.';
 
   @override
   String get passengerTrip => 'Passenger trip';

@@ -821,7 +821,7 @@ abstract class AppLocalizations {
   /// No description provided for @routeMatchExplanation.
   ///
   /// In ar, this message translates to:
-  /// **'اختار درب هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.'**
+  /// **'اختار درب هذا السائق لأنه يسلك نفس المسار الذي اخترته، ولديه مقعد متاح لك، ودرجة الثقة لديه مرتفعة.'**
   String get routeMatchExplanation;
 
   /// No description provided for @passengerTrip.

@@ -120,7 +120,7 @@
   "trustScore": "Trust score",
   "capacityFit": "Capacity fit",
   "matchExplanation": "Match explanation",
-  "routeMatchExplanation": "Darb selected this driver because the route matches the active corridor, pickup is near the route, capacity is available, and trust score is high.",
+  "routeMatchExplanation": "Darb selected this driver because they drive the same route you chose, there is room for you, and their trust score is high.",
   "passengerTrip": "Passenger trip",
   "tripTimeline": "Trip timeline",
   "latestLocation": "Latest location",
