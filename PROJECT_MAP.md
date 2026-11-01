@@ -2197,7 +2197,7 @@ M6B2 validation status (2026-07-13):
 - Safe release metadata generation passed with two migration checksums and reproducible output under `SOURCE_DATE_EPOCH`.
 
 M6B2A private remote and real CI execution (2026-07-17):
-- Repository-local Git identity is configured for Bashar Tomeza. `origin` is `https://github.com/bashartomeza/Masari.git`; GitHub confirmed the repository is private and the authenticated `bashartomeza` account has `ADMIN` permission.
+- Repository-local Git identity is configured for Bashar Tomeza. `origin` is `https://github.com/bashartomeza/Darb.git`; GitHub confirmed the repository is private and the authenticated `bashartomeza` account has `ADMIN` permission.
 - Local and remote history were compared before every push. `production-readiness` was synchronized only by normal fast-forward pushes; no force, history rewrite, branch deletion, or tag replacement was used.
 - Frozen annotated tags were pushed unchanged: `v0.1.0-hackathon` still peels to PostgreSQL release `074fc4e7cc79c6b08a2baa18ca251b4802aa48c7`, and `v0.2.0-hackathon-mysql` still peels to MySQL release `7f5c5bace1b081c32f6a24a7352c6b163ac97438`.
 - The first real execution proved two CI/tooling defects rather than product regressions: security test paths were incorrectly rooted for the API workspace and the Ubuntu APK scan used GNU `tar` for a ZIP-format APK. Corrective commits `3a14206`, `e15bf56`, and `3eb16a9` use workspace-relative test paths, generate the ignored Prisma client with a credential-free generation-only URL, and use the provisioned JDK's cross-platform `jar` extraction with the prior local fallback.

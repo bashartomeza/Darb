@@ -20,20 +20,20 @@ Versions come from `pubspec.yaml` (`version: 1.0.0+1`, name `+` code). Override 
 ## Create the upload keystore (once, on a trusted machine)
 
 ```sh
-keytool -genkeypair -v -storetype JKS -keystore <PATH>/masari-upload.jks \
+keytool -genkeypair -v -storetype JKS -keystore <PATH>/darb-upload.jks \
   -alias <KEY_ALIAS> -keyalg RSA -keysize 2048 -validity 10000
 ```
 
 keytool prompts for the store password, key password and certificate details. Choose strong unique passwords and store them in the owner's password manager. Show the fingerprint (to register with Google or Firebase):
 
 ```sh
-keytool -list -v -keystore <PATH>/masari-upload.jks -alias <KEY_ALIAS>
+keytool -list -v -keystore <PATH>/darb-upload.jks -alias <KEY_ALIAS>
 ```
 
 Create `apps/mobile/android/key.properties` (never commit it):
 
 ```properties
-storeFile=<ABSOLUTE_PATH>/masari-upload.jks
+storeFile=<ABSOLUTE_PATH>/darb-upload.jks
 storePassword=<STORE_PASSWORD>
 keyAlias=<KEY_ALIAS>
 keyPassword=<KEY_PASSWORD>
@@ -86,7 +86,7 @@ apksigner verify --print-certs app-release.apk   # must not say "Android Debug"
 ## CI
 
 - `ci-mobile.yml` (PRs): builds with `DARB_ALLOW_DEBUG_SIGNING=true` against a staging host and scans the APK. It needs no secrets and its output is not distributable.
-- `release-android.yml` (manual `workflow_dispatch` only, not required for PRs): builds a signed AAB and uploads it as an artifact. The repository owner must first add the secrets `ANDROID_KEYSTORE_BASE64` (`base64 -w0 masari-upload.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. Until then it fails at the first step by design.
+- `release-android.yml` (manual `workflow_dispatch` only, not required for PRs): builds a signed AAB and uploads it as an artifact. The repository owner must first add the secrets `ANDROID_KEYSTORE_BASE64` (`base64 -w0 darb-upload.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. Until then it fails at the first step by design.
 
 ## Checklist
 

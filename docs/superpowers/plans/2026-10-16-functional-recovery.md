@@ -149,7 +149,7 @@ Additional browser-to-database verification: the actual traditional picker prese
 ## Delivery
 
 - [x] Fresh independent review, final local required checks and disposable runnable QA with protected local login material.
-Draft PR: [#50](https://github.com/bashartomeza/Masari/pull/50), base `production-readiness`. The [PR checks](https://github.com/bashartomeza/Masari/pull/50/checks), PR validation table and final task report carry the exact final head and immutable hosted run links. All four are required before delivery; no merge or release is authorized. The issue ledger's source commit precedes those hosted results by necessity.
+Draft PR: [#50](https://github.com/bashartomeza/Darb/pull/50), base `production-readiness`. The [PR checks](https://github.com/bashartomeza/Darb/pull/50/checks), PR validation table and final task report carry the exact final head and immutable hosted run links. All four are required before delivery; no merge or release is authorized. The issue ledger's source commit precedes those hosted results by necessity.
 
 User explicitly excluded CodeRabbit after it reported unauthenticated. No CodeRabbit repository review was run or content sent. Use local independent review and required automated gates; no external review sign-in is pending.
 
