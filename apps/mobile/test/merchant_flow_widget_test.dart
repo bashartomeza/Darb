@@ -14,6 +14,7 @@ import 'package:darb_mobile/core/i18n/domain_labels.dart';
 import 'package:darb_mobile/features/auth/data/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/legacy_corridor_fixture.dart';
 import 'test_app_config.dart';
 
 void main() {
@@ -58,6 +59,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('نقطة الاستلام الثابتة'), findsOneWidget);
+    // The pickup and the corridor are the server's, in Arabic.
+    expect(find.text('باب الزاوية'), findsOneWidget);
+    expect(find.text(corridorNameAr), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
     await tester.tap(find.byKey(const ValueKey('addParcelButton')));
     await tester.tap(find.byKey(const ValueKey('addParcelButton')));
@@ -70,9 +74,16 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('submitMerchantOrder')));
     await tester.pumpAndSettle();
     expect(handler.createKey, matches(RegExp(r'^[A-Za-z0-9._:-]{8,128}$')));
+    expect(handler.createBody?['pickup_label'], 'Bab Al-Zawiya');
     expect(handler.createBody?['pickup_lat'], 31.5326);
     expect(handler.createBody?['pickup_lng'], 35.0998);
     expect(handler.createBody?['parcels'], hasLength(3));
+    // Every parcel goes to the corridor's drop-off stop, at its coordinates.
+    for (final parcel in handler.createBody?['parcels'] as List) {
+      expect(parcel['destination_label'], 'Bethlehem Center');
+      expect(parcel['destination_lat'], 31.7054);
+      expect(parcel['destination_lng'], 35.2024);
+    }
     expect(find.byKey(const ValueKey('merchantOrderId')), findsOneWidget);
   });
 
@@ -99,7 +110,7 @@ void main() {
         persisted.values.any(
           (value) =>
               value.contains('idempotency_key') &&
-              value.contains('Bethlehem Market'),
+              value.contains('Bethlehem Center'),
         ),
         isTrue,
       );
@@ -133,6 +144,55 @@ void main() {
       );
     },
   );
+
+  testWidgets('order form waits for the server places and can retry them', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(hasOrder: false)..corridorFails = true;
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/new');
+    await tester.pumpAndSettle();
+
+    VoidCallback? submit() => tester
+        .widget<FilledButton>(find.byKey(const ValueKey('submitMerchantOrder')))
+        .onPressed;
+    expect(find.byKey(const ValueKey('merchantPlacesError')), findsOneWidget);
+    expect(submit(), isNull);
+
+    handler.corridorFails = false;
+    await tester.tap(find.byKey(const ValueKey('merchantPlacesRetry')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('merchantPlacesError')), findsNothing);
+    expect(find.text('باب الزاوية'), findsOneWidget);
+    expect(submit(), isNotNull);
+  });
+
+  testWidgets('order form cannot be sent while the corridor has no places', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(hasOrder: false)..corridorStops = false;
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/new');
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('merchantPlacesUnavailable')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('submitMerchantOrder')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(handler.createCalls, 0);
+  });
 
   testWidgets('merchant batches, matches, and sees read-only scoring', (
     tester,
@@ -303,11 +363,14 @@ class _MerchantHandler {
   Map<String, dynamic>? createBody;
   String? createKey;
   bool loseNextResponse = false;
+  bool corridorFails = false;
+  bool corridorStops = true;
   int createCalls = 0;
   final lookupKeys = <String?>[];
 
   String _createdOrderJson() => jsonEncode({
     ...jsonDecode(_orderJson(false)) as Map<String, dynamic>,
+    'pickup_label': createBody!['pickup_label'],
     'parcels': [
       for (final entry in (createBody!['parcels'] as List).indexed)
         {
@@ -321,6 +384,12 @@ class _MerchantHandler {
   Future<http.Response> call(http.Request request) async {
     final path = request.url.path;
     if (path.endsWith('/me')) return http.Response(_meJson, 200);
+    if (path.endsWith('/legacy-corridor')) {
+      if (corridorFails) {
+        return http.Response('{"error":"internal_error"}', 500);
+      }
+      return corridorStops ? corridorResponse() : _corridorWithoutStops();
+    }
     if (path.endsWith('/merchant/order-operation')) {
       lookupKeys.add(request.headers['idempotency-key']);
       return hasOrder
@@ -394,6 +463,17 @@ class _MerchantHandler {
     }
     return http.Response('{"error":"not_found"}', 404);
   }
+}
+
+/// The corridor while it has no published route version: no places at all.
+http.Response _corridorWithoutStops() {
+  final body = jsonDecode(corridorJson) as Map<String, dynamic>;
+  (body['corridor'] as Map<String, dynamic>)['stops'] = <Object>[];
+  return http.Response(
+    jsonEncode(body),
+    200,
+    headers: {'content-type': 'application/json; charset=utf-8'},
+  );
 }
 
 const _meJson =

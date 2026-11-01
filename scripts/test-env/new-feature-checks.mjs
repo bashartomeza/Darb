@@ -4,6 +4,7 @@
 // the approaching alert, driver document expiry, bulk merchant orders and the admin metrics.
 //
 // Called from run-checks.mjs (after a reset). It can also run on its own: node scripts/test-env/new-feature-checks.mjs
+// (with the API started by `start.ps1 -Disposable`, since it writes test data).
 // (run scripts/test-env/reset-data.ps1 first).
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";

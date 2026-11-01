@@ -18,7 +18,8 @@ const createPassengerRequestSchema = z.object({
   destination_lat: latitudeSchema,
   destination_lng: longitudeSchema,
   preferred_time: z.coerce.date(),
-  passenger_count: z.coerce.number().int().min(1).max(4)
+  passenger_count: z.coerce.number().int().min(1).max(4),
+  selected_driver_route_id: z.string().trim().min(1).max(191).optional()
 });
 const idempotencyKeySchema = z.string().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/).optional();
 
@@ -38,6 +39,7 @@ function serializeLegacyPassengerRequest(value: Record<string, unknown>) {
     passenger_count: value.passenger_count,
     status: value.status,
     source: value.source,
+    selected_driver_route_id: value.selected_driver_route_id ?? null,
     created_at: value.created_at
   };
 }

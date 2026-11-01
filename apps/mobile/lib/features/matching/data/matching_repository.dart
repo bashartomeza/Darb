@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/api/api_error.dart';
 
 import '../../auth/data/authenticated_api_client.dart';
 import '../../passenger/application/legacy_passenger_request_mutation.dart';
@@ -18,28 +17,17 @@ class MatchingRepository {
   final AuthenticatedApiClient apiClient;
   final LegacyPassengerRequestMutation mutation;
 
-  Future<String?> _selectedRoute(String requestId, String? supplied) async {
-    final selected = await mutation.selectedDriverRouteForRequest(requestId);
-    if (selected != null && supplied != null && selected != supplied) {
-      throw const ApiException(
-        ApiErrorType.validation,
-        'selected_driver_route_unavailable',
-        statusCode: 409,
-      );
-    }
-    return selected ?? supplied;
-  }
-
+  /// [driverRouteId] is the route the passenger picked, as saved on the
+  /// request (`selected_driver_route_id`). The server pins matching to the
+  /// saved pick and rejects any other route, so sending it is a cross-check.
   Future<MatchResult> runForPassengerRequest(
     String requestId, {
     String? driverRouteId,
   }) async {
     final actor = mutation.actorId;
-    final selectedRoute = await _selectedRoute(requestId, driverRouteId);
-    mutation.requireActor(actor);
     final json = await apiClient.postJson(
       '/matches/run',
-      body: {'passengerRequestId': requestId, 'driverRouteId': ?selectedRoute},
+      body: {'passengerRequestId': requestId, 'driverRouteId': ?driverRouteId},
     );
     mutation.requireActor(actor);
     return _match(json);
@@ -55,8 +43,6 @@ class MatchingRepository {
     String? driverRouteId,
   }) async {
     final actor = mutation.actorId;
-    final selectedRoute = await _selectedRoute(requestId, driverRouteId);
-    mutation.requireActor(actor);
     final json = await apiClient.getJson('/matches');
     mutation.requireActor(actor);
     final matches = json['matches'];
@@ -64,9 +50,9 @@ class MatchingRepository {
     for (final raw in matches.cast<Map<String, dynamic>>()) {
       final passengerRequest = raw['passenger_request'];
       if (passengerRequest is Map && passengerRequest['id'] == requestId) {
-        if (selectedRoute != null &&
+        if (driverRouteId != null &&
             (raw['driver_route'] is! Map ||
-                (raw['driver_route'] as Map)['id'] != selectedRoute ||
+                (raw['driver_route'] as Map)['id'] != driverRouteId ||
                 ![
                   'proposed',
                   'sent_to_driver',

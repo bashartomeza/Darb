@@ -174,6 +174,8 @@ describe("demo reset", () => {
       parcelBatch: { deleteMany: vi.fn() },
       parcel: { deleteMany: vi.fn(), create: vi.fn() },
       merchantOrder: { deleteMany: vi.fn(), create: vi.fn().mockResolvedValue({ id: "order_1" }) },
+      passengerAssistantMessage: { deleteMany: vi.fn() },
+      passengerAssistantConversation: { deleteMany: vi.fn() },
       passengerRequest: { deleteMany: vi.fn(), create: vi.fn() },
       driverRoute: {
         deleteMany: vi.fn(),
@@ -244,6 +246,13 @@ describe("demo reset", () => {
     expect(tx.routeFare.deleteMany).toHaveBeenCalledOnce();
     expect(tx.routeFare.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(tx.serviceRoute.deleteMany.mock.invocationCallOrder[0]);
     expect(tx.routeFare.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(tx.user.deleteMany.mock.invocationCallOrder[0]);
+    // Assistant chats reference passenger requests and users, so they are cleared before both.
+    expect(tx.passengerAssistantMessage.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.passengerAssistantConversation.deleteMany.mock.invocationCallOrder[0]
+    );
+    expect(tx.passengerAssistantConversation.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.passengerRequest.deleteMany.mock.invocationCallOrder[0]
+    );
     expect(userCreate).toHaveBeenCalledTimes(5);
     expect(tx.driverVerification.createMany).toHaveBeenCalledWith({
       data: expect.arrayContaining([

@@ -2006,6 +2006,18 @@ abstract class AppLocalizations {
   /// **'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.'**
   String get routeCatalogUnavailable;
 
+  /// No description provided for @corridorPlacesLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل أماكن المسار. تحقّق من الاتصال وأعد المحاولة.'**
+  String get corridorPlacesLoadFailed;
+
+  /// No description provided for @corridorPlacesUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد أماكن متاحة على هذا المسار حالياً.'**
+  String get corridorPlacesUnavailable;
+
   /// No description provided for @noPublishedRoutes.
   ///
   /// In ar, this message translates to:
@@ -2341,6 +2353,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'العودة إلى لوحة التحكم'**
   String get returnToDashboard;
+
+  /// No description provided for @viewRouteRequests.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض طلبات المسار الخاصة بي'**
+  String get viewRouteRequests;
 
   /// No description provided for @canonicalDriverOffers.
   ///
@@ -3494,6 +3512,42 @@ abstract class AppLocalizations {
   /// **'خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.'**
   String get assistantUnavailable;
 
+  /// No description provided for @assistantHistoryErrorTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل المحادثة'**
+  String get assistantHistoryErrorTitle;
+
+  /// No description provided for @assistantHistoryErrorBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.'**
+  String get assistantHistoryErrorBody;
+
+  /// No description provided for @assistantNewChat.
+  ///
+  /// In ar, this message translates to:
+  /// **'محادثة جديدة'**
+  String get assistantNewChat;
+
+  /// No description provided for @assistantNewChatTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدء محادثة جديدة؟'**
+  String get assistantNewChatTitle;
+
+  /// No description provided for @assistantNewChatBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.'**
+  String get assistantNewChatBody;
+
+  /// No description provided for @assistantNewChatFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.'**
+  String get assistantNewChatFailed;
+
   /// No description provided for @assistantClarificationLabel.
   ///
   /// In ar, this message translates to:
@@ -4057,6 +4111,42 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'أخرى'**
   String get incidentCategoryOther;
+
+  /// No description provided for @myIncidentReports.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلاغاتي'**
+  String get myIncidentReports;
+
+  /// No description provided for @myIncidentReportsEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم ترسل أي بلاغ بعد.'**
+  String get myIncidentReportsEmpty;
+
+  /// No description provided for @myIncidentReportsFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل بلاغاتك.'**
+  String get myIncidentReportsFailed;
+
+  /// No description provided for @incidentStatusOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوح'**
+  String get incidentStatusOpen;
+
+  /// No description provided for @incidentStatusReviewing.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المراجعة'**
+  String get incidentStatusReviewing;
+
+  /// No description provided for @incidentStatusResolved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت المعالجة'**
+  String get incidentStatusResolved;
 
   /// No description provided for @notifIncidentUpdatedTitle.
   ///

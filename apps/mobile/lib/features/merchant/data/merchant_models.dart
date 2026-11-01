@@ -1,20 +1,9 @@
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../delivery_handover/data/delivery_handover_models.dart';
+import '../../legacy_corridor/data/legacy_corridor_models.dart';
 import '../../matching/data/matching_models.dart';
 import '../../trips/data/trip_models.dart';
 
-const merchantPickupLabel = 'Hebron Merchant Pickup';
-const merchantPickupLat = 31.5326;
-const merchantPickupLng = 35.0998;
-const merchantDestinationLat = 31.7054;
-const merchantDestinationLng = 35.2024;
-const merchantDestinations = [
-  'Bethlehem Market',
-  'Bethlehem University Area',
-  'Manger Street',
-  'Beit Jala Junction',
-  'Bethlehem Center',
-];
 const merchantTripTimeline = [
   'accepted',
   'pickup_started',
@@ -24,34 +13,64 @@ const merchantTripTimeline = [
   'completed',
 ];
 
+/// One parcel of an order being written.
+///
+/// The destination is one of the corridor's parcel drop-off stops and carries
+/// that stop's own coordinates; it stays null until a place is known.
 class ParcelDraft {
   const ParcelDraft({
-    this.destinationLabel = 'Bethlehem Market',
+    this.destinationLabel,
+    this.destinationLat,
+    this.destinationLng,
     this.size = 'S',
     this.priority = 'normal',
   });
 
-  final String destinationLabel;
+  ParcelDraft.to(
+    CorridorPlace destination, {
+    String size = 'S',
+    String priority = 'normal',
+  }) : this(
+         destinationLabel: destination.label,
+         destinationLat: destination.lat,
+         destinationLng: destination.lng,
+         size: size,
+         priority: priority,
+       );
+
+  final String? destinationLabel;
+  final double? destinationLat;
+  final double? destinationLng;
   final String size;
   final String priority;
 
+  bool get hasDestination =>
+      destinationLabel != null &&
+      destinationLat != null &&
+      destinationLng != null;
+
   ParcelDraft copyWith({
-    String? destinationLabel,
+    CorridorPlace? destination,
     String? size,
     String? priority,
   }) => ParcelDraft(
-    destinationLabel: destinationLabel ?? this.destinationLabel,
+    destinationLabel: destination?.label ?? destinationLabel,
+    destinationLat: destination?.lat ?? destinationLat,
+    destinationLng: destination?.lng ?? destinationLng,
     size: size ?? this.size,
     priority: priority ?? this.priority,
   );
 
-  Map<String, dynamic> toJson() => {
-    'destination_label': destinationLabel,
-    'destination_lat': merchantDestinationLat,
-    'destination_lng': merchantDestinationLng,
-    'size': size,
-    'priority': priority,
-  };
+  Map<String, dynamic> toJson() {
+    if (!hasDestination) throw StateError('parcel_destination_missing');
+    return {
+      'destination_label': destinationLabel,
+      'destination_lat': destinationLat,
+      'destination_lng': destinationLng,
+      'size': size,
+      'priority': priority,
+    };
+  }
 }
 
 class MerchantParcel {

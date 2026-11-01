@@ -21,6 +21,7 @@ import '../../community_reports/application/community_reports_controller.dart';
 import '../../security/presentation/security_actions.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../driver_renewal/presentation/driver_renewal_banner.dart';
+import '../../legacy_corridor/data/legacy_corridor_repository.dart';
 import '../application/driver_controller.dart';
 import '../data/driver_stats_source.dart';
 import '../domain/driver_home_stats.dart';
@@ -53,6 +54,10 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
     final route = dashboard.value?.currentRoute;
     final isOnline = route?.isOperational ?? false;
+    // The driver's own route start, else the start of the server's corridor.
+    final operatingArea =
+        route?.originLabel ??
+        ref.watch(legacyCorridorProvider).value?.driverRoute.originLabel;
 
     return ForegroundRefresh(
       refresh: () async {
@@ -85,9 +90,10 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                     DriverStatusCard(
                       greeting: _greeting(l10n, user?.name),
                       // Keeps the role visible alongside the operating area.
-                      subtitle:
-                          '${l10n.driver} • '
-                          '${localizedCorridorPlace(context, 'Hebron / PPU / Bab Al-Zawiya')}',
+                      subtitle: operatingArea == null
+                          ? l10n.driver
+                          : '${l10n.driver} • '
+                                '${localizedCorridorPlace(context, operatingArea)}',
                       isOnline: isOnline,
                       busy: _busy || dashboard.isLoading,
                       onChanged: (value) => _toggleOnline(l10n, value),

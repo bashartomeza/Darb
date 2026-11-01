@@ -13,6 +13,7 @@ import 'package:darb_mobile/core/config/app_config.dart';
 import 'package:darb_mobile/features/auth/data/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/legacy_corridor_fixture.dart';
 import 'test_app_config.dart';
 
 void main() {
@@ -52,12 +53,13 @@ void main() {
     ).go('/driver/route');
     await tester.pumpAndSettle();
 
+    // The corridor name and its ends come from GET /legacy-corridor.
+    expect(find.textContaining(corridorNameAr), findsWidgets);
     expect(
-      find.textContaining(
-        'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم',
-      ),
-      findsWidgets,
+      find.text('نقطة الانطلاق: الخليل / جامعة بوليتكنك فلسطين / باب الزاوية'),
+      findsOneWidget,
     );
+    expect(find.text('الوجهة: بيت لحم'), findsOneWidget);
     expect(find.byKey(const ValueKey('driverSeatsField')), findsOneWidget);
     expect(find.byKey(const ValueKey('driverParcelField')), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
@@ -236,6 +238,7 @@ class _DriverHandler {
   Future<http.Response> call(http.Request request) async {
     final path = request.url.path;
     if (path.endsWith('/me')) return http.Response(_meBody('driver'), 200);
+    if (path.endsWith('/legacy-corridor')) return corridorResponse();
     if (path.endsWith('/driver/routes/active')) {
       return http.Response(
         routesEmpty ? '{"routes":[]}' : '{"routes":[$_routeJson]}',

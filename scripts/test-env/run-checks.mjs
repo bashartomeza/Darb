@@ -4,6 +4,9 @@
 // rules, then runs the existing demo smoke suites for the main story. Prints one
 // line per check and a summary; exits non-zero if anything failed.
 //
+// Start the API with `start.ps1 -Disposable` first: the default permanent `darb`
+// database refuses the reset these checks begin with.
+//
 //   node scripts/test-env/run-checks.mjs
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
