@@ -49,7 +49,7 @@ class HandoverStrings {
     'تم التسليم دون المستلم: أبلغ السائق أن المستلم غير متوفر.',
   );
   String get confirmedAdmin => _t(
-    'Delivery was closed by Masari support.',
+    'Delivery was closed by Darb support.',
     'أغلق دعم مسار عملية التسليم.',
   );
   String reasonLabel(String reason) =>
@@ -75,7 +75,7 @@ class HandoverStrings {
   String get receiverUnavailable =>
       _t('Receiver unavailable', 'المستلم غير متوفر');
   String get unavailableIntro => _t(
-    'Only use this if the receiver cannot give the code. Your reason is recorded and Masari will review it.',
+    'Only use this if the receiver cannot give the code. Your reason is recorded and Darb will review it.',
     'استخدم هذا فقط إذا تعذّر على المستلم إعطاء الرمز. يُسجَّل سببك وستراجعه مسار.',
   );
   String get reasonLabelField =>

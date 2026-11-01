@@ -1,5 +1,5 @@
 name: masari_mobile
-description: "Masari Arabic-first Android demo shell."
+description: "Darb Arabic-first Android demo shell."
 publish_to: 'none'
 
 # The following defines the version and build number for your application.
@@ -47,6 +47,9 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+
+  assets:
+    - assets/brand/logo.png
 
   # Bundled rather than fetched at runtime: the app is used in low-bandwidth
   # areas and must render Arabic correctly offline. Licence (OFL) ships

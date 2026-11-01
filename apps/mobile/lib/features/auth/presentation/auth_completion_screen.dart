@@ -236,8 +236,8 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
               Text(
                 authText(
                   context,
-                  'Add a real contact number before using Masari services. We email the verification code to the email address on your account.',
-                  'أضف رقم تواصل حقيقياً قبل استخدام خدمات مساري. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
+                  'Add a real contact number before using Darb services. We email the verification code to the email address on your account.',
+                  'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
                 ),
               ),
               TextField(

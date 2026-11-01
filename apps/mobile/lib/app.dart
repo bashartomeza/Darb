@@ -17,7 +17,7 @@ class MasariApp extends ConsumerWidget {
         ref.watch(localeControllerProvider).value ?? DomainLabels.defaultLocale;
 
     return MaterialApp.router(
-      title: 'Masari',
+      title: 'Darb',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       locale: locale,

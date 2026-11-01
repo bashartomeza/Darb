@@ -9,13 +9,13 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Masari';
+  String get appTitle => 'Darb';
 
   @override
   String get tagline => 'Smart route-sharing logistics';
 
   @override
-  String get welcomeTitle => 'Welcome to Masari';
+  String get welcomeTitle => 'Welcome to Darb';
 
   @override
   String get welcomeBody =>
@@ -73,6 +73,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Retry';
 
   @override
+  String get whereToGo => 'Where do you want to go?';
+
+  @override
+  String get selectPickupLocation => 'Select pickup location';
+
+  @override
+  String get selectDestination => 'Select destination';
+
+  @override
+  String get selectPickupLocationTitle => 'Select pickup location';
+
+  @override
+  String get selectDestinationTitle => 'Select destination';
+
+  @override
+  String get selectBothLocations =>
+      'Choose a pickup location and a destination first';
+
+  @override
+  String get timeField => 'Time';
+
+  @override
+  String get dateField => 'Date';
+
+  @override
+  String get searchRide => 'Search a Ride';
+
+  @override
+  String get increasePassengers => 'Add a passenger';
+
+  @override
+  String get decreasePassengers => 'Remove a passenger';
+
+  @override
+  String get loginWelcomeBack => 'Welcome Back';
+
+  @override
+  String get loginWelcomeSubtitle => 'We are so happy you are back';
+
+  @override
   String get signInWelcome => 'Sign in to continue to your role workspace.';
 
   @override
@@ -106,7 +146,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createAccountSubtitle => 'Sign up as a passenger to get started.';
 
   @override
-  String get newToMasari => 'New to Masari? Create an account';
+  String get newToDarb => 'New to Darb? Create an account';
 
   @override
   String get alreadyHaveAccount => 'Already have an account? Sign in';
@@ -330,7 +370,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routeMatchExplanation =>
-      'Masari selected this driver because the route matches the active corridor, pickup is near the route, capacity is available, and trust score is high.';
+      'Darb selected this driver because the route matches the active corridor, pickup is near the route, capacity is available, and trust score is high.';
 
   @override
   String get passengerTrip => 'Passenger trip';
@@ -646,7 +686,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String parcelBatchExplanationDemo(int parcelCount) {
-    return '$parcelCount compatible parcels can use one Masari corridor trip instead of separate trips, reducing distance and cost.';
+    return '$parcelCount compatible parcels can use one Darb corridor trip instead of separate trips, reducing distance and cost.';
   }
 
   @override
@@ -788,7 +828,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pendingAfterRegistration => 'Pending until review';
 
   @override
-  String get registerChooseTitle => 'How will you use Masari?';
+  String get registerChooseTitle => 'How will you use Darb?';
 
   @override
   String get registerChooseSubtitle =>
@@ -1288,9 +1328,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get whereToGo => 'Where do you want to go?';
-
-  @override
   String get smartSearch => 'Smart search';
 
   @override
@@ -1321,7 +1358,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noAvailableTripsBody =>
-      'Create a request and Masari will match you with a driver on the corridor.';
+      'Create a request and Darb will match you with a driver on the corridor.';
 
   @override
   String seatsRemaining(int count) {
@@ -1707,10 +1744,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This screen is not live. Use Refresh to check for updates.';
 
   @override
-  String get assistantTitle => 'Masari assistant';
+  String get assistantTitle => 'Darb assistant';
 
   @override
-  String get assistantHomeTitle => 'Ask Masari';
+  String get assistantHomeTitle => 'Ask Darb';
 
   @override
   String get assistantHomeBody => 'Ask about your trips and available routes.';
@@ -1720,7 +1757,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantWelcomeBody =>
-      'Ask about your Masari trip data or available routes. If details are missing, I’ll ask you to clarify.';
+      'Ask about your Darb trip data or available routes. If details are missing, I’ll ask you to clarify.';
 
   @override
   String get assistantTryAsking => 'Try asking';
@@ -1738,7 +1775,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantSend => 'Send';
 
   @override
-  String get assistantProcessing => 'Checking Masari data…';
+  String get assistantProcessing => 'Checking Darb data…';
 
   @override
   String get assistantErrorTitle => 'Couldn’t complete the request';
@@ -1753,10 +1790,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantClarificationLabel =>
-      'Masari assistant needs clarification';
+      'Darb assistant needs clarification';
 
   @override
-  String get assistantResultLabel => 'Masari assistant reply';
+  String get assistantResultLabel => 'Darb assistant reply';
 
   @override
   String get assistantPassengerMessage => 'Your message';
