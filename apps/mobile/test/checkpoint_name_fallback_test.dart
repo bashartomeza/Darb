@@ -30,7 +30,7 @@ void main() {
       final marker = checkpointTrafficMarker(checkpoint);
       expect(marker.label.split('\n').first, entry.$3);
       expect(marker.position, const GeoPoint(31.7, 35.2));
-      expect(marker.color, const Color(0xFFDC2626));
+      expect(marker.color, const Color(0xFFEB3223));
       expect(marker.icon, Icons.car_crash_rounded);
       expect(marker.size, 40);
       expect(marker.foreground, Colors.white);

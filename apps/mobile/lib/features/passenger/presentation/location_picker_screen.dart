@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:masari_mobile/features/passenger/data/passenger_models.dart';
 
+import '../../../core/geo/reverse_geocoder.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/masari_map.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
@@ -11,10 +12,14 @@ class PassengerLocationPickerScreen extends StatefulWidget {
     super.key,
     required this.title,
     this.initialLocation,
+    this.reverseGeocoder,
   });
 
   final String title;
   final PassengerLocation? initialLocation;
+
+  /// Names tapped points. Null keeps the neutral fallback label.
+  final ReverseGeocoder? reverseGeocoder;
 
   @override
   State<PassengerLocationPickerScreen> createState() =>
@@ -28,6 +33,11 @@ class _PassengerLocationPickerScreenState
   late final TextEditingController _labelController;
 
   String? _error;
+
+  /// True once the user typed a name; it is then never overwritten.
+  bool _labelEdited = false;
+  bool _resolving = false;
+  int _lookupToken = 0;
 
   @override
   void initState() {
@@ -165,12 +175,22 @@ class _PassengerLocationPickerScreenState
                         TextField(
                           controller: _labelController,
                           onChanged: (_) {
-                            setState(() {});
+                            setState(() => _labelEdited = true);
                           },
                           decoration: InputDecoration(
                             labelText: 'اسم الموقع',
                             hintText: 'مثال: الجامعة، البيت، مكان العمل...',
-                            prefixIcon: const Icon(Icons.place_outlined),
+                            prefixIcon: _resolving
+                                ? const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox.square(
+                                      dimension: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(Icons.place_outlined),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -246,13 +266,42 @@ class _PassengerLocationPickerScreenState
   // MAP TAP
   // ========================================================================
 
+  static const fallbackLabel = PassengerLocationPickerFallback.label;
+
   void _onMapTap(LatLng point) {
+    final token = ++_lookupToken;
     setState(() {
       _selectedPoint = point;
       _error = null;
 
-      if (_labelController.text.trim().isEmpty) {
-        _labelController.text = 'الموقع المحدد';
+      // A name typed by the user is kept; any other name belonged to the
+      // previous point and must not stay attached to this one.
+      if (!_labelEdited || _labelController.text.trim().isEmpty) {
+        _labelEdited = false;
+        _labelController.text = fallbackLabel;
+      }
+      _resolving = !_labelEdited && widget.reverseGeocoder != null;
+    });
+    if (_resolving) _resolveName(point, token);
+  }
+
+  Future<void> _resolveName(LatLng point, int token) async {
+    String? name;
+    try {
+      name = await widget.reverseGeocoder!.lookup(
+        point.latitude,
+        point.longitude,
+      );
+    } catch (_) {
+      name = null;
+    }
+    // Ignore answers for a point that is no longer selected.
+    if (!mounted || token != _lookupToken) return;
+    setState(() {
+      _resolving = false;
+      final trimmed = name?.trim();
+      if (!_labelEdited && trimmed != null && trimmed.isNotEmpty) {
+        _labelController.text = trimmed;
       }
     });
   }
@@ -285,4 +334,10 @@ class _PassengerLocationPickerScreenState
       ),
     );
   }
+}
+
+/// Neutral label kept with the coordinates when a point has no known name.
+class PassengerLocationPickerFallback {
+  const PassengerLocationPickerFallback._();
+  static const label = 'الموقع المحدد';
 }

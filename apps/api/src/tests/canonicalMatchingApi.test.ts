@@ -356,6 +356,90 @@ describe("M7C3A canonical matching APIs", () => {
       .not.toMatch(/must-not-leak|phone|manifest|member|reservation|fingerprint/i);
   });
 
+  describe("merchant order to driver visibility", () => {
+    const merchantOffer = {
+      ...offer,
+      id: "offer_parcels",
+      passenger_request: null,
+      merchant_order: {
+        pickup_stop_id: "stop_1",
+        requested_departure_from: new Date(),
+        requested_departure_until: new Date(),
+        _count: { parcels: 2 },
+        parcels: [
+          { destination_stop_id: "stop_2", size: "S", fare_minor: null, fare_currency: null },
+          { destination_stop_id: "stop_3", size: "M", fare_minor: null, fare_currency: null }
+        ]
+      }
+    };
+
+    it("lists a merchant parcel offer for the offered driver with parcel summary and no private data", async () => {
+      const service = serviceMock();
+      service.listDriverOffers.mockResolvedValue({ offers: [merchantOffer], nextCursor: null });
+      const app = createApp(enabled, { canonicalMatchingService: service as never });
+      const response = await request(app)
+        .get("/api/v1/driver/canonical-match-offers")
+        .set(auth("driver_1", "driver"))
+        .expect(200);
+      expect(service.listDriverOffers).toHaveBeenCalledWith("driver_1", { limit: 25 });
+      expect(response.body.offers[0]).toEqual(
+        expect.objectContaining({
+          id: "offer_parcels",
+          status: "offered",
+          demand_type: "merchant_order",
+          demand: expect.objectContaining({
+            parcel_count: 2,
+            pickup_stop_id: "stop_1",
+            destination_stop_ids: ["stop_2", "stop_3"]
+          })
+        })
+      );
+      expect(JSON.stringify(response.body)).not.toMatch(/must-not-leak|phone|destination_label/);
+    });
+
+    it("gives the merchant parcel_count and destinations and only ever queries its own orders", async () => {
+      const service = serviceMock();
+      const app = createApp(enabled, { canonicalMatchingService: service as never });
+      const response = await request(app)
+        .get("/api/v1/merchant/route-orders")
+        .set(auth("merchant_7", "merchant"))
+        .expect(200);
+      expect(service.merchantStatus).toHaveBeenCalledWith("merchant_7", undefined, 25);
+      expect(response.body.orders[0]).toEqual(
+        expect.objectContaining({
+          status: "assigned",
+          dispatch_status: "offered",
+          offer_pending: true,
+          parcel_count: 1,
+          destination_stop_ids: ["stop_3"]
+        })
+      );
+      // A driver cannot read merchant order status, nor a merchant the driver inbox.
+      await request(app).get("/api/v1/merchant/route-orders").set(auth("driver_1", "driver")).expect(403);
+      await request(app).get("/api/v1/driver/canonical-match-offers").set(auth("merchant_7", "merchant")).expect(403);
+    });
+
+    it("scopes merchant status and driver offer queries to the caller", async () => {
+      const orderFindMany = vi.fn().mockResolvedValue([]);
+      const matchFindMany = vi.fn().mockResolvedValue([]);
+      const service = createCanonicalMatchingService(
+        { merchantOrder: { findMany: orderFindMany }, match: { findMany: matchFindMany } } as never,
+        enabled
+      );
+      await service.merchantStatus("merchant_7", "order_9", 5);
+      expect(orderFindMany.mock.calls[0]?.[0].where).toEqual({
+        merchant_id: "merchant_7",
+        operational_mode: "canonical_route_v1",
+        id: "order_9"
+      });
+      await service.listDriverOffers("driver_1");
+      const where = matchFindMany.mock.calls[0]?.[0].where;
+      expect(where.driver_route.driver).toEqual(
+        expect.objectContaining({ user_id: "driver_1", verified: true })
+      );
+    });
+  });
+
   it("scores deterministically and applies documented component weights", () => {
     const input = {
       departureAt: new Date("2026-07-26T10:30:00.000Z"),

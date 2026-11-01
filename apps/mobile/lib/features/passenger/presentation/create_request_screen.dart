@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/geo/reverse_geocoder.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
@@ -333,6 +334,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
               ? l10n.selectPickupLocationTitle
               : l10n.selectDestinationTitle,
           initialLocation: current,
+          reverseGeocoder: ref.read(reverseGeocoderProvider),
         ),
       ),
     );

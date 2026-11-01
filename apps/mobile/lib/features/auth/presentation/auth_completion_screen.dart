@@ -281,11 +281,14 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                   autofillHints: const [AutofillHints.telephoneNumber],
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.phone_outlined),
-                    labelText: authText(
+                    labelText: authText(context, 'Phone number', 'رقم الهاتف'),
+                    hintText: '+[country code][number]',
+                    helperText: authText(
                       context,
-                      'Phone in international format (+country code)',
-                      'الهاتف بالصيغة الدولية (+رمز الدولة)',
+                      'International format, starting with +',
+                      'بالصيغة الدولية، يبدأ بـ +',
                     ),
+                    helperMaxLines: 2,
                   ),
                 ),
                 if (_phoneToken != null) _codeField(context),
