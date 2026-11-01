@@ -7,7 +7,6 @@ import 'package:darb_mobile/core/widgets/darb_section.dart';
 import 'package:darb_mobile/core/widgets/status_chip.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/language_switch.dart';
@@ -15,6 +14,7 @@ import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../application/passenger_history_controller.dart';
 import '../data/passenger_models.dart';
 import 'passenger_home_screen.dart' show passengerStatusLabel;
+import 'passenger_request_labels.dart';
 
 /// Passenger "My Trips" screen.
 ///
@@ -1072,7 +1072,7 @@ class _TripCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      localizedCorridorPlace(context, request.destinationLabel),
+                      request.routeTitle(context),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(
@@ -1083,12 +1083,7 @@ class _TripCard extends StatelessWidget {
                     const SizedBox(height: 3),
 
                     Text(
-                      active
-                          ? 'Current trip'
-                          : localizedCorridorPlace(
-                              context,
-                              request.pickupLabel,
-                            ),
+                      active ? 'Current trip' : request.pickupText(context),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -1115,8 +1110,8 @@ class _TripCard extends StatelessWidget {
           // ROUTE
           // ------------------------------------------------------------------
           _RoutePreview(
-            from: localizedCorridorPlace(context, request.pickupLabel),
-            to: localizedCorridorPlace(context, request.destinationLabel),
+            from: request.pickupText(context),
+            to: request.dropoffText(context),
             active: active,
           ),
 

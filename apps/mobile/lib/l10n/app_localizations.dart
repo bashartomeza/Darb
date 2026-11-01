@@ -3548,6 +3548,156 @@ abstract class AppLocalizations {
   /// **'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.'**
   String get assistantNewChatFailed;
 
+  /// No description provided for @passengerRouteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار'**
+  String get passengerRouteLabel;
+
+  /// No description provided for @passengerRouteHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار'**
+  String get passengerRouteHint;
+
+  /// No description provided for @passengerRoutesLoading.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحميل المسارات…'**
+  String get passengerRoutesLoading;
+
+  /// No description provided for @passengerRoutesLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل المسارات. تحقّق من اتصالك وحاول مرة أخرى.'**
+  String get passengerRoutesLoadFailed;
+
+  /// No description provided for @passengerRoutesEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد مسارات متاحة حاليًا. يُرجى المحاولة لاحقًا.'**
+  String get passengerRoutesEmpty;
+
+  /// No description provided for @passengerRouteRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار للمتابعة.'**
+  String get passengerRouteRequired;
+
+  /// No description provided for @passengerRouteUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المسار لم يعد متاحًا. اختر مسارًا آخر.'**
+  String get passengerRouteUnavailable;
+
+  /// No description provided for @passengerPickupDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان الصعود بالتحديد'**
+  String get passengerPickupDetailsLabel;
+
+  /// No description provided for @passengerPickupDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: أمام البوابة الرئيسية لجامعة بوليتكنك فلسطين'**
+  String get passengerPickupDetailsHint;
+
+  /// No description provided for @passengerDropoffDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان النزول بالتحديد'**
+  String get passengerDropoffDetailsLabel;
+
+  /// No description provided for @passengerDropoffDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: مجمّع سيارات بيت لحم، بجانب الصيدلية'**
+  String get passengerDropoffDetailsHint;
+
+  /// No description provided for @passengerDetailsHelper.
+  ///
+  /// In ar, this message translates to:
+  /// **'صِف المكان بوضوح ليصل إليه السائق بسهولة.'**
+  String get passengerDetailsHelper;
+
+  /// No description provided for @passengerDetailsTooShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب 3 أحرف على الأقل.'**
+  String get passengerDetailsTooShort;
+
+  /// No description provided for @passengerPickupPoint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان الصعود'**
+  String get passengerPickupPoint;
+
+  /// No description provided for @passengerDropoffPoint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان النزول'**
+  String get passengerDropoffPoint;
+
+  /// No description provided for @assistantRouteChoose.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار المناسب لرحلتك، ثم تأكّد من مكانَي الصعود والنزول.'**
+  String get assistantRouteChoose;
+
+  /// No description provided for @passengerParcelRouteIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار، وصِف مكان استلام الطرد ومكان تسليمه، ثم أخبرنا من سيستلمه.'**
+  String get passengerParcelRouteIntro;
+
+  /// No description provided for @passengerParcelPickupDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان استلام الطرد منك'**
+  String get passengerParcelPickupDetailsLabel;
+
+  /// No description provided for @passengerParcelPickupDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: المحل المجاور لدوار ابن رشد في الخليل'**
+  String get passengerParcelPickupDetailsHint;
+
+  /// No description provided for @passengerParcelDropoffDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان تسليم الطرد'**
+  String get passengerParcelDropoffDetailsLabel;
+
+  /// No description provided for @passengerParcelDropoffDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: بيت المستلم، قرب كنيسة المهد'**
+  String get passengerParcelDropoffDetailsHint;
+
+  /// No description provided for @passengerParcelPreferredTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت المفضّل للاستلام'**
+  String get passengerParcelPreferredTime;
+
+  /// No description provided for @welcomeRoutesTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسارات التي نخدمها'**
+  String get welcomeRoutesTitle;
+
+  /// No description provided for @welcomeRoutesMore.
+  ///
+  /// In ar, this message translates to:
+  /// **'و{count} أخرى'**
+  String welcomeRoutesMore(int count);
+
+  /// No description provided for @welcomeRoutesOffline.
+  ///
+  /// In ar, this message translates to:
+  /// **'ستظهر المسارات عند الاتصال بالإنترنت.'**
+  String get welcomeRoutesOffline;
+
   /// No description provided for @assistantClarificationLabel.
   ///
   /// In ar, this message translates to:

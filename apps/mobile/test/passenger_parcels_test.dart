@@ -130,9 +130,9 @@ void main() {
 
   group('parcel draft', () {
     const complete = PassengerParcelDraft(
-      routeVersionId: 'r',
-      pickupStopId: 'a',
-      dropoffStopId: 'b',
+      serviceRouteId: 'route-heb-bth',
+      pickupDetails: 'The shop next to Ibn Rushd roundabout',
+      dropoffDetails: 'Receiver house near the Church of the Nativity',
       receiverName: 'Sami',
       receiverPhone: '0591234567',
       acknowledged: true,
@@ -143,44 +143,27 @@ void main() {
     });
 
     test('requires the forbidden-items acknowledgement', () {
-      const draft = PassengerParcelDraft(
-        routeVersionId: 'r',
-        pickupStopId: 'a',
-        dropoffStopId: 'b',
-        receiverName: 'Sami',
-        receiverPhone: '0591234567',
+      expect(
+        complete.copyWith(acknowledged: false).firstIssue,
+        ParcelFormIssue.acknowledgement,
       );
-      expect(draft.firstIssue, ParcelFormIssue.acknowledgement);
     });
 
     test(
-      'rejects large parcels, missing stops, short names and bad phones',
+      'rejects a missing route, short places, large parcels, short names and bad phones',
       () {
+        expect(const PassengerParcelDraft().firstIssue, ParcelFormIssue.route);
         expect(
-          const PassengerParcelDraft(routeVersionId: 'r').firstIssue,
+          complete.copyWith(pickupDetails: ' a ').firstIssue,
           ParcelFormIssue.pickup,
         );
         expect(
-          PassengerParcelDraft(
-            routeVersionId: 'r',
-            pickupStopId: 'a',
-            dropoffStopId: 'b',
-            size: 'L',
-            receiverName: complete.receiverName,
-            receiverPhone: complete.receiverPhone,
-            acknowledged: true,
-          ).firstIssue,
-          ParcelFormIssue.size,
+          complete.copyWith(dropoffDetails: 'ab').firstIssue,
+          ParcelFormIssue.dropoff,
         );
+        expect(complete.copyWith(size: 'L').firstIssue, ParcelFormIssue.size);
         expect(
-          const PassengerParcelDraft(
-            routeVersionId: 'r',
-            pickupStopId: 'a',
-            dropoffStopId: 'b',
-            receiverName: 'S',
-            receiverPhone: '0591234567',
-            acknowledged: true,
-          ).firstIssue,
+          complete.copyWith(receiverName: 'S').firstIssue,
           ParcelFormIssue.receiverName,
         );
         expect(looksLikePhone('abc'), isFalse);
@@ -189,15 +172,37 @@ void main() {
       },
     );
 
-    test('builds the API payload and leaves the note out when empty', () {
+    test('builds the route body and leaves the note out when empty', () {
       final payload = complete.toPayload(
-        departureFrom: DateTime.utc(2026, 11, 1, 10),
-        departureUntil: DateTime.utc(2026, 11, 1, 11),
+        preferredTime: DateTime.utc(2026, 11, 1, 10),
       );
-      expect(payload['forbidden_items_acknowledged'], isTrue);
-      expect(payload['size'], 'S');
-      expect(payload.containsKey('note'), isFalse);
-      expect(payload['requested_departure_from'], '2026-11-01T10:00:00.000Z');
+      expect(payload, {
+        'service_route_id': 'route-heb-bth',
+        'pickup_details': 'The shop next to Ibn Rushd roundabout',
+        'dropoff_details': 'Receiver house near the Church of the Nativity',
+        'preferred_time': '2026-11-01T10:00:00.000Z',
+        'size': 'S',
+        'receiver_name': 'Sami',
+        'receiver_phone': '0591234567',
+        'forbidden_items_acknowledged': true,
+      });
+      expect(
+        complete
+            .copyWith(note: '  fragile ')
+            .toPayload(preferredTime: DateTime.utc(2026, 11, 1, 10))['note'],
+        'fragile',
+      );
+    });
+
+    test('restores a pending create from its body', () {
+      final payload = complete.toPayload(
+        preferredTime: DateTime.utc(2026, 11, 1, 10),
+      );
+      final restored = PassengerParcelDraft.fromPayload(payload);
+      expect(
+        restored.toPayload(preferredTime: DateTime.utc(2026, 11, 1, 10)),
+        payload,
+      );
     });
   });
 

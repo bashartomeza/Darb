@@ -100,49 +100,25 @@ class PassengerRepository {
   // CREATE REQUEST
   // --------------------------------------------------------------------------
 
-  /// Creates a passenger request using arbitrary locations selected
-  /// by the passenger.
-  ///
-  /// The backend already supports:
-  /// - pickup label
-  /// - pickup latitude
-  /// - pickup longitude
-  /// - destination label
-  /// - destination latitude
-  /// - destination longitude
-  ///
-  /// Therefore there is no longer any hardcoded PPU/Bab Al-Zawiya
-  /// pickup or Bethlehem destination here.
+  /// Creates a passenger request on a predefined route, with the exact
+  /// pickup and drop-off typed by the passenger. The booking screens go
+  /// through [createPayload] so a lost response can be replayed safely.
   Future<PassengerRequest> createRequest({
-    required PassengerLocation pickup,
-    required PassengerLocation destination,
+    required String serviceRouteId,
+    required String pickupDetails,
+    required String dropoffDetails,
     required DateTime preferredTime,
     required int passengerCount,
   }) async {
     final json = await apiClient.postJson(
       '/passenger/requests',
-      body: {
-        // --------------------------------------------------------------
-        // PICKUP
-        // --------------------------------------------------------------
-        'pickup_label': pickup.label,
-        'pickup_lat': pickup.latitude,
-        'pickup_lng': pickup.longitude,
-
-        // --------------------------------------------------------------
-        // DESTINATION
-        // --------------------------------------------------------------
-        'destination_label': destination.label,
-        'destination_lat': destination.latitude,
-        'destination_lng': destination.longitude,
-
-        // --------------------------------------------------------------
-        // TRIP DETAILS
-        // --------------------------------------------------------------
-        'preferred_time': preferredTime.toUtc().toIso8601String(),
-
-        'passenger_count': passengerCount,
-      },
+      body: passengerRouteRequestBody(
+        serviceRouteId: serviceRouteId,
+        pickupDetails: pickupDetails,
+        dropoffDetails: dropoffDetails,
+        preferredTime: preferredTime,
+        passengerCount: passengerCount,
+      ),
     );
 
     return PassengerRequest.fromJson(json['request'] as Map<String, dynamic>);

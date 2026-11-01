@@ -1869,6 +1869,96 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t start a new chat. Check your connection and try again.';
 
   @override
+  String get passengerRouteLabel => 'Route';
+
+  @override
+  String get passengerRouteHint => 'Choose your route';
+
+  @override
+  String get passengerRoutesLoading => 'Loading routes…';
+
+  @override
+  String get passengerRoutesLoadFailed =>
+      'Couldn\'t load the routes. Check your connection and try again.';
+
+  @override
+  String get passengerRoutesEmpty =>
+      'No routes are running right now. Please check again later.';
+
+  @override
+  String get passengerRouteRequired => 'Choose a route to continue.';
+
+  @override
+  String get passengerRouteUnavailable =>
+      'This route is no longer available. Choose another route.';
+
+  @override
+  String get passengerPickupDetailsLabel => 'Exact pickup point';
+
+  @override
+  String get passengerPickupDetailsHint =>
+      'e.g. In front of the main gate of Palestine Polytechnic University';
+
+  @override
+  String get passengerDropoffDetailsLabel => 'Exact drop-off point';
+
+  @override
+  String get passengerDropoffDetailsHint =>
+      'e.g. Bethlehem bus station, next to the pharmacy';
+
+  @override
+  String get passengerDetailsHelper =>
+      'Describe the place so the driver finds it easily.';
+
+  @override
+  String get passengerDetailsTooShort => 'Write at least 3 characters.';
+
+  @override
+  String get passengerPickupPoint => 'Pickup point';
+
+  @override
+  String get passengerDropoffPoint => 'Drop-off point';
+
+  @override
+  String get assistantRouteChoose =>
+      'Choose the route that matches your trip, then check the pickup and drop-off points.';
+
+  @override
+  String get passengerParcelRouteIntro =>
+      'Choose the route, describe where the driver collects the parcel and where it goes, then tell us who receives it.';
+
+  @override
+  String get passengerParcelPickupDetailsLabel =>
+      'Where the driver collects the parcel';
+
+  @override
+  String get passengerParcelPickupDetailsHint =>
+      'e.g. The shop next to Ibn Rushd roundabout, Hebron';
+
+  @override
+  String get passengerParcelDropoffDetailsLabel =>
+      'Where the parcel is delivered';
+
+  @override
+  String get passengerParcelDropoffDetailsHint =>
+      'e.g. The receiver\'s house, near the Church of the Nativity';
+
+  @override
+  String get passengerParcelPreferredTime => 'Preferred pickup time';
+
+  @override
+  String get welcomeRoutesTitle => 'Routes we serve';
+
+  @override
+  String welcomeRoutesMore(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get welcomeRoutesOffline =>
+      'The routes will appear once you\'re connected.';
+
+  @override
   String get assistantClarificationLabel =>
       'Darb assistant needs clarification';
 

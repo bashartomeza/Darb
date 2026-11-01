@@ -372,7 +372,11 @@ class _MapBodyState extends ConsumerState<_MapBody> {
           const SizedBox(height: 10),
 
           Text(
-            trip.routeLabel,
+            // The predefined route's name when the trip's request has one.
+            trip.routeName(
+                  arabic: Localizations.localeOf(context).languageCode == 'ar',
+                ) ??
+                trip.routeLabel,
             style: const TextStyle(
               color: _navy,
               fontSize: 21,

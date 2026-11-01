@@ -15,10 +15,12 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../application/passenger_assistant_controller.dart';
 import '../data/speech_service.dart';
+import '../domain/assistant_route_match.dart';
 import '../domain/passenger_assistant_models.dart';
 import '../../passenger/application/passenger_controller.dart';
-import '../../legacy_corridor/data/legacy_corridor_models.dart';
-import '../../legacy_corridor/data/legacy_corridor_repository.dart';
+import '../../operating_routes/data/operating_route_models.dart';
+import '../../operating_routes/data/operating_route_repository.dart';
+import '../../operating_routes/presentation/operating_route_inputs.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../passenger/domain/trip_offer.dart';
 import '../../passenger/presentation/widgets/trip_offer_card.dart';
@@ -657,46 +659,59 @@ class _TripReviewCard extends ConsumerStatefulWidget {
 
 class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
   late PassengerAssistantTripDraft _draft = widget.draft;
+  late final _pickupDetails = TextEditingController(
+    text: _initialPickup(widget.draft),
+  );
+  late final _dropoffDetails = TextEditingController(
+    text: _initialDropoff(widget.draft),
+  );
 
-  /// Sets each end the passenger kept but that has no coordinates yet from the
-  /// corridor stop with the same key, so the request carries server places.
-  PassengerAssistantTripDraft _withCorridorCoordinates(
-    PassengerAssistantTripDraft draft,
-    LegacyCorridor? corridor,
-  ) {
-    if (corridor == null) return draft;
-    var resolved = draft;
-    if (draft.pickupLat == null || draft.pickupLng == null) {
-      final place = corridor.passengerPickups
-          .where((value) => value.key == draft.pickupKey)
-          .firstOrNull;
-      if (place != null) {
-        resolved = resolved.copyWith(
-          pickupLat: place.lat,
-          pickupLng: place.lng,
-        );
-      }
-    }
-    if (draft.destinationLat == null || draft.destinationLng == null) {
-      final place = corridor.passengerDropoffs
-          .where((value) => value.key == draft.destinationKey)
-          .firstOrNull;
-      if (place != null) {
-        resolved = resolved.copyWith(
-          destinationLat: place.lat,
-          destinationLng: place.lng,
-        );
-      }
-    }
-    return resolved;
-  }
+  /// The route the passenger picked; until they do, the one the extracted
+  /// places point to (or the route a restored draft already carries).
+  String? _routeId;
+  bool _routeTouched = false;
+  bool _showErrors = false;
+
+  static String _initialPickup(PassengerAssistantTripDraft draft) =>
+      draft.pickupDetails ?? draft.pickupLabel;
+
+  static String _initialDropoff(PassengerAssistantTripDraft draft) =>
+      draft.dropoffDetails ?? draft.destinationLabel;
 
   @override
   void didUpdateWidget(covariant _TripReviewCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.draft != widget.draft && !widget.searching) {
+      final sameTrip =
+          oldWidget.draft.pickupKey == widget.draft.pickupKey &&
+          oldWidget.draft.destinationKey == widget.draft.destinationKey;
       _draft = widget.draft;
+      if (!sameTrip) {
+        // A new reply from the assistant: start over from its places.
+        _routeTouched = false;
+        _routeId = null;
+        _showErrors = false;
+        _pickupDetails.text = _initialPickup(widget.draft);
+        _dropoffDetails.text = _initialDropoff(widget.draft);
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _pickupDetails.dispose();
+    _dropoffDetails.dispose();
+    super.dispose();
+  }
+
+  String? _selectedRoute(List<OperatingRoute>? routes) {
+    if (_routeTouched) return _routeId;
+    if (routes == null) return null;
+    final saved = _draft.serviceRouteId;
+    if (saved != null && routes.any((route) => route.id == saved)) {
+      return saved;
+    }
+    return routeForAssistantDraft(routes, _draft)?.id;
   }
 
   @override
@@ -704,12 +719,11 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final timeValid = _draft.preferredTime.isAfter(DateTime.now());
-    final arabic = Localizations.localeOf(context).languageCode == 'ar';
-    // The other places offered are the corridor's own stops; until they load
-    // (or if they cannot), the assistant's matched stops remain choosable.
-    final corridor = ref.watch(legacyCorridorProvider).value;
-    final pickups = corridor?.passengerPickups ?? const <CorridorPlace>[];
-    final destinations = corridor?.passengerDropoffs ?? const <CorridorPlace>[];
+    final routeId = _selectedRoute(ref.watch(operatingRoutesProvider).value);
+    final complete =
+        routeId != null &&
+        routeDetailsValid(_pickupDetails.text) &&
+        routeDetailsValid(_dropoffDetails.text);
 
     return DarbCard(
       key: const ValueKey('assistantExtractedData'),
@@ -731,106 +745,53 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
           ),
           const SizedBox(height: AppTokens.spaceExtraSmall),
           Text(
-            l10n.assistantReviewBody,
+            routeId == null
+                ? l10n.assistantRouteChoose
+                : l10n.assistantReviewBody,
             style: theme.textTheme.bodySmall?.copyWith(
               color: AppTheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
-          DropdownButtonFormField<String>(
-            key: const ValueKey('assistantPickupField'),
-            initialValue: _draft.pickupKey,
-            decoration: InputDecoration(labelText: l10n.pickup),
-            items: [
-              for (final pickup in pickups)
-                DropdownMenuItem(
-                  value: pickup.key,
-                  child: Text(pickup.displayName(arabic: arabic)),
-                ),
-              // The stop the assistant matched, when it is not a corridor stop.
-              if (!pickups.any((value) => value.key == widget.draft.pickupKey))
-                DropdownMenuItem(
-                  value: widget.draft.pickupKey,
-                  child: Text(
-                    localizedCorridorPlace(context, widget.draft.pickupLabel),
-                  ),
-                ),
-            ],
-            onChanged: widget.searching
-                ? null
-                : (key) {
-                    final pickup = pickups
-                        .where((value) => value.key == key)
-                        .firstOrNull;
-                    setState(() {
-                      if (pickup != null) {
-                        _draft = _draft.copyWith(
-                          pickupKey: pickup.key,
-                          pickupLabel: pickup.label,
-                          pickupLat: pickup.lat,
-                          pickupLng: pickup.lng,
-                        );
-                      } else if (key == widget.draft.pickupKey) {
-                        _draft = _draft.copyWith(
-                          pickupKey: widget.draft.pickupKey,
-                          pickupLabel: widget.draft.pickupLabel,
-                          pickupLat: widget.draft.pickupLat,
-                          pickupLng: widget.draft.pickupLng,
-                        );
-                      }
-                    });
-                  },
+          OperatingRouteDropdown(
+            fieldKey: const ValueKey('assistantRouteField'),
+            value: routeId,
+            enabled: !widget.searching,
+            errorText: _showErrors && routeId == null
+                ? l10n.passengerRouteRequired
+                : null,
+            onChanged: (route) => setState(() {
+              _routeTouched = true;
+              _routeId = route.id;
+            }),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
-          DropdownButtonFormField<String>(
-            key: const ValueKey('assistantDestinationField'),
-            initialValue: _draft.destinationKey,
-            decoration: InputDecoration(labelText: l10n.destination),
-            items: [
-              for (final destination in destinations)
-                DropdownMenuItem(
-                  value: destination.key,
-                  child: Text(destination.displayName(arabic: arabic)),
-                ),
-              // The stop the assistant matched, when it is not a corridor stop.
-              if (!destinations.any(
-                (value) => value.key == widget.draft.destinationKey,
-              ))
-                DropdownMenuItem(
-                  value: widget.draft.destinationKey,
-                  child: Text(
-                    localizedCorridorPlace(
-                      context,
-                      widget.draft.destinationLabel,
-                    ),
-                  ),
-                ),
-            ],
-            onChanged: widget.searching
-                ? null
-                : (key) {
-                    if (key == null) return;
-                    final destination = destinations
-                        .where((value) => value.key == key)
-                        .firstOrNull;
-                    setState(() {
-                      _draft = destination != null
-                          ? _draft.copyWith(
-                              destinationKey: destination.key,
-                              destinationLabel: destination.label,
-                              destinationLat: destination.lat,
-                              destinationLng: destination.lng,
-                            )
-                          : _draft.copyWith(
-                              destinationKey: widget.draft.destinationKey,
-                              destinationLabel: widget.draft.destinationLabel,
-                              destinationLat: widget.draft.destinationLat,
-                              destinationLng: widget.draft.destinationLng,
-                            );
-                    });
-                  },
+          RouteDetailsField(
+            key: const ValueKey('assistantPickupDetailsField'),
+            controller: _pickupDetails,
+            enabled: !widget.searching,
+            icon: Icons.trip_origin_rounded,
+            label: l10n.passengerPickupDetailsLabel,
+            hint: l10n.passengerPickupDetailsHint,
+            errorText: _showErrors
+                ? routeDetailsError(l10n, _pickupDetails.text)
+                : null,
+            onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: AppTokens.spaceMedium),
+          const SizedBox(height: AppTokens.spaceSmall),
+          RouteDetailsField(
+            key: const ValueKey('assistantDropoffDetailsField'),
+            controller: _dropoffDetails,
+            enabled: !widget.searching,
+            icon: Icons.location_on_outlined,
+            label: l10n.passengerDropoffDetailsLabel,
+            hint: l10n.passengerDropoffDetailsHint,
+            errorText: _showErrors
+                ? routeDetailsError(l10n, _dropoffDetails.text)
+                : null,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: AppTokens.spaceSmall),
           OutlinedButton.icon(
             key: const ValueKey('assistantTimeField'),
             onPressed: widget.searching ? null : _pickTime,
@@ -882,9 +843,19 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
             icon: widget.searching ? null : Icons.search,
             busy: widget.searching,
             onPressed: !widget.searching && timeValid
-                ? () => widget.onConfirm(
-                    _withCorridorCoordinates(_draft, corridor),
-                  )
+                ? () {
+                    if (!complete) {
+                      setState(() => _showErrors = true);
+                      return;
+                    }
+                    widget.onConfirm(
+                      _draft.copyWith(
+                        serviceRouteId: routeId,
+                        pickupDetails: _pickupDetails.text.trim(),
+                        dropoffDetails: _dropoffDetails.text.trim(),
+                      ),
+                    );
+                  }
                 : null,
           ),
         ],

@@ -5,22 +5,23 @@ import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
-import '../../../core/geo/reverse_geocoder.dart';
+import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
-import '../../../core/maps/darb_route_map.dart';
-import '../../../core/widgets/darb_map.dart';
-import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../matching/data/matching_repository.dart';
+import '../../operating_routes/data/operating_route_repository.dart';
+import '../../operating_routes/presentation/operating_route_inputs.dart';
 import '../data/passenger_models.dart';
 import '../data/passenger_repository.dart';
 import '../application/legacy_passenger_request_mutation.dart';
 import '../application/passenger_controller.dart';
-import 'location_picker_screen.dart';
+import 'passenger_request_labels.dart';
 
+/// Books a ride: a predefined route, then the exact pickup and drop-off typed
+/// as free text, the departure time and the number of passengers.
 class CreateRequestScreen extends ConsumerStatefulWidget {
   const CreateRequestScreen({super.key});
 
@@ -31,8 +32,12 @@ class CreateRequestScreen extends ConsumerStatefulWidget {
 
 class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
     with WidgetsBindingObserver {
-  PassengerLocation? _pickup;
-  PassengerLocation? _destination;
+  final _pickupDetails = TextEditingController();
+  final _dropoffDetails = TextEditingController();
+  String? _routeId;
+
+  /// Field errors are shown once the passenger tried to submit.
+  bool _showErrors = false;
 
   DateTime _preferredTime = DateTime.now().add(const Duration(hours: 1));
 
@@ -58,6 +63,8 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   void dispose() {
     _retryTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    _pickupDetails.dispose();
+    _dropoffDetails.dispose();
     super.dispose();
   }
 
@@ -71,6 +78,27 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
     }
   }
 
+  /// Shows a booking whose outcome is unknown with its saved values, then
+  /// replays it with the same idempotency key.
+  void _showPending(Map<String, dynamic> payload) {
+    final routeId = payload['service_route_id'];
+    if (routeId is String) {
+      _routeId = routeId;
+      _pickupDetails.text = payload['pickup_details'] as String? ?? '';
+      _dropoffDetails.text = payload['dropoff_details'] as String? ?? '';
+    } else {
+      // Left pending by an older build that sent places with coordinates;
+      // it is replayed exactly as saved, so only its names are shown.
+      _routeId = null;
+      _pickupDetails.text = payload['pickup_label'] as String? ?? '';
+      _dropoffDetails.text = payload['destination_label'] as String? ?? '';
+    }
+    _preferredTime = DateTime.parse(
+      payload['preferred_time'] as String,
+    ).toLocal();
+    _count = (payload['passenger_count'] as num).toInt();
+  }
+
   Future<void> _restorePending() async {
     try {
       final pending = await ref
@@ -82,20 +110,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
           ..remove('route_version_id');
         setState(() {
           _pendingPayload = payload;
-          _pickup = PassengerLocation(
-            label: payload['pickup_label'] as String,
-            latitude: (payload['pickup_lat'] as num).toDouble(),
-            longitude: (payload['pickup_lng'] as num).toDouble(),
-          );
-          _destination = PassengerLocation(
-            label: payload['destination_label'] as String,
-            latitude: (payload['destination_lat'] as num).toDouble(),
-            longitude: (payload['destination_lng'] as num).toDouble(),
-          );
-          _preferredTime = DateTime.parse(
-            payload['preferred_time'] as String,
-          ).toLocal();
-          _count = payload['passenger_count'] as int;
+          _showPending(payload);
           _restoring = false;
           _recoveryBlocked = false;
           _error = AppLocalizations.of(context).bookingOutcomeUnknown;
@@ -112,8 +127,6 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
       setState(() {
         _restoring = false;
         _recoveryBlocked = true;
-        _pickup = null;
-        _destination = null;
         _pendingPayload = null;
         _error = AppLocalizations.of(context).canonicalRecoveryRequired;
       });
@@ -140,12 +153,9 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
     final material = MaterialLocalizations.of(context);
     final busy = _loading || _locked;
 
-    final canSubmit =
-        _pickup != null &&
-        _destination != null &&
-        !_loading &&
-        !_restoring &&
-        !_recoveryBlocked;
+    final canSubmit = !_loading && !_restoring && !_recoveryBlocked;
+    final legacyPending =
+        _pendingPayload != null && _pendingPayload!['service_route_id'] == null;
 
     return Scaffold(
       appBar: AppBar(
@@ -170,91 +180,71 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
             ),
             const SizedBox(height: AppTokens.spaceLarge),
 
-            // From / To card with a dotted connector between the two stops.
+            // The route, then the exact places on it as the passenger says
+            // them. There is no map picker: the route's cities place the
+            // request, the text tells the driver where exactly.
             DarbCard(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppTokens.spaceMedium,
-                vertical: AppTokens.spaceSmall,
-              ),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const _DottedConnector(),
-                    const SizedBox(width: AppTokens.gutterMobile),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _PlaceTile(
-                            title: l10n.pickup,
-                            value: _pickup?.label ?? l10n.selectPickupLocation,
-                            selected: _pickup != null,
-                            onTap: busy
-                                ? null
-                                : () => _chooseLocation(isPickup: true),
-                          ),
-                          const Divider(height: 1),
-                          _PlaceTile(
-                            title: l10n.destination,
-                            value:
-                                _destination?.label ?? l10n.selectDestination,
-                            selected: _destination != null,
-                            onTap: busy
-                                ? null
-                                : () => _chooseLocation(isPickup: false),
-                          ),
-                        ],
+              padding: const EdgeInsets.all(AppTokens.spaceMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (legacyPending)
+                    InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: l10n.passengerRouteLabel,
+                        prefixIcon: const Icon(Icons.route_rounded, size: 20),
                       ),
+                      child: Text(
+                        bidiRoute(
+                          context,
+                          localizedCorridorPlace(context, _pickupDetails.text),
+                          localizedCorridorPlace(context, _dropoffDetails.text),
+                        ),
+                      ),
+                    )
+                  else
+                    OperatingRouteDropdown(
+                      fieldKey: const ValueKey('passengerRouteField'),
+                      value: _routeId,
+                      enabled: !busy,
+                      errorText: _showErrors && _routeId == null
+                          ? l10n.passengerRouteRequired
+                          : null,
+                      onChanged: (route) => setState(() {
+                        _routeId = route.id;
+                        _error = null;
+                      }),
                     ),
-                  ],
-                ),
+                  const SizedBox(height: AppTokens.spaceMedium),
+                  RouteDetailsField(
+                    key: const ValueKey('pickupDetailsField'),
+                    controller: _pickupDetails,
+                    enabled: !busy,
+                    icon: Icons.trip_origin_rounded,
+                    label: l10n.passengerPickupDetailsLabel,
+                    hint: l10n.passengerPickupDetailsHint,
+                    helper: l10n.passengerDetailsHelper,
+                    errorText: _showErrors && !legacyPending
+                        ? routeDetailsError(l10n, _pickupDetails.text)
+                        : null,
+                    onChanged: (_) => setState(() => _error = null),
+                  ),
+                  const SizedBox(height: AppTokens.spaceSmall),
+                  RouteDetailsField(
+                    key: const ValueKey('dropoffDetailsField'),
+                    controller: _dropoffDetails,
+                    enabled: !busy,
+                    icon: Icons.location_on_outlined,
+                    label: l10n.passengerDropoffDetailsLabel,
+                    hint: l10n.passengerDropoffDetailsHint,
+                    errorText: _showErrors && !legacyPending
+                        ? routeDetailsError(l10n, _dropoffDetails.text)
+                        : null,
+                    onChanged: (_) => setState(() => _error = null),
+                  ),
+                ],
               ),
             ),
-
-            if (_pickup != null || _destination != null) ...[
-              const SizedBox(height: AppTokens.spaceMedium),
-              DarbCard(
-                padding: EdgeInsets.zero,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
-                  // Pickup -> destination preview along real roads (dashed and
-                  // labelled when no road route is available).
-                  child: DarbRouteMap(
-                    key: const ValueKey('createRequestMap'),
-                    height: 240,
-                    // A form preview of the two chosen places only; the full
-                    // checkpoint and report layers are on the trip maps.
-                    showOverlay: false,
-                    emptyLabel: l10n.mapSelectRoute,
-                    waypoints: [
-                      if (_pickup != null)
-                        GeoPoint(_pickup!.latitude, _pickup!.longitude),
-                      if (_destination != null)
-                        GeoPoint(
-                          _destination!.latitude,
-                          _destination!.longitude,
-                        ),
-                    ],
-                    originLabel: _pickup?.label,
-                    destinationLabel: _destination?.label,
-                    // Only the destination chosen so far: show it as the end.
-                    extraMarkers: [
-                      if (_pickup == null && _destination != null)
-                        DarbMapMarker(
-                          position: GeoPoint(
-                            _destination!.latitude,
-                            _destination!.longitude,
-                          ),
-                          icon: Icons.location_on_rounded,
-                          color: AppTheme.routeDestination,
-                          label: _destination!.label,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
 
             const SizedBox(height: AppTokens.spaceMedium),
 
@@ -310,6 +300,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
             const SizedBox(height: AppTokens.spaceLarge),
 
             FilledButton.icon(
+              key: const ValueKey('submitPassengerRequest'),
               onPressed: canSubmit ? _submit : null,
               icon: _loading
                   ? const SizedBox(
@@ -326,39 +317,6 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
         ),
       ),
     );
-  }
-
-  // ----------------------------------------------------------------------
-  // LOCATION PICKER
-  // ----------------------------------------------------------------------
-
-  Future<void> _chooseLocation({required bool isPickup}) async {
-    final l10n = AppLocalizations.of(context);
-    final current = isPickup ? _pickup : _destination;
-
-    final result = await Navigator.of(context).push<PassengerLocation>(
-      MaterialPageRoute(
-        builder: (_) => PassengerLocationPickerScreen(
-          title: isPickup
-              ? l10n.selectPickupLocationTitle
-              : l10n.selectDestinationTitle,
-          initialLocation: current,
-          reverseGeocoder: ref.read(reverseGeocoderProvider),
-        ),
-      ),
-    );
-
-    if (result == null || !mounted) return;
-
-    setState(() {
-      if (isPickup) {
-        _pickup = result;
-      } else {
-        _destination = result;
-      }
-
-      _error = null;
-    });
   }
 
   // ----------------------------------------------------------------------
@@ -406,18 +364,24 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   // SUBMIT
   // ----------------------------------------------------------------------
 
+  bool get _formComplete =>
+      _routeId != null &&
+      routeDetailsValid(_pickupDetails.text) &&
+      routeDetailsValid(_dropoffDetails.text);
+
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context);
     if (_loading || _restoring || _recoveryBlocked) return;
-    if (_pickup == null || _destination == null) {
+    if (_pendingPayload == null && !_formComplete) {
       setState(() {
-        _error = l10n.selectBothLocations;
+        _showErrors = true;
+        _error = null;
       });
       return;
     }
 
     if (_pendingPayload == null && !_preferredTime.isAfter(DateTime.now())) {
-      setState(() => _error = AppLocalizations.of(context).bookingTimePassed);
+      setState(() => _error = l10n.bookingTimePassed);
       return;
     }
 
@@ -433,16 +397,13 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
       final mutation = ref.read(legacyPassengerRequestMutationProvider);
       final payload =
           _pendingPayload ??
-          <String, dynamic>{
-            'pickup_label': _pickup!.label,
-            'pickup_lat': _pickup!.latitude,
-            'pickup_lng': _pickup!.longitude,
-            'destination_label': _destination!.label,
-            'destination_lat': _destination!.latitude,
-            'destination_lng': _destination!.longitude,
-            'preferred_time': _preferredTime.toUtc().toIso8601String(),
-            'passenger_count': _count,
-          };
+          passengerRouteRequestBody(
+            serviceRouteId: _routeId!,
+            pickupDetails: _pickupDetails.text,
+            dropoffDetails: _dropoffDetails.text,
+            preferredTime: _preferredTime,
+            passengerCount: _count,
+          );
       final receipt = await mutation.create(
         payload: payload,
         send: ref.read(passengerRepositoryProvider).createPayload,
@@ -507,6 +468,11 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
         invalidatePassengerLists(container.invalidate);
       }
     } catch (error) {
+      if (error is ApiException && error.message == 'route_unavailable') {
+        // Turned off or retired since the list was read: offer the fresh list.
+        ref.invalidate(operatingRoutesProvider);
+        if (mounted) setState(() => _routeId = null);
+      }
       try {
         final pending = await ref
             .read(legacyPassengerRequestMutationProvider)
@@ -529,8 +495,6 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
         if (mounted) {
           setState(() {
             _recoveryBlocked = true;
-            _pickup = null;
-            _destination = null;
             _pendingPayload = null;
             _error = AppLocalizations.of(context).canonicalRecoveryRequired;
           });
@@ -545,14 +509,13 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
       }
     }
   }
-
-  // ----------------------------------------------------------------------
-  // HELPERS
-  // ----------------------------------------------------------------------
 }
 
 String _matchingCreateErrorLabel(AppLocalizations l10n, Object error) {
   if (error is! ApiException) return l10n.requestFailed;
+  if (error.message == 'route_unavailable') {
+    return l10n.passengerRouteUnavailable;
+  }
   if (error.message == 'selected_driver_route_unavailable') {
     return l10n.selectedDriverUnavailable;
   }
@@ -573,10 +536,9 @@ String _matchingCreateErrorLabel(AppLocalizations l10n, Object error) {
 
 /// White circular badge holding a leading icon, as in the Darb references.
 class _Badge extends StatelessWidget {
-  const _Badge({required this.icon, this.color});
+  const _Badge({required this.icon});
 
   final IconData icon;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -587,110 +549,7 @@ class _Badge extends StatelessWidget {
         shape: BoxShape.circle,
         color: AppTheme.surfaceContainerLowest,
       ),
-      child: Icon(icon, color: color ?? AppTheme.onSurface, size: 22),
-    );
-  }
-}
-
-/// Origin badge, a dotted vertical line, then the destination badge.
-class _DottedConnector extends StatelessWidget {
-  const _DottedConnector();
-
-  @override
-  Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: SizedBox(
-        width: 44,
-        child: Column(
-          children: [
-            const SizedBox(height: AppTokens.spaceSmall),
-            const _Badge(
-              icon: Icons.circle_outlined,
-              color: AppTheme.routeOrigin,
-            ),
-            Expanded(
-              child: Center(
-                child: SizedBox(
-                  width: 2,
-                  child: CustomPaint(painter: _DotsPainter()),
-                ),
-              ),
-            ),
-            const _Badge(
-              icon: Icons.location_on_outlined,
-              color: AppTheme.routeDestination,
-            ),
-            const SizedBox(height: AppTokens.spaceSmall),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A tappable From/To row: grey label, orange prompt (or the chosen place).
-class _PlaceTile extends StatelessWidget {
-  const _PlaceTile({
-    required this.title,
-    required this.value,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String title;
-  final String value;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 72),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppTokens.spaceSmall),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: AppTheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: AppTokens.spaceExtraSmall),
-                    Text(
-                      value,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: selected
-                            ? AppTheme.onSurface
-                            : AppTheme.primaryText,
-                        fontWeight: selected ? FontWeight.w600 : null,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Directionality.of(context) == TextDirection.rtl
-                    ? Icons.chevron_left_rounded
-                    : Icons.chevron_right_rounded,
-                color: AppTheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: Icon(icon, color: AppTheme.onSurface, size: 22),
     );
   }
 }
@@ -809,23 +668,4 @@ class _Stepper extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Paints the dotted vertical line between the origin and destination badges.
-class _DotsPainter extends CustomPainter {
-  const _DotsPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppTheme.hint
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-    for (var y = 4.0; y < size.height - 2; y += 8) {
-      canvas.drawLine(Offset(1, y), Offset(1, y + 2), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

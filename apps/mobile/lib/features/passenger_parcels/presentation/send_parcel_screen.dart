@@ -6,12 +6,14 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/darb_back_button.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/data/token_storage.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../canonical_routes/data/canonical_operation_storage.dart';
-import '../../canonical_routes/data/canonical_route_repository.dart';
-import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
+import '../../operating_routes/data/operating_route_repository.dart';
+import '../../operating_routes/presentation/operating_route_inputs.dart';
 import '../application/passenger_parcel_controller.dart';
 import '../data/passenger_parcel_draft.dart';
 import '../data/passenger_parcel_models.dart';
@@ -20,11 +22,26 @@ import 'passenger_parcel_labels.dart';
 
 const _operation = 'passenger_parcel_create';
 
-/// Lets a signed-in passenger send a small parcel along an approved route.
+/// Only for the storage format of the pending create; never sent.
+const _storageSentinel = 'passenger_parcel_route';
+
+/// The durable create of a passenger parcel, kept apart from other pending
+/// operations so a lost response is replayed with the same key and body.
+final passengerParcelMutationRunnerProvider = Provider<CanonicalMutationRunner>(
+  (ref) => CanonicalMutationRunner(
+    storage: CanonicalOperationStorage(
+      ref.watch(secureStorageProvider),
+      storageKey: 'darb_passenger_parcel_create_v2',
+    ),
+  ),
+);
+
+/// Lets a signed-in passenger send a small parcel along one of the predefined
+/// routes: the route, where the driver collects it and where it goes (typed
+/// as text), a preferred time, the size and the receiver.
 ///
-/// Route, stop and time selection reuse the canonical catalogue the ride
-/// request uses; creation uses the same durable idempotent mutation runner so
-/// a lost response can never create a second parcel.
+/// Creation uses the durable idempotent mutation runner, so a lost response
+/// can never create a second parcel.
 class SendParcelScreen extends ConsumerStatefulWidget {
   const SendParcelScreen({super.key});
 
@@ -33,13 +50,15 @@ class SendParcelScreen extends ConsumerStatefulWidget {
 }
 
 class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
+  final _pickup = TextEditingController();
+  final _dropoff = TextEditingController();
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _note = TextEditingController();
   PassengerParcelDraft _draft = const PassengerParcelDraft();
-  DateTime _from = DateTime.now().add(const Duration(hours: 2));
-  DateTime _until = DateTime.now().add(const Duration(hours: 3));
+  DateTime _preferredTime = DateTime.now().add(const Duration(hours: 2));
   bool _busy = false;
+  bool _showErrors = false;
   Object? _error;
   CanonicalOperationBundle? _completedOperation;
   PassengerParcel? _result;
@@ -52,6 +71,8 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
 
   @override
   void dispose() {
+    _pickup.dispose();
+    _dropoff.dispose();
     _name.dispose();
     _phone.dispose();
     _note.dispose();
@@ -65,7 +86,10 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
     if (actorId == null) return;
     CanonicalOperationBundle? bundle;
     try {
-      bundle = await ref.read(canonicalOperationStorageProvider).read();
+      bundle = await ref
+          .read(passengerParcelMutationRunnerProvider)
+          .storage
+          .read();
     } catch (error) {
       if (mounted) setState(() => _error = error);
       return;
@@ -77,84 +101,45 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
       return;
     }
     final payload = bundle!.payload;
-    _name.text = payload['receiver_name'] as String? ?? '';
-    _phone.text = payload['receiver_phone'] as String? ?? '';
-    _note.text = payload['note'] as String? ?? '';
+    final draft = PassengerParcelDraft.fromPayload(payload);
+    _pickup.text = draft.pickupDetails;
+    _dropoff.text = draft.dropoffDetails;
+    _name.text = draft.receiverName;
+    _phone.text = draft.receiverPhone;
+    _note.text = draft.note;
     setState(() {
-      _draft = PassengerParcelDraft(
-        routeVersionId: payload['route_version_id'] as String?,
-        pickupStopId: payload['pickup_stop_id'] as String?,
-        dropoffStopId: payload['dropoff_stop_id'] as String?,
-        size: payload['size'] as String? ?? 'S',
-        receiverName: _name.text,
-        receiverPhone: _phone.text,
-        note: _note.text,
-        acknowledged: payload['forbidden_items_acknowledged'] == true,
-      );
-      _from =
+      _draft = draft;
+      _preferredTime =
           DateTime.tryParse(
-            payload['requested_departure_from'] as String? ?? '',
+            payload['preferred_time'] as String? ?? '',
           )?.toLocal() ??
-          _from;
-      _until =
-          DateTime.tryParse(
-            payload['requested_departure_until'] as String? ?? '',
-          )?.toLocal() ??
-          _until;
+          _preferredTime;
     });
   }
 
   void _update(PassengerParcelDraft Function(PassengerParcelDraft) change) =>
       setState(() => _draft = change(_draft));
 
-  PassengerParcelDraft _copy({
-    String? routeVersionId,
-    String? pickupStopId,
-    String? dropoffStopId,
-    bool clearPickup = false,
-    bool clearDropoff = false,
-    String? size,
-    bool? acknowledged,
-  }) => PassengerParcelDraft(
-    routeVersionId: routeVersionId ?? _draft.routeVersionId,
-    pickupStopId: clearPickup ? null : pickupStopId ?? _draft.pickupStopId,
-    dropoffStopId: clearDropoff ? null : dropoffStopId ?? _draft.dropoffStopId,
-    size: size ?? _draft.size,
-    receiverName: _name.text,
-    receiverPhone: _phone.text,
-    note: _note.text,
-    acknowledged: acknowledged ?? _draft.acknowledged,
+  void _textChanged() => _update(
+    (draft) => draft.copyWith(
+      pickupDetails: _pickup.text,
+      dropoffDetails: _dropoff.text,
+      receiverName: _name.text,
+      receiverPhone: _phone.text,
+      note: _note.text,
+    ),
   );
-
-  void _textChanged() => _update((_) => _copy());
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (_result != null) return _buildDone(l10n);
-    return CanonicalFeatureGate(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.sendParcelTitle),
-          leading: const DarbBackButton(fallback: '/passenger'),
-        ),
-        body: SafeArea(
-          child: ref
-              .watch(canonicalRouteCatalogProvider)
-              .when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, _) => Center(
-                  child: FilledButton(
-                    onPressed: () => ref
-                        .read(canonicalRouteCatalogProvider.notifier)
-                        .refresh(),
-                    child: Text(l10n.refreshRoutes),
-                  ),
-                ),
-                data: (routes) => _buildForm(l10n, routes),
-              ),
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.sendParcelTitle),
+        leading: const DarbBackButton(fallback: '/passenger'),
       ),
+      body: SafeArea(child: _buildForm(l10n)),
     );
   }
 
@@ -184,94 +169,72 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
     );
   }
 
-  Widget _buildForm(AppLocalizations l10n, List<CanonicalRoute> routes) {
-    final route = routes
-        .where((value) => value.versionId == _draft.routeVersionId)
-        .firstOrNull;
-    final pickupStops = route == null
-        ? const <CanonicalStop>[]
-        : parcelPickupStops(route);
-    final pickup = route?.stops
-        .where((stop) => stop.id == _draft.pickupStopId)
-        .firstOrNull;
-    final dropoffStops = route == null || pickup == null
-        ? const <CanonicalStop>[]
-        : downstreamParcelStops(route, pickup);
+  Widget _buildForm(AppLocalizations l10n) {
     final theme = Theme.of(context);
     final issue = _draft.firstIssue;
+    String? fieldError(ParcelFormIssue field, String? message) =>
+        _showErrors && issue == field ? message : null;
     return ListView(
       padding: const EdgeInsets.all(AppTokens.spaceLarge),
       children: [
-        Text(l10n.sendParcelIntro),
+        Text(l10n.passengerParcelRouteIntro),
         const SizedBox(height: AppTokens.spaceMedium),
-        for (final value in routes)
-          RouteCard(
-            route: value,
-            selected: value.versionId == route?.versionId,
-            onTap: _busy
-                ? null
-                : () => _update(
-                    (_) => PassengerParcelDraft(
-                      routeVersionId: value.versionId,
-                      size: _draft.size,
-                      receiverName: _name.text,
-                      receiverPhone: _phone.text,
-                      note: _note.text,
-                      acknowledged: _draft.acknowledged,
-                    ),
-                  ),
+        DarbCard(
+          padding: const EdgeInsets.all(AppTokens.spaceMedium),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              OperatingRouteDropdown(
+                fieldKey: const ValueKey('parcelRouteField'),
+                value: _draft.serviceRouteId,
+                enabled: !_busy,
+                errorText: _showErrors && _draft.serviceRouteId == null
+                    ? l10n.passengerRouteRequired
+                    : null,
+                onChanged: (route) => _update(
+                  (draft) => draft.copyWith(serviceRouteId: route.id),
+                ),
+              ),
+              const SizedBox(height: AppTokens.spaceMedium),
+              RouteDetailsField(
+                key: const ValueKey('parcelPickupDetails'),
+                controller: _pickup,
+                enabled: !_busy,
+                icon: Icons.trip_origin_rounded,
+                label: l10n.passengerParcelPickupDetailsLabel,
+                hint: l10n.passengerParcelPickupDetailsHint,
+                errorText: _showErrors
+                    ? routeDetailsError(l10n, _pickup.text)
+                    : null,
+                onChanged: (_) => _textChanged(),
+              ),
+              const SizedBox(height: AppTokens.spaceSmall),
+              RouteDetailsField(
+                key: const ValueKey('parcelDropoffDetails'),
+                controller: _dropoff,
+                enabled: !_busy,
+                icon: Icons.location_on_outlined,
+                label: l10n.passengerParcelDropoffDetailsLabel,
+                hint: l10n.passengerParcelDropoffDetailsHint,
+                errorText: _showErrors
+                    ? routeDetailsError(l10n, _dropoff.text)
+                    : null,
+                onChanged: (_) => _textChanged(),
+              ),
+              ListTile(
+                key: const ValueKey('parcelPreferredTime'),
+                contentPadding: EdgeInsets.zero,
+                minTileHeight: 56,
+                leading: const Icon(Icons.schedule_rounded),
+                title: Text(l10n.passengerParcelPreferredTime),
+                subtitle: Text(dateTimeLabel(context, _preferredTime)),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: _busy ? null : _chooseTime,
+              ),
+            ],
           ),
-        if (route != null) ...[
-          OrderedStopTimeline(
-            stops: route.stops,
-            selectedIds: {
-              _draft.pickupStopId,
-              _draft.dropoffStopId,
-            }.whereType<String>().toSet(),
-          ),
-          _StopDropdown(
-            fieldKey: const ValueKey('parcelPickupStop'),
-            label: l10n.pickupStop,
-            stops: pickupStops,
-            value: _draft.pickupStopId,
-            onChanged: _busy
-                ? null
-                : (value) => _update(
-                    (_) => _copy(pickupStopId: value, clearDropoff: true),
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
-            child: Text(
-              l10n.sendParcelPickupHint,
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-          _StopDropdown(
-            fieldKey: const ValueKey('parcelDropoffStop'),
-            label: l10n.dropoffStop,
-            stops: dropoffStops,
-            value: _draft.dropoffStopId,
-            onChanged: _busy
-                ? null
-                : (value) => _update((_) => _copy(dropoffStopId: value)),
-          ),
-          ListTile(
-            minTileHeight: 56,
-            title: Text(l10n.departureFrom),
-            subtitle: Text(dateTimeLabel(context, _from)),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: _busy ? null : () => _choose(from: true),
-          ),
-          ListTile(
-            minTileHeight: 56,
-            title: Text(l10n.departureUntil),
-            subtitle: Text(dateTimeLabel(context, _until)),
-            trailing: const Icon(Icons.calendar_today),
-            onTap: _busy ? null : () => _choose(from: false),
-          ),
-        ],
-        const SizedBox(height: AppTokens.spaceSmall),
+        ),
+        const SizedBox(height: AppTokens.spaceMedium),
         Text(l10n.parcelSize, style: theme.textTheme.titleSmall),
         const SizedBox(height: AppTokens.spaceSmall),
         SegmentedButton<String>(
@@ -283,7 +246,8 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
           selected: {_draft.size},
           onSelectionChanged: _busy
               ? null
-              : (value) => _update((_) => _copy(size: value.first)),
+              : (value) =>
+                    _update((draft) => draft.copyWith(size: value.first)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppTokens.spaceSmall),
@@ -302,7 +266,13 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
           enabled: !_busy,
           maxLength: PassengerParcelLimits.receiverNameMaxLength,
           textInputAction: TextInputAction.next,
-          decoration: InputDecoration(labelText: l10n.receiverNameLabel),
+          decoration: InputDecoration(
+            labelText: l10n.receiverNameLabel,
+            errorText: fieldError(
+              ParcelFormIssue.receiverName,
+              l10n.receiverNameInvalid,
+            ),
+          ),
           onChanged: (_) => _textChanged(),
         ),
         TextField(
@@ -311,7 +281,13 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
           enabled: !_busy,
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
-          decoration: InputDecoration(labelText: l10n.receiverPhoneLabel),
+          decoration: InputDecoration(
+            labelText: l10n.receiverPhoneLabel,
+            errorText: fieldError(
+              ParcelFormIssue.receiverPhone,
+              l10n.invalidReceiverPhone,
+            ),
+          ),
           onChanged: (_) => _textChanged(),
         ),
         Padding(
@@ -337,14 +313,31 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
           value: _draft.acknowledged,
           onChanged: _busy
               ? null
-              : (value) => _update((_) => _copy(acknowledged: value ?? false)),
+              : (value) => _update(
+                  (draft) => draft.copyWith(acknowledged: value ?? false),
+                ),
           title: Text(l10n.forbiddenItemsAck),
+          subtitle:
+              fieldError(
+                    ParcelFormIssue.acknowledgement,
+                    l10n.parcelAckRequired,
+                  ) ==
+                  null
+              ? null
+              : Text(
+                  l10n.parcelAckRequired,
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
         ),
         if (_error != null) Text(_errorLabel(l10n, _error!)),
         const SizedBox(height: AppTokens.spaceLarge),
         FilledButton(
           key: const ValueKey('submitPassengerParcel'),
-          onPressed: issue != null || _busy ? null : _submit,
+          onPressed: _busy
+              ? null
+              : issue != null
+              ? () => setState(() => _showErrors = true)
+              : _submit,
           child: _busy
               ? const SizedBox.square(
                   dimension: 24,
@@ -356,17 +349,9 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
     );
   }
 
-  Future<void> _choose({required bool from}) async {
-    final value = await pickFutureDateTime(context, from ? _from : _until);
-    if (value != null) {
-      setState(() {
-        if (from) {
-          _from = value;
-        } else {
-          _until = value;
-        }
-      });
-    }
+  Future<void> _chooseTime() async {
+    final value = await pickFutureDateTime(context, _preferredTime);
+    if (value != null) setState(() => _preferredTime = value);
   }
 
   Future<void> _submit() async {
@@ -375,10 +360,10 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
       _busy = true;
       _error = null;
     });
-    final payload = _draft.toPayload(
-      departureFrom: _from,
-      departureUntil: _until,
-    );
+    final payload = {
+      ..._draft.toPayload(preferredTime: _preferredTime),
+      'route_version_id': _storageSentinel,
+    };
     try {
       final actorId = ref.read(authControllerProvider).value?.user?.id;
       if (actorId == null) {
@@ -389,7 +374,7 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
         );
       }
       final result = await ref
-          .read(canonicalMutationRunnerProvider)
+          .read(passengerParcelMutationRunnerProvider)
           .run<PassengerParcel>(
             operation: _operation,
             scope: 'passenger',
@@ -398,29 +383,44 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
             actorId: actorId,
             payload: payload,
             preflight: () async {
-              if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
+              if (!_preferredTime.isAfter(DateTime.now())) {
                 throw const ApiException(
                   ApiErrorType.validation,
                   'invalid_departure_window',
                   statusCode: 400,
                 );
               }
-              await ref
-                  .read(canonicalRouteRepositoryProvider)
-                  .requireFreshRoute(_draft.routeVersionId!);
             },
             send: (bundle) => ref
                 .read(passengerParcelRepositoryProvider)
                 .create(
-                  payload: bundle.payload,
+                  payload: Map<String, dynamic>.from(bundle.payload)
+                    ..remove('route_version_id'),
                   idempotencyKey: bundle.idempotencyKey,
                 ),
           );
       if (mounted) setState(() => _result = result);
     } catch (error) {
-      if (error is ApiException && error.statusCode == 404) {
-        ref.invalidate(mobileCapabilitiesProvider);
-        ref.invalidate(canonicalRouteCatalogProvider);
+      if (error is ApiException && error.message == 'route_unavailable') {
+        // Turned off since the list was read: nothing was created, so a
+        // replayed create is settled too. Offer the fresh list.
+        final attempted = _completedOperation;
+        if (attempted != null) {
+          try {
+            await ref
+                .read(passengerParcelMutationRunnerProvider)
+                .acknowledge(
+                  actorId: attempted.actorId,
+                  operation: _operation,
+                  idempotencyKey: attempted.idempotencyKey,
+                );
+          } catch (_) {
+            // Another create was saved meanwhile; it stays to be verified.
+          }
+          _completedOperation = null;
+        }
+        ref.invalidate(operatingRoutesProvider);
+        if (mounted) setState(() => _draft = _draft.withoutRoute());
       }
       if (mounted) setState(() => _error = error);
     } finally {
@@ -436,7 +436,7 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
     }
     try {
       await ref
-          .read(canonicalMutationRunnerProvider)
+          .read(passengerParcelMutationRunnerProvider)
           .acknowledge(
             actorId: actorId,
             operation: _operation,
@@ -455,6 +455,9 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
       return l10n.canonicalRecoveryRequired;
     }
     if (error is ApiException) {
+      if (error.message == 'route_unavailable') {
+        return l10n.passengerRouteUnavailable;
+      }
       if (error.message == 'transaction_retry_required') {
         return l10n.transactionRetryRequired;
       }
@@ -467,41 +470,5 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
       return parcelErrorLabel(l10n, error.message, error.statusCode);
     }
     return l10n.requestFailed;
-  }
-}
-
-class _StopDropdown extends StatelessWidget {
-  const _StopDropdown({
-    required this.fieldKey,
-    required this.label,
-    required this.stops,
-    required this.value,
-    required this.onChanged,
-  });
-  final Key fieldKey;
-  final String label;
-  final List<CanonicalStop> stops;
-  final String? value;
-  final ValueChanged<String?>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final arabic = Localizations.localeOf(context).languageCode == 'ar';
-    return DropdownButtonFormField<String>(
-      key: fieldKey,
-      initialValue: stops.any((stop) => stop.id == value) ? value : null,
-      decoration: InputDecoration(labelText: label),
-      items: [
-        for (final stop in stops)
-          DropdownMenuItem(
-            value: stop.id,
-            child: Text(
-              arabic ? stop.nameAr : stop.nameEn,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-      ],
-      onChanged: onChanged,
-    );
   }
 }

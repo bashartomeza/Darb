@@ -9,13 +9,13 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/status_chip.dart';
-import '../../../core/presentation/localized_labels.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import '../../security/presentation/security_actions.dart';
 import '../../matching/data/matching_repository.dart';
 import '../application/passenger_controller.dart';
 import '../data/passenger_repository.dart';
 import '../data/passenger_models.dart';
+import 'passenger_request_labels.dart';
 
 String _readableTime(BuildContext context, DateTime value) {
   final local = value.toLocal();
@@ -149,23 +149,34 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
+                      // The route, then the exact places the passenger typed;
+                      // older requests show their saved place names instead.
                       DetailRow(
-                        label: l10n.pickup,
-                        value: localizedCorridorPlace(
-                          context,
-                          request.pickupLabel,
-                        ),
+                        key: const ValueKey('requestRouteName'),
+                        label: l10n.passengerRouteLabel,
+                        value: request.routeTitle(context),
                       ),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         child: Divider(height: 1),
                       ),
                       DetailRow(
-                        label: l10n.destination,
-                        value: localizedCorridorPlace(
-                          context,
-                          request.destinationLabel,
-                        ),
+                        key: const ValueKey('requestPickupDetails'),
+                        label: request.pickupDetails == null
+                            ? l10n.pickup
+                            : l10n.passengerPickupPoint,
+                        value: request.pickupText(context),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Divider(height: 1),
+                      ),
+                      DetailRow(
+                        key: const ValueKey('requestDropoffDetails'),
+                        label: request.dropoffDetails == null
+                            ? l10n.destination
+                            : l10n.passengerDropoffPoint,
+                        value: request.dropoffText(context),
                       ),
                       const SizedBox(height: 20),
                       DetailRow(

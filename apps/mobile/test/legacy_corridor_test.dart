@@ -1,14 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:darb_mobile/core/theme/app_theme.dart';
-import 'package:darb_mobile/features/assistant/application/passenger_assistant_controller.dart';
-import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
-import 'package:darb_mobile/features/assistant/presentation/passenger_assistant_screen.dart';
 import 'package:darb_mobile/features/legacy_corridor/data/legacy_corridor_models.dart';
 import 'package:darb_mobile/features/legacy_corridor/data/legacy_corridor_repository.dart';
-import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
 import 'support/legacy_corridor_fixture.dart';
@@ -93,86 +86,4 @@ void main() {
       await expectLater(repository.fetch(), throwsFormatException);
     });
   });
-
-  group('assistant review card', () {
-    testWidgets('offers the corridor stops and books the chosen one', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1000, 2400);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final controller = _CapturingAssistantController(
-        PassengerAssistantState(
-          phase: PassengerAssistantPhase.requestReview,
-          messages: const [
-            PassengerAssistantMessage.passenger('من باب الزاوية إلى بيت لحم'),
-          ],
-          draft: PassengerAssistantTripDraft(
-            pickupKey: testPickup.key,
-            pickupLabel: testPickup.label,
-            pickupLat: testPickup.lat,
-            pickupLng: testPickup.lng,
-            destinationKey: testDropoff.key,
-            destinationLabel: testDropoff.label,
-            destinationLat: testDropoff.lat,
-            destinationLng: testDropoff.lng,
-            preferredTime: DateTime.now().add(const Duration(days: 1)),
-            passengerCount: 1,
-          ),
-        ),
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            passengerAssistantControllerProvider.overrideWith(() => controller),
-            legacyCorridorProvider.overrideWith((ref) async => testCorridor()),
-          ],
-          child: MaterialApp(
-            locale: const Locale('ar'),
-            supportedLocales: AppLocalizations.supportedLocales,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            theme: AppTheme.light,
-            home: const PassengerAssistantScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const ValueKey('assistantPickupField')));
-      await tester.pumpAndSettle();
-      // Both passenger pickup stops of the corridor, named by the server.
-      expect(find.text('بوابة جامعة بوليتكنك فلسطين'), findsOneWidget);
-      await tester.tap(find.text('بوابة جامعة بوليتكنك فلسطين'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('assistantConfirmSearch')),
-      );
-      await tester.tap(find.byKey(const ValueKey('assistantConfirmSearch')));
-      await tester.pumpAndSettle();
-
-      final searched = controller.searched!;
-      expect(searched.pickupKey, 'demo-ppu-main-gate');
-      expect(searched.pickupLabel, 'PPU Main Gate');
-      expect(searched.pickupLat, 31.55);
-      expect(searched.pickupLng, 35.1);
-      expect(searched.destinationKey, testDropoff.key);
-      expect(searched.destinationLat, testDropoff.lat);
-    });
-  });
-}
-
-class _CapturingAssistantController extends PassengerAssistantController {
-  _CapturingAssistantController(this.value);
-
-  final PassengerAssistantState value;
-  PassengerAssistantTripDraft? searched;
-
-  @override
-  Future<PassengerAssistantState> build() async => value;
-
-  @override
-  Future<void> confirmAndSearch(PassengerAssistantTripDraft draft) async {
-    searched = draft;
-  }
 }
