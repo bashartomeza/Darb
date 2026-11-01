@@ -1006,6 +1006,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Routes are temporarily unavailable. Refresh before submitting.';
 
   @override
+  String get corridorPlacesLoadFailed =>
+      'Couldn\'t load the route\'s places. Check your connection and retry.';
+
+  @override
+  String get corridorPlacesUnavailable =>
+      'No places are open on this route right now.';
+
+  @override
   String get noPublishedRoutes => 'No eligible published routes are available.';
 
   @override

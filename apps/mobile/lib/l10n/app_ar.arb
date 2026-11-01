@@ -325,6 +325,8 @@
   "canonicalRoutesBody": "اختر من المسارات الحالية والمحطات المعتمدة.",
   "featureUnavailable": "هذه الخدمة غير متاحة في هذه البيئة.",
   "routeCatalogUnavailable": "المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.",
+  "corridorPlacesLoadFailed": "تعذّر تحميل أماكن المسار. تحقّق من الاتصال وأعد المحاولة.",
+  "corridorPlacesUnavailable": "لا توجد أماكن متاحة على هذا المسار حالياً.",
   "noPublishedRoutes": "لا توجد مسارات منشورة ومؤهلة حالياً.",
   "selectRoute": "اختر المسار",
   "routeDirection": "الاتجاه",

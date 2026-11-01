@@ -4,7 +4,6 @@ import '../../../core/api/api_error.dart';
 
 import '../../auth/data/authenticated_api_client.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../passenger/data/passenger_models.dart';
 import '../../passenger/application/legacy_passenger_request_mutation.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../domain/passenger_assistant_models.dart';
@@ -258,11 +257,17 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
     return mutation!.create(
       payload: body,
       recoveryContext: {
+        // The places keep their own coordinates, so a restored draft is still
+        // bookable without the app knowing any place itself.
         'draft': {
           'pickup_key': draft.pickupKey,
           'pickup_label': draft.pickupLabel,
+          'pickup_lat': draft.pickupLat,
+          'pickup_lng': draft.pickupLng,
           'destination_key': draft.destinationKey,
           'destination_label': draft.destinationLabel,
+          'destination_lat': draft.destinationLat,
+          'destination_lng': draft.destinationLng,
           'preferred_time': draft.preferredTime.toUtc().toIso8601String(),
           'passenger_count': draft.passengerCount,
         },
@@ -304,15 +309,13 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
     );
   }
 
-  /// A draft is bookable when each end is either a matched stop (carries its
-  /// own coordinates) or one of the legacy preset places.
+  /// A draft is bookable when each end is a server place carrying its own
+  /// coordinates: the stop the assistant matched, or a corridor stop the
+  /// passenger picked instead.
   void _validateDraft(PassengerAssistantTripDraft draft) {
-    final pickupKnown =
-        (draft.pickupLat != null && draft.pickupLng != null) ||
-        lockedPickupPresets.any((value) => value.key == draft.pickupKey);
+    final pickupKnown = draft.pickupLat != null && draft.pickupLng != null;
     final destinationKnown =
-        (draft.destinationLat != null && draft.destinationLng != null) ||
-        draft.destinationKey == 'bethlehem';
+        draft.destinationLat != null && draft.destinationLng != null;
     if (!pickupKnown || !destinationKnown) {
       throw const FormatException('Unsupported extracted trip data');
     }
@@ -322,26 +325,13 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
   }
 
   Map<String, dynamic> _requestBody(PassengerAssistantTripDraft draft) {
-    final preset = lockedPickupPresets
-        .where((value) => value.key == draft.pickupKey)
-        .firstOrNull;
-    final hasPickupCoordinates =
-        draft.pickupLat != null && draft.pickupLng != null;
-    final hasDestinationCoordinates =
-        draft.destinationLat != null && draft.destinationLng != null;
     return {
-      'pickup_label': hasPickupCoordinates ? draft.pickupLabel : preset!.label,
-      'pickup_lat': hasPickupCoordinates ? draft.pickupLat : preset!.lat,
-      'pickup_lng': hasPickupCoordinates ? draft.pickupLng : preset!.lng,
-      'destination_label': hasDestinationCoordinates
-          ? draft.destinationLabel
-          : lockedDestinationLabel,
-      'destination_lat': hasDestinationCoordinates
-          ? draft.destinationLat
-          : lockedDestinationLat,
-      'destination_lng': hasDestinationCoordinates
-          ? draft.destinationLng
-          : lockedDestinationLng,
+      'pickup_label': draft.pickupLabel,
+      'pickup_lat': draft.pickupLat,
+      'pickup_lng': draft.pickupLng,
+      'destination_label': draft.destinationLabel,
+      'destination_lat': draft.destinationLat,
+      'destination_lng': draft.destinationLng,
       'preferred_time': draft.preferredTime.toUtc().toIso8601String(),
       'passenger_count': draft.passengerCount,
     };

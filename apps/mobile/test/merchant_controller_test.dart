@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:darb_mobile/features/matching/data/matching_models.dart';
+import 'package:darb_mobile/features/legacy_corridor/data/legacy_corridor_models.dart';
 import 'package:darb_mobile/features/merchant/application/merchant_controller.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_models.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
 import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/legacy_corridor_fixture.dart';
 
 void main() {
   test(
@@ -65,6 +67,48 @@ void main() {
     controller.removeParcel(1);
     expect(container.read(merchantOrderDraftProvider), hasLength(9));
   });
+
+  test(
+    'parcel destinations are corridor places with their own coordinates',
+    () {
+      final container = _container(_FakeMerchantRepository());
+      addTearDown(container.dispose);
+      final controller = container.read(merchantOrderDraftProvider.notifier);
+      expect(
+        container.read(merchantOrderDraftProvider).single.hasDestination,
+        isFalse,
+      );
+      expect(
+        () => container.read(merchantOrderDraftProvider).single.toJson(),
+        throwsStateError,
+      );
+
+      controller.addParcel(destination: testDropoff);
+      const other = CorridorPlace(
+        key: 'other',
+        nameAr: 'مكان',
+        nameEn: 'Other place',
+        lat: 31.6,
+        lng: 35.15,
+        parcelDropoff: true,
+      );
+      controller.updateParcel(1, destination: other);
+      controller.fillMissingDestinations(testDropoff);
+
+      final parcels = container.read(merchantOrderDraftProvider);
+      expect(parcels[0].toJson(), {
+        'destination_label': 'Bethlehem Center',
+        'destination_lat': 31.7054,
+        'destination_lng': 35.2024,
+        'size': 'S',
+        'priority': 'normal',
+      });
+      // A chosen destination is not overwritten by the default.
+      expect(parcels[1].destinationLabel, 'Other place');
+      expect(parcels[1].destinationLat, 31.6);
+      expect(parcels[1].destinationLng, 35.15);
+    },
+  );
 
   test(
     'order controller batches, then matches, without driver actions',
@@ -183,7 +227,7 @@ void main() {
       final batch = _batch();
       final order = MerchantOrder(
         id: 'secondary',
-        pickupLabel: merchantPickupLabel,
+        pickupLabel: 'Bab Al-Zawiya',
         status: 'assigned',
         createdAt: _time,
         parcels: const [],
@@ -309,7 +353,7 @@ MerchantOrder _order({
   List<MerchantBatch>? batches,
 }) => MerchantOrder(
   id: 'order_1',
-  pickupLabel: merchantPickupLabel,
+  pickupLabel: 'Bab Al-Zawiya',
   status: status,
   createdAt: _time,
   parcels: const [
@@ -342,7 +386,7 @@ MerchantMatch _match({MerchantBatch? batch}) => MerchantMatch(
   route: _route(),
   order: const MerchantOrderSummary(
     id: 'order_1',
-    pickupLabel: merchantPickupLabel,
+    pickupLabel: 'Bab Al-Zawiya',
     status: 'batched',
     parcelCount: 1,
   ),

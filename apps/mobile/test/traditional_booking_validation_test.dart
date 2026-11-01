@@ -33,6 +33,10 @@ void main() {
       );
       final draft = PassengerAssistantTripDraft(
         pickupKey: 'bab_al_zawiya',
+        pickupLat: 31.5326,
+        pickupLng: 35.0998,
+        destinationLat: 31.7054,
+        destinationLng: 35.2024,
         pickupLabel: 'Bab Al-Zawiya',
         destinationKey: 'bethlehem',
         destinationLabel: 'Bethlehem Center',

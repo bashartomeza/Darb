@@ -325,6 +325,8 @@
   "canonicalRoutesBody": "Choose from current routes and approved stops.",
   "featureUnavailable": "This service is not available in this environment.",
   "routeCatalogUnavailable": "Routes are temporarily unavailable. Refresh before submitting.",
+  "corridorPlacesLoadFailed": "Couldn't load the route's places. Check your connection and retry.",
+  "corridorPlacesUnavailable": "No places are open on this route right now.",
   "noPublishedRoutes": "No eligible published routes are available.",
   "selectRoute": "Select route",
   "routeDirection": "Direction",

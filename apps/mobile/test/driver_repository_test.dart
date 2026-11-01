@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
 import 'package:darb_mobile/features/auth/domain/auth_models.dart';
-import 'package:darb_mobile/features/driver/data/driver_models.dart';
 import 'package:darb_mobile/features/driver/data/driver_repository.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/legacy_corridor_fixture.dart';
 
 void main() {
   test(
@@ -19,6 +19,13 @@ void main() {
       final repository = DriverRepository(
         apiClient: _client((request) async {
           final path = request.url.path;
+          if (path.endsWith('/legacy-corridor')) {
+            return http.Response(
+              corridorJson,
+              200,
+              headers: {'content-type': 'application/json; charset=utf-8'},
+            );
+          }
           if (path.endsWith('/driver/routes/active')) {
             return http.Response('{"routes":[$_routeJson]}', 200);
           }
@@ -44,10 +51,11 @@ void main() {
         parcelCapacityAvailable: 8,
       );
       expect(created.destinationLng, 35.2024);
+      // The corridor's ends come from the server, not the app.
       expect(createBody, {
-        'origin_label': lockedDriverOriginLabel,
-        'destination_label': lockedDriverDestinationLabel,
-        'corridor_key': lockedDriverCorridorKey,
+        'origin_label': corridorOriginLabel,
+        'destination_label': corridorDestinationLabel,
+        'corridor_key': corridorKey,
         'seats_available': 3,
         'parcel_capacity_available': 8,
       });

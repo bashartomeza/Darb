@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/presentation/localized_labels.dart';
 import '../data/driver_models.dart';
 
 String driverStatusLabel(AppLocalizations l10n, String status) =>
@@ -69,9 +70,5 @@ Widget technicalText(String value, {Key? key, bool selectable = false}) {
   );
 }
 
-String localizedOrigin(BuildContext context, String fallback) {
-  return Localizations.localeOf(context).languageCode == 'ar' &&
-          fallback == lockedDriverOriginLabel
-      ? 'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية'
-      : fallback;
-}
+String localizedOrigin(BuildContext context, String fallback) =>
+    localizedCorridorPlace(context, fallback);
