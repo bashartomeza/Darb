@@ -1775,6 +1775,42 @@ class AppLocalizationsAr extends AppLocalizations {
   String get assistantInputHint => 'اكتب سؤالك هنا';
 
   @override
+  String get assistantVoiceStart => 'تحدّث بطلبك';
+
+  @override
+  String get assistantVoiceStop => 'إيقاف الاستماع';
+
+  @override
+  String get assistantVoiceListening => 'جارٍ الاستماع…';
+
+  @override
+  String get assistantVoicePermissionDenied =>
+      'نحتاج إذن الميكروفون للإدخال الصوتي. يمكنك كتابة طلبك بدلًا من ذلك.';
+
+  @override
+  String get assistantVoicePermissionPermanent =>
+      'إذن الميكروفون أو التعرف على الكلام معطّل. افتح الإعدادات للسماح به أو اكتب طلبك.';
+
+  @override
+  String get assistantVoiceOpenSettings => 'فتح الإعدادات';
+
+  @override
+  String get assistantVoiceUnavailable =>
+      'الإدخال الصوتي غير متاح على هذا الجهاز. يرجى كتابة طلبك.';
+
+  @override
+  String get assistantVoiceNoSpeech =>
+      'لم أسمعك جيدًا. اضغط على الميكروفون وحاول مجددًا أو اكتب طلبك.';
+
+  @override
+  String get assistantVoiceOffline =>
+      'يحتاج الإدخال الصوتي إلى اتصال حاليًا. اكتب طلبك أو حاول لاحقًا.';
+
+  @override
+  String get assistantVoiceError =>
+      'توقف الإدخال الصوتي بشكل غير متوقع. حاول مجددًا أو اكتب طلبك.';
+
+  @override
   String get assistantSend => 'إرسال';
 
   @override

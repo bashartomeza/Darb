@@ -1784,6 +1784,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantInputHint => 'Type your question';
 
   @override
+  String get assistantVoiceStart => 'Speak your request';
+
+  @override
+  String get assistantVoiceStop => 'Stop listening';
+
+  @override
+  String get assistantVoiceListening => 'Listening…';
+
+  @override
+  String get assistantVoicePermissionDenied =>
+      'Microphone access is needed for voice input. You can still type your request.';
+
+  @override
+  String get assistantVoicePermissionPermanent =>
+      'Microphone or speech access is turned off. Open settings to allow it, or type your request.';
+
+  @override
+  String get assistantVoiceOpenSettings => 'Open settings';
+
+  @override
+  String get assistantVoiceUnavailable =>
+      'Voice input isn’t available on this device. Please type your request.';
+
+  @override
+  String get assistantVoiceNoSpeech =>
+      'I didn’t catch that. Tap the microphone and try again, or type your request.';
+
+  @override
+  String get assistantVoiceOffline =>
+      'Voice input needs a connection right now. Please type your request or try again later.';
+
+  @override
+  String get assistantVoiceError =>
+      'Voice input stopped unexpectedly. Please try again or type your request.';
+
+  @override
   String get assistantSend => 'Send';
 
   @override
