@@ -3494,6 +3494,18 @@ abstract class AppLocalizations {
   /// **'خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.'**
   String get assistantUnavailable;
 
+  /// No description provided for @assistantHistoryErrorTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل المحادثة'**
+  String get assistantHistoryErrorTitle;
+
+  /// No description provided for @assistantHistoryErrorBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.'**
+  String get assistantHistoryErrorBody;
+
   /// No description provided for @assistantClarificationLabel.
   ///
   /// In ar, this message translates to:

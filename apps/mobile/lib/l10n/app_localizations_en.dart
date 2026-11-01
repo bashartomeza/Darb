@@ -1837,6 +1837,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'The assistant service is not available in this build. No result was created.';
 
   @override
+  String get assistantHistoryErrorTitle => 'Couldn’t load your chat';
+
+  @override
+  String get assistantHistoryErrorBody =>
+      'Your chat with the assistant is saved to your account. Check your connection and try again.';
+
+  @override
   String get assistantClarificationLabel =>
       'Darb assistant needs clarification';
 

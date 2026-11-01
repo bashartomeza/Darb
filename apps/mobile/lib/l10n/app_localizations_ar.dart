@@ -1828,6 +1828,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.';
 
   @override
+  String get assistantHistoryErrorTitle => 'تعذّر تحميل المحادثة';
+
+  @override
+  String get assistantHistoryErrorBody =>
+      'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
   String get assistantClarificationLabel => 'يحتاج مساعد درب إلى توضيح';
 
   @override
