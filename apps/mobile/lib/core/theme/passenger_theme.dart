@@ -10,19 +10,20 @@ import 'app_theme.dart';
 /// and generous 30px corners. Every value here is lifted from the design rather
 /// than approximated, so screens built from these tokens line up with it.
 abstract final class PassengerStyle {
-  // Colours.
-  static const orange = Color(0xFFFA5F12);
+  // Colours. Every value comes from the shared Darb palette in [AppTheme], so
+  // passenger screens and the driver/merchant screens cannot drift apart.
+  static const orange = AppTheme.primary;
   static const orangeLight = Color(0xFFFEA97F);
-  static const orangeContainer = Color(0xFFFFE9DD);
-  static const onOrangeContainer = Color(0xFF8F3307);
-  static const ink = Color(0xFF000000);
-  static const muted = Color(0xFF707070);
-  static const subtle = Color(0xFF6C6C6C);
-  static const iconMuted = Color(0xFFA9A9A9);
-  static const panel = Color(0xFFF8F8F8);
-  static const border = Color(0xFFEBEBEB);
-  static const indicator = Color(0xFFAEAEAE);
-  static const surface = Color(0xFFFFFFFF);
+  static const orangeContainer = AppTheme.primaryContainer;
+  static const onOrangeContainer = AppTheme.onPrimaryContainer;
+  static const ink = AppTheme.onSurface;
+  static const muted = AppTheme.onSurfaceVariant;
+  static const subtle = AppTheme.onSurfaceVariant;
+  static const iconMuted = AppTheme.hint;
+  static const panel = AppTheme.surfaceContainerLow;
+  static const border = AppTheme.outlineVariant;
+  static const indicator = AppTheme.hint;
+  static const surface = AppTheme.surface;
 
   // Radii.
   static const radiusCard = 30.0;
@@ -114,7 +115,7 @@ class PassengerTheme extends StatelessWidget {
       surfaceContainerLowest: PassengerStyle.surface,
       surfaceContainerLow: PassengerStyle.panel,
       surfaceContainer: PassengerStyle.panel,
-      surfaceContainerHigh: const Color(0xFFF1F1F1),
+      surfaceContainerHigh: AppTheme.surfaceContainerHigh,
       surfaceContainerHighest: PassengerStyle.border,
       outline: PassengerStyle.iconMuted,
       outlineVariant: PassengerStyle.border,
