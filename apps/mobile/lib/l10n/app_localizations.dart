@@ -2018,6 +2018,174 @@ abstract class AppLocalizations {
   /// **'لا توجد أماكن متاحة على هذا المسار حالياً.'**
   String get corridorPlacesUnavailable;
 
+  /// No description provided for @orderRouteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار'**
+  String get orderRouteLabel;
+
+  /// No description provided for @orderRouteChoose.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار'**
+  String get orderRouteChoose;
+
+  /// No description provided for @orderRoutesLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل المسارات. تحقّق من الاتصال وحاول مرة أخرى.'**
+  String get orderRoutesLoadFailed;
+
+  /// No description provided for @orderRoutesEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد مسارات تعمل حالياً. حاول لاحقاً.'**
+  String get orderRoutesEmpty;
+
+  /// No description provided for @orderRouteRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار أولاً.'**
+  String get orderRouteRequired;
+
+  /// No description provided for @orderRouteUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المسار لم يعد يعمل. اختر مساراً آخر.'**
+  String get orderRouteUnavailable;
+
+  /// No description provided for @orderRouteSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار المحفوظ'**
+  String get orderRouteSaved;
+
+  /// No description provided for @orderDetailsTooShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب 3 أحرف على الأقل ليجد السائق المكان.'**
+  String get orderDetailsTooShort;
+
+  /// No description provided for @merchantPickupDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل مكان الاستلام'**
+  String get merchantPickupDetailsLabel;
+
+  /// No description provided for @merchantPickupDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: اسم المتجر والشارع'**
+  String get merchantPickupDetailsHint;
+
+  /// No description provided for @merchantDropoffDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل مكان التسليم'**
+  String get merchantDropoffDetailsLabel;
+
+  /// No description provided for @merchantDropoffDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: الحي والشارع وأقرب معلم'**
+  String get merchantDropoffDetailsHint;
+
+  /// No description provided for @merchantReceiverNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المستلم (اختياري)'**
+  String get merchantReceiverNameLabel;
+
+  /// No description provided for @merchantReceiverPhoneLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'هاتف المستلم (اختياري)'**
+  String get merchantReceiverPhoneLabel;
+
+  /// No description provided for @merchantReceiverPhoneInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.'**
+  String get merchantReceiverPhoneInvalid;
+
+  /// No description provided for @merchantReceiverLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستلم'**
+  String get merchantReceiverLabel;
+
+  /// No description provided for @merchantPendingOrderTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب بانتظار التأكيد'**
+  String get merchantPendingOrderTitle;
+
+  /// No description provided for @driverRoutePickTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر مسارك'**
+  String get driverRoutePickTitle;
+
+  /// No description provided for @driverRoutePickBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ستصلك طلبات الركاب والطرود على هذا المسار فقط.'**
+  String get driverRoutePickBody;
+
+  /// No description provided for @driverRoutePickConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ العمل'**
+  String get driverRoutePickConfirm;
+
+  /// No description provided for @driverRouteNone.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تختر مساراً بعد'**
+  String get driverRouteNone;
+
+  /// No description provided for @driverPickupDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان الصعود'**
+  String get driverPickupDetailsLabel;
+
+  /// No description provided for @driverDropoffDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان النزول'**
+  String get driverDropoffDetailsLabel;
+
+  /// No description provided for @driverMerchantPickupLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'استلم الطرود من'**
+  String get driverMerchantPickupLabel;
+
+  /// No description provided for @driverParcelStopsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أماكن تسليم الطرود'**
+  String get driverParcelStopsTitle;
+
+  /// No description provided for @driverParcelStopLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطرد {number}'**
+  String driverParcelStopLabel(int number);
+
+  /// No description provided for @driverReceiverLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستلم'**
+  String get driverReceiverLabel;
+
+  /// No description provided for @driverWhereToFindTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أماكن الاستلام والتسليم'**
+  String get driverWhereToFindTitle;
+
   /// No description provided for @noPublishedRoutes.
   ///
   /// In ar, this message translates to:

@@ -92,6 +92,13 @@ class DriverDashboardController extends AsyncNotifier<DriverDashboardState> {
   }
 }
 
+/// Going online needs a route the driver chooses; the screen asks for one.
+class DriverRouteRequired implements Exception {
+  const DriverRouteRequired();
+  @override
+  String toString() => 'driver_route_required';
+}
+
 const legacyDriverOnlineOperation = 'legacy_driver_online_state_v1';
 const _legacyOnlineScope = 'legacy_driver_online_state';
 const _legacyRouteSentinel = 'legacy_driver_online_state';
@@ -107,7 +114,13 @@ class LegacyDriverOnlineController {
 
   bool get busy => _busy;
 
-  Future<DriverDashboardState> setOnline(bool desiredOnline) async {
+  /// Going online without an operational route needs [serviceRouteId], the
+  /// route the driver chose; a saved, unconfirmed change is resent with the
+  /// route it was saved with.
+  Future<DriverDashboardState> setOnline(
+    bool desiredOnline, {
+    String? serviceRouteId,
+  }) async {
     if (_busy) throw StateError('operation_in_progress');
     _busy = true;
     try {
@@ -128,7 +141,9 @@ class LegacyDriverOnlineController {
           .read(driverDashboardProvider.notifier)
           .refresh();
       _requireCurrentActor(actorId);
-      if (pending != null && pending.operation == legacyDriverOnlineOperation) {
+      final pendingOnline =
+          pending != null && pending.operation == legacyDriverOnlineOperation;
+      if (pendingOnline) {
         final pendingDesired = pending.payload['online'];
         if (pendingDesired is! bool) {
           throw const CanonicalOperationBlocked(
@@ -150,10 +165,27 @@ class LegacyDriverOnlineController {
       }
 
       final routeId = dashboard.currentRoute?.id;
+      // A saved change is resent with exactly the route it was saved with
+      // (none for one saved before routes existed).
+      final pendingRoute = pendingOnline
+          ? pending.payload['service_route_id']
+          : null;
+      final chosenRoute = pendingOnline
+          ? (pendingRoute is String ? pendingRoute : null)
+          : desiredOnline && routeId == null
+          ? serviceRouteId
+          : null;
+      if (desiredOnline &&
+          routeId == null &&
+          chosenRoute == null &&
+          !pendingOnline) {
+        throw const DriverRouteRequired();
+      }
       final payload = <String, dynamic>{
         'route_version_id': _legacyRouteSentinel,
         'online': desiredOnline,
         'expected_route_id': desiredOnline ? null : routeId,
+        'service_route_id': ?chosenRoute,
       };
       final receipt = await ref
           .read(canonicalMutationRunnerProvider)
@@ -170,6 +202,8 @@ class LegacyDriverOnlineController {
                     online: bundle.payload['online'] as bool,
                     expectedRouteId:
                         bundle.payload['expected_route_id'] as String?,
+                    serviceRouteId:
+                        bundle.payload['service_route_id'] as String?,
                     idempotencyKey: bundle.idempotencyKey,
                     beforeRetry: () async => _requireCurrentActor(actorId),
                   );
@@ -261,7 +295,10 @@ class DriverRouteController extends AsyncNotifier<DriverRouteState> {
     );
   }
 
+  /// Starts a route on [serviceRouteId]. Null only when resending a route
+  /// saved before routes existed (see [LegacyDriverRouteMutation.create]).
   Future<DriverRoute> create({
+    required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
   }) async {
@@ -271,13 +308,18 @@ class DriverRouteController extends AsyncNotifier<DriverRouteState> {
     if (current != null && pending == null) {
       throw const ApiException(ApiErrorType.validation, 'route_already_active');
     }
+    if (serviceRouteId == null && pending == null) {
+      throw const ApiException(ApiErrorType.validation, 'route_required');
+    }
     final actor = mutation.actorId;
     final receipt = await mutation.create(
+      serviceRouteId: serviceRouteId,
       seats: seatsAvailable,
       parcels: parcelCapacityAvailable,
       send: (key, beforeRetry) => ref
           .read(driverRepositoryProvider)
           .createRoute(
+            serviceRouteId: serviceRouteId,
             seatsAvailable: seatsAvailable,
             parcelCapacityAvailable: parcelCapacityAvailable,
             idempotencyKey: key,

@@ -91,6 +91,17 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
     );
   }
 
+  /// The trip's predefined route, else the order's, else (for trips created
+  /// before routes existed) the driver route's two ends.
+  static String _routeName(BuildContext context, MerchantTripViewState state) {
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    return state.trip.route.routeName(arabic: arabic) ??
+        state.order.routeName(arabic: arabic) ??
+        '${localizedCorridorPlace(context, state.trip.route.originLabel)}'
+            ' → '
+            '${localizedCorridorPlace(context, state.trip.route.destinationLabel)}';
+  }
+
   Widget _content(AppLocalizations l10n, MerchantTripViewState state) {
     final currentIndex = merchantTripTimeline.indexOf(state.trip.status);
     final location = state.location;
@@ -119,10 +130,12 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
                 key: const ValueKey('merchantTripStatus'),
               ),
               Text(
-                '${l10n.selectedRoute}: '
-                '${localizedCorridorPlace(context, state.trip.route.originLabel)}'
-                ' → '
-                '${localizedCorridorPlace(context, state.trip.route.destinationLabel)}',
+                '${l10n.selectedRoute}: ${_routeName(context, state)}',
+                key: const ValueKey('merchantTripRoute'),
+              ),
+              Text(
+                '${l10n.pickup}: ${merchantPickupText(context, state.order)}',
+                key: const ValueKey('merchantTripPickup'),
               ),
               Text(
                 '${l10n.orderStatus}: ${merchantStatusLabel(l10n, state.order.status)}',
@@ -163,7 +176,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
               Text('${l10n.parcelCount}: ${state.order.parcels.length}'),
               ...state.order.parcels.indexed.map(
                 (entry) => Text(
-                  '${l10n.parcel} ${entry.$1 + 1}: ${merchantDestinationLabel(context, entry.$2.destinationLabel)} — ${merchantStatusLabel(l10n, entry.$2.status)}',
+                  '${l10n.parcel} ${entry.$1 + 1}: ${merchantParcelDropoffText(context, entry.$2)} — ${merchantStatusLabel(l10n, entry.$2.status)}',
                 ),
               ),
             ],

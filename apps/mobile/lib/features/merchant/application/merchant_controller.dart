@@ -4,7 +4,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../legacy_corridor/data/legacy_corridor_models.dart';
 import '../../trips/data/trip_models.dart';
 import '../data/merchant_models.dart';
 import '../data/merchant_repository.dart';
@@ -93,37 +92,17 @@ final merchantOrderDraftProvider =
     >(MerchantOrderDraftController.new);
 
 class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
+  int _nextId = 1;
+
   @override
   List<ParcelDraft> build() => const [ParcelDraft()];
-
-  void restorePending(List<ParcelDraft> parcels) {
-    if (parcels.isEmpty || parcels.length > 10) {
-      throw const FormatException("Invalid parcel count");
-    }
-    state = List.unmodifiable(parcels);
-  }
 
   bool get canAdd => state.length < 10;
   bool get canRemove => state.length > 1;
 
-  void addParcel({CorridorPlace? destination}) {
+  void addParcel() {
     if (!canAdd) return;
-    state = [
-      ...state,
-      destination == null ? const ParcelDraft() : ParcelDraft.to(destination),
-    ];
-  }
-
-  /// Gives every parcel still without a destination [destination], once the
-  /// corridor's places have loaded. Chosen destinations are left alone.
-  void fillMissingDestinations(CorridorPlace destination) {
-    if (state.every((parcel) => parcel.hasDestination)) return;
-    state = [
-      for (final parcel in state)
-        parcel.hasDestination
-            ? parcel
-            : parcel.copyWith(destination: destination),
-    ];
+    state = [...state, ParcelDraft(id: _nextId++)];
   }
 
   void removeParcel(int index) {
@@ -133,16 +112,20 @@ class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
 
   void updateParcel(
     int index, {
-    CorridorPlace? destination,
+    String? dropoffDetails,
     String? size,
     String? priority,
+    String? receiverName,
+    String? receiverPhone,
   }) {
     if (index < 0 || index >= state.length) return;
     final updated = [...state];
     updated[index] = updated[index].copyWith(
-      destination: destination,
+      dropoffDetails: dropoffDetails,
       size: size,
       priority: priority,
+      receiverName: receiverName,
+      receiverPhone: receiverPhone,
     );
     state = updated;
   }

@@ -24,7 +24,6 @@ import 'package:darb_mobile/features/trips/data/trip_models.dart';
 import 'support/auth_test_support.dart';
 import 'test_app_config.dart';
 import 'support/booking_recovery_test_support.dart';
-import 'support/legacy_corridor_fixture.dart';
 import 'package:darb_mobile/features/driver/application/legacy_driver_route_mutation.dart';
 
 void main() {
@@ -76,7 +75,11 @@ void main() {
 
     await container
         .read(driverRouteControllerProvider.notifier)
-        .create(seatsAvailable: 3, parcelCapacityAvailable: 7);
+        .create(
+          serviceRouteId: _routeId,
+          seatsAvailable: 3,
+          parcelCapacityAvailable: 7,
+        );
     expect(fake.createCalls, 1);
     expect(fake.lastSeats, 3);
     expect(fake.lastParcels, 7);
@@ -84,7 +87,11 @@ void main() {
     await expectLater(
       container
           .read(driverRouteControllerProvider.notifier)
-          .create(seatsAvailable: 4, parcelCapacityAvailable: 8),
+          .create(
+            serviceRouteId: _routeId,
+            seatsAvailable: 4,
+            parcelCapacityAvailable: 8,
+          ),
       throwsA(isA<ApiException>()),
     );
     expect(fake.createCalls, 1);
@@ -167,7 +174,7 @@ void main() {
 
         final state = await container
             .read(legacyDriverOnlineControllerProvider)
-            .setOnline(true);
+            .setOnline(true, serviceRouteId: _routeId);
 
         expect(state.currentRoute?.isOperational, isTrue);
         expect(fake.onlineCalls, 1);
@@ -184,11 +191,14 @@ void main() {
       addTearDown(container.dispose);
       final controller = container.read(legacyDriverOnlineControllerProvider);
 
-      final first = controller.setOnline(true);
+      final first = controller.setOnline(true, serviceRouteId: _routeId);
       while (fake.onlineCalls == 0) {
         await Future<void>.delayed(Duration.zero);
       }
-      await expectLater(controller.setOnline(true), throwsStateError);
+      await expectLater(
+        controller.setOnline(true, serviceRouteId: _routeId),
+        throwsStateError,
+      );
       fake.onlineBarrier!.complete();
       await first;
 
@@ -206,13 +216,13 @@ void main() {
         final controller = container.read(legacyDriverOnlineControllerProvider);
 
         await expectLater(
-          controller.setOnline(true),
+          controller.setOnline(true, serviceRouteId: _routeId),
           throwsA(isA<ApiException>()),
         );
         final retained = storage.bundle!;
         expect(retained.operation, legacyDriverOnlineOperation);
         expect(retained.payload['online'], isTrue);
-        await controller.setOnline(true);
+        await controller.setOnline(true, serviceRouteId: _routeId);
 
         expect(fake.observedKeys, [
           retained.idempotencyKey,
@@ -231,7 +241,9 @@ void main() {
       addTearDown(container.dispose);
 
       await expectLater(
-        container.read(legacyDriverOnlineControllerProvider).setOnline(true),
+        container
+            .read(legacyDriverOnlineControllerProvider)
+            .setOnline(true, serviceRouteId: _routeId),
         throwsStateError,
       );
       expect(fake.onlineCalls, 0);
@@ -250,7 +262,9 @@ void main() {
       addTearDown(container.dispose);
 
       await expectLater(
-        container.read(legacyDriverOnlineControllerProvider).setOnline(true),
+        container
+            .read(legacyDriverOnlineControllerProvider)
+            .setOnline(true, serviceRouteId: _routeId),
         throwsA(
           isA<CanonicalOperationBlocked>().having(
             (error) => error.code,
@@ -282,7 +296,9 @@ void main() {
         addTearDown(container.dispose);
 
         await expectLater(
-          container.read(legacyDriverOnlineControllerProvider).setOnline(true),
+          container
+              .read(legacyDriverOnlineControllerProvider)
+              .setOnline(true, serviceRouteId: _routeId),
           throwsA(
             isA<CanonicalOperationBlocked>().having(
               (error) => error.code,
@@ -308,7 +324,9 @@ void main() {
         };
 
         await expectLater(
-          container.read(legacyDriverOnlineControllerProvider).setOnline(true),
+          container
+              .read(legacyDriverOnlineControllerProvider)
+              .setOnline(true, serviceRouteId: _routeId),
           throwsA(
             isA<ApiException>().having(
               (error) => error.message,
@@ -325,6 +343,112 @@ void main() {
         expect(storage.bundle?.actorId, 'driver_1');
       },
     );
+
+    test(
+      'going online without a route asks for one and sends nothing',
+      () async {
+        final fake = _FakeDriverRepository();
+        final storage = _MemoryCanonicalStorage();
+        final container = await _onlineContainer(fake, storage);
+        addTearDown(container.dispose);
+
+        await expectLater(
+          container.read(legacyDriverOnlineControllerProvider).setOnline(true),
+          throwsA(isA<DriverRouteRequired>()),
+        );
+        expect(fake.onlineCalls, 0);
+        expect(storage.saveCount, 0);
+      },
+    );
+
+    test('going online sends and saves the chosen route', () async {
+      final fake = _FakeDriverRepository();
+      final storage = _MemoryCanonicalStorage();
+      CanonicalOperationBundle? sentBundle;
+      fake.onOnlineSend = () => sentBundle = storage.bundle;
+      final container = await _onlineContainer(fake, storage);
+      addTearDown(container.dispose);
+
+      await container
+          .read(legacyDriverOnlineControllerProvider)
+          .setOnline(true, serviceRouteId: _routeId);
+      expect(fake.onlineServiceRouteIds, [_routeId]);
+      expect(sentBundle?.payload['service_route_id'], _routeId);
+    });
+
+    test('going offline sends no route', () async {
+      final fake = _FakeDriverRepository(routes: [_route()]);
+      final storage = _MemoryCanonicalStorage();
+      final container = await _onlineContainer(fake, storage);
+      addTearDown(container.dispose);
+
+      await container
+          .read(legacyDriverOnlineControllerProvider)
+          .setOnline(false, serviceRouteId: _routeId);
+      expect(fake.onlineServiceRouteIds, [null]);
+    });
+
+    test(
+      'a saved change from before routes existed is resent as saved',
+      () async {
+        final fake = _FakeDriverRepository();
+        final existing = CanonicalOperationBundle.create(
+          operation: legacyDriverOnlineOperation,
+          scope: 'legacy_driver_online_state',
+          actorId: 'driver_1',
+          payload: const {
+            'route_version_id': 'legacy_driver_online_state',
+            'online': true,
+            'expected_route_id': null,
+          },
+        );
+        final storage = _MemoryCanonicalStorage()..bundle = existing;
+        final container = await _onlineContainer(fake, storage);
+        addTearDown(container.dispose);
+
+        // No route is asked for: the saved change is resent exactly.
+        await container
+            .read(legacyDriverOnlineControllerProvider)
+            .setOnline(true);
+        expect(fake.observedKeys, [existing.idempotencyKey]);
+        expect(fake.onlineServiceRouteIds, [null]);
+        expect(storage.bundle, isNull);
+      },
+    );
+  });
+
+  test('a new route needs a chosen route', () async {
+    final fake = _FakeDriverRepository();
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    await container.read(driverRouteControllerProvider.future);
+
+    await expectLater(
+      container
+          .read(driverRouteControllerProvider.notifier)
+          .create(
+            serviceRouteId: null,
+            seatsAvailable: 2,
+            parcelCapacityAvailable: 5,
+          ),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.message,
+          'message',
+          'route_required',
+        ),
+      ),
+    );
+    expect(fake.createCalls, 0);
+
+    await container
+        .read(driverRouteControllerProvider.notifier)
+        .create(
+          serviceRouteId: _routeId,
+          seatsAvailable: 2,
+          parcelCapacityAvailable: 5,
+        );
+    expect(fake.lastServiceRouteId, _routeId);
   });
 
   test('match inbox handles empty, ordering, filter, and error', () async {
@@ -504,6 +628,8 @@ class _FakeDriverRepository extends DriverRepository {
   int createCalls = 0;
   int acceptCalls = 0;
   int rejectCalls = 0;
+  String? lastServiceRouteId;
+  final List<String?> onlineServiceRouteIds = [];
   int? lastSeats;
   int? lastParcels;
   String? lastMatchStatus;
@@ -541,12 +667,14 @@ class _FakeDriverRepository extends DriverRepository {
 
   @override
   Future<DriverRoute> createRoute({
+    required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
     String? idempotencyKey,
     Future<void> Function()? beforeRetry,
   }) async {
     createCalls += 1;
+    lastServiceRouteId = serviceRouteId;
     lastSeats = seatsAvailable;
     lastParcels = parcelCapacityAvailable;
     final route = _route(
@@ -575,10 +703,12 @@ class _FakeDriverRepository extends DriverRepository {
     required bool online,
     required String idempotencyKey,
     String? expectedRouteId,
+    String? serviceRouteId,
     Future<void> Function()? beforeRetry,
   }) async {
     onlineCalls += 1;
     observedKeys.add(idempotencyKey);
+    onlineServiceRouteIds.add(serviceRouteId);
     onOnlineSend?.call();
     await onlineBarrier?.future;
     if (timeoutOnlineOnce) {
@@ -698,19 +828,24 @@ class _MemoryCanonicalStorage implements CanonicalOperationStorage {
 
 final _fixedTime = DateTime.utc(2026, 7, 13, 8);
 
+const _routeId = 'route-heb-bth';
+
 DriverRoute _route({
   String status = 'active',
   int seats = 2,
   int parcels = 5,
 }) => DriverRoute(
   id: 'route_1',
-  originLabel: corridorOriginLabel,
-  originLat: corridorOriginLat,
-  originLng: corridorOriginLng,
-  destinationLabel: corridorDestinationLabel,
-  destinationLat: corridorDestinationLat,
-  destinationLng: corridorDestinationLng,
-  corridorKey: corridorKey,
+  originLabel: 'Hebron',
+  originLat: 31.5326,
+  originLng: 35.0998,
+  destinationLabel: 'Bethlehem',
+  destinationLat: 31.7054,
+  destinationLng: 35.2024,
+  corridorKey: 'hebron-to-bethlehem',
+  serviceRouteId: _routeId,
+  routeNameAr: 'الخليل ← بيت لحم',
+  routeNameEn: 'Hebron → Bethlehem',
   seatsAvailable: seats,
   parcelCapacityAvailable: parcels,
   status: status,
@@ -735,9 +870,9 @@ DriverMatch _match(String status, DateTime createdAt) => DriverMatch(
   createdAt: createdAt,
   route: const DriverRouteSummary(
     id: 'route_1',
-    originLabel: corridorOriginLabel,
-    destinationLabel: corridorDestinationLabel,
-    corridorKey: corridorKey,
+    originLabel: 'Hebron',
+    destinationLabel: 'Bethlehem',
+    corridorKey: 'hebron-to-bethlehem',
     seatsAvailable: 2,
     parcelCapacityAvailable: 5,
     status: 'active',

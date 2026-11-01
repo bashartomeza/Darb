@@ -6,7 +6,10 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../canonical_routes/data/canonical_operation_storage.dart';
+import '../../operating_routes/data/operating_route_models.dart';
+import '../../operating_routes/data/operating_route_repository.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_bulk_models.dart';
 import '../data/merchant_repository.dart';
@@ -35,6 +38,7 @@ class _MerchantBulkOrdersScreenState
   BulkSubmitResult? _result;
   String? _submittedCsv;
   String? _idempotencyKey;
+  Map<String, int> _routeCounts = const {};
 
   @override
   void dispose() {
@@ -56,11 +60,31 @@ class _MerchantBulkOrdersScreenState
       _error = null;
     });
     try {
-      final preview = await ref
-          .read(merchantRepositoryProvider)
-          .previewBulkOrders(csv);
+      // Route keys are checked here against the running routes, so a typo
+      // gets an error that lists the right keys. Without the list (still
+      // loading or unavailable) the server's check stands alone.
+      final routes = ref.read(operatingRoutesProvider).value;
+      final check = routes == null || routes.isEmpty
+          ? null
+          : checkBulkCsvRoutes(csv, routes);
+      final BulkPreview preview;
+      if (check != null && check.hasFileError) {
+        preview = BulkPreview(
+          totalRows: check.totalRows,
+          validOrderCount: 0,
+          errors: check.errors,
+          batchCount: 0,
+          maxRows: 50,
+        );
+      } else {
+        final server = await ref
+            .read(merchantRepositoryProvider)
+            .previewBulkOrders(csv);
+        preview = server.withRouteErrors(check?.errors ?? const []);
+      }
       if (!mounted) return;
       setState(() {
+        _routeCounts = check?.rowsByRoute ?? const {};
         _preview = preview;
         _skipInvalid = false;
         _step = _Step.preview;
@@ -109,6 +133,9 @@ class _MerchantBulkOrdersScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Kept loaded on every step: the input lists the keys, the preview checks
+    // and names them.
+    ref.watch(operatingRoutesProvider);
     return Scaffold(
       key: const ValueKey('merchantBulkOrders'),
       appBar: AppBar(
@@ -142,6 +169,8 @@ class _MerchantBulkOrdersScreenState
   List<Widget> _inputStep() => [
     Text(_t('hint')),
     const SizedBox(height: AppTokens.spaceMedium),
+    _routeKeysCard(),
+    const SizedBox(height: AppTokens.spaceMedium),
     TextField(
       key: const ValueKey('bulkCsvField'),
       controller: _controller,
@@ -159,7 +188,17 @@ class _MerchantBulkOrdersScreenState
     const SizedBox(height: AppTokens.spaceMedium),
     OutlinedButton.icon(
       key: const ValueKey('bulkTemplateButton'),
-      onPressed: _busy ? null : () => _controller.text = bulkCsvTemplate,
+      onPressed: _busy
+          ? null
+          : () {
+              final first = ref
+                  .read(operatingRoutesProvider)
+                  .value
+                  ?.firstOrNull;
+              _controller.text = first == null
+                  ? bulkCsvTemplate
+                  : bulkCsvTemplateFor(first.key);
+            },
       icon: const Icon(Icons.description_outlined),
       label: Text(_t('template')),
     ),
@@ -172,8 +211,62 @@ class _MerchantBulkOrdersScreenState
     ),
   ];
 
+  /// The `route_key` values a row may use, with each route's name.
+  Widget _routeKeysCard() {
+    final routes = ref.watch(operatingRoutesProvider);
+    return DarbCard(
+      key: const ValueKey('bulkRouteKeys'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_t('routeKeys'), style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: AppTokens.spaceSmall),
+          routes.when(
+            skipLoadingOnRefresh: false,
+            loading: () => const LinearProgressIndicator(),
+            error: (_, _) => Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context).orderRoutesLoadFailed,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  key: const ValueKey('bulkRoutesRetry'),
+                  onPressed: () => ref.invalidate(operatingRoutesProvider),
+                  child: Text(AppLocalizations.of(context).retry),
+                ),
+              ],
+            ),
+            data: (list) => list.isEmpty
+                ? Text(AppLocalizations.of(context).orderRoutesEmpty)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final route in list)
+                        Text(
+                          '${route.key} — ${route.displayName(arabic: _arabic)}',
+                          key: ValueKey('bulkRouteKey-${route.key}'),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _previewStep() {
     final preview = _preview!;
+    final routes = {
+      for (final route
+          in ref.read(operatingRoutesProvider).value ??
+              const <OperatingRoute>[])
+        route.key: route,
+    };
     final wholeFile = preview.errors.where((error) => error.row <= 1).toList();
     final canSubmit =
         preview.validOrderCount > 0 &&
@@ -192,6 +285,19 @@ class _MerchantBulkOrdersScreenState
             Text('${_t('valid')}: ${preview.validOrderCount}'),
             Text('${_t('errors')}: ${preview.errors.length}'),
             Text('${_t('groups')}: ${preview.batchCount}'),
+            if (_routeCounts.isNotEmpty) ...[
+              const SizedBox(height: AppTokens.spaceSmall),
+              Text(
+                _t('byRoute'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              for (final entry in _routeCounts.entries)
+                Text(
+                  '${routes[entry.key]?.displayName(arabic: _arabic) ?? entry.key}'
+                  ': ${entry.value}',
+                  key: ValueKey('bulkRouteCount-${entry.key}'),
+                ),
+            ],
           ],
         ),
       ),
@@ -277,7 +383,9 @@ class _MerchantBulkOrdersScreenState
 const _en = {
   'title': 'Bulk orders',
   'hint':
-      'Paste or edit up to 50 rows. Columns: pickup_label, pickup_lat, pickup_lng, destination_label, destination_lat, destination_lng, size (S/M/L), priority (low/normal/high). Rows sharing an optional order_ref column become one order.',
+      'Paste or edit up to 50 rows. Columns: route_key, pickup_details (e.g. store name and street), dropoff_details (e.g. neighbourhood, street and a nearby landmark), size (S/M/L), priority (low/normal/high), and optionally receiver_name and receiver_phone. Rows with the same route and pickup become one order.',
+  'routeKeys': 'Routes you can use in route_key',
+  'byRoute': 'Rows per route',
   'csv': 'Orders (CSV)',
   'template': 'Insert example',
   'preview': 'Preview',
@@ -305,7 +413,9 @@ const _en = {
 const _ar = {
   'title': 'طلبات بالجملة',
   'hint':
-      'الصق أو عدّل حتى 50 صفاً. الأعمدة: pickup_label و pickup_lat و pickup_lng و destination_label و destination_lat و destination_lng و size (S/M/L) و priority (low/normal/high). الصفوف التي تشترك في عمود order_ref الاختياري تصبح طلباً واحداً.',
+      'الصق أو عدّل حتى 50 صفاً. الأعمدة: route_key (المسار) و pickup_details (مكان الاستلام، مثل اسم المتجر والشارع) و dropoff_details (مكان التسليم، مثل الحي والشارع وأقرب معلم) و size (S/M/L) و priority (low/normal/high)، ويمكنك إضافة receiver_name و receiver_phone. الصفوف التي لها المسار ومكان الاستلام نفسهما تصبح طلباً واحداً.',
+  'routeKeys': 'المسارات التي يمكنك كتابتها في route_key',
+  'byRoute': 'عدد الصفوف لكل مسار',
   'csv': 'الطلبات (CSV)',
   'template': 'إدراج مثال',
   'preview': 'معاينة',

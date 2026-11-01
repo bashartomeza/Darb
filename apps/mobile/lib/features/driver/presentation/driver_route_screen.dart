@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/darb_card.dart';
-import '../../legacy_corridor/data/legacy_corridor_repository.dart';
+import '../../operating_routes/data/operating_route_models.dart';
+import '../../operating_routes/data/operating_route_repository.dart';
 import '../application/driver_controller.dart';
 import '../application/legacy_driver_route_mutation.dart';
 import 'driver_ui.dart';
@@ -23,6 +23,10 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
     with WidgetsBindingObserver {
   int _seats = 2;
   int _parcels = 5;
+
+  /// The predefined route chosen in the form, or restored from a saved,
+  /// unconfirmed route (null for one saved before routes existed).
+  String? _routeId;
   bool _busy = false;
   String? _message;
   bool _messageIsError = false;
@@ -70,6 +74,7 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
         if (pending != null) {
           _seats = pending.payload['seats_available'] as int;
           _parcels = pending.payload['parcel_capacity_available'] as int;
+          _routeId = pending.payload['service_route_id'] as String?;
         }
       });
       if (pending != null) await _create();
@@ -81,6 +86,7 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
           _recovering = false;
           _seats = 2;
           _parcels = 5;
+          _routeId = null;
           _message = AppLocalizations.of(context).canonicalRecoveryRequired;
           _messageIsError = true;
         });
@@ -104,7 +110,7 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
     final l10n = AppLocalizations.of(context);
     final arabic = Localizations.localeOf(context).languageCode == 'ar';
     final routeState = ref.watch(driverRouteControllerProvider);
-    final corridor = ref.watch(legacyCorridorProvider);
+    final routes = ref.watch(operatingRoutesProvider);
     return ForegroundRefresh(
       refresh: () async {
         await ref.read(driverRouteControllerProvider.notifier).refresh();
@@ -133,38 +139,25 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
                 ),
                 data: (state) {
                   final route = state.currentRoute;
-                  // Before a route exists, its ends are the server's corridor.
-                  final origin =
-                      route?.originLabel ??
-                      corridor.value?.driverRoute.originLabel;
-                  final destination =
-                      route?.destinationLabel ??
-                      corridor.value?.driverRoute.destinationLabel;
                   return DarbCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (origin != null)
+                        if (route != null && !_recovering)
                           Text(
-                            '${l10n.origin}: ${localizedOrigin(context, origin)}',
-                          ),
-                        if (destination != null)
-                          Text(
-                            '${l10n.destination}: ${localizedCorridorPlace(context, destination)}',
-                          ),
-                        if (corridor.value case final value?)
-                          Text(
-                            '${l10n.lockedCorridorLabel}: ${value.displayName(arabic: arabic)}',
+                            '${l10n.orderRouteLabel}: ${driverRouteName(context, route)}',
+                            key: const ValueKey('driverActiveRouteName'),
+                            style: Theme.of(context).textTheme.titleMedium,
                           )
-                        else if (corridor.hasError)
-                          TextButton(
-                            key: const ValueKey('driverCorridorRetry'),
-                            onPressed: () =>
-                                ref.invalidate(legacyCorridorProvider),
-                            child: Text(
-                              '${l10n.corridorPlacesLoadFailed} ${l10n.retry}',
-                            ),
-                          ),
+                        else if (_recovering)
+                          // A saved route is resent exactly as saved, so it
+                          // is shown, not chosen again.
+                          Text(
+                            '${l10n.orderRouteLabel}: ${_savedRouteName(l10n, routes.value, arabic)}',
+                            key: const ValueKey('driverSavedRouteName'),
+                          )
+                        else
+                          _routeField(l10n, routes, arabic),
                         const SizedBox(height: AppTokens.spaceMedium),
                         if (route == null || _recovering) ...[
                           DropdownButtonFormField<int>(
@@ -210,7 +203,12 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
                           const SizedBox(height: AppTokens.spaceMedium),
                           FilledButton(
                             key: const ValueKey('activateRouteButton'),
-                            onPressed: _busy || _restoring || _blocked
+                            onPressed:
+                                _busy ||
+                                    _restoring ||
+                                    _blocked ||
+                                    (!_recovering &&
+                                        _chosenRoute(routes.value) == null)
                                 ? null
                                 : _create,
                             child: Text(
@@ -269,9 +267,91 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
     );
   }
 
+  /// The route in the form while it is still running; a single running route
+  /// is chosen for the driver.
+  String? _chosenRoute(List<OperatingRoute>? routes) {
+    if (routes == null) return null;
+    if (routes.any((route) => route.id == _routeId)) return _routeId;
+    return routes.length == 1 ? routes.single.id : null;
+  }
+
+  String _savedRouteName(
+    AppLocalizations l10n,
+    List<OperatingRoute>? routes,
+    bool arabic,
+  ) =>
+      routes
+          ?.where((route) => route.id == _routeId)
+          .firstOrNull
+          ?.displayName(arabic: arabic) ??
+      l10n.orderRouteSaved;
+
+  /// The route dropdown, with loading, error-and-retry and empty states.
+  Widget _routeField(
+    AppLocalizations l10n,
+    AsyncValue<List<OperatingRoute>> routes,
+    bool arabic,
+  ) => routes.when(
+    skipLoadingOnRefresh: false,
+    loading: () => const Padding(
+      padding: EdgeInsets.symmetric(vertical: AppTokens.spaceSmall),
+      child: LinearProgressIndicator(key: ValueKey('driverRoutesLoading')),
+    ),
+    error: (_, _) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.orderRoutesLoadFailed,
+          key: const ValueKey('driverRoutesError'),
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
+        TextButton(
+          key: const ValueKey('driverRoutesRetry'),
+          onPressed: () => ref.invalidate(operatingRoutesProvider),
+          child: Text(l10n.retry),
+        ),
+      ],
+    ),
+    data: (list) => list.isEmpty
+        ? Text(l10n.orderRoutesEmpty, key: const ValueKey('driverRoutesEmpty'))
+        // A reloaded list starts a fresh field, so a route that was turned
+        // off is never kept as the chosen value.
+        : KeyedSubtree(
+            key: ObjectKey(list),
+            child: DropdownButtonFormField<String>(
+              key: const ValueKey('driverRouteField'),
+              initialValue: _chosenRoute(list),
+              isExpanded: true,
+              decoration: InputDecoration(labelText: l10n.orderRouteLabel),
+              hint: Text(l10n.orderRouteChoose),
+              items: [
+                for (final route in list)
+                  DropdownMenuItem(
+                    value: route.id,
+                    child: Text(
+                      route.displayName(arabic: arabic),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: _busy || _restoring || _blocked
+                  ? null
+                  : (id) => setState(() => _routeId = id),
+            ),
+          ),
+  );
+
   Future<void> _create() async {
     if (_busy || _restoring || _blocked) return;
     final l10n = AppLocalizations.of(context);
+    // A saved route is resent with exactly the route it was saved with.
+    final serviceRouteId = _recovering
+        ? _routeId
+        : _chosenRoute(ref.read(operatingRoutesProvider).value);
+    if (!_recovering && serviceRouteId == null) {
+      _show(l10n.orderRouteRequired, true);
+      return;
+    }
     setState(() {
       _busy = true;
       _message = null;
@@ -279,7 +359,11 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
     try {
       final route = await ref
           .read(driverRouteControllerProvider.notifier)
-          .create(seatsAvailable: _seats, parcelCapacityAvailable: _parcels);
+          .create(
+            serviceRouteId: serviceRouteId,
+            seatsAvailable: _seats,
+            parcelCapacityAvailable: _parcels,
+          );
       if (mounted) setState(() => _recovering = false);
       _show(
         route.status == 'active'

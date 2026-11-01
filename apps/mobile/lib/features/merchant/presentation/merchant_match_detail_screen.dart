@@ -62,6 +62,7 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
     AppLocalizations l10n,
     MerchantMatch match,
   ) {
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppTokens.marginMobile,
@@ -99,9 +100,17 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
               DetailRow(
                 label: l10n.selectedRoute,
                 value:
+                    match.route.routeName(arabic: arabic) ??
+                    match.order.routeName(arabic: arabic) ??
                     '${match.route.originLabel} → ${match.route.destinationLabel}',
                 icon: Icons.route_outlined,
               ),
+              if (match.order.pickupDetails case final pickup?)
+                DetailRow(
+                  label: l10n.pickup,
+                  value: pickup,
+                  icon: Icons.storefront_outlined,
+                ),
               if (match.batch != null)
                 DetailRow(
                   label: l10n.estimatedDistanceSaved,

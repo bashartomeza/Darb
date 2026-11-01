@@ -73,6 +73,9 @@ class _DriverMatchDetailScreenState
   }
 
   Widget _content(AppLocalizations l10n, DriverMatch match) {
+    final routeName = match.route.routeName(
+      arabic: Localizations.localeOf(context).languageCode == 'ar',
+    );
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppTokens.marginMobile,
@@ -91,10 +94,18 @@ class _DriverMatchDetailScreenState
               Row(
                 children: [
                   Expanded(
-                    child: RouteChip(
-                      from: match.pickupLabel,
-                      to: match.destinationLabel,
-                    ),
+                    // A route match is named by its route; older matches
+                    // keep their two places.
+                    child: routeName != null
+                        ? Text(
+                            routeName,
+                            key: const ValueKey('driverMatchRoute'),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          )
+                        : RouteChip(
+                            from: match.pickupLabel,
+                            to: match.destinationLabel,
+                          ),
                   ),
                   const SizedBox(width: AppTokens.gutterMobile),
                   MatchScore(score: match.score, label: l10n.matchScore),
@@ -125,6 +136,16 @@ class _DriverMatchDetailScreenState
           ),
         ),
         const SizedBox(height: AppTokens.spaceLarge),
+
+        // Where to collect and drop each passenger and parcel: the typed
+        // details are how the driver finds people.
+        if (match.passengerRequest != null || match.merchantOrder != null) ...[
+          DriverStopDetailsCard(
+            passenger: match.passengerRequest,
+            merchantOrder: match.merchantOrder,
+          ),
+          const SizedBox(height: AppTokens.spaceLarge),
+        ],
 
         DarbSection(
           title: l10n.scoringBreakdown,

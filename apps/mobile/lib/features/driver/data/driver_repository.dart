@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import '../../auth/data/authenticated_api_client.dart';
-import '../../legacy_corridor/data/legacy_corridor_repository.dart';
 import '../../trips/data/trip_models.dart';
 import 'driver_models.dart';
 
@@ -114,28 +113,37 @@ class DriverRepository {
     return _routes(json);
   }
 
+  /// The driver's route for today on one predefined route; the server fills
+  /// the ends from the route's cities.
+  ///
+  /// [serviceRouteId] is null only when resending a route saved by a build
+  /// before routes existed: that send is a replay of its idempotency key.
+  static Map<String, dynamic> createRouteBody({
+    required String? serviceRouteId,
+    required int seatsAvailable,
+    required int parcelCapacityAvailable,
+  }) => {
+    'service_route_id': ?serviceRouteId,
+    'seats_available': seatsAvailable,
+    'parcel_capacity_available': parcelCapacityAvailable,
+  };
+
   Future<DriverRoute> createRoute({
+    required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
     String? idempotencyKey,
     Future<void> Function()? beforeRetry,
   }) async {
-    // The server locks legacy routes to one corridor; send its own ends back
-    // rather than a copy compiled into the app.
-    final corridor = await LegacyCorridorRepository(
-      apiClient: apiClient,
-    ).fetch();
     final json = await apiClient.postJson(
       '/driver/routes',
       headers: {'Idempotency-Key': ?idempotencyKey},
       beforeRetry: beforeRetry,
-      body: {
-        'origin_label': corridor.driverRoute.originLabel,
-        'destination_label': corridor.driverRoute.destinationLabel,
-        'corridor_key': corridor.key,
-        'seats_available': seatsAvailable,
-        'parcel_capacity_available': parcelCapacityAvailable,
-      },
+      body: createRouteBody(
+        serviceRouteId: serviceRouteId,
+        seatsAvailable: seatsAvailable,
+        parcelCapacityAvailable: parcelCapacityAvailable,
+      ),
     );
     return DriverRoute.fromJson(json['route'] as Map<String, dynamic>);
   }
@@ -145,15 +153,21 @@ class DriverRepository {
     return DriverRoute.fromJson(json['route'] as Map<String, dynamic>);
   }
 
+  /// Going online without an active route needs [serviceRouteId]: the route
+  /// the driver chose to drive.
   Future<LegacyDriverOnlineResult> setLegacyOnlineState({
     required bool online,
     required String idempotencyKey,
     String? expectedRouteId,
+    String? serviceRouteId,
     Future<void> Function()? beforeRetry,
   }) async {
     final body = <String, dynamic>{'online': online};
     if (expectedRouteId != null) {
       body['expected_route_id'] = expectedRouteId;
+    }
+    if (serviceRouteId != null) {
+      body['service_route_id'] = serviceRouteId;
     }
     final json = await apiClient.putJson(
       '/driver/online-state',
