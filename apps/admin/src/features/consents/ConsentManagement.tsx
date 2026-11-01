@@ -84,7 +84,7 @@ const copy = {
     activate: "Activate release",
     retire: "Retire release",
     refresh: "Refresh",
-    approvalConfirm: "I confirm all six documents already received real-world legal approval. Record that approval in Masari?",
+    approvalConfirm: "I confirm all six documents already received real-world legal approval. Record that approval in Darb?",
     activationConfirm: "This release will become current and the previous release will be retired atomically. Continue?",
     retirementConfirm: "This will disable public onboarding because no effective release will remain. Continue?",
     retirementReason: "Enter a retirement reason (at least three characters).",

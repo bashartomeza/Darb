@@ -258,7 +258,7 @@ describe("SMTP email delivery configuration", () => {
   const smtp = {
     EMAIL_DELIVERY: "smtp", SMTP_HOST: "smtp.mail.example", SMTP_PORT: "587", SMTP_SECURE: "starttls",
     SMTP_USER: "mailer", SMTP_PASSWORD: "a-real-smtp-password", EMAIL_FROM_ADDRESS: "no-reply@masari.example",
-    EMAIL_FROM_NAME: "Masari", AUTH_ACTION_TOKEN_PEPPER: pepper
+    EMAIL_FROM_NAME: "Darb", AUTH_ACTION_TOKEN_PEPPER: pepper
   };
 
   it("defaults to disabled with no smtp settings", () => {
@@ -268,11 +268,11 @@ describe("SMTP email delivery configuration", () => {
   it.each(["staging", "production"])("accepts a complete smtp configuration in %s", (appEnv) => {
     const config = createConfig(environment({ APP_ENV: appEnv, ...smtp }));
     expect(config.email.smtp).toEqual({ host: "smtp.mail.example", port: 587, secure: "starttls", user: "mailer",
-      password: "a-real-smtp-password", fromAddress: "no-reply@masari.example", fromName: "Masari" });
+      password: "a-real-smtp-password", fromAddress: "no-reply@masari.example", fromName: "Darb" });
   });
   it("defaults the port from the secure mode and the sender name", () => {
     const tlsConfig = createConfig(environment({ ...smtp, SMTP_PORT: "", SMTP_SECURE: "tls", EMAIL_FROM_NAME: "" }));
-    expect(tlsConfig.email.smtp).toMatchObject({ port: 465, secure: "tls", fromName: "Masari" });
+    expect(tlsConfig.email.smtp).toMatchObject({ port: 465, secure: "tls", fromName: "Darb" });
     expect(createConfig(environment({ ...smtp, SMTP_PORT: "" })).email.smtp?.port).toBe(587);
   });
   it.each(["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_ADDRESS", "AUTH_ACTION_TOKEN_PEPPER"])("requires %s together with the rest in production", (name) => {
@@ -284,7 +284,7 @@ describe("SMTP email delivery configuration", () => {
     expect(() => createConfig(environment({ ...smtp, EMAIL_FROM_ADDRESS: "not-an-address" }))).toThrow(/EMAIL_FROM_ADDRESS/);
     expect(() => createConfig(environment({ ...smtp, SMTP_HOST: "smtp://host" }))).toThrow(/SMTP_HOST/);
     expect(() => createConfig(environment({ ...smtp, SMTP_HOST: "localhost" }))).toThrow(/loopback/);
-    expect(() => createConfig(environment({ ...smtp, EMAIL_FROM_NAME: "Masari\r\nBcc: x@y.example" }))).toThrow(/EMAIL_FROM_NAME/);
+    expect(() => createConfig(environment({ ...smtp, EMAIL_FROM_NAME: "Darb\r\nBcc: x@y.example" }))).toThrow(/EMAIL_FROM_NAME/);
     try { createConfig(environment({ ...smtp, SMTP_PASSWORD: "<replace-with-smtp-password>" })); expect.unreachable(); }
     catch (error) { expect(error).toBeInstanceOf(ConfigurationError); expect(String((error as Error).message)).not.toContain("replace-with-smtp-password"); expect(String((error as Error).message)).toMatch(/SMTP_PASSWORD/); }
   });

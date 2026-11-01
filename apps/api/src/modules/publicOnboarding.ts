@@ -55,7 +55,7 @@ const localeSchema = z.enum(SUPPORTED_LOCALES);
 const startSchema = z.strictObject({
   role: roleSchema,
   phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH),
-  // Masari sends no SMS, so the one-time code goes to this address.
+  // Darb sends no SMS, so the one-time code goes to this address.
   email: contactEmailSchema,
   region: z.string().trim().regex(/^[A-Za-z]{2}$/).optional(),
   locale: localeSchema

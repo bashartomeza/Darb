@@ -2,7 +2,7 @@
 
 The API exposes three unthrottled operational endpoints:
 
-- `GET /api/v1/health` preserves the existing Masari service-identity contract and reports live status.
+- `GET /api/v1/health` preserves the existing Darb service-identity contract and reports live status.
 - `GET /api/v1/health/live` confirms only that the process and HTTP stack are running; it never queries MySQL.
 - `GET /api/v1/health/ready` runs a read-only `SELECT 1` through Prisma and returns `200` only when the database check completes within the configured bound.
 

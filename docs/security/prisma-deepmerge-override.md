@@ -1,6 +1,6 @@
 # Prisma deepmerge security override
 
-Masari uses Prisma 7.9.1 across the CLI, client, and MariaDB adapter. That
+Darb uses Prisma 7.9.1 across the CLI, client, and MariaDB adapter. That
 release still resolves `@prisma/config` to `deepmerge-ts` 7.1.5, which is
 affected by GHSA-ggr8-5vv4-36mx.
 

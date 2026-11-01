@@ -42,7 +42,7 @@ app does about it:
 - Shows the "OpenStreetMap contributors" attribution on every map.
 
 The public servers are for light use. `flutter_map` prints a policy reminder in
-debug builds. If Masari grows beyond demo / pilot traffic, move to a tile
+debug builds. If Darb grows beyond demo / pilot traffic, move to a tile
 server we are entitled to use heavily.
 
 ## Switching to a self-hosted or commercial tile server

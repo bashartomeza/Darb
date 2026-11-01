@@ -66,7 +66,7 @@ describe("admin shell", () => {
           active="overview"
           onSelect={() => undefined}
           labels={{
-            brand: "Masari",
+            brand: "Darb",
             subtitle: "",
             navigation: "nav",
             label: (item) => translate(locale, item.labelKey),

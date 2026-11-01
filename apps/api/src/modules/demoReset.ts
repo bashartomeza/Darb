@@ -337,8 +337,8 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
         status: "published",
         name_ar: "الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم",
         name_en: LOCKED_CORRIDOR_LABEL,
-        description_ar: "مسار العرض التجريبي الثابت لمساري.",
-        description_en: "Masari's deterministic demo corridor.",
+        description_ar: "مسار العرض التجريبي الثابت لدرب.",
+        description_en: "Darb's deterministic demo corridor.",
         origin_stop_id: originStop.id,
         destination_stop_id: destinationStop.id,
         encoded_geometry: encodedGeometry,
@@ -558,7 +558,7 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
         {
           scenario_key: "masari_batch_wins",
           corridor_key: LOCKED_CORRIDOR_KEY,
-          description: "Masari batches five parcels into one compatible corridor trip.",
+          description: "Darb batches five parcels into one compatible corridor trip.",
           seed_version: "m1"
         },
         {
@@ -570,7 +570,7 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
         {
           scenario_key: "driver_utilization_wins",
           corridor_key: LOCKED_CORRIDOR_KEY,
-          description: "Masari improves utilization by combining passenger and parcel demand.",
+          description: "Darb improves utilization by combining passenger and parcel demand.",
           seed_version: "m1"
         }
       ]

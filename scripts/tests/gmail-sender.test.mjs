@@ -69,5 +69,5 @@ test("the message is bilingual and keeps the token on its own line", () => {
   assert.match(ar, /Content-Type: text\/plain; charset=UTF-8/);
   const text = Buffer.from(ar.split("\r\n\r\n")[1].replace(/\r\n/g, ""), "base64").toString();
   assert.match(text, /\r\n\r\ntok_a{39}\r\n\r\n/);
-  assert.match(text, /مساري/);
+  assert.match(text, /درب/);
 });

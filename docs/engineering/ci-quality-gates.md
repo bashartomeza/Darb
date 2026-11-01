@@ -1,6 +1,6 @@
 # CI quality gates
 
-Masari uses four focused GitHub Actions workflows under `.github/workflows`. They are locally parseable with `npm run ci:workflows`; GitHub execution remains pending until the team leader creates and approves an exact private remote.
+Darb uses four focused GitHub Actions workflows under `.github/workflows`. They are locally parseable with `npm run ci:workflows`; GitHub execution remains pending until the team leader creates and approves an exact private remote.
 
 ## Canonical toolchains
 

@@ -50,7 +50,7 @@ export type SimParams = {
   manualWrongDirectionAcceptProbability: number;
   /** Fixed processing delay of the nearest-driver method. */
   nearestMatchDelayMin: number;
-  /** Delay between a Masari match run and the driver accepting the offer. */
+  /** Delay between a Darb match run and the driver accepting the offer. */
   masariOfferDelayMin: number;
   /** Orders from one merchant submitted within this many minutes of the first one share a batch. */
   masariBatchWindowMin: number;

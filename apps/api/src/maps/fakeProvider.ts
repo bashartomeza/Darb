@@ -60,7 +60,7 @@ export class FakeRouteProvider implements RouteProvider {
       confidence: 1,
       category: fixture.category,
       provenance: { provider: "fake", apiVersion: "fake-v1", providerReferenceId: `fixture:${fixture.category}`, providerReferenceStoragePermitted: true },
-      attribution: [{ text: "Masari non-production deterministic fixture", displayRequired: false }]
+      attribution: [{ text: "Darb non-production deterministic fixture", displayRequired: false }]
     }, this.id);
   }
 
@@ -91,7 +91,7 @@ export class FakeRouteProvider implements RouteProvider {
       durationSeconds,
       calculatedAt: this.now().toISOString(),
       provenance: { provider: "fake", apiVersion: "fake-v1", profile: input.profile, providerReferenceStoragePermitted: true },
-      attribution: [{ text: "Masari non-production deterministic fixture", displayRequired: false }],
+      attribution: [{ text: "Darb non-production deterministic fixture", displayRequired: false }],
       inputChecksum,
       geometryChecksum: checksum
     };
