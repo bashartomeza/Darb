@@ -1855,6 +1855,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your chat with the assistant is saved to your account. Check your connection and try again.';
 
   @override
+  String get assistantNewChat => 'New chat';
+
+  @override
+  String get assistantNewChatTitle => 'Start a new chat?';
+
+  @override
+  String get assistantNewChatBody =>
+      'This chat will be deleted from your account. Trips you already booked are not affected.';
+
+  @override
+  String get assistantNewChatFailed =>
+      'Couldn\'t start a new chat. Check your connection and try again.';
+
+  @override
   String get assistantClarificationLabel =>
       'Darb assistant needs clarification';
 

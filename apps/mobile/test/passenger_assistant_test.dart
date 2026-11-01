@@ -677,6 +677,9 @@ class _ControlledAssistantRepository implements PassengerAssistantRepository {
       const PassengerAssistantState();
 
   @override
+  Future<void> clearConversation() async {}
+
+  @override
   Future<void> linkSavedRequest({
     required String conversationId,
     required String requestId,

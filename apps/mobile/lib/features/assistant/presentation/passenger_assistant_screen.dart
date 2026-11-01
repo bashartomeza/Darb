@@ -224,6 +224,40 @@ class _PassengerAssistantScreenState
     }
   }
 
+  Future<void> _startNewChat() async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.assistantNewChatTitle),
+        content: Text(l10n.assistantNewChatBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('assistantNewChatConfirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.assistantNewChat),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    _inputController.clear();
+    try {
+      await ref
+          .read(passengerAssistantControllerProvider.notifier)
+          .startNewChat();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.assistantNewChatFailed)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -253,6 +287,21 @@ class _PassengerAssistantScreenState
             ),
       body: Column(
         children: [
+          if ((assistant.value?.messages.isNotEmpty ?? false) &&
+              !busy &&
+              !recoveryPending)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(top: 4, end: 8),
+                child: TextButton.icon(
+                  key: const ValueKey('assistantNewChat'),
+                  onPressed: _startNewChat,
+                  icon: const Icon(Icons.add_comment_outlined, size: 18),
+                  label: Text(l10n.assistantNewChat),
+                ),
+              ),
+            ),
           Expanded(
             child: assistant.when(
               loading: () => const _AssistantLoadingView(),

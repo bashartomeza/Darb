@@ -177,6 +177,46 @@ void main() {
       expect(find.text('في أي ساعة؟'), findsOneWidget);
     });
 
+    testWidgets('New chat deletes the saved chat after confirming', (
+      tester,
+    ) async {
+      final requests = <String>[];
+      var cleared = false;
+      final auth = TestAuthenticatedClient(
+        handler: (request) async {
+          requests.add('${request.method} ${request.url.path}');
+          if (request.method == 'DELETE') {
+            cleared = true;
+            return _json({'deleted': true});
+          }
+          return _json(cleared ? {'conversation': null} : _savedChat());
+        },
+      );
+      await tester.pumpWidget(_app(auth, locale: 'en'));
+      await tester.pumpAndSettle();
+      expect(find.text('رحلة إلى بيت لحم'), findsOneWidget);
+
+      // Cancelling the dialog keeps everything.
+      await tester.tap(find.byKey(const ValueKey('assistantNewChat')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(requests.where((r) => r.startsWith('DELETE')), isEmpty);
+      expect(find.text('رحلة إلى بيت لحم'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('assistantNewChat')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('assistantNewChatConfirm')));
+      await tester.pumpAndSettle();
+
+      expect(
+        requests,
+        contains('DELETE /api/v1/passenger/assistant/conversation'),
+      );
+      expect(find.text('رحلة إلى بيت لحم'), findsNothing);
+      expect(find.byKey(const ValueKey('assistantNewChat')), findsNothing);
+    });
+
     testWidgets('a failed load offers a retry that brings the chat back', (
       tester,
     ) async {

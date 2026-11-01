@@ -47,6 +47,8 @@ class _Repo implements PassengerAssistantRepository {
   Future<PassengerAssistantState> loadConversation() async =>
       const PassengerAssistantState();
   @override
+  Future<void> clearConversation() async {}
+  @override
   Future<void> linkSavedRequest({
     required String conversationId,
     required String requestId,

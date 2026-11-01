@@ -320,6 +320,8 @@ class _Delayed implements PassengerAssistantRepository {
   @override
   Future<PassengerAssistantState> loadConversation() async => conversation;
   @override
+  Future<void> clearConversation() async {}
+  @override
   Future<void> linkSavedRequest({
     required String conversationId,
     required String requestId,

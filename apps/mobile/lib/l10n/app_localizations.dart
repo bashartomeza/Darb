@@ -3524,6 +3524,30 @@ abstract class AppLocalizations {
   /// **'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.'**
   String get assistantHistoryErrorBody;
 
+  /// No description provided for @assistantNewChat.
+  ///
+  /// In ar, this message translates to:
+  /// **'محادثة جديدة'**
+  String get assistantNewChat;
+
+  /// No description provided for @assistantNewChatTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدء محادثة جديدة؟'**
+  String get assistantNewChatTitle;
+
+  /// No description provided for @assistantNewChatBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.'**
+  String get assistantNewChatBody;
+
+  /// No description provided for @assistantNewChatFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.'**
+  String get assistantNewChatFailed;
+
   /// No description provided for @assistantClarificationLabel.
   ///
   /// In ar, this message translates to:

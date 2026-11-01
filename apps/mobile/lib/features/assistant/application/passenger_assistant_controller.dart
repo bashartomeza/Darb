@@ -82,6 +82,21 @@ class PassengerAssistantController
     await _send(query, locale: locale, appendPassengerMessage: true);
   }
 
+  /// Deletes the saved chat on the server and starts an empty one. Refused
+  /// while a booking from this chat is still being confirmed. Returns whether
+  /// the chat was cleared.
+  Future<bool> startNewChat() async {
+    if (state.isLoading || _mutationPending) return false;
+    final generation = _generation;
+    final actor = _actor;
+    await ref.read(passengerAssistantRepositoryProvider).clearConversation();
+    if (!_isCurrent(generation, actor)) return false;
+    state = AsyncData(
+      PassengerAssistantState(lastLocale: state.value?.lastLocale ?? 'ar'),
+    );
+    return true;
+  }
+
   Future<void> retry() async {
     final current = state.value;
     final query = current?.lastQuery;

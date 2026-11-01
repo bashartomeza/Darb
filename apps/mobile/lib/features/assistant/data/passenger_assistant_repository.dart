@@ -25,6 +25,9 @@ abstract interface class PassengerAssistantRepository {
   /// server, so it is the same after a reinstall or on another device.
   Future<PassengerAssistantState> loadConversation();
 
+  /// Deletes the account's saved chat; the next message starts a new one.
+  Future<void> clearConversation();
+
   /// Records on the chat the request the passenger saved from it.
   Future<void> linkSavedRequest({
     required String conversationId,
@@ -99,6 +102,10 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
       savedRequestId: savedRequestId is String ? savedRequestId : null,
     );
   }
+
+  @override
+  Future<void> clearConversation() =>
+      apiClient.deleteJson('/passenger/assistant/conversation');
 
   @override
   Future<void> linkSavedRequest({

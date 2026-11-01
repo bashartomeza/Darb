@@ -1846,6 +1846,20 @@ class AppLocalizationsAr extends AppLocalizations {
       'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.';
 
   @override
+  String get assistantNewChat => 'محادثة جديدة';
+
+  @override
+  String get assistantNewChatTitle => 'بدء محادثة جديدة؟';
+
+  @override
+  String get assistantNewChatBody =>
+      'سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.';
+
+  @override
+  String get assistantNewChatFailed =>
+      'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
   String get assistantClarificationLabel => 'يحتاج مساعد درب إلى توضيح';
 
   @override
