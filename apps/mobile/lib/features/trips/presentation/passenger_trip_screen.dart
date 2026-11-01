@@ -37,23 +37,23 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   // MASARI DESIGN SYSTEM
   // ============================================================
 
-  static const Color _orange = Color(0xFFC66A3D);
-  static const Color _orangeDark = Color(0xFF8A3F2A);
-  static const Color _orangeSoft = Color(0xFFF2DED1);
+  static const Color _orange = Color(0xFFFA5F12);
+  static const Color _orangeDark = Color(0xFFC2410C);
+  static const Color _orangeSoft = Color(0xFFFFE8DC);
 
-  static const Color _background = Color(0xFFF9F5EE);
+  static const Color _background = Color(0xFFFFFFFF);
   static const Color _white = Colors.white;
 
-  static const Color _text = Color(0xFF243129);
-  static const Color _secondary = Color(0xFF5B625D);
-  static const Color _muted = Color(0xFF8B867D);
+  static const Color _text = Color(0xFF1C1A1A);
+  static const Color _secondary = Color(0xFF707070);
+  static const Color _muted = Color(0xFF707070);
 
-  static const Color _line = Color(0xFFD7CEC1);
+  static const Color _line = Color(0xFFE0E0E0);
 
-  static const Color _success = Color(0xFF2F4A3A);
-  static const Color _successSoft = Color(0xFFE7EFE1);
+  static const Color _success = Color(0xFF3A7C07);
+  static const Color _successSoft = Color(0xFFE8F2DF);
 
-  static const Color _blue = Color(0xFF7A8F5A);
+  static const Color _blue = Color(0xFF2F6690);
 
   // ============================================================
   // LIFECYCLE

@@ -420,7 +420,7 @@ class _GoogleOnboardingScreenState
         capabilities?['google_driver_signup_available'] != false;
     return [
       _StepTitle(
-        title: _t('How will you use Masari?', 'كيف ستستخدم مساري؟'),
+        title: _t('How will you use Darb?', 'كيف ستستخدم درب؟'),
         subtitle: _t(
           'Choose one. It sets up the right experience for you.',
           'اختر واحداً، وسنجهز لك التجربة المناسبة.',
@@ -443,8 +443,8 @@ class _GoogleOnboardingScreenState
         title: _t('Driver', 'سائق'),
         help: driverAvailable
             ? _t(
-                'Drive on Masari routes. Needs Admin approval first.',
-                'قُد على مسارات مساري. يتطلب موافقة الإدارة أولاً.',
+                'Drive on Darb routes. Needs Admin approval first.',
+                'قُد على مسارات درب. يتطلب موافقة الإدارة أولاً.',
               )
             : _t(
                 'Driver applications are not open right now.',
@@ -571,8 +571,8 @@ class _GoogleOnboardingScreenState
     _StepTitle(
       title: _t('Your vehicle', 'مركبتك'),
       subtitle: _t(
-        'The car you will drive on Masari.',
-        'السيارة التي ستقودها على مساري.',
+        'The car you will drive on Darb.',
+        'السيارة التي ستقودها على درب.',
       ),
     ),
     _ChipGroup(

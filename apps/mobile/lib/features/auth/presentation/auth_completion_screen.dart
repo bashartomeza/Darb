@@ -254,11 +254,11 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                 authText(
                   context,
                   phoneOff
-                      ? 'Add a real contact number before using Masari services.'
-                      : 'Add a real contact number before using Masari services. We email the verification code to the email address on your account.',
+                      ? 'Add a real contact number before using Darb services.'
+                      : 'Add a real contact number before using Darb services. We email the verification code to the email address on your account.',
                   phoneOff
-                      ? 'أضف رقم تواصل حقيقياً قبل استخدام خدمات مساري.'
-                      : 'أضف رقم تواصل حقيقياً قبل استخدام خدمات مساري. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
+                      ? 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب.'
+                      : 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
                 ),
               ),
               TextField(

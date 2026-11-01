@@ -101,7 +101,7 @@ class TripOfferCard extends StatelessWidget {
                       ),
                       key: const ValueKey('tripOfferFare'),
                       style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppTheme.primary,
+                        color: AppTheme.price,
                         fontWeight: FontWeight.w700,
                       ),
                       maxLines: 1,
@@ -123,7 +123,7 @@ class TripOfferCard extends StatelessWidget {
                     Text(
                       offer.priceLabel!,
                       style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppTheme.primary,
+                        color: AppTheme.price,
                         fontWeight: FontWeight.w700,
                       ),
                       maxLines: 1,

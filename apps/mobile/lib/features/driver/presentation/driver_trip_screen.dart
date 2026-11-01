@@ -32,26 +32,26 @@ import '../data/driver_models.dart';
 // MASARI DRIVER MAP COLORS
 // ============================================================
 
-const Color navy = Color(0xFF2F4A3A);
-const Color orange = Color(0xFFC66A3D);
-const Color orangeDark = Color(0xFF8A3F2A);
-const Color orangeSoft = Color(0xFFF2DED1);
+const Color navy = Color(0xFF1C1A1A);
+const Color orange = Color(0xFFFA5F12);
+const Color orangeDark = Color(0xFFC2410C);
+const Color orangeSoft = Color(0xFFFFE8DC);
 
-const Color success = Color(0xFF2F4A3A);
-const Color successSoft = Color(0xFFE7EFE1);
+const Color success = Color(0xFF3A7C07);
+const Color successSoft = Color(0xFFE8F2DF);
 
 const Color warning = Color(0xFFA36B22);
-const Color error = Color(0xFF8A3F2A);
+const Color error = Color(0xFFD92D20);
 
 const Color white = Color(0xFFFFFFFF);
-const Color background = Color(0xFFF9F5EE);
+const Color background = Color(0xFFFFFFFF);
 
-const Color textDark = Color(0xFF243129);
-const Color textSecondary = Color(0xFF5B625D);
-const Color textMuted = Color(0xFF8B867D);
+const Color textDark = Color(0xFF1C1A1A);
+const Color textSecondary = Color(0xFF707070);
+const Color textMuted = Color(0xFF707070);
 
-const Color border = Color(0xFFD7CEC1);
-const Color driverBlue = Color(0xFF7A8F5A);
+const Color border = Color(0xFFE0E0E0);
+const Color driverBlue = Color(0xFF2F6690);
 
 // ============================================================
 // DRIVER TRIP SCREEN

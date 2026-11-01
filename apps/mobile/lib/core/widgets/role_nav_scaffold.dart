@@ -122,7 +122,7 @@ class RoleShellScaffold extends StatelessWidget {
           : Drawer(child: _sidebar(context, arabic, closeDrawer: true)),
     );
     return ColoredBox(
-      color: const Color(0xFFEAE5D9),
+      color: const Color(0xFFF6F6F6),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1200),
@@ -182,7 +182,7 @@ class RoleShellScaffold extends StatelessWidget {
     bool closeDrawer = false,
   }) {
     return Material(
-      color: const Color(0xFF263C2F),
+      color: const Color(0xFF1C1A1A),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -205,7 +205,7 @@ class RoleShellScaffold extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        arabic ? 'مساري' : 'Masari',
+                        arabic ? 'درب' : 'Darb',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 26,
@@ -213,9 +213,9 @@ class RoleShellScaffold extends StatelessWidget {
                         ),
                       ),
                       const Text(
-                        'M A S A R I',
+                        'D A R B',
                         style: TextStyle(
-                          color: Color(0xFFBAC8BE),
+                          color: Color(0xFFD0D0D0),
                           fontSize: 10,
                         ),
                       ),
@@ -226,7 +226,7 @@ class RoleShellScaffold extends StatelessWidget {
               const SizedBox(height: 48),
               Text(
                 arabic ? 'القائمة الرئيسية' : 'MAIN MENU',
-                style: const TextStyle(color: Color(0xFFA9B8AB), fontSize: 12),
+                style: const TextStyle(color: Color(0xFFAEAEAE), fontSize: 12),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -242,20 +242,20 @@ class RoleShellScaffold extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           tileColor: i == navigationShell.currentIndex
-                              ? const Color(0xFF3F5145)
+                              ? const Color(0xFF3A3636)
                               : Colors.transparent,
                           leading: Icon(
                             destinations[i].item.icon,
                             color: i == navigationShell.currentIndex
                                 ? Colors.white
-                                : const Color(0xFFB8C5BB),
+                                : const Color(0xFFD0D0D0),
                           ),
                           title: Text(
                             destinations[i].item.label,
                             style: TextStyle(
                               color: i == navigationShell.currentIndex
                                   ? Colors.white
-                                  : const Color(0xFFB8C5BB),
+                                  : const Color(0xFFD0D0D0),
                               fontSize: 14,
                             ),
                           ),
@@ -271,7 +271,7 @@ class RoleShellScaffold extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF48604E)),
+                  border: Border.all(color: const Color(0xFF4A4646)),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -279,7 +279,7 @@ class RoleShellScaffold extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.verified_user_outlined,
-                      color: Color(0xFFE7CFAD),
+                      color: Color(0xFFFFB590),
                       size: 22,
                     ),
                     const SizedBox(width: 10),
@@ -301,7 +301,7 @@ class RoleShellScaffold extends StatelessWidget {
                                 ? 'تابع رحلاتك وراجع جلسات حسابك.'
                                 : 'Follow your trips and manage your account sessions.',
                             style: const TextStyle(
-                              color: Color(0xFFB8C5BB),
+                              color: Color(0xFFD0D0D0),
                               fontSize: 11,
                             ),
                           ),

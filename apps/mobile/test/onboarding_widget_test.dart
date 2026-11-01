@@ -84,24 +84,28 @@ void main() {
     );
   });
 
-  testWidgets('driver sign-up while registration is unavailable stays on the chooser', (
-    tester,
-  ) async {
-    await _pumpApp(
-      tester,
-      onboardingEnabled: true,
-      disableAfterFirstConfig: true,
-    );
+  testWidgets(
+    'driver sign-up while registration is unavailable stays on the chooser',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        onboardingEnabled: true,
+        disableAfterFirstConfig: true,
+      );
 
-    await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register-role-driver')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('register-role-driver')));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('invitationCodeField')), findsNothing);
-    expect(find.byKey(const ValueKey('register-role-driver')), findsOneWidget);
-    expect(find.text('التسجيل غير متاح مؤقتاً.'), findsOneWidget);
-  });
+      expect(find.byKey(const ValueKey('invitationCodeField')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('register-role-driver')),
+        findsOneWidget,
+      );
+      expect(find.text('التسجيل غير متاح مؤقتاً.'), findsOneWidget);
+    },
+  );
 
   testWidgets('direct onboarding route while disabled returns safely', (
     tester,
@@ -261,28 +265,35 @@ void main() {
     expect(find.byKey(const ValueKey('loginButton')), findsNothing);
   });
 
-  testWidgets('registration asks for phone and email, never an invitation code', (
-    tester,
-  ) async {
-    await _pumpApp(
-      tester,
-      handler: (request) async {
-        if (request.url.path.endsWith('/onboarding/config')) {
-          return http.Response(_openConfigBody, 200);
-        }
-        return http.Response('{"error":"not_found"}', 404);
-      },
-    );
+  testWidgets(
+    'registration asks for phone and email, never an invitation code',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/onboarding/config')) {
+            return http.Response(_openConfigBody, 200);
+          }
+          return http.Response('{"error":"not_found"}', 404);
+        },
+      );
 
-    await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register-role-driver')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('register-role-driver')));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('رمز الدعوة'), findsNothing);
-    expect(find.byKey(const ValueKey('onboardingPhoneField')), findsOneWidget);
-    expect(find.byKey(const ValueKey('onboardingEmailField')), findsOneWidget);
-  });
+      expect(find.textContaining('رمز الدعوة'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('onboardingPhoneField')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('onboardingEmailField')),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('submit stays locked until every required document is on file', (
     tester,

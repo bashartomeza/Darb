@@ -9,13 +9,13 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appTitle => 'مساري';
+  String get appTitle => 'درب';
 
   @override
   String get tagline => 'لوجستيات ذكية لتشارك المسار';
 
   @override
-  String get welcomeTitle => 'مرحباً بك في مساري';
+  String get welcomeTitle => 'مرحباً بك في درب';
 
   @override
   String get welcomeBody =>
@@ -74,6 +74,45 @@ class AppLocalizationsAr extends AppLocalizations {
   String get retry => 'إعادة المحاولة';
 
   @override
+  String get whereToGo => 'إلى أين تريد الذهاب؟';
+
+  @override
+  String get selectPickupLocation => 'اختاري موقع الانطلاق';
+
+  @override
+  String get selectDestination => 'اختاري الوجهة';
+
+  @override
+  String get selectPickupLocationTitle => 'اختيار موقع الانطلاق';
+
+  @override
+  String get selectDestinationTitle => 'اختيار الوجهة';
+
+  @override
+  String get selectBothLocations => 'اختاري موقع الانطلاق والوجهة أولاً';
+
+  @override
+  String get timeField => 'الوقت';
+
+  @override
+  String get dateField => 'التاريخ';
+
+  @override
+  String get searchRide => 'ابحث عن رحلة';
+
+  @override
+  String get increasePassengers => 'إضافة راكب';
+
+  @override
+  String get decreasePassengers => 'إزالة راكب';
+
+  @override
+  String get loginWelcomeBack => 'أهلاً بعودتك';
+
+  @override
+  String get loginWelcomeSubtitle => 'يسعدنا عودتك';
+
+  @override
   String get signInWelcome => 'سجل الدخول للمتابعة إلى مساحة عمل دورك.';
 
   @override
@@ -107,7 +146,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get createAccountSubtitle => 'أنشئ حساب مسافر للبدء.';
 
   @override
-  String get newToMasari => 'جديد في مساري؟ أنشئ حساباً';
+  String get newToDarb => 'جديد في درب؟ أنشئ حساباً';
 
   @override
   String get alreadyHaveAccount => 'لديك حساب؟ سجّل الدخول';
@@ -350,7 +389,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get routeMatchExplanation =>
-      'اختار مساري هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.';
+      'اختار درب هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.';
 
   @override
   String get passengerTrip => 'رحلة المسافر';
@@ -665,7 +704,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String parcelBatchExplanationDemo(int parcelCount) {
-    return 'يمكن تجميع $parcelCount طرود متوافقة في رحلة واحدة على ممر مساري بدلاً من رحلات منفصلة، مما يقلل المسافة والتكلفة.';
+    return 'يمكن تجميع $parcelCount طرود متوافقة في رحلة واحدة على ممر درب بدلاً من رحلات منفصلة، مما يقلل المسافة والتكلفة.';
   }
 
   @override
@@ -806,7 +845,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'يبقى الحساب قيد المراجعة حتى الموافقة';
 
   @override
-  String get registerChooseTitle => 'كيف ستستخدم مساري؟';
+  String get registerChooseTitle => 'كيف ستستخدم درب؟';
 
   @override
   String get registerChooseSubtitle =>
@@ -1295,9 +1334,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get whereToGo => 'إلى أين تريد الذهاب؟';
-
-  @override
   String get smartSearch => 'بحث ذكي';
 
   @override
@@ -1328,7 +1364,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noAvailableTripsBody =>
-      'أنشئ طلباً وسيقوم مساري بمطابقتك مع سائق على المسار.';
+      'أنشئ طلباً وسيقوم درب بمطابقتك مع سائق على المسار.';
 
   @override
   String seatsRemaining(int count) {
@@ -1711,10 +1747,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'هذه الشاشة ليست مباشرة. استخدم التحديث للتحقق من المستجدات.';
 
   @override
-  String get assistantTitle => 'مساعد مساري';
+  String get assistantTitle => 'مساعد درب';
 
   @override
-  String get assistantHomeTitle => 'اسأل مساعد مساري';
+  String get assistantHomeTitle => 'اسأل مساعد درب';
 
   @override
   String get assistantHomeBody => 'استفسر عن رحلاتك والمسارات المتاحة.';
@@ -1724,7 +1760,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get assistantWelcomeBody =>
-      'اسأل عن بيانات رحلاتك أو المسارات المتاحة في مساري. إذا كانت التفاصيل ناقصة، سأطلب منك توضيحها.';
+      'اسأل عن بيانات رحلاتك أو المسارات المتاحة في درب. إذا كانت التفاصيل ناقصة، سأطلب منك توضيحها.';
 
   @override
   String get assistantTryAsking => 'جرّب أن تسأل';
@@ -1742,7 +1778,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get assistantSend => 'إرسال';
 
   @override
-  String get assistantProcessing => 'جارٍ التحقق من بيانات مساري…';
+  String get assistantProcessing => 'جارٍ التحقق من بيانات درب…';
 
   @override
   String get assistantErrorTitle => 'تعذّر إكمال الطلب';
@@ -1756,10 +1792,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.';
 
   @override
-  String get assistantClarificationLabel => 'يحتاج مساعد مساري إلى توضيح';
+  String get assistantClarificationLabel => 'يحتاج مساعد درب إلى توضيح';
 
   @override
-  String get assistantResultLabel => 'رد مساعد مساري';
+  String get assistantResultLabel => 'رد مساعد درب';
 
   @override
   String get assistantPassengerMessage => 'رسالتك';

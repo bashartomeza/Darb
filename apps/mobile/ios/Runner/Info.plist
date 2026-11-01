@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Masari</string>
+	<string>Darb</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
@@ -48,11 +48,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Masari uses the camera so you can photograph your driver documents for verification.</string>
+	<string>Darb uses the camera so you can photograph your driver documents for verification.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Masari uses your location to show nearby routes and your position on the map.</string>
+	<string>Darb uses your location to show nearby routes and your position on the map.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Masari needs access to your photos so you can choose a driver document to upload.</string>
+	<string>Darb needs access to your photos so you can choose a driver document to upload.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

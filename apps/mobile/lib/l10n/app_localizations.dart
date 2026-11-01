@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In ar, this message translates to:
-  /// **'مساري'**
+  /// **'درب'**
   String get appTitle;
 
   /// No description provided for @tagline.
@@ -113,7 +113,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeTitle.
   ///
   /// In ar, this message translates to:
-  /// **'مرحباً بك في مساري'**
+  /// **'مرحباً بك في درب'**
   String get welcomeTitle;
 
   /// No description provided for @welcomeBody.
@@ -218,6 +218,84 @@ abstract class AppLocalizations {
   /// **'إعادة المحاولة'**
   String get retry;
 
+  /// No description provided for @whereToGo.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلى أين تريد الذهاب؟'**
+  String get whereToGo;
+
+  /// No description provided for @selectPickupLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختاري موقع الانطلاق'**
+  String get selectPickupLocation;
+
+  /// No description provided for @selectDestination.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختاري الوجهة'**
+  String get selectDestination;
+
+  /// No description provided for @selectPickupLocationTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار موقع الانطلاق'**
+  String get selectPickupLocationTitle;
+
+  /// No description provided for @selectDestinationTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار الوجهة'**
+  String get selectDestinationTitle;
+
+  /// No description provided for @selectBothLocations.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختاري موقع الانطلاق والوجهة أولاً'**
+  String get selectBothLocations;
+
+  /// No description provided for @timeField.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت'**
+  String get timeField;
+
+  /// No description provided for @dateField.
+  ///
+  /// In ar, this message translates to:
+  /// **'التاريخ'**
+  String get dateField;
+
+  /// No description provided for @searchRide.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن رحلة'**
+  String get searchRide;
+
+  /// No description provided for @increasePassengers.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة راكب'**
+  String get increasePassengers;
+
+  /// No description provided for @decreasePassengers.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة راكب'**
+  String get decreasePassengers;
+
+  /// No description provided for @loginWelcomeBack.
+  ///
+  /// In ar, this message translates to:
+  /// **'أهلاً بعودتك'**
+  String get loginWelcomeBack;
+
+  /// No description provided for @loginWelcomeSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'يسعدنا عودتك'**
+  String get loginWelcomeSubtitle;
+
   /// No description provided for @signInWelcome.
   ///
   /// In ar, this message translates to:
@@ -284,11 +362,11 @@ abstract class AppLocalizations {
   /// **'أنشئ حساب مسافر للبدء.'**
   String get createAccountSubtitle;
 
-  /// No description provided for @newToMasari.
+  /// No description provided for @newToDarb.
   ///
   /// In ar, this message translates to:
-  /// **'جديد في مساري؟ أنشئ حساباً'**
-  String get newToMasari;
+  /// **'جديد في درب؟ أنشئ حساباً'**
+  String get newToDarb;
 
   /// No description provided for @alreadyHaveAccount.
   ///
@@ -749,7 +827,7 @@ abstract class AppLocalizations {
   /// No description provided for @routeMatchExplanation.
   ///
   /// In ar, this message translates to:
-  /// **'اختار مساري هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.'**
+  /// **'اختار درب هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.'**
   String get routeMatchExplanation;
 
   /// No description provided for @passengerTrip.
@@ -1373,7 +1451,7 @@ abstract class AppLocalizations {
   /// No description provided for @parcelBatchExplanationDemo.
   ///
   /// In ar, this message translates to:
-  /// **'يمكن تجميع {parcelCount} طرود متوافقة في رحلة واحدة على ممر مساري بدلاً من رحلات منفصلة، مما يقلل المسافة والتكلفة.'**
+  /// **'يمكن تجميع {parcelCount} طرود متوافقة في رحلة واحدة على ممر درب بدلاً من رحلات منفصلة، مما يقلل المسافة والتكلفة.'**
   String parcelBatchExplanationDemo(int parcelCount);
 
   /// No description provided for @runMatching.
@@ -1637,7 +1715,7 @@ abstract class AppLocalizations {
   /// No description provided for @registerChooseTitle.
   ///
   /// In ar, this message translates to:
-  /// **'كيف ستستخدم مساري؟'**
+  /// **'كيف ستستخدم درب؟'**
   String get registerChooseTitle;
 
   /// No description provided for @registerChooseSubtitle.
@@ -2528,12 +2606,6 @@ abstract class AppLocalizations {
   /// **'مساء الخير، {name}'**
   String greetingEvening(String name);
 
-  /// No description provided for @whereToGo.
-  ///
-  /// In ar, this message translates to:
-  /// **'إلى أين تريد الذهاب؟'**
-  String get whereToGo;
-
   /// No description provided for @smartSearch.
   ///
   /// In ar, this message translates to:
@@ -2591,7 +2663,7 @@ abstract class AppLocalizations {
   /// No description provided for @noAvailableTripsBody.
   ///
   /// In ar, this message translates to:
-  /// **'أنشئ طلباً وسيقوم مساري بمطابقتك مع سائق على المسار.'**
+  /// **'أنشئ طلباً وسيقوم درب بمطابقتك مع سائق على المسار.'**
   String get noAvailableTripsBody;
 
   /// No description provided for @seatsRemaining.
@@ -3281,13 +3353,13 @@ abstract class AppLocalizations {
   /// No description provided for @assistantTitle.
   ///
   /// In ar, this message translates to:
-  /// **'مساعد مساري'**
+  /// **'مساعد درب'**
   String get assistantTitle;
 
   /// No description provided for @assistantHomeTitle.
   ///
   /// In ar, this message translates to:
-  /// **'اسأل مساعد مساري'**
+  /// **'اسأل مساعد درب'**
   String get assistantHomeTitle;
 
   /// No description provided for @assistantHomeBody.
@@ -3305,7 +3377,7 @@ abstract class AppLocalizations {
   /// No description provided for @assistantWelcomeBody.
   ///
   /// In ar, this message translates to:
-  /// **'اسأل عن بيانات رحلاتك أو المسارات المتاحة في مساري. إذا كانت التفاصيل ناقصة، سأطلب منك توضيحها.'**
+  /// **'اسأل عن بيانات رحلاتك أو المسارات المتاحة في درب. إذا كانت التفاصيل ناقصة، سأطلب منك توضيحها.'**
   String get assistantWelcomeBody;
 
   /// No description provided for @assistantTryAsking.
@@ -3341,7 +3413,7 @@ abstract class AppLocalizations {
   /// No description provided for @assistantProcessing.
   ///
   /// In ar, this message translates to:
-  /// **'جارٍ التحقق من بيانات مساري…'**
+  /// **'جارٍ التحقق من بيانات درب…'**
   String get assistantProcessing;
 
   /// No description provided for @assistantErrorTitle.
@@ -3365,13 +3437,13 @@ abstract class AppLocalizations {
   /// No description provided for @assistantClarificationLabel.
   ///
   /// In ar, this message translates to:
-  /// **'يحتاج مساعد مساري إلى توضيح'**
+  /// **'يحتاج مساعد درب إلى توضيح'**
   String get assistantClarificationLabel;
 
   /// No description provided for @assistantResultLabel.
   ///
   /// In ar, this message translates to:
-  /// **'رد مساعد مساري'**
+  /// **'رد مساعد درب'**
   String get assistantResultLabel;
 
   /// No description provided for @assistantPassengerMessage.

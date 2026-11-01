@@ -71,7 +71,7 @@ class OnboardingRepository {
     final json = await _post(
       '/onboarding/attempts',
       body: {
-        // Masari sends no SMS: the one-time code is emailed to this address.
+        // Darb sends no SMS: the one-time code is emailed to this address.
         'email': email.trim(),
         'role': role.apiValue,
         'phone': phone.trim(),

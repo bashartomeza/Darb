@@ -70,26 +70,29 @@ void main() {
     },
   );
 
-  test('start sends the email the code goes to and never an invitation', () async {
-    var seen = <String, dynamic>{};
-    final repository = _repository((request) async {
-      seen = jsonDecode(request.body) as Map<String, dynamic>;
-      return http.Response(
-        '{"attempt":{"id":"attempt_1","status":"otp_sent","phone":"+970*****01","expires_at":"2026-07-20T10:00:00.000Z","resend_available_at":"2026-07-20T09:01:00.000Z"},"onboarding_token":"continuation","onboarding_token_expires_at":"2026-07-20T09:30:00.000Z","next_action":"verify_otp","request_id":"req"}',
-        201,
+  test(
+    'start sends the email the code goes to and never an invitation',
+    () async {
+      var seen = <String, dynamic>{};
+      final repository = _repository((request) async {
+        seen = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          '{"attempt":{"id":"attempt_1","status":"otp_sent","phone":"+970*****01","expires_at":"2026-07-20T10:00:00.000Z","resend_available_at":"2026-07-20T09:01:00.000Z"},"onboarding_token":"continuation","onboarding_token_expires_at":"2026-07-20T09:30:00.000Z","next_action":"verify_otp","request_id":"req"}',
+          201,
+        );
+      });
+      await repository.start(
+        role: OnboardingRole.driver,
+        phone: '+970590000001',
+        email: ' Driver@Example.com ',
+        locale: 'en',
+        idempotencyKey: 'idem-start-email',
       );
-    });
-    await repository.start(
-      role: OnboardingRole.driver,
-      phone: '+970590000001',
-      email: ' Driver@Example.com ',
-      locale: 'en',
-      idempotencyKey: 'idem-start-email',
-    );
-    expect(seen['email'], 'Driver@Example.com');
-    expect(seen['role'], 'driver');
-    expect(seen, isNot(contains('invitation_code')));
-  });
+      expect(seen['email'], 'Driver@Example.com');
+      expect(seen['role'], 'driver');
+      expect(seen, isNot(contains('invitation_code')));
+    },
+  );
 
   test('continuation requests use Onboarding authorization only', () async {
     final repository = _repository((request) async {

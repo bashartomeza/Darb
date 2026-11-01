@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_back_button.dart';
@@ -133,6 +134,8 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final material = MaterialLocalizations.of(context);
+    final busy = _loading || _locked;
 
     final canSubmit =
         _pickup != null &&
@@ -149,76 +152,71 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppTokens.spaceLarge),
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.marginMobile,
+            AppTokens.spaceSmall,
+            AppTokens.marginMobile,
+            AppTokens.spaceLarge,
+          ),
           children: [
+            Text(
+              l10n.whereToGo,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: AppTokens.spaceLarge),
 
-            // ----------------------------------------------------------
-            // PICKUP + DESTINATION
-            // ----------------------------------------------------------
+            // From / To card with a dotted connector between the two stops.
             MasariCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.pickup,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTokens.spaceMedium,
+                vertical: AppTokens.spaceSmall,
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _DottedConnector(),
+                    const SizedBox(width: AppTokens.gutterMobile),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _PlaceTile(
+                            title: l10n.pickup,
+                            value: _pickup?.label ?? l10n.selectPickupLocation,
+                            selected: _pickup != null,
+                            onTap: busy
+                                ? null
+                                : () => _chooseLocation(isPickup: true),
+                          ),
+                          const Divider(height: 1),
+                          _PlaceTile(
+                            title: l10n.destination,
+                            value:
+                                _destination?.label ?? l10n.selectDestination,
+                            selected: _destination != null,
+                            onTap: busy
+                                ? null
+                                : () => _chooseLocation(isPickup: false),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-
-                  const SizedBox(height: AppTokens.spaceSmall),
-
-                  _LocationButton(
-                    icon: Icons.trip_origin_rounded,
-                    title: _pickup?.label ?? 'اختاري موقع الانطلاق',
-                    subtitle: _pickup == null
-                        ? 'اضغطي لاختيار الموقع من الخريطة'
-                        : _coordinatesText(_pickup!),
-                    selected: _pickup != null,
-                    onTap: _loading || _locked
-                        ? null
-                        : () => _chooseLocation(isPickup: true),
-                  ),
-
-                  const SizedBox(height: AppTokens.spaceMedium),
-
-                  Text(
-                    l10n.destination,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-
-                  const SizedBox(height: AppTokens.spaceSmall),
-
-                  _LocationButton(
-                    icon: Icons.location_on_rounded,
-                    title: _destination?.label ?? 'اختاري الوجهة',
-                    subtitle: _destination == null
-                        ? 'اضغطي لاختيار الوجهة من الخريطة'
-                        : _coordinatesText(_destination!),
-                    selected: _destination != null,
-                    onTap: _loading || _locked
-                        ? null
-                        : () => _chooseLocation(isPickup: false),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
-            // ----------------------------------------------------------
-            // MAP PREVIEW
-            // ----------------------------------------------------------
             if (_pickup != null || _destination != null) ...[
               const SizedBox(height: AppTokens.spaceMedium),
-
               MasariCard(
                 padding: EdgeInsets.zero,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
                   child: MasariMap(
-                    height: 300,
+                    height: 240,
                     emptyLabel: '',
                     attributionLabel: '© OpenStreetMap contributors',
                     markers: [
@@ -229,10 +227,9 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
                             _pickup!.longitude,
                           ),
                           icon: Icons.trip_origin_rounded,
-                          color: theme.colorScheme.primary,
+                          color: AppTheme.routeOrigin,
                           label: _pickup!.label,
                         ),
-
                       if (_destination != null)
                         MasariMapMarker(
                           position: GeoPoint(
@@ -240,7 +237,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
                             _destination!.longitude,
                           ),
                           icon: Icons.location_on_rounded,
-                          color: theme.colorScheme.error,
+                          color: AppTheme.routeDestination,
                           label: _destination!.label,
                         ),
                     ],
@@ -251,73 +248,68 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
 
             const SizedBox(height: AppTokens.spaceMedium),
 
-            // ----------------------------------------------------------
-            // TIME + PASSENGERS
-            // ----------------------------------------------------------
+            // Passengers, time and date.
             MasariCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTokens.spaceMedium,
+                vertical: AppTokens.spaceSmall,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: _loading || _locked ? null : _pickTime,
-                    icon: const Icon(Icons.schedule_rounded),
-                    label: Text(
-                      '${l10n.preferredTime}: '
-                      '${_preferredTime.toLocal()}',
+                  _SettingTile(
+                    icon: Icons.people_alt_outlined,
+                    title: l10n.passengerCount,
+                    value: '$_count',
+                    trailing: _Stepper(
+                      value: _count,
+                      min: 1,
+                      max: 4,
+                      decrementLabel: l10n.decreasePassengers,
+                      incrementLabel: l10n.increasePassengers,
+                      onChanged: busy
+                          ? null
+                          : (value) => setState(() => _count = value),
                     ),
                   ),
-
-                  const SizedBox(height: AppTokens.spaceMedium),
-
-                  DropdownButtonFormField<int>(
-                    initialValue: _count,
-                    decoration: InputDecoration(
-                      labelText: l10n.passengerCount,
-                      prefixIcon: const Icon(Icons.people_alt_outlined),
+                  const Divider(height: 1),
+                  _SettingTile(
+                    icon: Icons.schedule_rounded,
+                    title: l10n.timeField,
+                    value: material.formatTimeOfDay(
+                      TimeOfDay.fromDateTime(_preferredTime),
                     ),
-                    items: [1, 2, 3, 4]
-                        .map(
-                          (count) => DropdownMenuItem(
-                            value: count,
-                            child: Text('$count'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: _loading || _locked
-                        ? null
-                        : (value) {
-                            setState(() {
-                              _count = value ?? 1;
-                            });
-                          },
+                    onTap: busy ? null : _pickTime,
                   ),
-
-                  if (_error != null) ...[
-                    const SizedBox(height: AppTokens.spaceMedium),
-                    Text(
-                      _error!,
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                  ],
-
-                  const SizedBox(height: AppTokens.spaceLarge),
-
-                  FilledButton.icon(
-                    onPressed: canSubmit ? _submit : null,
-                    icon: _loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send_rounded),
-                    label: Text(
-                      _pendingPayload == null
-                          ? l10n.submitRequest
-                          : l10n.verifyBooking,
-                    ),
+                  const Divider(height: 1),
+                  _SettingTile(
+                    icon: Icons.calendar_today_rounded,
+                    title: l10n.dateField,
+                    value: material.formatFullDate(_preferredTime),
+                    onTap: busy ? null : _pickDate,
                   ),
                 ],
+              ),
+            ),
+
+            if (_error != null) ...[
+              const SizedBox(height: AppTokens.spaceMedium),
+              Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+            ],
+
+            const SizedBox(height: AppTokens.spaceLarge),
+
+            FilledButton.icon(
+              onPressed: canSubmit ? _submit : null,
+              icon: _loading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.search_rounded),
+              label: Text(
+                _pendingPayload == null ? l10n.searchRide : l10n.verifyBooking,
               ),
             ),
           ],
@@ -331,12 +323,15 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   // ----------------------------------------------------------------------
 
   Future<void> _chooseLocation({required bool isPickup}) async {
+    final l10n = AppLocalizations.of(context);
     final current = isPickup ? _pickup : _destination;
 
     final result = await Navigator.of(context).push<PassengerLocation>(
       MaterialPageRoute(
         builder: (_) => PassengerLocationPickerScreen(
-          title: isPickup ? 'اختيار موقع الانطلاق' : 'اختيار الوجهة',
+          title: isPickup
+              ? l10n.selectPickupLocationTitle
+              : l10n.selectDestinationTitle,
           initialLocation: current,
         ),
       ),
@@ -359,28 +354,37 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   // TIME PICKER
   // ----------------------------------------------------------------------
 
-  Future<void> _pickTime() async {
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 14)),
-      initialDate: _preferredTime,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: now.add(const Duration(days: 14)),
+      initialDate: _preferredTime.isBefore(now) ? now : _preferredTime,
     );
-
     if (date == null || !mounted) return;
-
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_preferredTime),
-    );
-
-    if (time == null) return;
-
     setState(() {
       _preferredTime = DateTime(
         date.year,
         date.month,
         date.day,
+        _preferredTime.hour,
+        _preferredTime.minute,
+      );
+    });
+  }
+
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_preferredTime),
+    );
+    if (time == null || !mounted) return;
+    setState(() {
+      _preferredTime = DateTime(
+        _preferredTime.year,
+        _preferredTime.month,
+        _preferredTime.day,
         time.hour,
         time.minute,
       );
@@ -392,10 +396,11 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   // ----------------------------------------------------------------------
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     if (_loading || _restoring || _recoveryBlocked) return;
     if (_pickup == null || _destination == null) {
       setState(() {
-        _error = 'اختاري موقع الانطلاق والوجهة أولاً';
+        _error = l10n.selectBothLocations;
       });
       return;
     }
@@ -526,11 +531,6 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   // ----------------------------------------------------------------------
   // HELPERS
   // ----------------------------------------------------------------------
-
-  String _coordinatesText(PassengerLocation location) {
-    return '${location.latitude.toStringAsFixed(6)}, '
-        '${location.longitude.toStringAsFixed(6)}';
-  }
 }
 
 String _matchingCreateErrorLabel(AppLocalizations l10n, Object error) {
@@ -550,96 +550,264 @@ String _matchingCreateErrorLabel(AppLocalizations l10n, Object error) {
 }
 
 // ==========================================================================
-// LOCATION BUTTON
+// FORM PARTS
 // ==========================================================================
 
-class _LocationButton extends StatelessWidget {
-  const _LocationButton({
-    required this.icon,
+/// White circular badge holding a leading icon, as in the Darb references.
+class _Badge extends StatelessWidget {
+  const _Badge({required this.icon, this.color});
+
+  final IconData icon;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppTheme.surfaceContainerLowest,
+      ),
+      child: Icon(icon, color: color ?? AppTheme.onSurface, size: 22),
+    );
+  }
+}
+
+/// Origin badge, a dotted vertical line, then the destination badge.
+class _DottedConnector extends StatelessWidget {
+  const _DottedConnector();
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: 44,
+        child: Column(
+          children: [
+            const SizedBox(height: AppTokens.spaceSmall),
+            const _Badge(
+              icon: Icons.circle_outlined,
+              color: AppTheme.routeOrigin,
+            ),
+            Expanded(
+              child: Center(
+                child: SizedBox(
+                  width: 2,
+                  child: CustomPaint(painter: _DotsPainter()),
+                ),
+              ),
+            ),
+            const _Badge(
+              icon: Icons.location_on_outlined,
+              color: AppTheme.routeDestination,
+            ),
+            const SizedBox(height: AppTokens.spaceSmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A tappable From/To row: grey label, orange prompt (or the chosen place).
+class _PlaceTile extends StatelessWidget {
+  const _PlaceTile({
     required this.title,
-    required this.subtitle,
+    required this.value,
     required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
   final String title;
-  final String subtitle;
+  final String value;
   final bool selected;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(AppTokens.spaceMedium),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outlineVariant,
+      borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 72),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppTokens.spaceSmall),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppTheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppTokens.spaceExtraSmall),
+                    Text(
+                      value,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: selected
+                            ? AppTheme.onSurface
+                            : AppTheme.primaryText,
+                        fontWeight: selected ? FontWeight.w600 : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Icons.chevron_left_rounded
+                    : Icons.chevron_right_rounded,
+                color: AppTheme.onSurfaceVariant,
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A row in the passengers/time/date card.
+class _SettingTile extends StatelessWidget {
+  const _SettingTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    this.trailing,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 72),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: selected
-                    ? theme.colorScheme.primary.withValues(alpha: 0.12)
-                    : theme.colorScheme.surfaceContainerHighest,
-              ),
-              child: Icon(
-                icon,
-                color: selected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-
-            const SizedBox(width: AppTokens.spaceMedium),
-
+            _Badge(icon: icon),
+            const SizedBox(width: AppTokens.gutterMobile),
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: AppTheme.onSurfaceVariant,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  Text(value, style: theme.textTheme.bodyMedium),
                 ],
               ),
             ),
-
-            const SizedBox(width: 8),
-
-            Icon(
-              Icons.chevron_right_rounded,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            trailing ??
+                Icon(
+                  Directionality.of(context) == TextDirection.rtl
+                      ? Icons.chevron_left_rounded
+                      : Icons.chevron_right_rounded,
+                  color: AppTheme.onSurfaceVariant,
+                ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Minus / plus buttons for the passenger count.
+class _Stepper extends StatelessWidget {
+  const _Stepper({
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.decrementLabel,
+    required this.incrementLabel,
+    required this.onChanged,
+  });
+
+  final int value;
+  final int min;
+  final int max;
+  final String decrementLabel;
+  final String incrementLabel;
+  final ValueChanged<int>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget button(IconData icon, String label, int? next) => Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: next == null || onChanged == null
+            ? null
+            : () => onChanged!(next),
+        borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
+            border: Border.all(color: AppTheme.outlineVariant),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: next == null || onChanged == null
+                ? AppTheme.hint
+                : AppTheme.onSurface,
+          ),
+        ),
+      ),
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        button(Icons.remove, decrementLabel, value > min ? value - 1 : null),
+        const SizedBox(width: AppTokens.spaceSmall),
+        button(Icons.add, incrementLabel, value < max ? value + 1 : null),
+      ],
+    );
+  }
+}
+
+/// Paints the dotted vertical line between the origin and destination badges.
+class _DotsPainter extends CustomPainter {
+  const _DotsPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.hint
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    for (var y = 4.0; y < size.height - 2; y += 8) {
+      canvas.drawLine(Offset(1, y), Offset(1, y + 2), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

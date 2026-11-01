@@ -65,7 +65,7 @@ class PassengerMapAlertsScreen extends ConsumerWidget {
     BuildContext context,
     AppLocalizations l10n,
   ) {
-    const orange = Color(0xFFF97316);
+    const orange = Color(0xFFFA5F12);
 
     return AppBar(
       backgroundColor: navy,
@@ -123,8 +123,8 @@ class _MapBody extends ConsumerStatefulWidget {
 
 class _MapBodyState extends ConsumerState<_MapBody> {
   static const Color _navy = Color(0xFF292524);
-  static const Color _navyLight = Color(0xFFF97316);
-  static const Color _orange = Color(0xFFF97316);
+  static const Color _navyLight = Color(0xFFFA5F12);
+  static const Color _orange = Color(0xFFFA5F12);
   static const Color _mutedText = Color(0xFF64748B);
   static const Color _border = Color(0xFFE2E8F0);
 
@@ -1389,7 +1389,7 @@ class _ReportsPanel extends StatefulWidget {
 }
 
 class _ReportsPanelState extends State<_ReportsPanel> {
-  static const _orange = Color(0xFFF97316);
+  static const _orange = Color(0xFFFA5F12);
   static const _ink = Color(0xFF292524);
   static const _muted = Color(0xFF78716C);
   static const _border = Color(0xFFF0E4DB);
@@ -1587,7 +1587,7 @@ class _RoadReportTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const orange = Color(0xFFF97316);
+    const orange = Color(0xFFFA5F12);
     const ink = Color(0xFF292524);
     const muted = Color(0xFF78716C);
     final icon = switch (report.category) {
@@ -1694,7 +1694,7 @@ class _CreateRoadReportSheet extends StatefulWidget {
 }
 
 class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
-  static const _orange = Color(0xFFF97316);
+  static const _orange = Color(0xFFFA5F12);
   static const _ink = Color(0xFF292524);
   static const _muted = Color(0xFF78716C);
   static const _categories = <String>[
@@ -2003,7 +2003,7 @@ class _CheckpointsPanel extends ConsumerWidget {
   final bool arabic;
 
   static const _navy = Color(0xFF102A43);
-  static const _orange = Color(0xFFF97316);
+  static const _orange = Color(0xFFFA5F12);
   static const _orangeSoft = Color(0xFFFFF3EA);
   static const _textMuted = Color(0xFF64748B);
 
@@ -2504,7 +2504,7 @@ class _CheckpointCityTile extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.location_city_rounded,
-                  color: Color(0xFFF97316),
+                  color: Color(0xFFFA5F12),
                 ),
               ),
               const SizedBox(width: 11),
@@ -2601,7 +2601,7 @@ class _CheckpointDetailCard extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.local_police_rounded,
-                  color: Color(0xFFF97316),
+                  color: Color(0xFFFA5F12),
                   size: 21,
                 ),
               ),
@@ -2920,7 +2920,7 @@ class _StatusBadge extends StatelessWidget {
         ? const Color(0xFFDC2626)
         : isCompleted
         ? const Color(0xFF16A34A)
-        : const Color(0xFFF97316);
+        : const Color(0xFFFA5F12);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -2967,7 +2967,7 @@ class _RoutePoint extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(height: 2),
-        Icon(icon, color: const Color(0xFFF97316), size: 27),
+        Icon(icon, color: const Color(0xFFFA5F12), size: 27),
         const SizedBox(height: 5),
         Text(
           label,
@@ -3002,7 +3002,7 @@ class _InfoItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: const Color(0xFFF97316)),
+        Icon(icon, size: 18, color: const Color(0xFFFA5F12)),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -3043,7 +3043,7 @@ class _LocationStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isStale ? const Color(0xFFF97316) : const Color(0xFF16A34A);
+    final color = isStale ? const Color(0xFFFA5F12) : const Color(0xFF16A34A);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,

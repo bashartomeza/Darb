@@ -154,9 +154,7 @@ void main() {
       expect(find.byKey(const ValueKey('roleNavigation-3')), findsNothing);
     });
 
-    testWidgets('the home bell opens the notifications branch', (
-      tester,
-    ) async {
+    testWidgets('the home bell opens the notifications branch', (tester) async {
       await _pumpApp(tester, handler: _passengerHandler);
 
       await tester.tap(find.byKey(const ValueKey('passengerNotifications')));

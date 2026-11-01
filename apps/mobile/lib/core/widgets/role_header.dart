@@ -20,7 +20,7 @@ class RoleHeader extends StatelessWidget {
     super.key,
   });
 
-  /// App or screen title, e.g. "مساري".
+  /// App or screen title, e.g. "درب".
   final String title;
 
   /// Localised role name, shown under the user's name.

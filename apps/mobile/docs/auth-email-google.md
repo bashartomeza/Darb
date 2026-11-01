@@ -5,8 +5,8 @@ Email/password login uses `POST /auth/mobile/login`. Phone is contact/profile da
 ## Registration
 
 - Email: `/auth/mobile/register/start` returns a short-lived registration envelope and emails a verification token. The app stores the envelope only in memory. It displays the current three legal documents from `/auth/consents?locale=ar|en`. The user supplies the email token and explicitly accepts every document before `/auth/mobile/register/complete`.
-- Google: the official `google_sign_in` tooling supplies a transient ID token to `/auth/mobile/google`. An existing linked identity receives a Masari session. An unknown identity receives a registration envelope, then requires name and legal acceptance at `/auth/mobile/google/complete-registration`. Email collisions direct the user to their existing account and explicit linking.
-- Cancel/restart discards the envelope. No Google profile, Google credential, password, or pre-consent registration grant is written to application storage. Only the existing secure Masari token bundle persists.
+- Google: the official `google_sign_in` tooling supplies a transient ID token to `/auth/mobile/google`. An existing linked identity receives a Darb session. An unknown identity receives a registration envelope, then requires name and legal acceptance at `/auth/mobile/google/complete-registration`. Email collisions direct the user to their existing account and explicit linking.
+- Cancel/restart discards the envelope. No Google profile, Google credential, password, or pre-consent registration grant is written to application storage. Only the existing secure Darb token bundle persists.
 - If a legal release changes while accepting it, the app reloads documents and clears acceptance.
 
 ## Profile completion and recovery

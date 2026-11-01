@@ -22,11 +22,11 @@ class AuthLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/images/masari_logo.png',
+      'assets/brand/logo.png',
       key: const ValueKey('authLogo'),
       width: 176,
       fit: BoxFit.contain,
-      semanticLabel: 'Masari',
+      semanticLabel: 'Darb / درب',
     );
   }
 }
