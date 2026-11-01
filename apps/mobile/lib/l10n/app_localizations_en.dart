@@ -2584,4 +2584,186 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tripsFilterAll => 'All';
+
+  @override
+  String get communityReportsTitle => 'Community reports';
+
+  @override
+  String get communityReportsNote =>
+      'Unverified reports from other users. Votes are community feedback only and never change a checkpoint or road status.';
+
+  @override
+  String get communityReportsAdd => 'Add a report';
+
+  @override
+  String get communityReportsEmpty => 'No reports right now.';
+
+  @override
+  String get communityReportsLoadFailed => 'Reports could not be loaded.';
+
+  @override
+  String get communityFilterAll => 'All';
+
+  @override
+  String get communityGroupRoad => 'Roads';
+
+  @override
+  String get communityGroupCheckpoint => 'Checkpoints';
+
+  @override
+  String get communityGroupSafety => 'Safety';
+
+  @override
+  String get communityGroupOther => 'Other';
+
+  @override
+  String get communitySortRecent => 'Newest';
+
+  @override
+  String get communitySortTop => 'Most supported';
+
+  @override
+  String get communitySortDisputed => 'Most disputed';
+
+  @override
+  String get communityBadgeRecent => 'Recent';
+
+  @override
+  String get communityBadgeDisputed => 'Disputed';
+
+  @override
+  String get communityBadgeWellSupported => 'Well supported';
+
+  @override
+  String get communityAwaitingReview => 'Awaiting admin verification';
+
+  @override
+  String get communityUnverifiedPrefix => 'Unverified report: ';
+
+  @override
+  String get communityCategoryRoadClosure => 'Road closed';
+
+  @override
+  String get communityCategoryRoadReopened => 'Road reopened';
+
+  @override
+  String get communityCategoryRoadCongestion => 'Congestion';
+
+  @override
+  String get communityCategoryCheckpointOpenMarkedClosed =>
+      'Checkpoint open but shown closed';
+
+  @override
+  String get communityCategoryCheckpointClosedMarkedOpen =>
+      'Checkpoint closed but shown open';
+
+  @override
+  String get communityCategoryCheckpointOutdated =>
+      'Outdated checkpoint information';
+
+  @override
+  String get communityCategorySafetyAlert => 'Safety or security alert';
+
+  @override
+  String get communityCategoryDriverReport => 'Trip or driver feedback';
+
+  @override
+  String get communityCategoryIncorrectMapInfo => 'Incorrect map information';
+
+  @override
+  String get communityCategoryOther => 'Other';
+
+  @override
+  String get communitySheetTitle => 'Add a report';
+
+  @override
+  String get communitySensitiveNote =>
+      'Describe only what you saw. Do not include a person\'s name, plate number or other personal details. Others will see this as an unverified report.';
+
+  @override
+  String get communityFieldCategory => 'Report type';
+
+  @override
+  String get communityFieldDescription => 'What happened?';
+
+  @override
+  String get communityFieldLocation => 'Place name';
+
+  @override
+  String get communityAttachLocation => 'Show my current location on the map';
+
+  @override
+  String get communitySubmit => 'Send report';
+
+  @override
+  String get communitySubmitted => 'Report posted.';
+
+  @override
+  String get communitySubmitFailed =>
+      'The report could not be sent. Try again.';
+
+  @override
+  String get communityTooMany => 'You have sent many reports. Try again later.';
+
+  @override
+  String get communityUpvote => 'Support this report';
+
+  @override
+  String get communityDownvote => 'Dispute this report';
+
+  @override
+  String get communityVoteFailed => 'Your vote could not be saved.';
+
+  @override
+  String get communityOwnReportVote => 'You cannot vote on your own report.';
+
+  @override
+  String get communityFlag => 'Flag as misleading';
+
+  @override
+  String get communityFlagged => 'Thanks. Our team will look at this report.';
+
+  @override
+  String get communityFlagFailed => 'The flag could not be sent.';
+
+  @override
+  String get communityJustNow => 'Just now';
+
+  @override
+  String communityMinutesAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes ago',
+      one: '1 minute ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityHoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours ago',
+      one: '1 hour ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days ago',
+      one: '1 day ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityVoteCounts(int up, int down) {
+    return '$up support, $down dispute';
+  }
 }

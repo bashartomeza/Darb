@@ -82,7 +82,7 @@ function serialize(row: IncidentRow, options: { admin: boolean }) {
   };
 }
 
-async function assertTripParticipant(tripId: string, userId: string, role: string) {
+export async function assertTripParticipant(tripId: string, userId: string, role: string) {
   const trip = await prisma.trip.findUnique({
     where: { id: tripId },
     select: {

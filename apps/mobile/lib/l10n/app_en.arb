@@ -926,5 +926,86 @@
   "tripsStatActive": "Active",
   "tripsStatUpcoming": "Upcoming",
   "tripsStatPast": "Past",
-  "tripsFilterAll": "All"
+  "tripsFilterAll": "All",
+  "communityReportsTitle": "Community reports",
+  "communityReportsNote": "Unverified reports from other users. Votes are community feedback only and never change a checkpoint or road status.",
+  "communityReportsAdd": "Add a report",
+  "communityReportsEmpty": "No reports right now.",
+  "communityReportsLoadFailed": "Reports could not be loaded.",
+  "communityFilterAll": "All",
+  "communityGroupRoad": "Roads",
+  "communityGroupCheckpoint": "Checkpoints",
+  "communityGroupSafety": "Safety",
+  "communityGroupOther": "Other",
+  "communitySortRecent": "Newest",
+  "communitySortTop": "Most supported",
+  "communitySortDisputed": "Most disputed",
+  "communityBadgeRecent": "Recent",
+  "communityBadgeDisputed": "Disputed",
+  "communityBadgeWellSupported": "Well supported",
+  "communityAwaitingReview": "Awaiting admin verification",
+  "communityUnverifiedPrefix": "Unverified report: ",
+  "communityCategoryRoadClosure": "Road closed",
+  "communityCategoryRoadReopened": "Road reopened",
+  "communityCategoryRoadCongestion": "Congestion",
+  "communityCategoryCheckpointOpenMarkedClosed": "Checkpoint open but shown closed",
+  "communityCategoryCheckpointClosedMarkedOpen": "Checkpoint closed but shown open",
+  "communityCategoryCheckpointOutdated": "Outdated checkpoint information",
+  "communityCategorySafetyAlert": "Safety or security alert",
+  "communityCategoryDriverReport": "Trip or driver feedback",
+  "communityCategoryIncorrectMapInfo": "Incorrect map information",
+  "communityCategoryOther": "Other",
+  "communitySheetTitle": "Add a report",
+  "communitySensitiveNote": "Describe only what you saw. Do not include a person's name, plate number or other personal details. Others will see this as an unverified report.",
+  "communityFieldCategory": "Report type",
+  "communityFieldDescription": "What happened?",
+  "communityFieldLocation": "Place name",
+  "communityAttachLocation": "Show my current location on the map",
+  "communitySubmit": "Send report",
+  "communitySubmitted": "Report posted.",
+  "communitySubmitFailed": "The report could not be sent. Try again.",
+  "communityTooMany": "You have sent many reports. Try again later.",
+  "communityUpvote": "Support this report",
+  "communityDownvote": "Dispute this report",
+  "communityVoteFailed": "Your vote could not be saved.",
+  "communityOwnReportVote": "You cannot vote on your own report.",
+  "communityFlag": "Flag as misleading",
+  "communityFlagged": "Thanks. Our team will look at this report.",
+  "communityFlagFailed": "The flag could not be sent.",
+  "communityJustNow": "Just now",
+  "communityMinutesAgo": "{count, plural, =1{1 minute ago} other{{count} minutes ago}}",
+  "@communityMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityHoursAgo": "{count, plural, =1{1 hour ago} other{{count} hours ago}}",
+  "@communityHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityDaysAgo": "{count, plural, =1{1 day ago} other{{count} days ago}}",
+  "@communityDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityVoteCounts": "{up} support, {down} dispute",
+  "@communityVoteCounts": {
+    "placeholders": {
+      "up": {
+        "type": "int"
+      },
+      "down": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -1027,5 +1027,86 @@
   "tripsStatActive": "نشطة",
   "tripsStatUpcoming": "قادمة",
   "tripsStatPast": "سابقة",
-  "tripsFilterAll": "الكل"
+  "tripsFilterAll": "الكل",
+  "communityReportsTitle": "بلاغات المجتمع",
+  "communityReportsNote": "بلاغات غير مؤكدة من المستخدمين. التصويت رأي المجتمع فقط ولا يغيّر حالة الحواجز أو الطرق.",
+  "communityReportsAdd": "إضافة بلاغ",
+  "communityReportsEmpty": "لا توجد بلاغات حالياً.",
+  "communityReportsLoadFailed": "تعذّر تحميل البلاغات.",
+  "communityFilterAll": "الكل",
+  "communityGroupRoad": "الطرق",
+  "communityGroupCheckpoint": "الحواجز",
+  "communityGroupSafety": "السلامة",
+  "communityGroupOther": "أخرى",
+  "communitySortRecent": "الأحدث",
+  "communitySortTop": "الأكثر تأييداً",
+  "communitySortDisputed": "المتنازع عليها",
+  "communityBadgeRecent": "حديث",
+  "communityBadgeDisputed": "محل خلاف",
+  "communityBadgeWellSupported": "مدعوم من المجتمع",
+  "communityAwaitingReview": "بانتظار تحقق الإدارة",
+  "communityUnverifiedPrefix": "بلاغ غير مؤكد: ",
+  "communityCategoryRoadClosure": "إغلاق طريق",
+  "communityCategoryRoadReopened": "إعادة فتح طريق",
+  "communityCategoryRoadCongestion": "ازدحام",
+  "communityCategoryCheckpointOpenMarkedClosed": "حاجز مفتوح لكنه معروض مغلقاً",
+  "communityCategoryCheckpointClosedMarkedOpen": "حاجز مغلق لكنه معروض مفتوحاً",
+  "communityCategoryCheckpointOutdated": "معلومات حاجز قديمة",
+  "communityCategorySafetyAlert": "تنبيه سلامة أو أمن",
+  "communityCategoryDriverReport": "ملاحظة عن رحلة أو سائق",
+  "communityCategoryIncorrectMapInfo": "معلومة خاطئة على الخريطة",
+  "communityCategoryOther": "أخرى",
+  "communitySheetTitle": "إضافة بلاغ",
+  "communitySensitiveNote": "صف ما رأيته فقط. لا تذكر اسم شخص أو رقم مركبة أو أي بيانات شخصية. سيظهر البلاغ للآخرين كبلاغ غير مؤكد.",
+  "communityFieldCategory": "نوع البلاغ",
+  "communityFieldDescription": "ماذا حدث؟",
+  "communityFieldLocation": "اسم المكان",
+  "communityAttachLocation": "إرفاق موقعي الحالي على الخريطة",
+  "communitySubmit": "إرسال البلاغ",
+  "communitySubmitted": "تم نشر البلاغ.",
+  "communitySubmitFailed": "تعذّر إرسال البلاغ. حاول مرة أخرى.",
+  "communityTooMany": "أرسلت بلاغات كثيرة. حاول لاحقاً.",
+  "communityUpvote": "أؤيد البلاغ",
+  "communityDownvote": "لا أؤيد البلاغ",
+  "communityVoteFailed": "تعذّر تسجيل صوتك.",
+  "communityOwnReportVote": "لا يمكنك التصويت على بلاغك.",
+  "communityFlag": "الإبلاغ عن بلاغ مضلّل",
+  "communityFlagged": "شكراً. سيراجع فريقنا البلاغ.",
+  "communityFlagFailed": "تعذّر إرسال الإشعار.",
+  "communityJustNow": "الآن",
+  "communityMinutesAgo": "{count, plural, =1{قبل دقيقة} =2{قبل دقيقتين} few{قبل {count} دقائق} other{قبل {count} دقيقة}}",
+  "@communityMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityHoursAgo": "{count, plural, =1{قبل ساعة} =2{قبل ساعتين} few{قبل {count} ساعات} other{قبل {count} ساعة}}",
+  "@communityHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityDaysAgo": "{count, plural, =1{قبل يوم} =2{قبل يومين} few{قبل {count} أيام} other{قبل {count} يوماً}}",
+  "@communityDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityVoteCounts": "{up} تأييد، {down} اعتراض",
+  "@communityVoteCounts": {
+    "placeholders": {
+      "up": {
+        "type": "int"
+      },
+      "down": {
+        "type": "int"
+      }
+    }
+  }
 }

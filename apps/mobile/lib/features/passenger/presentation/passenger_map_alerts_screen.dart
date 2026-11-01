@@ -17,6 +17,8 @@ import '../../../core/widgets/masari_card.dart';
 import '../../../core/widgets/masari_map.dart';
 import '../../../core/widgets/masari_section.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../community_reports/application/community_reports_controller.dart';
+import '../../community_reports/presentation/community_reports_section.dart';
 import '../../checkpoints/application/checkpoint_controller.dart';
 import '../../checkpoints/domain/checkpoint_models.dart';
 import '../../checkpoints/presentation/checkpoint_sheet.dart';
@@ -527,6 +529,12 @@ class _MapBodyState extends ConsumerState<_MapBody> {
               arabic: arabic,
             ),
           ),
+
+          // ==================================================================
+          // COMMUNITY REPORTS
+          // ==================================================================
+          const SizedBox(height: AppTokens.spaceMedium),
+          const CommunityReportsSection(),
         ],
       ),
     );
@@ -806,6 +814,10 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                         // --------------------------------------------------
                         ...checkpointTrafficMarkers(
                           checkpointSnapshot.checkpoints,
+                        ),
+                        ...communityReportMarkers(
+                          l10n,
+                          ref.watch(communityReportsProvider).value ?? const [],
                         ),
                         // CHECKPOINTS
                         //

@@ -4789,6 +4789,306 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الكل'**
   String get tripsFilterAll;
+
+  /// No description provided for @communityReportsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلاغات المجتمع'**
+  String get communityReportsTitle;
+
+  /// No description provided for @communityReportsNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلاغات غير مؤكدة من المستخدمين. التصويت رأي المجتمع فقط ولا يغيّر حالة الحواجز أو الطرق.'**
+  String get communityReportsNote;
+
+  /// No description provided for @communityReportsAdd.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة بلاغ'**
+  String get communityReportsAdd;
+
+  /// No description provided for @communityReportsEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد بلاغات حالياً.'**
+  String get communityReportsEmpty;
+
+  /// No description provided for @communityReportsLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل البلاغات.'**
+  String get communityReportsLoadFailed;
+
+  /// No description provided for @communityFilterAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get communityFilterAll;
+
+  /// No description provided for @communityGroupRoad.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطرق'**
+  String get communityGroupRoad;
+
+  /// No description provided for @communityGroupCheckpoint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحواجز'**
+  String get communityGroupCheckpoint;
+
+  /// No description provided for @communityGroupSafety.
+  ///
+  /// In ar, this message translates to:
+  /// **'السلامة'**
+  String get communityGroupSafety;
+
+  /// No description provided for @communityGroupOther.
+  ///
+  /// In ar, this message translates to:
+  /// **'أخرى'**
+  String get communityGroupOther;
+
+  /// No description provided for @communitySortRecent.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأحدث'**
+  String get communitySortRecent;
+
+  /// No description provided for @communitySortTop.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأكثر تأييداً'**
+  String get communitySortTop;
+
+  /// No description provided for @communitySortDisputed.
+  ///
+  /// In ar, this message translates to:
+  /// **'المتنازع عليها'**
+  String get communitySortDisputed;
+
+  /// No description provided for @communityBadgeRecent.
+  ///
+  /// In ar, this message translates to:
+  /// **'حديث'**
+  String get communityBadgeRecent;
+
+  /// No description provided for @communityBadgeDisputed.
+  ///
+  /// In ar, this message translates to:
+  /// **'محل خلاف'**
+  String get communityBadgeDisputed;
+
+  /// No description provided for @communityBadgeWellSupported.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدعوم من المجتمع'**
+  String get communityBadgeWellSupported;
+
+  /// No description provided for @communityAwaitingReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار تحقق الإدارة'**
+  String get communityAwaitingReview;
+
+  /// No description provided for @communityUnverifiedPrefix.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلاغ غير مؤكد: '**
+  String get communityUnverifiedPrefix;
+
+  /// No description provided for @communityCategoryRoadClosure.
+  ///
+  /// In ar, this message translates to:
+  /// **'إغلاق طريق'**
+  String get communityCategoryRoadClosure;
+
+  /// No description provided for @communityCategoryRoadReopened.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة فتح طريق'**
+  String get communityCategoryRoadReopened;
+
+  /// No description provided for @communityCategoryRoadCongestion.
+  ///
+  /// In ar, this message translates to:
+  /// **'ازدحام'**
+  String get communityCategoryRoadCongestion;
+
+  /// No description provided for @communityCategoryCheckpointOpenMarkedClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'حاجز مفتوح لكنه معروض مغلقاً'**
+  String get communityCategoryCheckpointOpenMarkedClosed;
+
+  /// No description provided for @communityCategoryCheckpointClosedMarkedOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'حاجز مغلق لكنه معروض مفتوحاً'**
+  String get communityCategoryCheckpointClosedMarkedOpen;
+
+  /// No description provided for @communityCategoryCheckpointOutdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلومات حاجز قديمة'**
+  String get communityCategoryCheckpointOutdated;
+
+  /// No description provided for @communityCategorySafetyAlert.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه سلامة أو أمن'**
+  String get communityCategorySafetyAlert;
+
+  /// No description provided for @communityCategoryDriverReport.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة عن رحلة أو سائق'**
+  String get communityCategoryDriverReport;
+
+  /// No description provided for @communityCategoryIncorrectMapInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلومة خاطئة على الخريطة'**
+  String get communityCategoryIncorrectMapInfo;
+
+  /// No description provided for @communityCategoryOther.
+  ///
+  /// In ar, this message translates to:
+  /// **'أخرى'**
+  String get communityCategoryOther;
+
+  /// No description provided for @communitySheetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة بلاغ'**
+  String get communitySheetTitle;
+
+  /// No description provided for @communitySensitiveNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'صف ما رأيته فقط. لا تذكر اسم شخص أو رقم مركبة أو أي بيانات شخصية. سيظهر البلاغ للآخرين كبلاغ غير مؤكد.'**
+  String get communitySensitiveNote;
+
+  /// No description provided for @communityFieldCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع البلاغ'**
+  String get communityFieldCategory;
+
+  /// No description provided for @communityFieldDescription.
+  ///
+  /// In ar, this message translates to:
+  /// **'ماذا حدث؟'**
+  String get communityFieldDescription;
+
+  /// No description provided for @communityFieldLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المكان'**
+  String get communityFieldLocation;
+
+  /// No description provided for @communityAttachLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرفاق موقعي الحالي على الخريطة'**
+  String get communityAttachLocation;
+
+  /// No description provided for @communitySubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال البلاغ'**
+  String get communitySubmit;
+
+  /// No description provided for @communitySubmitted.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نشر البلاغ.'**
+  String get communitySubmitted;
+
+  /// No description provided for @communitySubmitFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر إرسال البلاغ. حاول مرة أخرى.'**
+  String get communitySubmitFailed;
+
+  /// No description provided for @communityTooMany.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرسلت بلاغات كثيرة. حاول لاحقاً.'**
+  String get communityTooMany;
+
+  /// No description provided for @communityUpvote.
+  ///
+  /// In ar, this message translates to:
+  /// **'أؤيد البلاغ'**
+  String get communityUpvote;
+
+  /// No description provided for @communityDownvote.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا أؤيد البلاغ'**
+  String get communityDownvote;
+
+  /// No description provided for @communityVoteFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تسجيل صوتك.'**
+  String get communityVoteFailed;
+
+  /// No description provided for @communityOwnReportVote.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكنك التصويت على بلاغك.'**
+  String get communityOwnReportVote;
+
+  /// No description provided for @communityFlag.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإبلاغ عن بلاغ مضلّل'**
+  String get communityFlag;
+
+  /// No description provided for @communityFlagged.
+  ///
+  /// In ar, this message translates to:
+  /// **'شكراً. سيراجع فريقنا البلاغ.'**
+  String get communityFlagged;
+
+  /// No description provided for @communityFlagFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر إرسال الإشعار.'**
+  String get communityFlagFailed;
+
+  /// No description provided for @communityJustNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'الآن'**
+  String get communityJustNow;
+
+  /// No description provided for @communityMinutesAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{قبل دقيقة} =2{قبل دقيقتين} few{قبل {count} دقائق} other{قبل {count} دقيقة}}'**
+  String communityMinutesAgo(int count);
+
+  /// No description provided for @communityHoursAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{قبل ساعة} =2{قبل ساعتين} few{قبل {count} ساعات} other{قبل {count} ساعة}}'**
+  String communityHoursAgo(int count);
+
+  /// No description provided for @communityDaysAgo.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count, plural, =1{قبل يوم} =2{قبل يومين} few{قبل {count} أيام} other{قبل {count} يوماً}}'**
+  String communityDaysAgo(int count);
+
+  /// No description provided for @communityVoteCounts.
+  ///
+  /// In ar, this message translates to:
+  /// **'{up} تأييد، {down} اعتراض'**
+  String communityVoteCounts(int up, int down);
 }
 
 class _AppLocalizationsDelegate

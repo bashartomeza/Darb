@@ -450,6 +450,9 @@ model User {
   driver_verification_evidence     DriverVerificationEvidence[]
   incidents_reported                Incident[]             @relation("IncidentReporter")
   incidents_reviewed               Incident[]             @relation("IncidentReviewer")
+  community_reports                CommunityReport[]
+  community_report_votes           CommunityReportVote[]
+  community_report_flags           CommunityReportFlag[]
   trip_ratings                     TripRating[]
 
   @@map("users")
@@ -1323,7 +1326,8 @@ model Trip {
   legacy_assignment_key String? @unique @db.VarChar(191)
 
   incidents         Incident[]
-  ratings           TripRating[]
+  community_reports CommunityReport[]
+  ratings          TripRating[]
   driver_route      DriverRoute       @relation(fields: [driver_route_id], references: [id], onDelete: Restrict)
   mode_driver_route DriverRoute       @relation("TripAvailabilityMode", fields: [driver_route_id, operational_mode], references: [id, operational_mode], onDelete: Restrict, onUpdate: Restrict)
   passenger_request PassengerRequest? @relation(fields: [passenger_request_id], references: [id], onDelete: Restrict)
@@ -1646,6 +1650,66 @@ model Incident {
   @@index([reporter_id, created_at])
   @@index([trip_id])
   @@map("incidents")
+}
+
+/// Public, location-based report shared with every signed-in rider and driver.
+/// Votes are community feedback only: they never change checkpoint or road status.
+model CommunityReport {
+  id                 String    @id @default(cuid())
+  author_id          String
+  trip_id            String?
+  category           String    @db.VarChar(40)
+  description        String    @db.VarChar(500)
+  location_name      String    @db.VarChar(120)
+  latitude           Decimal?  @db.Decimal(9, 6)
+  longitude          Decimal?  @db.Decimal(9, 6)
+  /// incorrect_map_info reports are queued for an Admin to verify.
+  needs_admin_review Boolean   @default(false)
+  admin_reviewed_at  DateTime?
+  hidden_at          DateTime?
+  created_at         DateTime  @default(now())
+
+  author User                  @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  trip   Trip?                 @relation(fields: [trip_id], references: [id], onDelete: SetNull)
+  votes  CommunityReportVote[]
+  flags  CommunityReportFlag[]
+
+  @@index([hidden_at, created_at])
+  @@index([category, created_at])
+  @@index([needs_admin_review, admin_reviewed_at])
+  @@index([author_id, created_at])
+  @@map("community_reports")
+}
+
+model CommunityReportVote {
+  id         String   @id @default(cuid())
+  report_id  String
+  user_id    String
+  /// 1 = upvote, -1 = downvote.
+  value      Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  report CommunityReport @relation(fields: [report_id], references: [id], onDelete: Cascade)
+  user   User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([report_id, user_id])
+  @@index([user_id])
+  @@map("community_report_votes")
+}
+
+model CommunityReportFlag {
+  id         String   @id @default(cuid())
+  report_id  String
+  user_id    String
+  created_at DateTime @default(now())
+
+  report CommunityReport @relation(fields: [report_id], references: [id], onDelete: Cascade)
+  user   User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([report_id, user_id])
+  @@index([user_id])
+  @@map("community_report_flags")
 }
 
 /// Assistant requests the parser was not confident about, kept for admin review.

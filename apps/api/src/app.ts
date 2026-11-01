@@ -70,6 +70,7 @@ import { notificationsRouter } from "./modules/notifications.js";
 import { reportsRouter } from "./modules/reports.js";
 import { adminSuccessMetricsRouter } from "./modules/adminSuccessMetrics.js";
 import { incidentsRouter } from "./modules/incidents.js";
+import { communityReportsRouter } from "./modules/communityReports.js";
 import { adminAiRequestsRouter } from "./modules/adminAiRequests.js";
 import { createAdminMatchingMonitoringRouter } from "./modules/adminMatchingMonitoring.js";
 import type { MonitoringService } from "./services/adminMatchingMonitoring/contracts.js";
@@ -190,6 +191,7 @@ export function createApp(
   app.use("/api/v1", reportsRouter);
   app.use("/api/v1", adminSuccessMetricsRouter);
   app.use("/api/v1", incidentsRouter);
+  app.use("/api/v1", communityReportsRouter);
   app.use("/api/v1", adminAiRequestsRouter);
   app.use("/api/v1", passengerRouter);
   app.use(
