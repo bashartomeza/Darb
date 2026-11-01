@@ -7,6 +7,7 @@ import {
   OsmCheckpointIndex,
   PartnerCheckpointMapService,
   loadOsmCheckpoints,
+  nameSkeleton,
   normaliseArabicName,
   osmArabicNames,
   placePartnerCheckpoints,
@@ -58,6 +59,19 @@ describe("Arabic name normalisation", () => {
     expect(normaliseArabicName("نقطة التفتيش ٥٦")).toBe("التفتيش 56");
   });
 
+  it("matches the article and long-vowel spellings, but not short names", () => {
+    const index = new OsmCheckpointIndex([
+      { id: "node/10", name: "نقطة تفتيش الجبع الاسرائيلية", name_ar: null, lat: 31.854, lng: 35.256 },
+      { id: "node/11", name: null, name_ar: "حاجز الكونتينار", lat: 31.742, lng: 35.289 },
+      { id: "node/12", name: null, name_ar: "حاجز دار", lat: 31.75, lng: 35.2 }
+    ]);
+    expect(index.match("جبع", "القدس")).toMatchObject({ entry: { id: "node/10" }, quality: "article" });
+    expect(index.match("الكونتينر", "بيت لحم")).toMatchObject({ entry: { id: "node/11" }, quality: "spelling_variant" });
+    // A three-letter skeleton is too short to trust.
+    expect(index.match("دير", "القدس")).toEqual({ entry: null, reason: "no_name_match" });
+    expect(nameSkeleton("دير")).toBeNull();
+  });
+
   it("reads the Arabic part of mixed-script OSM names and alternatives", () => {
     expect(osmArabicNames({ name: "מחסום דיר שרף حاجز ديار شرف", name_ar: null })).toEqual(["ديار شرف"]);
     expect(osmArabicNames({ name: "Container", name_ar: "حاجز وادي النار /الكونتينار" })).toEqual(["وادي النار", "الكونتينار"]);
@@ -75,15 +89,18 @@ describe("placing partner rows", () => {
         { id: "p3", city: "بيت لحم", checkpoint: "وادي النار - الكونتينر" },
         { id: "p4", city: "القدس", checkpoint: "التوأم" },
         { id: "p5", city: "أريحا - طوباس", checkpoint: "تياسير" },
-        { id: "p6", city: "الخليل", checkpoint: "تياسير" }
+        { id: "p6", city: "الخليل", checkpoint: "تياسير" },
+        { id: "p7", city: "نابلس", checkpoint: "المربعة" }
       ]),
       index,
       osm
     );
-    expect(result.checkpoints.map((c) => [c.id, c.position_osm_id])).toEqual([
-      ["aweenrayeh:p1", "node/1"],
-      ["aweenrayeh:p3", "node/3"],
-      ["aweenrayeh:p5", "node/6"]
+    expect(result.checkpoints.map((c) => [c.id, c.position_osm_id, c.position_match])).toEqual([
+      ["aweenrayeh:p1", "node/1", "exact"],
+      // "دير شرف" / "ديار شرف": the same name written with an extra long vowel.
+      ["aweenrayeh:p2", "node/2", "spelling_variant"],
+      ["aweenrayeh:p3", "node/3", "exact"],
+      ["aweenrayeh:p5", "node/6", "exact"]
     ]);
     expect(result.checkpoints.every((c) => c.status === "unknown")).toBe(true);
     expect(result.checkpoints[0]).toMatchObject({
@@ -96,11 +113,11 @@ describe("placing partner rows", () => {
       timezone_specified: false,
       position_source: "openstreetmap"
     });
-    // "دير شرف" is not "ديار شرف": no fuzzy guess. p4 is ambiguous, p6 is in another city.
+    // p4 is ambiguous, p6 is in another city, p7 is not a known place.
     expect(result.unplaced.map((c) => [c.id, c.reason])).toEqual([
-      ["aweenrayeh:p2", "no_name_match"],
       ["aweenrayeh:p4", "ambiguous"],
-      ["aweenrayeh:p6", "outside_city"]
+      ["aweenrayeh:p6", "outside_city"],
+      ["aweenrayeh:p7", "no_name_match"]
     ]);
     expect(result.unplaced[0]).not.toHaveProperty("latitude");
     expect(result.position_attribution).toContain("OpenStreetMap");

@@ -28,7 +28,11 @@ the API serves `GET /checkpoints` from that feed
 - Each partner row is matched to the committed OpenStreetMap extract
   `apps/api/data/osm-checkpoints.json` by **normalised Arabic name** (diacritics,
   tatweel, alef/hamza/ya/ta-marbuta variants and generic words such as "حاجز",
-  "معبر", "نقطة تفتيش" are ignored; "a - b" names try each part). A match must lie
+  "معبر", "نقطة تفتيش" are ignored; "a - b" names try each part). Tiers, in
+  order: exact name, the name without the article "ال" ("جبع" = "الجبع"), then a
+  spelling variant that differs only in long vowels ("الكونتينر" = "الكونتينار",
+  "شومرون" = "شمرون"; at least four consonants). Each pin records which tier
+  matched in `position_match`. A match must lie
   within 40 km of the row's city (both cities for rows like "أريحا - طوباس"), and
   same-named places more than 1 km apart are treated as ambiguous.
 - Only a row with exactly one such place gets a pin. Every other row is returned
@@ -101,3 +105,13 @@ shown as **"Community says: open / closed / congested (unverified)"** in the
 checkpoint's details and as a coloured ring and badge around its pin
 (`communityCheckpointNotes`). It never changes the official status; votes only
 change the report's own "disputed" / "well supported" standing.
+
+## Current coverage (measured 2026-11-01)
+
+One read of the test-mode partner feed (70 rows, 10 cities) against the committed
+extract (69 OpenStreetMap checkpoints, of which only about a dozen carry an Arabic
+name) places **5 rows**: تياسير, جبع, الكونتينر, دير شرف, شافي شومرون. The other 65
+are listed as unplaced (`no_name_match`): OpenStreetMap has no Arabic-named
+checkpoint for them. Coverage grows by adding `name:ar` to the checkpoints in
+OpenStreetMap and re-running the fetch script, or by an owner-approved
+coordinate source; positions are never guessed.

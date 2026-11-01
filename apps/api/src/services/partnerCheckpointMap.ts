@@ -111,50 +111,96 @@ export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; ln
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
-export type OsmMatch = { entry: OsmCheckpoint } | { entry: null; reason: "no_name_match" | "ambiguous" | "outside_city" };
+/** Drops the definite article from each word ("الجبع" -> "جبع"). */
+export function withoutArticle(name: string): string {
+  return name
+    .split(" ")
+    .map((word) => (word.length > 3 && word.startsWith("ال") ? word.slice(2) : word))
+    .join(" ");
+}
+
+/**
+ * Consonant skeleton for spelling variants of the same name, which Arabic
+ * transliterations write with or without long vowels ("الكونتينر" /
+ * "الكونتينار", "شومرون" / "شمرون", "دير" / "ديار"). The first letter of each
+ * word is kept. Too-short skeletons are not used: they would match unrelated
+ * places.
+ */
+export function nameSkeleton(name: string): string | null {
+  const skeleton = withoutArticle(name)
+    .split(" ")
+    .map((word) => word.slice(0, 1) + word.slice(1).replace(/[اوي]/g, ""))
+    .join(" ");
+  return skeleton.replace(/\s/g, "").length >= 4 ? skeleton : null;
+}
+
+export type MatchQuality = "exact" | "article" | "spelling_variant";
+export type OsmMatch =
+  | { entry: OsmCheckpoint; quality: MatchQuality }
+  | { entry: null; reason: "no_name_match" | "ambiguous" | "outside_city" };
+
+type Centre = { lat: number; lng: number };
 
 export class OsmCheckpointIndex {
-  private readonly byName = new Map<string, OsmCheckpoint[]>();
+  private readonly tiers: Array<{ quality: MatchQuality; key: (name: string) => string | null; byKey: Map<string, OsmCheckpoint[]> }> = [
+    { quality: "exact", key: (name) => name, byKey: new Map() },
+    { quality: "article", key: withoutArticle, byKey: new Map() },
+    { quality: "spelling_variant", key: nameSkeleton, byKey: new Map() }
+  ];
 
   constructor(entries: OsmCheckpoint[]) {
     for (const entry of entries) {
       for (const name of osmArabicNames(entry)) {
-        const list = this.byName.get(name) ?? [];
-        list.push(entry);
-        this.byName.set(name, list);
+        for (const tier of this.tiers) {
+          const key = tier.key(name);
+          if (!key) continue;
+          const list = tier.byKey.get(key) ?? [];
+          if (!list.includes(entry)) list.push(entry);
+          tier.byKey.set(key, list);
+        }
       }
     }
   }
 
+  /**
+   * Finds the single OSM place for a partner name: exact normalised name
+   * first, then without the article, then a spelling variant. Each tier must
+   * give one place (nodes within 1 km count as one) near the row's city.
+   */
   match(name: string, city?: string | null): OsmMatch {
     // "المعرجات-كرملو": try the whole name, then each alternative on its own.
-    const keys = [name, ...name.split(/[\/\-–|،,]/)].map(normaliseArabicName).filter(Boolean);
-    const seen = new Set<string>();
-    const candidates: OsmCheckpoint[] = [];
-    for (const key of keys) {
-      for (const entry of this.byName.get(key) ?? []) {
-        if (!seen.has(entry.id)) {
-          seen.add(entry.id);
-          candidates.push(entry);
-        }
-      }
-    }
-    if (candidates.length === 0) return { entry: null, reason: "no_name_match" };
+    const names = [name, ...name.split(/[\/\-–|،,()]/)].map(normaliseArabicName).filter(Boolean);
     // "أريحا - طوباس" names two cities; a place near either one is in the area.
     const centres = (city ?? "")
       .split(/[\/\-–|،,]/)
       .map((part) => CITY_CENTRES[normaliseArabicName(part)])
-      .filter((centre): centre is { lat: number; lng: number } => centre !== undefined);
+      .filter((centre): centre is Centre => centre !== undefined);
     const cityDistance = (c: OsmCheckpoint) => Math.min(...centres.map((centre) => distanceKm(c, centre)));
-    const near = centres.length ? candidates.filter((c) => cityDistance(c) <= MAX_CITY_DISTANCE_KM) : candidates;
-    if (near.length === 0) return { entry: null, reason: "outside_city" };
-    const ordered = centres.length ? [...near].sort((a, b) => cityDistance(a) - cityDistance(b)) : near;
-    const first = ordered[0]!;
-    // Several far-apart places share the name and nothing decides between them.
-    if (ordered.some((c) => distanceKm(c, first) > SAME_PLACE_KM)) {
-      return { entry: null, reason: "ambiguous" };
+
+    let sawFar = false;
+    for (const tier of this.tiers) {
+      const candidates: OsmCheckpoint[] = [];
+      for (const value of names) {
+        const key = tier.key(value);
+        for (const entry of (key && tier.byKey.get(key)) || []) {
+          if (!candidates.includes(entry)) candidates.push(entry);
+        }
+      }
+      if (candidates.length === 0) continue;
+      const near = centres.length ? candidates.filter((c) => cityDistance(c) <= MAX_CITY_DISTANCE_KM) : candidates;
+      if (near.length === 0) {
+        sawFar = true;
+        continue;
+      }
+      const ordered = centres.length ? [...near].sort((a, b) => cityDistance(a) - cityDistance(b)) : near;
+      const first = ordered[0]!;
+      // Several far-apart places share the name and nothing decides between them.
+      if (ordered.some((c) => distanceKm(c, first) > SAME_PLACE_KM)) {
+        return { entry: null, reason: "ambiguous" };
+      }
+      return { entry: first, quality: tier.quality };
     }
-    return { entry: first };
+    return { entry: null, reason: sawFar ? "outside_city" : "no_name_match" };
   }
 }
 
@@ -172,6 +218,8 @@ export type PartnerMapCheckpoint = {
   timezone_specified: boolean;
   position_source: "openstreetmap";
   position_osm_id: string;
+  /** How the name matched: exactly, without "ال", or as a spelling variant. */
+  position_match: MatchQuality;
 };
 export type PartnerUnplacedCheckpoint = {
   id: string;
@@ -208,7 +256,8 @@ export function placePartnerCheckpoints(directory: LimitedCheckpointDirectory, i
         status: "unknown",
         updated_at: null,
         position_source: "openstreetmap",
-        position_osm_id: match.entry.id
+        position_osm_id: match.entry.id,
+        position_match: match.quality
       });
     } else {
       unplaced.push({ ...base, reason: match.reason });
