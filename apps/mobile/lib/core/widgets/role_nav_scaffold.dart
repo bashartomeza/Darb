@@ -115,7 +115,7 @@ class RoleShellScaffold extends StatelessWidget {
             ),
     );
     return ColoredBox(
-      color: const Color(0xFFF6F6F6),
+      color: AppTheme.surfaceContainerLow,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1200),
