@@ -14,6 +14,7 @@ import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_back_button.dart';
 import '../application/passenger_assistant_controller.dart';
+import '../data/speech_service.dart';
 import '../domain/passenger_assistant_models.dart';
 import '../../passenger/data/passenger_models.dart';
 import '../../auth/application/auth_controller.dart';
@@ -45,10 +46,111 @@ class _PassengerAssistantScreenState
       ..removeListener(_refreshComposer)
       ..dispose();
     _scrollController.dispose();
+    if (_voice == _VoiceState.listening) _speech?.cancel();
     super.dispose();
   }
 
   void _refreshComposer() => setState(() {});
+
+  _VoiceState _voice = _VoiceState.idle;
+  SpeechFailure? _voiceFailure;
+  SpeechAvailability? _voiceAvailability;
+  String _voiceBase = '';
+  SpeechService? _speech;
+
+  Future<void> _toggleVoice() async {
+    final speech = ref.read(speechServiceProvider);
+    _speech = speech;
+    if (_voice == _VoiceState.listening) {
+      await speech.stop();
+      if (mounted) setState(() => _voice = _VoiceState.idle);
+      return;
+    }
+    if (_voice == _VoiceState.starting) return;
+    final languageCode = Localizations.localeOf(context).languageCode;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _voice = _VoiceState.starting;
+      _voiceFailure = null;
+      _voiceAvailability = null;
+    });
+    final availability = await speech.initialize();
+    if (!mounted) return;
+    if (availability != SpeechAvailability.available) {
+      setState(() {
+        _voice = _VoiceState.error;
+        _voiceAvailability = availability;
+      });
+      return;
+    }
+    final localeId = pickSpeechLocale(languageCode, await speech.locales());
+    if (!mounted) return;
+    _voiceBase = _inputController.text.trim();
+    setState(() => _voice = _VoiceState.listening);
+    try {
+      await speech.start(
+        localeId: localeId,
+        onResult: (text, isFinal) {
+          if (!mounted) return;
+          final spoken = text.trim();
+          if (spoken.isEmpty) return;
+          final value = _voiceBase.isEmpty ? spoken : '$_voiceBase $spoken';
+          _inputController.value = TextEditingValue(
+            text: value,
+            selection: TextSelection.collapsed(offset: value.length),
+          );
+        },
+        onFailure: (failure) {
+          if (!mounted) return;
+          setState(() {
+            _voice = _VoiceState.error;
+            _voiceFailure = failure;
+          });
+        },
+        onDone: () {
+          if (mounted && _voice == _VoiceState.listening) {
+            setState(() => _voice = _VoiceState.idle);
+          }
+        },
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _voice = _VoiceState.error;
+          _voiceFailure = SpeechFailure.other;
+        });
+      }
+    }
+  }
+
+  String? _voiceMessage(AppLocalizations l10n) {
+    if (_voice != _VoiceState.error) return null;
+    switch (_voiceAvailability) {
+      case SpeechAvailability.permissionDenied:
+        return l10n.assistantVoicePermissionDenied;
+      case SpeechAvailability.permanentlyDenied:
+        return l10n.assistantVoicePermissionPermanent;
+      case SpeechAvailability.unavailable:
+        return l10n.assistantVoiceUnavailable;
+      default:
+    }
+    switch (_voiceFailure) {
+      case SpeechFailure.noSpeech:
+        return l10n.assistantVoiceNoSpeech;
+      case SpeechFailure.offline:
+        return l10n.assistantVoiceOffline;
+      case SpeechFailure.permission:
+        return l10n.assistantVoicePermissionPermanent;
+      case SpeechFailure.unavailable:
+        return l10n.assistantVoiceUnavailable;
+      default:
+        return l10n.assistantVoiceError;
+    }
+  }
+
+  bool get _voiceNeedsSettings =>
+      _voiceAvailability == SpeechAvailability.permanentlyDenied ||
+      _voiceFailure == SpeechFailure.permission;
 
   void _scrollToLatest() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -65,6 +167,10 @@ class _PassengerAssistantScreenState
     final query = (suggestion ?? _inputController.text).trim();
     if (query.isEmpty) return;
     _inputController.clear();
+    if (_voice == _VoiceState.listening) {
+      _speech?.cancel();
+      _voice = _VoiceState.idle;
+    }
     FocusScope.of(context).unfocus();
     await ref
         .read(passengerAssistantControllerProvider.notifier)
@@ -176,6 +282,12 @@ class _PassengerAssistantScreenState
             enabled: !assistant.isLoading && !busy && !recoveryPending,
             busy: busy,
             onSubmit: _submit,
+            voice: _voice,
+            voiceMessage: _voiceMessage(l10n),
+            onVoice: _toggleVoice,
+            onOpenSettings: _voiceNeedsSettings
+                ? () => ref.read(speechServiceProvider).openSettings()
+                : null,
           ),
         ],
       ),
@@ -889,13 +1001,24 @@ class _AssistantLoadingView extends StatelessWidget {
   }
 }
 
+enum _VoiceState { idle, starting, listening, error }
+
 class _AssistantComposer extends StatelessWidget {
   const _AssistantComposer({
     required this.controller,
     required this.enabled,
     required this.busy,
     required this.onSubmit,
+    required this.voice,
+    required this.onVoice,
+    this.voiceMessage,
+    this.onOpenSettings,
   });
+
+  final _VoiceState voice;
+  final VoidCallback onVoice;
+  final String? voiceMessage;
+  final VoidCallback? onOpenSettings;
 
   final TextEditingController controller;
   final bool enabled;
@@ -920,49 +1043,130 @@ class _AssistantComposer extends StatelessWidget {
           color: AppTheme.surfaceContainerLowest,
           border: Border(top: BorderSide(color: AppTheme.outlineVariant)),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: TextField(
-                key: const ValueKey('assistantTextInput'),
-                controller: controller,
-                enabled: enabled,
-                minLines: 1,
-                maxLines: 4,
-                textInputAction: TextInputAction.send,
-                onSubmitted: canSubmit ? (_) => onSubmit() : null,
-                decoration: InputDecoration(
-                  hintText: l10n.assistantInputHint,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppTokens.spaceMedium,
-                    vertical: AppTokens.gutterMobile,
-                  ),
+            if (voice == _VoiceState.listening)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
+                child: Row(
+                  key: const ValueKey('assistantVoiceListening'),
+                  children: [
+                    const Icon(
+                      Icons.graphic_eq_rounded,
+                      size: 18,
+                      color: AppTheme.primary,
+                    ),
+                    const SizedBox(width: AppTokens.spaceSmall),
+                    Text(
+                      l10n.assistantVoiceListening,
+                      style: const TextStyle(color: AppTheme.primary),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: AppTokens.spaceSmall),
-            SizedBox(
-              width: AppTokens.minTouchTarget,
-              height: AppTokens.minTouchTarget,
-              child: IconButton.filled(
-                key: const ValueKey('assistantSendButton'),
-                tooltip: l10n.assistantSend,
-                onPressed: canSubmit ? onSubmit : null,
-                icon: busy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.onPrimary,
+            if (voiceMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
+                child: Row(
+                  key: const ValueKey('assistantVoiceError'),
+                  children: [
+                    const Icon(
+                      Icons.mic_off_rounded,
+                      size: 18,
+                      color: SemanticColors.error,
+                    ),
+                    const SizedBox(width: AppTokens.spaceSmall),
+                    Expanded(
+                      child: Text(
+                        voiceMessage!,
+                        style: const TextStyle(
+                          color: SemanticColors.onErrorContainer,
                         ),
-                      )
-                    : const Icon(Icons.send_rounded),
+                      ),
+                    ),
+                    if (onOpenSettings != null)
+                      TextButton(
+                        key: const ValueKey('assistantVoiceSettings'),
+                        onPressed: onOpenSettings,
+                        child: Text(l10n.assistantVoiceOpenSettings),
+                      ),
+                  ],
+                ),
               ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SizedBox(
+                  width: AppTokens.minTouchTarget,
+                  height: AppTokens.minTouchTarget,
+                  child: IconButton(
+                    key: const ValueKey('assistantMicButton'),
+                    tooltip: voice == _VoiceState.listening
+                        ? l10n.assistantVoiceStop
+                        : l10n.assistantVoiceStart,
+                    onPressed: enabled ? onVoice : null,
+                    style: voice == _VoiceState.listening
+                        ? IconButton.styleFrom(
+                            backgroundColor: AppTheme.primaryContainer,
+                            foregroundColor: AppTheme.primary,
+                          )
+                        : null,
+                    icon: voice == _VoiceState.starting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            voice == _VoiceState.listening
+                                ? Icons.stop_rounded
+                                : Icons.mic_rounded,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: AppTokens.spaceSmall),
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('assistantTextInput'),
+                    controller: controller,
+                    enabled: enabled,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: canSubmit ? (_) => onSubmit() : null,
+                    decoration: InputDecoration(
+                      hintText: l10n.assistantInputHint,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppTokens.spaceMedium,
+                        vertical: AppTokens.gutterMobile,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppTokens.spaceSmall),
+                SizedBox(
+                  width: AppTokens.minTouchTarget,
+                  height: AppTokens.minTouchTarget,
+                  child: IconButton.filled(
+                    key: const ValueKey('assistantSendButton'),
+                    tooltip: l10n.assistantSend,
+                    onPressed: canSubmit ? onSubmit : null,
+                    icon: busy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.onPrimary,
+                            ),
+                          )
+                        : const Icon(Icons.send_rounded),
+                  ),
+                ),
+              ],
             ),
-            // Voice is intentionally absent: no speech-input capability or
-            // microphone permission exists in this app yet.
           ],
         ),
       ),

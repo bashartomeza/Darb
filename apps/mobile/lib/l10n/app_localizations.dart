@@ -3404,6 +3404,66 @@ abstract class AppLocalizations {
   /// **'اكتب سؤالك هنا'**
   String get assistantInputHint;
 
+  /// No description provided for @assistantVoiceStart.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحدّث بطلبك'**
+  String get assistantVoiceStart;
+
+  /// No description provided for @assistantVoiceStop.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف الاستماع'**
+  String get assistantVoiceStop;
+
+  /// No description provided for @assistantVoiceListening.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ الاستماع…'**
+  String get assistantVoiceListening;
+
+  /// No description provided for @assistantVoicePermissionDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'نحتاج إذن الميكروفون للإدخال الصوتي. يمكنك كتابة طلبك بدلًا من ذلك.'**
+  String get assistantVoicePermissionDenied;
+
+  /// No description provided for @assistantVoicePermissionPermanent.
+  ///
+  /// In ar, this message translates to:
+  /// **'إذن الميكروفون أو التعرف على الكلام معطّل. افتح الإعدادات للسماح به أو اكتب طلبك.'**
+  String get assistantVoicePermissionPermanent;
+
+  /// No description provided for @assistantVoiceOpenSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح الإعدادات'**
+  String get assistantVoiceOpenSettings;
+
+  /// No description provided for @assistantVoiceUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإدخال الصوتي غير متاح على هذا الجهاز. يرجى كتابة طلبك.'**
+  String get assistantVoiceUnavailable;
+
+  /// No description provided for @assistantVoiceNoSpeech.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم أسمعك جيدًا. اضغط على الميكروفون وحاول مجددًا أو اكتب طلبك.'**
+  String get assistantVoiceNoSpeech;
+
+  /// No description provided for @assistantVoiceOffline.
+  ///
+  /// In ar, this message translates to:
+  /// **'يحتاج الإدخال الصوتي إلى اتصال حاليًا. اكتب طلبك أو حاول لاحقًا.'**
+  String get assistantVoiceOffline;
+
+  /// No description provided for @assistantVoiceError.
+  ///
+  /// In ar, this message translates to:
+  /// **'توقف الإدخال الصوتي بشكل غير متوقع. حاول مجددًا أو اكتب طلبك.'**
+  String get assistantVoiceError;
+
   /// No description provided for @assistantSend.
   ///
   /// In ar, this message translates to:

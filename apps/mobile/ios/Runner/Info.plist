@@ -51,6 +51,10 @@
 	<string>Darb uses the camera so you can photograph your driver documents for verification.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Darb uses your location to show nearby routes and your position on the map.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Darb uses the microphone so you can speak your trip request to the assistant.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Darb uses speech recognition to turn your voice into text for the assistant.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Darb needs access to your photos so you can choose a driver document to upload.</string>
 	<key>UIApplicationSceneManifest</key>

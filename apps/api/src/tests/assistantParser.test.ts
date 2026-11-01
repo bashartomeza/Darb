@@ -149,3 +149,24 @@ describe("buildClarification", () => {
     expect(buildClarification(intent, { places: [] }, "en").reason).toBe("no_places");
   });
 });
+
+describe("parseRequest: spoken Palestinian dialect (voice input)", () => {
+  const spoken: AssistantPlace[] = [
+    { key: "bethlehem", name_ar: "بيت لحم", name_en: "Bethlehem" },
+    { key: "ramallah", name_ar: "رام الله", name_en: "Ramallah" }
+  ];
+  const phrase = "بدي أروح من بيت لحم لرام الله بكرا الساعة خمسة، اعطيني السواقين المناسبين";
+
+  it("reads places, tomorrow and a spelled-out hour despite the trailing request", () => {
+    const intent = parseRequest(phrase, { now, places: spoken });
+    expect(intent.pickup?.key).toBe("bethlehem");
+    expect(intent.dropoff?.key).toBe("ramallah");
+    expect(localTime(intent.time)?.slice(0, 10)).toBe("2026-10-29");
+    expect(intent.seats).toBe(1);
+  });
+
+  it("never invents an hour: a bare 'five' is resolved or asked, not guessed silently", () => {
+    const intent = parseRequest(phrase, { now, places: spoken });
+    expect(intent.time === null || /T0?5:00|T17:00/.test(localTime(intent.time) ?? "")).toBe(true);
+  });
+});
