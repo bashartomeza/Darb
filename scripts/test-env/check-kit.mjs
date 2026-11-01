@@ -11,7 +11,7 @@ export const env = Object.fromEntries(
   readFileSync(resolve(root, "apps/api/.env"), "utf8").split(/\r?\n/).map((l) => l.match(/^([A-Z0-9_]+)=(.*)$/)).filter(Boolean).map((m) => [m[1], m[2].replace(/^"|"$/g, "")])
 );
 export const databaseUrl = env.DATABASE_URL.replace(/\/[A-Za-z0-9_]+(\?|$)/, "/masari_demo$1");
-Object.assign(process.env, env, { DATABASE_URL: databaseUrl, DEMO_RESET_ALLOWED_DATABASES: "masari_demo", APP_ENV: "demo" });
+Object.assign(process.env, env, { DATABASE_URL: databaseUrl, DEMO_RESET_ALLOWED_DATABASES: "masari_demo", APP_ENV: "demo", DRIVER_DOCUMENTS_ENABLED: "true", DRIVER_DOCUMENTS_DIR: resolve(root, ".staging-data/test-env/driver-docs") });
 
 export const base = "http://localhost:3000/api/v1";
 export const stateDir = resolve(root, ".staging-data/test-env");
