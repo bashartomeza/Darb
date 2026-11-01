@@ -13,10 +13,16 @@ export function scoreDriverRoute(input: {
   };
   passengerRequest?: { pickup_lat: unknown; pickup_lng: unknown; passenger_count: number; preferred_time: Date | string } | null;
   parcelCount: number;
+  /**
+   * Live matching only ranks driver routes already on the demand's own service
+   * route and passes `true`. The comparison simulation, which mixes directions,
+   * leaves it out and falls back to the corridor's labels.
+   */
+  sameRoute?: boolean;
 }) {
   const isForwardCorridor =
     input.route.origin_label === "Hebron / PPU / Bab Al-Zawiya" && input.route.destination_label === "Bethlehem";
-  const corridorOverlap = isForwardCorridor ? 0.95 : 0.3;
+  const corridorOverlap = (input.sameRoute ?? isForwardCorridor) ? 0.95 : 0.3;
   const pickupPoint = input.passengerRequest
     ? { lat: toNumber(input.passengerRequest.pickup_lat), lng: toNumber(input.passengerRequest.pickup_lng) }
     : LOCKED_ORIGIN;

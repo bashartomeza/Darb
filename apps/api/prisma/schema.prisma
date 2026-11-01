@@ -1087,6 +1087,10 @@ model PassengerRequest {
   /// The driver route the passenger picked when booking. Matching for this
   /// request is pinned to it; null means "best compatible route".
   selected_driver_route_id      String?
+  /// Free text the passenger typed for the exact pickup / drop-off inside the
+  /// route's cities. The labels and coordinates hold the city names and centres.
+  pickup_details                String?    @db.VarChar(300)
+  dropoff_details               String?    @db.VarChar(300)
 
   passenger    User                 @relation(fields: [passenger_id], references: [id], onDelete: Cascade)
   route_version ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -1120,6 +1124,8 @@ model MerchantOrder {
   requested_departure_until DateTime?
   canonical_created_at      DateTime?
   operational_mode          String     @default("legacy") @db.VarChar(50)
+  /// Free-text pickup typed by the sender (merchant or passenger parcel sender).
+  pickup_details            String?    @db.VarChar(300)
 
   merchant       User          @relation(fields: [merchant_id], references: [id], onDelete: Cascade)
   route_version  ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -1157,6 +1163,11 @@ model Parcel {
   fare_id                String? @db.VarChar(191)
   fare_minor             Int?
   fare_currency          String? @db.Char(3)
+  /// Free-text drop-off typed by the sender, and an optional receiver for
+  /// merchant parcels (passenger parcels keep theirs in passenger_parcel_details).
+  dropoff_details        String? @db.VarChar(300)
+  receiver_name          String? @db.VarChar(80)
+  receiver_phone         String? @db.VarChar(32)
 
   order         MerchantOrder        @relation(fields: [order_id, operational_mode], references: [id, operational_mode], onDelete: Restrict, onUpdate: Restrict)
   route_version ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)

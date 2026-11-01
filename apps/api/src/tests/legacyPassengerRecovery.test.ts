@@ -12,9 +12,11 @@ const db = vi.hoisted(() => ({
   driverRoute: { create: vi.fn(), findFirst: vi.fn() },
   idempotencyRecord: { create: vi.fn(), findUniqueOrThrow: vi.fn(), updateMany: vi.fn() },
   auditEvent: { create: vi.fn() },
+  serviceRoute: { findUnique: vi.fn() },
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: db }));
 const { createApp } = await import("../app.js");
+const { findOperatingRoute, HEBRON_TO_BETHLEHEM } = await import("./operatingRouteFixture.js");
 
 type Row = Record<string, any>;
 let rows: Row[];
@@ -52,6 +54,8 @@ describe("legacy passenger creation recovery", () => {
         user: { id, role: id.startsWith("driver") ? "driver" : "passenger", account_status: "active", security_version: 1, email_verified_at: new Date() } };
     });
     db.authSession.update.mockResolvedValue({});
+    // Coordinate bodies ride the predefined Hebron → Bethlehem route.
+    db.serviceRoute.findUnique.mockImplementation(findOperatingRoute());
     db.passengerRequest.create.mockImplementation(async ({ data }) => {
       const row = { id: `request_${++nextId}`, created_at: new Date(), ...data };
       rows.push(row); return row;
@@ -261,7 +265,7 @@ describe("legacy passenger creation recovery", () => {
   });
 
   it("recovers keyed driver creation after capacity reservation, completion and retention expiry", async () => {
-    const payload = { seats_available: 2, parcel_capacity_available: 5 };
+    const payload = { service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: 2, parcel_capacity_available: 5 };
     const first = await createDriver("driver_1", payload, "durable-driver-route-key").expect(201);
     driverRoutes[0]!.seats_available = 1;
     const reserved = await createDriver("driver_1", payload, "durable-driver-route-key").expect(201);
@@ -276,7 +280,7 @@ describe("legacy passenger creation recovery", () => {
   });
 
   it("isolates durable driver keys by actor and collapses concurrent retries", async () => {
-    const payload = { seats_available: 2, parcel_capacity_available: 5 };
+    const payload = { service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: 2, parcel_capacity_available: 5 };
     const concurrent = await Promise.all(Array.from({ length: 4 }, () => createDriver("driver_1", payload, "concurrent-driver-key")));
     expect(concurrent.every(response => response.status === 201)).toBe(true);
     expect(new Set(concurrent.map(response => response.body.route.id)).size).toBe(1);
@@ -287,7 +291,7 @@ describe("legacy passenger creation recovery", () => {
   });
 
   it("rolls keyed driver creation and its claim back on audit failure", async () => {
-    const payload = { seats_available: 2, parcel_capacity_available: 5 };
+    const payload = { service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: 2, parcel_capacity_available: 5 };
     db.auditEvent.create.mockRejectedValueOnce(new Error("audit unavailable"));
     await createDriver("driver_1", payload, "driver-audit-failure-key").expect(500);
     expect(driverRoutes).toHaveLength(0);

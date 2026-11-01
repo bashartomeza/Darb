@@ -9,17 +9,23 @@ import {
   type CanonicalDemandService
 } from "./canonicalDemand.js";
 import { issueHandover } from "./deliveryHandover.js";
+import { releaseLegacyCapacity } from "./legacyCapacity.js";
+import { createLegacyMerchantOrder } from "./legacyMerchantOrders.js";
+import { routeFields, routeSummarySelect } from "./operatingRoutes.js";
 
 /**
  * Parcels sent by ordinary passengers ("individual delivery").
  *
- * A passenger parcel is a normal canonical parcel order whose owner happens to
- * be a passenger. It is created by the very same `createMerchantOrder` code the
- * merchant route orders use, so it enters the same dispatch/matching path
- * (a `CanonicalDemandDispatch` row, status `submitted`, parcel `pending`).
- * The only extra state is one `PassengerParcelDetail` row holding what is
- * specific to a person-to-person parcel: the receiver (who is not an app user),
- * an optional note and the forbidden-items acknowledgement.
+ * A passenger parcel is a normal parcel order whose owner happens to be a
+ * passenger. Route-based parcels (the default) are legacy merchant orders
+ * created by the same `createLegacyMerchantOrder` the merchant orders use, on
+ * the route the passenger picked, so they are matched to driver routes on that
+ * route by the legacy matcher and closed with the same receiver handover code.
+ * The canonical body (route version + stop ids) still goes through the
+ * canonical `createMerchantOrder` while MULTI_ROUTE_ENTRY_ENABLED is on.
+ * Either way the only extra state is one `PassengerParcelDetail` row holding
+ * what is specific to a person-to-person parcel: the receiver (who is not an
+ * app user), an optional note and the forbidden-items acknowledgement.
  */
 export const PASSENGER_PARCEL_LIMITS = {
   /** Parcels a passenger may have in flight at once. */
@@ -31,8 +37,12 @@ export const PASSENGER_PARCEL_LIMITS = {
   noteMaxLength: 200,
   receiverNameMaxLength: 80,
   /** Receiver data is erased this long after the end of the departure window. */
-  receiverRetentionDays: 14
+  receiverRetentionDays: 14,
+  /** A route-based parcel waits this long after its preferred time before it expires. */
+  routeDepartureWindowMinutes: 120
 } as const;
+
+const LEGACY_PARCEL_OPERATION = "passenger_parcel_route_create_v1";
 
 export type PassengerParcelSize = (typeof PASSENGER_PARCEL_LIMITS.allowedSizes)[number];
 
@@ -44,6 +54,20 @@ export type PassengerParcelInput = {
   dropoffStopId: string;
   requestedDepartureFrom: Date;
   requestedDepartureUntil: Date;
+  size: PassengerParcelSize;
+  note?: string;
+  receiverName: string;
+  /** Already normalised to E.164 by the caller. */
+  receiverPhone: string;
+  forbiddenItemsAcknowledged: true;
+};
+
+/** The route-based body: a predefined route and the exact pickup and drop-off as text. */
+export type RoutePassengerParcelInput = {
+  serviceRouteId: string;
+  pickupDetails: string;
+  dropoffDetails: string;
+  preferredTime: Date;
   size: PassengerParcelSize;
   note?: string;
   receiverName: string;
@@ -116,27 +140,62 @@ const detailInclude = {
   order: {
     include: {
       parcels: true,
-      canonical_dispatch: { select: { status: true } }
+      canonical_dispatch: { select: { status: true } },
+      route_version: routeSummarySelect,
+      trips: { select: { id: true, status: true }, orderBy: { created_at: "desc" as const }, take: 1 }
     }
   }
 } satisfies Prisma.PassengerParcelDetailInclude;
 
 type DetailWithOrder = Prisma.PassengerParcelDetailGetPayload<{ include: typeof detailInclude }>;
 
+type CancellableShape = {
+  order: {
+    status: string;
+    canonical_entry_version?: string | null;
+    canonical_dispatch?: { status: string } | null;
+    parcels: Array<{ status: string }>;
+  };
+};
+
+/**
+ * A route-based (legacy) parcel can be cancelled until a driver accepts it:
+ * an offer still waiting for the driver is withdrawn. A canonical parcel can
+ * be cancelled while no driver has been offered or assigned it.
+ */
+function isLegacyParcel(detail: CancellableShape) {
+  return !detail.order.canonical_entry_version && !detail.order.canonical_dispatch;
+}
+
+function isCancellable(detail: CancellableShape) {
+  const parcel = detail.order.parcels[0];
+  if (isLegacyParcel(detail)) {
+    return ["submitted", "matched"].includes(detail.order.status) && parcel?.status === "pending";
+  }
+  const dispatchStatus = detail.order.canonical_dispatch?.status;
+  return (
+    detail.order.status === "submitted" &&
+    parcel?.status === "pending" &&
+    (dispatchStatus === undefined || dispatchStatus === "pending" || dispatchStatus === "unavailable")
+  );
+}
+
 /** The sender's own view. Receiver data appears here and nowhere else. */
 export function serializePassengerParcel(detail: DetailWithOrder) {
   const parcel = detail.order.parcels[0];
   const tracking = passengerParcelTrackingState(detail.order, parcel?.status);
-  const dispatchStatus = detail.order.canonical_dispatch?.status;
   const purged = detail.receiver_purged_at !== null;
   return {
     id: detail.order_id,
     tracking_state: tracking,
     route_version_id: detail.order.route_version_id,
+    ...routeFields(detail.order.route_version),
     pickup_stop_id: detail.order.pickup_stop_id,
     dropoff_stop_id: parcel?.destination_stop_id ?? null,
     pickup_label: detail.order.pickup_label,
     dropoff_label: parcel?.destination_label ?? null,
+    pickup_details: detail.order.pickup_details ?? null,
+    dropoff_details: parcel?.dropoff_details ?? null,
     size: detail.size,
     note: purged ? null : detail.note,
     receiver_name: purged ? null : detail.receiver_name,
@@ -144,11 +203,10 @@ export function serializePassengerParcel(detail: DetailWithOrder) {
     receiver_details_removed: purged,
     requested_departure_from: detail.order.requested_departure_from,
     requested_departure_until: detail.order.requested_departure_until,
+    // The trip carrying the parcel once a driver accepted it (GET /trips/:id).
+    trip_id: detail.order.trips?.[0]?.id ?? null,
     created_at: detail.created_at,
-    can_cancel:
-      detail.order.status === "submitted" &&
-      parcel?.status === "pending" &&
-      (dispatchStatus === undefined || dispatchStatus === "pending" || dispatchStatus === "unavailable")
+    can_cancel: isCancellable(detail)
   };
 }
 
@@ -172,11 +230,124 @@ export function createPassengerParcelService(
     });
   }
 
+  /** Serialises this passenger's creations so the limits cannot be raced past by parallel requests. */
+  async function enforceLimits(tx: Prisma.TransactionClient, senderId: string) {
+    await lockRow(tx, "users", senderId);
+    const open = await tx.passengerParcelDetail.count({
+      where: { sender_id: senderId, order: { status: { in: [...OPEN_ORDER_STATUSES] } } }
+    });
+    if (open >= PASSENGER_PARCEL_LIMITS.maximumOpen) throw new HttpError(409, "passenger_parcel_limit_reached");
+    const recent = await tx.passengerParcelDetail.count({
+      where: { sender_id: senderId, created_at: { gte: new Date(Date.now() - 86_400_000) } }
+    });
+    if (recent >= PASSENGER_PARCEL_LIMITS.maximumPerDay) throw new HttpError(429, "passenger_parcel_daily_limit_reached");
+  }
+
+  /**
+   * Cancels a route-based parcel the order row is already locked for. An
+   * offer still waiting for its driver is withdrawn and the capacity it held
+   * is given back, the same steps a merchant cancellation takes.
+   */
+  async function cancelRouteParcel(tx: Prisma.TransactionClient, senderId: string, orderId: string, current: DetailWithOrder) {
+    if (!isCancellable(current)) throw new HttpError(409, "parcel_cannot_be_cancelled");
+    const offers = await tx.match.findMany({
+      where: { merchant_order_id: orderId, operational_mode: "legacy", status: { in: ["proposed", "sent_to_driver"] } },
+      select: { id: true, driver_route_id: true, legacy_capacity_held: true }
+    });
+    const parcelUnits = await tx.parcel.count({
+      where: { order_id: orderId, status: { notIn: ["cancelled", "failed", "expired"] } }
+    });
+    if (parcelUnits > 0) {
+      const heldRoutes = new Set(offers.filter((offer) => offer.legacy_capacity_held).map((offer) => offer.driver_route_id));
+      for (const driverRouteId of heldRoutes) {
+        await releaseLegacyCapacity(tx, { driverRouteId, seats: 0, parcelUnits });
+      }
+    }
+    if (offers.length > 0) {
+      await tx.match.updateMany({
+        where: { id: { in: offers.map((offer) => offer.id) } },
+        data: { status: "invalidated", legacy_demand_key: null, legacy_capacity_held: false }
+      });
+    }
+    const claimed = await tx.merchantOrder.updateMany({
+      where: { id: orderId, status: { in: ["submitted", "matched"] } },
+      data: { status: "cancelled" }
+    });
+    if (claimed.count !== 1) throw new HttpError(409, "parcel_cannot_be_cancelled");
+    await tx.parcel.updateMany({ where: { order_id: orderId, status: "pending" }, data: { status: "cancelled" } });
+    // The receiver is no longer needed: erase now rather than at expiry.
+    await tx.passengerParcelDetail.update({
+      where: { order_id: orderId },
+      data: { receiver_name: null, receiver_phone: null, note: null, receiver_purged_at: new Date() }
+    });
+    await auditEvent(tx, {
+      userId: senderId,
+      action: AuditAction.admin_action,
+      entityType: "MerchantOrder",
+      entityId: orderId,
+      metadata: { action: "passenger_parcel_cancelled", withdrawn_offers: offers.length }
+    });
+    return (await load(senderId, orderId, tx))!;
+  }
+
+  function validate(input: { size: string; forbiddenItemsAcknowledged: boolean; note?: string }) {
+    if (!(PASSENGER_PARCEL_LIMITS.allowedSizes as readonly string[]).includes(input.size)) throw new HttpError(400, "parcel_size_not_allowed");
+    if (input.forbiddenItemsAcknowledged !== true) throw new HttpError(400, "forbidden_items_acknowledgement_required");
+    if (input.note && input.note.length > PASSENGER_PARCEL_LIMITS.noteMaxLength) throw new HttpError(400, "note_too_long");
+  }
+
   return {
+    /**
+     * Route-based parcel: a legacy order owned by the passenger on the route
+     * they picked, with the pickup and drop-off as text. The order creation
+     * issues the receiver handover code, exactly as for merchant orders.
+     */
+    async createForRoute(input: RoutePassengerParcelInput, actor: Actor) {
+      validate(input);
+      const until = new Date(input.preferredTime.getTime() + PASSENGER_PARCEL_LIMITS.routeDepartureWindowMinutes * 60_000);
+      const result = await createLegacyMerchantOrder(
+        actor.id,
+        {
+          service_route_id: input.serviceRouteId,
+          pickup_details: input.pickupDetails,
+          parcels: [{ dropoff_details: input.dropoffDetails, size: input.size, priority: "normal" }]
+        },
+        actor.idempotencyKey,
+        {
+          operation: LEGACY_PARCEL_OPERATION,
+          digestExtension: { note: input.note ?? null, receiver_name: input.receiverName, receiver_phone: input.receiverPhone },
+          requestedDeparture: { from: input.preferredTime, until },
+          replayWhere: { passenger_parcel: { is: { sender_id: actor.id } } },
+          auditMetadata: { kind: "passenger_parcel" },
+          beforeCreate: async (tx) => {
+            if (input.preferredTime <= new Date()) throw new HttpError(400, "preferred_time_in_past");
+            await enforceLimits(tx, actor.id);
+          },
+          afterCreate: async (tx, created) => {
+            await tx.passengerParcelDetail.create({
+              data: {
+                order_id: created.orderId,
+                sender_id: actor.id,
+                size: input.size,
+                note: input.note?.trim() || null,
+                receiver_name: input.receiverName,
+                receiver_phone: input.receiverPhone,
+                forbidden_items_ack_at: new Date(),
+                retention_expires_at: new Date(until.getTime() + PASSENGER_PARCEL_LIMITS.receiverRetentionDays * 86_400_000)
+              }
+            });
+          }
+        },
+        db
+      );
+      const detail = await load(actor.id, result.order.id);
+      // A replay of a key whose original was not a passenger parcel cannot be served.
+      if (!detail) throw new HttpError(409, "idempotency_replay_unavailable");
+      return { parcel: detail, replayed: result.replayed, handoverCode: result.handoverCode };
+    },
+
     async create(input: PassengerParcelInput, actor: Actor) {
-      if (!PASSENGER_PARCEL_LIMITS.allowedSizes.includes(input.size)) throw new HttpError(400, "parcel_size_not_allowed");
-      if (input.forbiddenItemsAcknowledged !== true) throw new HttpError(400, "forbidden_items_acknowledgement_required");
-      if (input.note && input.note.length > PASSENGER_PARCEL_LIMITS.noteMaxLength) throw new HttpError(400, "note_too_long");
+      validate(input);
 
       const result = await demand.createMerchantOrder(
         {
@@ -196,17 +367,7 @@ export function createPassengerParcelService(
           },
           auditMetadata: { kind: "passenger_parcel" },
           beforeCreate: async (tx) => {
-            // Serialise this passenger's creations so the limits cannot be
-            // raced past by parallel requests.
-            await lockRow(tx, "users", actor.id);
-            const open = await tx.passengerParcelDetail.count({
-              where: { sender_id: actor.id, order: { status: { in: [...OPEN_ORDER_STATUSES] } } }
-            });
-            if (open >= PASSENGER_PARCEL_LIMITS.maximumOpen) throw new HttpError(409, "passenger_parcel_limit_reached");
-            const recent = await tx.passengerParcelDetail.count({
-              where: { sender_id: actor.id, created_at: { gte: new Date(Date.now() - 86_400_000) } }
-            });
-            if (recent >= PASSENGER_PARCEL_LIMITS.maximumPerDay) throw new HttpError(429, "passenger_parcel_daily_limit_reached");
+            await enforceLimits(tx, actor.id);
           },
           afterCreate: async (tx, created) => {
             const now = new Date();
@@ -272,6 +433,7 @@ export function createPassengerParcelService(
         await lockRow(tx, "merchant_orders", orderId);
         const current = await load(senderId, orderId, tx);
         if (!current) throw new HttpError(404, "parcel_not_found");
+        if (isLegacyParcel(current)) return cancelRouteParcel(tx, senderId, orderId, current);
         const parcel = current.order.parcels[0];
         const dispatchStatus = current.order.canonical_dispatch?.status;
         const unmatched =

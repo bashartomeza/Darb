@@ -5,6 +5,7 @@ import { HttpError } from "./error.js";
 const completionSafePaths = new Set([
   "/api/v1/me",
   "/api/v1/capabilities",
+  "/api/v1/operating-routes",
   "/api/v1/onboarding/consents",
   "/api/v1/profile/phone/start-verification",
   "/api/v1/profile/phone/confirm-verification"

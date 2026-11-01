@@ -99,19 +99,21 @@ describe("admin matching monitoring query contracts", () => {
 
 describe("admin matching monitoring eligibility policy", () => {
   it("fails closed on passenger, order, route, parcel, and batch provenance", () => {
+    // Legacy demand and driver routes carry their predefined route; the
+    // canonical columns, not the route, keep canonical rows out.
     expect(eligibleParcel).toEqual({
-      operational_mode: "legacy", canonical_entry_version: null, route_version_id: null
+      operational_mode: "legacy", canonical_entry_version: null
     });
     expect(eligiblePassenger).toEqual({
-      operational_mode: "legacy", canonical_entry_version: null, route_version_id: null,
+      operational_mode: "legacy", canonical_entry_version: null,
       source: "manual", passenger: { is: { demo_account: false } }
     });
     expect(eligibleOrder).toEqual({
-      operational_mode: "legacy", canonical_entry_version: null, route_version_id: null,
+      operational_mode: "legacy", canonical_entry_version: null,
       merchant: { is: { demo_account: false } }, parcels: { every: eligibleParcel }
     });
     expect(eligibleRoute).toEqual({
-      operational_mode: "legacy", canonical_availability_version: null, route_version_id: null,
+      operational_mode: "legacy", canonical_availability_version: null,
       driver: { is: { user: { is: { demo_account: false } } } }
     });
     expect(eligibleBatch).toEqual({
@@ -122,7 +124,7 @@ describe("admin matching monitoring eligibility policy", () => {
 
   it("independently authorizes every optional match relation and requires demand", () => {
     const orderProvenance = {
-      operational_mode: "legacy", canonical_entry_version: null, route_version_id: null,
+      operational_mode: "legacy", canonical_entry_version: null,
       merchant: { is: { demo_account: false } }
     };
     expect(eligibleMatch).toEqual({

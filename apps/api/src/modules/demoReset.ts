@@ -10,6 +10,7 @@ import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { DEMO_ROUTE_POINTS } from "../lib/geo.js";
 import { PARTNER_BUDGET_BUCKET } from "../services/limitedCheckpointBudget.js";
+import { ensurePredefinedRoutes } from "../services/operatingRoutes.js";
 import {
   assertDemoResetDatabaseSafe,
   DemoResetDatabaseNotAllowedError
@@ -395,19 +396,29 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
       data: { current_version_id: routeVersion.id }
     });
 
+    // The predefined city routes every order names; the demo's driver,
+    // passenger and merchant data sit on Hebron → Bethlehem.
+    const operating = await ensurePredefinedRoutes(tx, admin.id);
+    const hebron = operating.stops.hebron!;
+    const bethlehem = operating.stops.bethlehem!;
+    const forward = operating.routes["hebron-to-bethlehem"]!;
+    const backward = operating.routes["bethlehem-to-hebron"]!;
+    const hebronPlace = { label: hebron.name_en, lat: String(hebron.latitude), lng: String(hebron.longitude) };
+    const bethlehemPlace = { label: bethlehem.name_en, lat: String(bethlehem.latitude), lng: String(bethlehem.longitude) };
+
     await tx.driverRoute.create({
       data: {
         driver_id: driver1.id,
-        origin_label: "Hebron / PPU / Bab Al-Zawiya",
-        origin_lat: "31.532600",
-        origin_lng: "35.099800",
-        destination_label: "Bethlehem",
-        destination_lat: "31.705400",
-        destination_lng: "35.202400",
-        corridor_key: LOCKED_CORRIDOR_KEY,
+        origin_label: hebronPlace.label,
+        origin_lat: hebronPlace.lat,
+        origin_lng: hebronPlace.lng,
+        destination_label: bethlehemPlace.label,
+        destination_lat: bethlehemPlace.lat,
+        destination_lng: bethlehemPlace.lng,
+        corridor_key: "hebron-to-bethlehem",
         seats_available: 2,
         parcel_capacity_available: 5,
-        route_version_id: routeVersion.id,
+        route_version_id: forward.current_version_id,
         departure_at: schedule.legacyDeparture,
         availability_window_end: schedule.legacyWindowEnd,
         total_seats: 3,
@@ -423,13 +434,14 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
     await tx.driverRoute.create({
       data: {
         driver_id: driver2.id,
-        origin_label: "Bethlehem",
-        origin_lat: "31.705400",
-        origin_lng: "35.202400",
-        destination_label: "Hebron / PPU / Bab Al-Zawiya",
-        destination_lat: "31.532600",
-        destination_lng: "35.099800",
-        corridor_key: LOCKED_CORRIDOR_KEY,
+        origin_label: bethlehemPlace.label,
+        origin_lat: bethlehemPlace.lat,
+        origin_lng: bethlehemPlace.lng,
+        destination_label: hebronPlace.label,
+        destination_lat: hebronPlace.lat,
+        destination_lng: hebronPlace.lng,
+        corridor_key: "bethlehem-to-hebron",
+        route_version_id: backward.current_version_id,
         seats_available: 1,
         parcel_capacity_available: 8,
         status: "inactive"
@@ -513,12 +525,15 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
     await tx.passengerRequest.create({
       data: {
         passenger_id: passenger.id,
-        pickup_label: "PPU Main Gate",
-        pickup_lat: "31.550000",
-        pickup_lng: "35.100000",
-        destination_label: "Bethlehem Center",
-        destination_lat: "31.705400",
-        destination_lng: "35.202400",
+        pickup_label: hebronPlace.label,
+        pickup_lat: hebronPlace.lat,
+        pickup_lng: hebronPlace.lng,
+        destination_label: bethlehemPlace.label,
+        destination_lat: bethlehemPlace.lat,
+        destination_lng: bethlehemPlace.lng,
+        route_version_id: forward.current_version_id,
+        pickup_details: "PPU main gate",
+        dropoff_details: "Bethlehem Center, Manger Square",
         preferred_time: schedule.legacyDeparture,
         passenger_count: 1,
         status: "pending",
@@ -529,9 +544,11 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
     const order = await tx.merchantOrder.create({
       data: {
         merchant_id: merchant.id,
-        pickup_label: "Hebron Merchant Pickup",
-        pickup_lat: "31.532600",
-        pickup_lng: "35.099800",
+        pickup_label: hebronPlace.label,
+        pickup_lat: hebronPlace.lat,
+        pickup_lng: hebronPlace.lng,
+        route_version_id: forward.current_version_id,
+        pickup_details: "Demo merchant store, Ein Sarah Street",
         status: "submitted"
       }
     });
@@ -548,9 +565,11 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
       await tx.parcel.create({
         data: {
           order_id: order.id,
-          destination_label: destination,
-          destination_lat: "31.705400",
-          destination_lng: "35.202400",
+          destination_label: bethlehemPlace.label,
+          destination_lat: bethlehemPlace.lat,
+          destination_lng: bethlehemPlace.lng,
+          route_version_id: forward.current_version_id,
+          dropoff_details: destination,
           size: index === 0 ? "M" : "S",
           priority: index < 2 ? "high" : "normal",
           status: "pending"
@@ -605,6 +624,11 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
       parcels: parcelDestinations.length,
       scenarios: 3,
       route_version_id: routeVersion.id,
+      operating_route: {
+        service_route_id: forward.id,
+        route_version_id: forward.current_version_id,
+        routes_created: operating.createdRoutes
+      },
       stops: {
         origin: originStop.id,
         passenger_pickup: passengerPickupStop.id,

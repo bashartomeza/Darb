@@ -53,7 +53,8 @@ const expected = {
   "20261102100000_community_reports": "6fb5d924b9e0a59dac66175e17800bb0176c7ece7742b25330758b6862ad5ef5",
   "20261102120000_rename_masari_to_darb": "61daa994d081419d3e68f3f0450af1c815450da9c62e6cf44f842d22cf40bdf3",
   "20261103120000_passenger_request_selected_route": "9402249f9f16bf1a4734e1330e5edb771a2f2abe60db5d64b72784e81da1ce3c",
-  "20261103130000_passenger_assistant_history": "c7bea5dd1b8e4511c3aa7467c2039740352d02355e00d5a360c3fb028d0db728"
+  "20261103130000_passenger_assistant_history": "c7bea5dd1b8e4511c3aa7467c2039740352d02355e00d5a360c3fb028d0db728",
+  "20261104120000_route_based_orders": "c23ba119616d43914d4efbf8f4c9d2e57b2993328230b7d6468522f66b504376"
 };
 
 function normalizedChecksum(path) {

@@ -8,8 +8,10 @@ import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
 import { MatchStatus, TripStatus } from "../generated/prisma/enums.js";
 import { advanceLegacyTrip } from "../services/tripLifecycle.js";
 import { releaseLegacyCapacity } from "../services/legacyCapacity.js";
-import { legacyPassengerCreationService } from "../services/legacyPassengerCreation.js";
+import { legacyPassengerCreationService, passengerRequestInclude } from "../services/legacyPassengerCreation.js";
+import { detailsSchema, routeFields, serviceRouteIdSchema, type RouteSummary } from "../services/operatingRoutes.js";
 
+/** Older app builds: coordinates for each end; mapped to the Hebron → Bethlehem route. */
 const createPassengerRequestSchema = z.object({
   pickup_label: z.string().min(1),
   pickup_lat: latitudeSchema,
@@ -21,11 +23,26 @@ const createPassengerRequestSchema = z.object({
   passenger_count: z.coerce.number().int().min(1).max(4),
   selected_driver_route_id: z.string().trim().min(1).max(191).optional()
 });
+/** Route-based body: a predefined route and the exact pickup and drop-off as text. */
+const createRoutePassengerRequestSchema = z.object({
+  service_route_id: serviceRouteIdSchema,
+  pickup_details: detailsSchema,
+  dropoff_details: detailsSchema,
+  preferred_time: z.coerce.date(),
+  passenger_count: z.coerce.number().int().min(1).max(4),
+  selected_driver_route_id: z.string().trim().min(1).max(191).optional()
+});
+
+export function parsePassengerRequestBody(body: unknown) {
+  return body && typeof body === "object" && "service_route_id" in body
+    ? createRoutePassengerRequestSchema.parse(body)
+    : createPassengerRequestSchema.parse(body);
+}
 const idempotencyKeySchema = z.string().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/).optional();
 
 export const passengerRouter = Router();
 
-function serializeLegacyPassengerRequest(value: Record<string, unknown>) {
+export function serializeLegacyPassengerRequest(value: Record<string, unknown>) {
   return {
     id: value.id,
     passenger_id: value.passenger_id,
@@ -40,6 +57,9 @@ function serializeLegacyPassengerRequest(value: Record<string, unknown>) {
     status: value.status,
     source: value.source,
     selected_driver_route_id: value.selected_driver_route_id ?? null,
+    ...routeFields(value.route_version as RouteSummary),
+    pickup_details: value.pickup_details ?? null,
+    dropoff_details: value.dropoff_details ?? null,
     created_at: value.created_at
   };
 }
@@ -55,7 +75,7 @@ passengerRouter.use("/passenger", requireAuth, requireRole("passenger"));
 
 passengerRouter.post("/passenger/requests", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const input = createPassengerRequestSchema.parse(req.body);
+    const input = parsePassengerRequestBody(req.body);
     const idempotencyKey = idempotencyKeySchema.parse(req.header("idempotency-key"));
     const result = await legacyPassengerCreationService.create(input, { id: req.user!.id, idempotencyKey });
     res.status(201).json({ request: serializeLegacyPassengerRequest(result.resource as unknown as Record<string, unknown>) });
@@ -68,6 +88,7 @@ passengerRouter.get("/passenger/requests", async (req: AuthenticatedRequest, res
   try {
     const requests = await prisma.passengerRequest.findMany({
       where: { passenger_id: req.user!.id, canonical_entry_version: null },
+      include: passengerRequestInclude,
       orderBy: { created_at: "desc" }
     });
     res.json({ requests: requests.map((request) => serializeLegacyPassengerRequest(request as unknown as Record<string, unknown>)) });
@@ -84,6 +105,7 @@ passengerRouter.get("/passenger/requests/active", async (req: AuthenticatedReque
         canonical_entry_version: null,
         status: { in: ["pending", "matched", "accepted", "picked_up", "in_transit", "delivered"] }
       },
+      include: passengerRequestInclude,
       orderBy: { created_at: "desc" }
     });
     res.json({ requests: requests.map((request) => serializeLegacyPassengerRequest(request as unknown as Record<string, unknown>)) });
@@ -96,7 +118,8 @@ passengerRouter.get("/passenger/requests/:id", async (req: AuthenticatedRequest,
   try {
     const requestId = routeParam(req.params.id);
     const request = await prisma.passengerRequest.findFirst({
-      where: { id: requestId, passenger_id: req.user!.id, canonical_entry_version: null }
+      where: { id: requestId, passenger_id: req.user!.id, canonical_entry_version: null },
+      include: passengerRequestInclude
     });
     if (!request) {
       throw new HttpError(404, "request_not_found");
@@ -164,7 +187,7 @@ passengerRouter.patch("/passenger/requests/:id/cancel", async (req: Authenticate
           },
         });
 
-        const updatedRequest = await tx.passengerRequest.findUniqueOrThrow({ where: { id: existing.id } });
+        const updatedRequest = await tx.passengerRequest.findUniqueOrThrow({ where: { id: existing.id }, include: passengerRequestInclude });
         return updatedRequest;
       }
 
@@ -263,7 +286,7 @@ passengerRouter.patch("/passenger/requests/:id/cancel", async (req: Authenticate
         },
       });
 
-      return tx.passengerRequest.findUniqueOrThrow({ where: { id: existing.id } });
+      return tx.passengerRequest.findUniqueOrThrow({ where: { id: existing.id }, include: passengerRequestInclude });
     });
 
     res.json({ request: serializeLegacyPassengerRequest(request as unknown as Record<string, unknown>) });

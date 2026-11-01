@@ -8,11 +8,15 @@ import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { signAuthToken } from "../middleware/auth.js";
 import { LOCKED_CORRIDOR_KEY } from "../modules/demoReset.js";
+import { ensurePredefinedRoutes } from "../services/operatingRoutes.js";
 
 // Never accept a remote or unconfirmed database for destructive synthetic fixtures.
 const db = new URL(process.env.DATABASE_URL!);
 assert(["127.0.0.1", "localhost"].includes(db.hostname) && db.pathname.endsWith("_ci") &&
   process.env.MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE === "true", "explicit_disposable_database_required");
+// Legacy demand rides the predefined Hebron → Bethlehem route; supply must be on it to match.
+await ensurePredefinedRoutes(prisma);
+const HEBRON_TO_BETHLEHEM = await prisma.serviceRoute.findUniqueOrThrow({ where: { route_key: "hebron-to-bethlehem" } });
 const prefix = `task10_${randomUUID()}`;
 const actors = { merchant: `${prefix}_m`, other: `${prefix}_o`, driver: `${prefix}_d`, stranger: `${prefix}_s` };
 const tokens: Record<string, string> = {};
@@ -98,7 +102,7 @@ try {
     tokens[key] = signAuthToken({ id, role, sessionId: session.id, securityVersion: 1 });
   }
   const profile = await prisma.driverProfile.create({ data: { user_id: actors.driver, vehicle_type: "van", seats_total: 4, parcel_capacity: 20, verified: true } });
-  const route = await prisma.driverRoute.create({ data: { driver_id: profile.id, origin_label: "Hebron / PPU / Bab Al-Zawiya", origin_lat: "31.532600", origin_lng: "35.099800", destination_label: "Bethlehem", destination_lat: "31.705400", destination_lng: "35.202400", corridor_key: LOCKED_CORRIDOR_KEY, seats_available: 4, parcel_capacity_available: 20 } }); routeId = route.id;
+  const route = await prisma.driverRoute.create({ data: { driver_id: profile.id, origin_label: "Hebron / PPU / Bab Al-Zawiya", origin_lat: "31.532600", origin_lng: "35.099800", destination_label: "Bethlehem", destination_lat: "31.705400", destination_lng: "35.202400", corridor_key: LOCKED_CORRIDOR_KEY, route_version_id: HEBRON_TO_BETHLEHEM.current_version_id, seats_available: 4, parcel_capacity_available: 20 } }); routeId = route.id;
   await available();
   const main = await demand(true);
   const initialRace = await Promise.all(Array.from({ length: 8 }, () => match(main.id)));
@@ -246,7 +250,7 @@ try {
   const recoveryRoute = await prisma.driverRoute.create({ data: {
     driver_id: profile.id, origin_label: "Hebron / PPU / Bab Al-Zawiya", origin_lat: "31.532600", origin_lng: "35.099800",
     destination_label: "Bethlehem", destination_lat: "31.705400", destination_lng: "35.202400",
-    corridor_key: LOCKED_CORRIDOR_KEY, seats_available: 4, parcel_capacity_available: 20
+    corridor_key: LOCKED_CORRIDOR_KEY, route_version_id: HEBRON_TO_BETHLEHEM.current_version_id, seats_available: 4, parcel_capacity_available: 20
   } });
   routeId = recoveryRoute.id; await available();
   const standalone = await call("other", "POST", "/merchant/orders", { ...payload, parcels: [payload.parcels[0], payload.parcels[0]] });

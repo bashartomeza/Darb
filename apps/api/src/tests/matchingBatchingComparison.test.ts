@@ -16,7 +16,8 @@ const prismaMock = vi.hoisted(() => ({
   parcelBatch: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   parcelBatchOrder: { findMany: vi.fn(), updateMany: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
-  comparisonRun: { create: vi.fn(), findUnique: vi.fn() }
+  comparisonRun: { create: vi.fn(), findUnique: vi.fn() },
+  serviceRoute: { findUnique: vi.fn() }
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -24,6 +25,7 @@ vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
 const jwtSecret = "test-only-jwt-secret-with-at-least-thirty-two-characters";
 
 const { createApp } = await import("../app.js");
+const { findOperatingRoute } = await import("./operatingRouteFixture.js");
 
 type Role = "passenger" | "driver" | "merchant" | "admin";
 
@@ -153,7 +155,8 @@ describe("matching, batching, comparison", () => {
     prismaMock.passengerRequest.update.mockResolvedValue({});
     prismaMock.passengerRequest.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.$transaction.mockImplementation((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
-
+    // Coordinate searches ride the predefined Hebron → Bethlehem route.
+    prismaMock.serviceRoute.findUnique.mockImplementation(findOperatingRoute());
   });
 
   it("route-compatible driver scores higher than nearest wrong-direction driver", () => {

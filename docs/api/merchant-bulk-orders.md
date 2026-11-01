@@ -49,9 +49,13 @@ Body `{ "csv": "...", "skip_invalid": false, "auto_batch": false }` and a requir
 
 Header row required. Columns: `pickup_label, pickup_lat, pickup_lng, destination_label, destination_lat, destination_lng, size, priority` and optional `order_ref`. Comma, semicolon or tab separated (spreadsheet paste works). Rows sharing a non-empty `order_ref` and the same pickup become one multi-parcel order; every other row is its own order. `size` is S/M/L (also small/medium/large and Arabic words); `priority` defaults to `normal`. Arabic-Indic digits are accepted in numbers.
 
+### Route-based CSV format
+
+A header containing `route_key` selects the route-based format (`docs/routes/route-based-orders.md`): columns `route_key, pickup_details, dropoff_details, size, priority` and optional `receiver_name, receiver_phone`. Rows sharing a `route_key` and `pickup_details` become one order on that route. Details are 3-300 characters; receiver phones are normalised to E.164. Rows naming an unknown, retired or turned-off route are reported as `route_unavailable` on the `route_key` field and handled like any other invalid row. Preview orders add `route_key`, `service_route_id`, `route_name_ar`, `route_name_en` and `pickup_details`. The coordinate format above is still accepted; its orders ride `hebron-to-bethlehem`.
+
 ### Row errors
 
-`errors[]` entries: `{ row, field, code, message_en, message_ar }`. `row` is the 1-based spreadsheet row (header = 1); `0` means the whole file. Codes: `csv_empty`, `csv_too_large`, `csv_too_many_rows`, `csv_missing_column`, `csv_unterminated_quote`, `row_missing_field`, `row_invalid_number`, `row_out_of_range`, `row_too_long`, `row_invalid_size`, `row_invalid_priority`, `row_order_ref_pickup_mismatch`, `row_too_many_parcels`.
+`errors[]` entries: `{ row, field, code, message_en, message_ar }`. `row` is the 1-based spreadsheet row (header = 1); `0` means the whole file. Codes: `csv_empty`, `csv_too_large`, `csv_too_many_rows`, `csv_missing_column`, `csv_unterminated_quote`, `row_missing_field`, `row_invalid_number`, `row_out_of_range`, `row_too_long`, `row_invalid_size`, `row_invalid_priority`, `row_order_ref_pickup_mismatch`, `row_too_many_parcels`, and for the route-based format `row_invalid_route_key`, `row_invalid_length`, `row_invalid_phone`, `route_unavailable`.
 
 ## Flutter merchant app
 
