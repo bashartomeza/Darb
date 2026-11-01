@@ -1,5 +1,5 @@
 /*
- * Component layer for the Masari admin console.
+ * Component layer for the Darb admin console.
  *
  * Structure mirrors the Stitch desktop screens: a fixed inline-start rail, a
  * sticky top bar, and a 12-column bento canvas. Everything is expressed with
@@ -64,11 +64,23 @@
   flex: none;
 }
 
+.sidenav__logo-img,
+.login-card__logo {
+  display: block;
+  block-size: auto;
+  max-inline-size: 100%;
+  /* The PNG has an opaque white background; multiply lets the grey card show through. */
+  mix-blend-mode: multiply;
+}
+
+.sidenav__logo-img { inline-size: 132px; }
+.login-card__logo { inline-size: 168px; margin-block-end: var(--space-base); }
+
 .sidenav__brand-name {
   font-size: var(--headline-md-size);
   line-height: 1.1;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .sidenav__brand-subtitle {
@@ -128,10 +140,10 @@
 }
 
 .sidenav__item.is-active {
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 700;
   border-inline-start-color: var(--primary);
-  background: color-mix(in srgb, var(--primary-container) 10%, transparent);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
 .sidenav__item svg {
@@ -152,9 +164,9 @@
 }
 
 .sidenav__footer .btn.is-active {
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 700;
-  background: color-mix(in srgb, var(--primary-container) 10%, transparent);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
 /* --------------------------------------------------------------- topbar -- */
@@ -187,7 +199,7 @@
   font-size: var(--headline-sm-size);
   line-height: var(--headline-sm-line);
   font-weight: 600;
-  color: var(--primary);
+  color: var(--primary-text);
   white-space: nowrap;
   margin-inline-end: var(--space-sm);
 }
@@ -358,10 +370,9 @@
 /* ---------------------------------------------------------------- cards -- */
 
 .card {
-  background: var(--surface-container-lowest);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 20%, transparent);
+  background: var(--card);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--elevation-1);
   display: flex;
   flex-direction: column;
   min-inline-size: 0;
@@ -478,10 +489,10 @@ button.card__row:focus-visible {
   border-radius: var(--radius-lg);
 }
 
-.kpi__icon--info { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); }
+.kpi__icon--info { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary-text); }
 .kpi__icon--warning { background: color-mix(in srgb, var(--tertiary) 10%, transparent); color: var(--tertiary); }
 .kpi__icon--success { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success); }
-.kpi__icon--danger { background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error); }
+.kpi__icon--danger { background: color-mix(in srgb, var(--error) 10%, transparent); color: var(--error-text); }
 .kpi__icon--neutral { background: color-mix(in srgb, var(--secondary) 12%, transparent); color: var(--secondary); }
 
 .kpi__delta {
@@ -490,9 +501,9 @@ button.card__row:focus-visible {
 }
 
 .kpi__delta--success { color: var(--success); }
-.kpi__delta--danger { color: var(--error); }
+.kpi__delta--danger { color: var(--error-text); }
 .kpi__delta--warning { color: var(--tertiary); }
-.kpi__delta--info { color: var(--primary); }
+.kpi__delta--info { color: var(--primary-text); }
 .kpi__delta--neutral { color: var(--on-surface-variant); }
 
 .kpi__label {
@@ -534,10 +545,10 @@ button.card__row:focus-visible {
   line-height: var(--body-sm-line);
 }
 
-.kpi__status--danger { color: var(--error); }
+.kpi__status--danger { color: var(--error-text); }
 .kpi__status--warning { color: var(--tertiary); }
 .kpi__status--success { color: var(--success); }
-.kpi__status--info { color: var(--primary); }
+.kpi__status--info { color: var(--primary-text); }
 
 .overview-resource-state {
   min-block-size: 112px;
@@ -554,7 +565,7 @@ button.card__row:focus-visible {
 }
 
 .overview-resource-note--error {
-  color: var(--error);
+  color: var(--error-text);
   background: color-mix(in srgb, var(--error-container) 30%, transparent);
 }
 
@@ -639,8 +650,8 @@ button.card__row:focus-visible {
 }
 
 .badge--neutral { background: var(--surface-container-high); color: var(--on-surface-variant); }
-.badge--info { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); }
-.badge--success { background: color-mix(in srgb, var(--success) 14%, transparent); color: #2e7d32; }
+.badge--info { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary-text); }
+.badge--success { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
 .badge--warning { background: color-mix(in srgb, var(--tertiary) 12%, transparent); color: var(--tertiary); }
 .badge--danger { background: var(--error-container); color: var(--on-error-container); }
 
@@ -685,7 +696,7 @@ button.card__row:focus-visible {
   background: color-mix(in srgb, var(--error-container) 40%, transparent);
 }
 
-.alert--danger .alert__icon { color: var(--error); }
+.alert--danger .alert__icon { color: var(--error-text); }
 
 .alert--warning {
   border-inline-start-color: var(--tertiary);
@@ -694,7 +705,7 @@ button.card__row:focus-visible {
 .alert--warning .alert__icon { color: var(--tertiary); }
 
 .alert--info { border-inline-start-color: var(--primary); }
-.alert--info .alert__icon { color: var(--primary); }
+.alert--info .alert__icon { color: var(--primary-text); }
 
 .alert__icon { flex: none; }
 
@@ -836,7 +847,7 @@ button.card__row:focus-visible {
 
 .status-rail__step.is-done {
   background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .status-rail__step.is-done .status-rail__dot { opacity: 1; }
@@ -941,7 +952,7 @@ button.card__row:focus-visible {
   block-size: 56px;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--primary) 8%, transparent);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .empty--compact .empty__icon {
@@ -1025,7 +1036,7 @@ button.card__row:focus-visible {
 
 .btn--secondary {
   background: color-mix(in srgb, var(--primary) 10%, transparent);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .btn--secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 18%, transparent); }
 
@@ -1039,7 +1050,7 @@ button.card__row:focus-visible {
 .btn--destructive {
   background: transparent;
   border-color: color-mix(in srgb, var(--error) 40%, transparent);
-  color: var(--error);
+  color: var(--error-text);
 }
 .btn--destructive:hover:not(:disabled) { background: color-mix(in srgb, var(--error-container) 50%, transparent); }
 
@@ -1049,12 +1060,12 @@ button.card__row:focus-visible {
   min-block-size: auto;
   padding: var(--space-xs) var(--space-base);
 }
-.btn--ghost:hover:not(:disabled) { background: var(--surface-container-low); color: var(--primary); }
+.btn--ghost:hover:not(:disabled) { background: var(--surface-container-low); color: var(--primary-text); }
 
-.btn--signout { color: var(--error); }
+.btn--signout { color: var(--error-text); }
 .btn--signout:hover:not(:disabled) {
   background: color-mix(in srgb, var(--error-container) 40%, transparent);
-  color: var(--error);
+  color: var(--error-text);
 }
 
 .icon-btn {
@@ -1204,16 +1215,14 @@ button.card__row:focus-visible {
   display: grid;
   place-items: center;
   padding: var(--space-md);
-  background:
-    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--tertiary) 45%, transparent) 0, transparent 32%),
-    linear-gradient(135deg, var(--primary) 0%, #3d1a00 72%);
+  background: var(--background);
 }
 
 .login-card {
   inline-size: min(460px, 100%);
-  background: var(--surface-container-lowest);
+  background: var(--card);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--elevation-3);
   padding: var(--space-lg);
   display: grid;
   gap: var(--space-sm);
@@ -1409,7 +1418,7 @@ button.card__row:focus-visible {
 
 .route-workspace__tabs [role="tab"][aria-selected="true"] {
   border-block-end-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .route-workspace__tabs [role="tab"]:focus-visible,
@@ -1539,7 +1548,7 @@ button.card__row:focus-visible {
   opacity: 0.45;
 }
 
-.route-action-menu__items [role="menuitem"].is-destructive { color: var(--error); }
+.route-action-menu__items [role="menuitem"].is-destructive { color: var(--error-text); }
 
 .route-action-menu__separator {
   display: block;
@@ -1557,7 +1566,7 @@ button.card__row:focus-visible {
 
 .field__error {
   margin: 0;
-  color: var(--error);
+  color: var(--error-text);
   font-size: var(--label-sm-size);
 }
 
@@ -1748,7 +1757,7 @@ button.card__row:focus-visible {
 }
 
 .route-versions__current {
-  color: var(--primary);
+  color: var(--primary-text);
   font-size: var(--label-sm-size);
   font-weight: 700;
 }
@@ -1863,7 +1872,7 @@ button.card__row:focus-visible {
   cursor: pointer;
   font-size: var(--label-lg-size);
   font-weight: 600;
-  color: var(--primary);
+  color: var(--primary-text);
   list-style-position: inside;
 }
 
