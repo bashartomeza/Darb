@@ -5,6 +5,7 @@ import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/masari_back_button.dart';
 import '../../../core/widgets/masari_card.dart';
 import '../../../core/widgets/route_chip.dart';
@@ -22,66 +23,70 @@ class PassengerParcelsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final parcels = ref.watch(passengerParcelsProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.myParcelsTitle),
-        leading: const MasariBackButton(fallback: '/passenger'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const ValueKey('sendNewParcel'),
-        onPressed: () => context.push('/passenger/parcels/new'),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.sendParcelTitle),
-      ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () =>
-              ref.read(passengerParcelsProvider.notifier).refresh(),
-          child: parcels.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, _) => ListView(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(AppTokens.spaceLarge),
-                  child: Column(
-                    children: [
-                      Text(l10n.requestFailed),
-                      FilledButton(
-                        onPressed: () => ref
-                            .read(passengerParcelsProvider.notifier)
-                            .refresh(),
-                        child: Text(l10n.retry),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            data: (items) => items.isEmpty
-                ? ListView(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(AppTokens.spaceLarge),
-                        child: Text(
-                          l10n.myParcelsEmpty,
-                          textAlign: TextAlign.center,
+    return ForegroundRefresh(
+      refresh: () =>
+          ref.read(passengerParcelsProvider.notifier).refresh(background: true),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.myParcelsTitle),
+          leading: const MasariBackButton(fallback: '/passenger'),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          key: const ValueKey('sendNewParcel'),
+          onPressed: () => context.push('/passenger/parcels/new'),
+          icon: const Icon(Icons.add),
+          label: Text(l10n.sendParcelTitle),
+        ),
+        body: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: () =>
+                ref.read(passengerParcelsProvider.notifier).refresh(),
+            child: parcels.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, _) => ListView(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(AppTokens.spaceLarge),
+                    child: Column(
+                      children: [
+                        Text(l10n.requestFailed),
+                        FilledButton(
+                          onPressed: () => ref
+                              .read(passengerParcelsProvider.notifier)
+                              .refresh(),
+                          child: Text(l10n.retry),
                         ),
-                      ),
-                    ],
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppTokens.spaceLarge,
-                      AppTokens.spaceMedium,
-                      AppTokens.spaceLarge,
-                      96,
+                      ],
                     ),
-                    itemCount: items.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppTokens.spaceMedium),
-                    itemBuilder: (context, index) =>
-                        ParcelCard(parcel: items[index]),
                   ),
+                ],
+              ),
+              data: (items) => items.isEmpty
+                  ? ListView(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(AppTokens.spaceLarge),
+                          child: Text(
+                            l10n.myParcelsEmpty,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppTokens.spaceLarge,
+                        AppTokens.spaceMedium,
+                        AppTokens.spaceLarge,
+                        96,
+                      ),
+                      itemCount: items.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppTokens.spaceMedium),
+                      itemBuilder: (context, index) =>
+                          ParcelCard(parcel: items[index]),
+                    ),
+            ),
           ),
         ),
       ),

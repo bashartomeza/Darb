@@ -1,3 +1,4 @@
+import '../../canonical_assignments/application/canonical_assignment_controller.dart';
 import '../../../core/widgets/masari_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -393,6 +394,9 @@ class _MerchantRouteOrderScreenState
                   idempotencyKey: bundle.idempotencyKey,
                 ),
           );
+      // The order is saved and enters matching server-side; make the merchant's
+      // assignment list re-read so it appears without a manual pull.
+      ref.invalidate(merchantCanonicalAssignmentsProvider);
       if (mounted) setState(() => _result = result);
     } catch (error) {
       if (error is ApiException && error.statusCode == 404) {
