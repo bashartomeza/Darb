@@ -100,6 +100,23 @@ describe("legacy passenger creation recovery", () => {
     });
   });
 
+  it("persists and returns the place names together with their coordinates", async () => {
+    const payload = { ...body(), pickup_label: "جامعة بوليتكنك فلسطين", destination_label: "Selected place" };
+    const response = await create("passenger_names", payload, "names-key-1");
+    expect(response.status).toBe(201);
+    expect(response.body.request).toMatchObject({
+      pickup_label: "جامعة بوليتكنك فلسطين", pickup_lat: "31.532600", pickup_lng: "35.099800",
+      destination_label: "Selected place", destination_lat: "31.705400", destination_lng: "35.202400",
+    });
+    expect(rows[0]).toMatchObject({ pickup_label: "جامعة بوليتكنك فلسطين", destination_label: "Selected place" });
+  });
+
+  it("rejects a request without a place name instead of saving bare coordinates", async () => {
+    const response = await create("passenger_noname", { ...body(), pickup_label: "" }, "names-key-2");
+    expect(response.status).toBe(400);
+    expect(rows).toHaveLength(0);
+  });
+
   it("rolls resource creation back if mandatory audit insertion fails, then safely retries", async () => {
     const payload = body();
     db.auditEvent.create.mockRejectedValueOnce(new Error("audit unavailable"));
