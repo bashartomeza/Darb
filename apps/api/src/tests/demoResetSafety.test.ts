@@ -8,9 +8,9 @@ import {
 
 const base = {
   appEnv: "demo",
-  databaseUrl: "mysql://user:secret@localhost:3306/masari_demo_ci",
+  databaseUrl: "mysql://user:secret@localhost:3306/darb_demo_ci",
   demoFeaturesEnabled: true,
-  demoResetAllowedDatabases: ["masari_demo_ci"]
+  demoResetAllowedDatabases: ["darb_demo_ci"]
 };
 
 describe("demo reset database safety", () => {
@@ -19,17 +19,17 @@ describe("demo reset database safety", () => {
     expect(() => assertDemoResetDatabaseSafe(base)).not.toThrow();
   });
 
-  it("permanently protects masari even if it is accidentally allow-listed", () => {
+  it("permanently protects darb even if it is accidentally allow-listed", () => {
     const result = evaluateDemoResetSafety({
       ...base,
-      databaseUrl: "mysql://user:secret@localhost:3306/masari",
-      demoResetAllowedDatabases: ["masari"]
+      databaseUrl: "mysql://user:secret@localhost:3306/darb",
+      demoResetAllowedDatabases: ["darb"]
     });
     expect(result).toEqual({ allowed: false, reason: "protected_database" });
     expect(evaluateDemoResetSafety({
       ...base,
-      databaseUrl: "mysql://user:secret@localhost:3306/MASARI",
-      demoResetAllowedDatabases: ["MASARI"]
+      databaseUrl: "mysql://user:secret@localhost:3306/DARB",
+      demoResetAllowedDatabases: ["DARB"]
     })).toEqual({ allowed: false, reason: "protected_database" });
   });
 
@@ -45,8 +45,8 @@ describe("demo reset database safety", () => {
   });
 
   it("extracts only bounded MySQL database identifiers", () => {
-    expect(databaseNameFromUrl(base.databaseUrl)).toBe("masari_demo_ci");
-    expect(databaseNameFromUrl("postgres://user:secret@localhost/masari_demo_ci")).toBeNull();
+    expect(databaseNameFromUrl(base.databaseUrl)).toBe("darb_demo_ci");
+    expect(databaseNameFromUrl("postgres://user:secret@localhost/darb_demo_ci")).toBeNull();
     expect(databaseNameFromUrl("mysql://user:secret@localhost/unsafe/name")).toBeNull();
   });
 });

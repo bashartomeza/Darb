@@ -1,5 +1,5 @@
 # Starts the local test environment: API (port 3000) and Admin site (port 5173) on the
-# disposable masari_demo database. State, logs and one-time codes live in
+# disposable darb_demo database. State, logs and one-time codes live in
 # .staging-data/test-env (git-ignored).
 #
 #   pwsh -NoProfile -File scripts/test-env/start.ps1
@@ -24,7 +24,7 @@ $values = @{}
 foreach ($line in Get-Content (Join-Path $root "apps\api\.env")) {
   if ($line -match '^([A-Z0-9_]+)=(.*)$') { $values[$Matches[1]] = $Matches[2].Trim('"') }
 }
-$databaseUrl = $values["DATABASE_URL"] -replace "/[A-Za-z0-9_]+(\?|$)", "/masari_demo`$1"
+$databaseUrl = $values["DATABASE_URL"] -replace "/[A-Za-z0-9_]+(\?|$)", "/darb_demo`$1"
 
 # Admin site first, with a clean environment (it reads its own apps/admin/.env.local).
 $adminProcess = Start-Process -FilePath (Get-Command npm.cmd).Source `
@@ -37,7 +37,7 @@ foreach ($key in $values.Keys) { Set-Item -Path "Env:$key" -Value $values[$key] 
 $env:DATABASE_URL = $databaseUrl
 $env:APP_ENV = "demo"
 $env:PORT = "$ApiPort"
-$env:DEMO_RESET_ALLOWED_DATABASES = "masari_demo"
+$env:DEMO_RESET_ALLOWED_DATABASES = "darb_demo"
 $env:TEST_OTP_FILE = Join-Path $state "otp.txt"
 # Email sign-up needs a secret for its one-time tokens; keep one per test machine.
 $pepperFile = Join-Path $state "auth-pepper.txt"

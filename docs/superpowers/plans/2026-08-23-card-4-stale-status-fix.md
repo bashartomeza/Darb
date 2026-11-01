@@ -14,7 +14,7 @@
 
 - Stay on `admin/user-management` and update draft PR #28 only.
 - Do not merge, begin Card 5, create a migration, or change the Prisma schema.
-- Do not mutate real `masari`; use only `masari_users_qa` for status mutation testing.
+- Do not mutate real `darb`; use only `darb_users_qa` for status mutation testing.
 - Preserve pending driver/merchant, self-Admin, last-active-Admin, session-revocation, and authorization protections.
 - Keep API >= 327, Admin >= 95, Mobile >= 241, and security findings at zero.
 
@@ -75,7 +75,7 @@
 - No tracked production files beyond Tasks 1-3.
 
 **Interfaces:**
-- Consumes: `masari_users_qa`, QA API 3100, QA Admin 5174.
+- Consumes: `darb_users_qa`, QA API 3100, QA Admin 5174.
 - Produces: one active synthetic stale-test user and complete verification evidence.
 
 - [x] Run the live sequence: both snapshots active, Tab B suspend 200, stale Tab A disable 409, authoritative state suspended.

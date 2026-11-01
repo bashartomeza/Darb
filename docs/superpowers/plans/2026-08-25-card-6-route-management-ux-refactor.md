@@ -17,7 +17,7 @@
 - Backend route lifecycle, current-version fencing, draft `expected_revision`, idempotency, authorization, audit, and validation semantics remain authoritative and unchanged.
 - `ServiceRoute`, `ServiceRouteVersion`, `Stop`, and `RouteVersionStop` remain the existing data model; Prisma schema is unchanged, Migration 22 does not exist, and total migrations remain 21.
 - `ROUTE_MANAGEMENT_ENABLED` and `VITE_ROUTE_MANAGEMENT_ENABLED` remain unchanged and are enabled process-locally only for QA.
-- Maps, providers, GPS, geocoding, geometry persistence, realtime, legacy `DriverRoute`, mobile lifecycle, matching, batching, payments, Card 7, and the real `masari` database are out of scope.
+- Maps, providers, GPS, geocoding, geometry persistence, realtime, legacy `DriverRoute`, mobile lifecycle, matching, batching, payments, Card 7, and the real `darb` database are out of scope.
 - Maps remain a small honest unavailable capability; no map library, provider credential, picker, or verified-location claim may be added.
 - Full Arabic/English coverage is required; Arabic defaults to RTL, English to LTR, and route keys, IDs, coordinates, and technical values remain LTR-isolated.
 - Every stale mutation shows localized contextual feedback, suppresses success, reloads authoritative data, and preserves the selected route and logical tab when reload succeeds.
@@ -457,7 +457,7 @@ git commit -m "test(admin): cover route management workflow"
 
 **Interfaces:**
 - Consumes the complete refactor and existing repository validation/QA scripts.
-- Produces review evidence, exact-head hosted CI evidence, and a fresh `masari_routes_qa` environment on API 3100/Admin 5174.
+- Produces review evidence, exact-head hosted CI evidence, and a fresh `darb_routes_qa` environment on API 3100/Admin 5174.
 
 - [ ] **Step 1: Verify scope and migration invariants**
 
@@ -516,7 +516,7 @@ Push `admin/route-management` normally so PR #30 updates; do not create a PR and
 
 - [ ] **Step 7: Recreate only the disposable QA database**
 
-Stop the old Card 6 QA processes. Use the guarded Card 6 QA scripts to clean and prepare exactly `masari_routes_qa`, never `masari`; deploy the existing 21 migrations only to the disposable database; source the Admin password process-locally without printing it; run the exact fixture verifier before manual mutation and confirm all 12 categories.
+Stop the old Card 6 QA processes. Use the guarded Card 6 QA scripts to clean and prepare exactly `darb_routes_qa`, never `darb`; deploy the existing 21 migrations only to the disposable database; source the Admin password process-locally without printing it; run the exact fixture verifier before manual mutation and confirm all 12 categories.
 
 - [ ] **Step 8: Start fresh QA services and perform smoke checks**
 
@@ -524,7 +524,7 @@ Start API with `ROUTE_MANAGEMENT_ENABLED=true`, maps/providers/demo reset disabl
 
 - [ ] **Step 9: Commit any review-only tested corrections and finish evidence**
 
-Use focused commit messages describing actual corrections. Confirm `git status --short` is empty, PR #30 remains open/draft/unmerged, real `masari` was untouched, and report `MANUAL QA READY = YES` and `CARD 6 READINESS = READY_FOR_HUMAN_QA` only after every local, review, security, hosted-CI, and fresh-QA gate is green.
+Use focused commit messages describing actual corrections. Confirm `git status --short` is empty, PR #30 remains open/draft/unmerged, real `darb` was untouched, and report `MANUAL QA READY = YES` and `CARD 6 READINESS = READY_FOR_HUMAN_QA` only after every local, review, security, hosted-CI, and fresh-QA gate is green.
 
 ## Plan Self-Review
 

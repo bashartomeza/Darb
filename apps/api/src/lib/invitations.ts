@@ -163,7 +163,7 @@ export async function findUsableInvitationByCode(
   }
   if (invitation.intended_phone_digest) {
     if (!input.phoneE164 || !input.phoneKey || invitation.phone_digest_version !== input.phoneKey.version) return null;
-    if (!keyedDigestMatches(invitation.intended_phone_digest, "masari:phone", input.phoneE164, input.phoneKey)) return null;
+    if (!keyedDigestMatches(invitation.intended_phone_digest, "darb:phone", input.phoneE164, input.phoneKey)) return null;
   }
   return invitation;
 }

@@ -10,7 +10,7 @@ const apiBaseUrl = `${(process.env.DEMO_API_BASE_URL ?? "http://localhost:3000")
 const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
 let databaseName = "";
 try { databaseName = new URL(process.env.DATABASE_URL).pathname.replace(/^\//, ""); } catch {}
-if (databaseName.toLowerCase() === "masari" || !allowed.includes(databaseName)) {
+if (databaseName.toLowerCase() === "darb" || !allowed.includes(databaseName)) {
   throw new Error("Approvals smoke refuses a database that is not explicitly reset-safe");
 }
 
@@ -30,11 +30,11 @@ async function request(path, { token, method = "GET", body, expected = 200 } = {
 const login = (email, password, expected = 200) => request("/auth/login", { method: "POST", body: { email, password }, expected });
 
 async function run() {
-  const admin = (await login("demo.admin@masari.app", process.env.DEMO_ADMIN_PASSWORD)).token;
+  const admin = (await login("demo.admin@darb.app", process.env.DEMO_ADMIN_PASSWORD)).token;
   const merchantPhone = "+970590000006";
   const driverPhone = "+970590000007";
-  const merchantEmail = "demo.pending.merchant@masari.app";
-  const driverEmail = "demo.rejected.driver@masari.app";
+  const merchantEmail = "demo.pending.merchant@darb.app";
+  const driverEmail = "demo.rejected.driver@darb.app";
 
   // Merchant approval -------------------------------------------------------
   const pendingMerchants = await request("/admin/users?role=merchant&account_status=pending", { token: admin });

@@ -32,7 +32,7 @@
 
 ~~~ts
 it('rejects a non-disposable rehearsal database', async () => {
-  await expect(runAuthMigrationRehearsal({ database: 'masari' }))
+  await expect(runAuthMigrationRehearsal({ database: 'darb' }))
     .rejects.toThrow('disposable_database_required');
 });
 ~~~
@@ -47,7 +47,7 @@ Expected: FAIL because the rehearsal harness is absent.
 
 ~~~ts
 export function assertDisposableDatabase(name: string) {
-  if (!/^masari_auth_rehearsal_[a-z0-9_]+$/.test(name)) {
+  if (!/^darb_auth_rehearsal_[a-z0-9_]+$/.test(name)) {
     throw new Error('disposable_database_required');
   }
 }

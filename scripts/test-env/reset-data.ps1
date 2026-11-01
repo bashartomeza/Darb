@@ -1,4 +1,4 @@
-# Puts the disposable masari_demo database back to the clean test starting state:
+# Puts the disposable darb_demo database back to the clean test starting state:
 # protected demo reset, the three pending/rejected approval accounts, placeholder
 # legal text (which opens driver and shop-owner registration; no invitations are needed).
 # The API must be running (scripts/test-env/start.ps1).
@@ -10,8 +10,8 @@ $values = @{}
 foreach ($line in Get-Content (Join-Path $root "apps\api\.env")) {
   if ($line -match '^([A-Z0-9_]+)=(.*)$') { $values[$Matches[1]] = $Matches[2].Trim('"') }
 }
-$env:DATABASE_URL = $values["DATABASE_URL"] -replace "/[A-Za-z0-9_]+(\?|$)", "/masari_demo`$1"
-$env:DEMO_RESET_ALLOWED_DATABASES = "masari_demo"
+$env:DATABASE_URL = $values["DATABASE_URL"] -replace "/[A-Za-z0-9_]+(\?|$)", "/darb_demo`$1"
+$env:DEMO_RESET_ALLOWED_DATABASES = "darb_demo"
 foreach ($key in $values.Keys) { if ($key -ne "DATABASE_URL") { Set-Item -Path "Env:$key" -Value $values[$key] } }
 $env:APP_ENV = "demo"
 # The shared settings validator requires document uploads whenever public onboarding is on (same as start.ps1).

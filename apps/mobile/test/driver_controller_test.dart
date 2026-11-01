@@ -721,7 +721,7 @@ DriverMatch _match(String status, DateTime createdAt) => DriverMatch(
   id: 'match_$status',
   status: status,
   score: 0.9317,
-  method: 'masari_route_score',
+  method: 'darb_route_score',
   explanation: 'Safe explanation',
   breakdown: const ScoringBreakdown(
     corridorOverlap: 0.95,

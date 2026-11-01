@@ -1,11 +1,11 @@
-name: masari-staging-simulation
+name: darb-staging-simulation
 
 services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_DATABASE: masari_staging_sim
-      MYSQL_USER: masari_staging
+      MYSQL_DATABASE: darb_staging_sim
+      MYSQL_USER: darb_staging
       MYSQL_PASSWORD: ${MYSQL_STAGING_PASSWORD:?set MYSQL_STAGING_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_STAGING_ROOT_PASSWORD:?set MYSQL_STAGING_ROOT_PASSWORD}
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]

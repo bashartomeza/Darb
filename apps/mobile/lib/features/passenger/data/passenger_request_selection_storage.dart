@@ -11,7 +11,7 @@ class PassengerRequestSelectionStorage {
   static final _writes = <String, Future<void>>{};
 
   String _key(String actorId, String requestId) =>
-      'masari_request_selection_v1_${base64Url.encode(utf8.encode(actorId))}_${base64Url.encode(utf8.encode(requestId))}';
+      'darb_request_selection_v1_${base64Url.encode(utf8.encode(actorId))}_${base64Url.encode(utf8.encode(requestId))}';
 
   Future<String?> read(String actorId, String requestId) async {
     final encoded = await storage.read(key: _key(actorId, requestId));

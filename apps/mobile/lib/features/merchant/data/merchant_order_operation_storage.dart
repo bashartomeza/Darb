@@ -130,7 +130,7 @@ class MerchantOrderOperationStorage {
   const MerchantOrderOperationStorage(this._storage);
   final FlutterSecureStorage _storage;
   String _key(String actor) =>
-      'masari_merchant_order_v1:${Uri.encodeComponent(actor)}';
+      'darb_merchant_order_v1:${Uri.encodeComponent(actor)}';
   Future<MerchantPendingOrder?> read(String actorId) async {
     final encoded = await _storage.read(key: _key(actorId));
     if (encoded == null) return null;

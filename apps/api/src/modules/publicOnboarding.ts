@@ -47,7 +47,7 @@ const PASSWORD_MIN_CHARACTERS = 15;
 const PASSWORD_MAX_CHARACTERS = 64;
 const PASSWORD_MAX_BYTES = 72;
 const IDEMPOTENCY_TTL_MS = 10 * 60 * 1_000;
-const DUMMY_PASSWORD = "masari-pending-recovery-dummy-value";
+const DUMMY_PASSWORD = "darb-pending-recovery-dummy-value";
 const dummyHash = bcrypt.hash(DUMMY_PASSWORD, 10);
 
 const roleSchema = z.enum(SUPPORTED_ROLES);

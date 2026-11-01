@@ -10,7 +10,7 @@ const mode = process.argv.find((argument) => argument.startsWith("--mode="))?.sl
 const valhallaUrl = (process.env.VALHALLA_URL ?? "http://127.0.0.1:18002").replace(/\/$/, "");
 const nominatimUrl = (process.env.NOMINATIM_URL ?? "http://127.0.0.1:18080").replace(/\/$/, "");
 const requestTimeoutMs = Number(process.env.M7D1B_REQUEST_TIMEOUT_MS ?? 5_000);
-const userAgent = "Masari-M7D1B-evidence/1.0";
+const userAgent = "Darb-M7D1B-evidence/1.0";
 
 export function percentile(values, fraction) {
   if (values.length === 0) return null;

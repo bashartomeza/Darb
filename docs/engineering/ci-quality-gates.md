@@ -7,7 +7,7 @@ Darb uses four focused GitHub Actions workflows under `.github/workflows`. They 
 - Node: `.nvmrc` (`22.17.1`); npm is locked by `packageManager` in `package.json` (`10.9.2`).
 - Flutter: `.flutter-version` (`3.44.6`), without adding a version-manager dependency.
 - Java: `.java-version` (`21`).
-- Database CI: MySQL `8.0`, ephemeral and dedicated to `masari_ci`.
+- Database CI: MySQL `8.0`, ephemeral and dedicated to `darb_ci`.
 
 External actions are immutable-SHA pinned with their maintained major noted inline: `actions/checkout` v6, `actions/setup-node` v6, `actions/setup-java` v5, and `subosito/flutter-action` v2. Review and deliberately update those SHAs as a dependency-maintenance change.
 

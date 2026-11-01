@@ -66,7 +66,7 @@ void main() {
     () async {
       FlutterSecureStorage.setMockInitialValues({
         OnboardingStorage.bundleKey: '{"version":1,"type":"continuation"}',
-        'masari_locale': 'ar',
+        'darb_locale': 'ar',
         TokenStorage.tokenKey: 'legacy-auth',
       });
       final storage = OnboardingStorage(secureStorage);
@@ -76,7 +76,7 @@ void main() {
         await secureStorage.read(key: OnboardingStorage.bundleKey),
         isNull,
       );
-      expect(await secureStorage.read(key: 'masari_locale'), 'ar');
+      expect(await secureStorage.read(key: 'darb_locale'), 'ar');
       expect(
         await secureStorage.read(key: TokenStorage.tokenKey),
         'legacy-auth',

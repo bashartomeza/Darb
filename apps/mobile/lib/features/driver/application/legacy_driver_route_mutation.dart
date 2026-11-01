@@ -13,7 +13,7 @@ final legacyDriverRouteMutationProvider = Provider<LegacyDriverRouteMutation>((
   return LegacyDriverRouteMutation(
     storage: CanonicalOperationStorage(
       ref.watch(secureStorageProvider),
-      storageKey: 'masari_legacy_driver_create_v1',
+      storageKey: 'darb_legacy_driver_create_v1',
     ),
     currentActor: () => binding.actorId,
   );

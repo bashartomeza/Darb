@@ -24,11 +24,11 @@ export const DEMO_STOP_KEYS = {
 } as const;
 
 export const DEMO_ACCOUNTS = {
-  passenger: { name: "Demo Passenger", phone: "+970590000001", email: "demo.passenger@masari.app" },
-  driver1: { name: "Demo Driver Hebron Route", phone: "+970590000002", email: "demo.driver@masari.app" },
-  driver2: { name: "Demo Driver Alternate", phone: "+970590000003", email: "demo.driver2@masari.app" },
-  merchant: { name: "Demo Merchant", phone: "+970590000004", email: "demo.merchant@masari.app" },
-  admin: { name: "Demo Admin", phone: "+970590000005", email: "demo.admin@masari.app" }
+  passenger: { name: "Demo Passenger", phone: "+970590000001", email: "demo.passenger@darb.app" },
+  driver1: { name: "Demo Driver Hebron Route", phone: "+970590000002", email: "demo.driver@darb.app" },
+  driver2: { name: "Demo Driver Alternate", phone: "+970590000003", email: "demo.driver2@darb.app" },
+  merchant: { name: "Demo Merchant", phone: "+970590000004", email: "demo.merchant@darb.app" },
+  admin: { name: "Demo Admin", phone: "+970590000005", email: "demo.admin@darb.app" }
 } as const;
 
 export const CANONICAL_MODE = "canonical_route_v1";
@@ -343,7 +343,7 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
         destination_stop_id: destinationStop.id,
         encoded_geometry: encodedGeometry,
         geometry_encoding: "demo-json-v1",
-        geometry_provider: "masari-demo",
+        geometry_provider: "darb-demo",
         geometry_checksum: createHash("sha256").update(encodedGeometry).digest("hex"),
         geometry_precision: 6,
         estimated_distance_meters: 21_530,
@@ -556,7 +556,7 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
     await tx.demoScenario.createMany({
       data: [
         {
-          scenario_key: "masari_batch_wins",
+          scenario_key: "darb_batch_wins",
           corridor_key: LOCKED_CORRIDOR_KEY,
           description: "Darb batches five parcels into one compatible corridor trip.",
           seed_version: "m1"

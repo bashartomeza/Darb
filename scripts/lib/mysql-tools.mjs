@@ -19,7 +19,7 @@ function optionValue(value) {
 }
 
 export function createMysqlDefaults(url) {
-  const directory = mkdtempSync(join(tmpdir(), "masari-mysql-"));
+  const directory = mkdtempSync(join(tmpdir(), "darb-mysql-"));
   const path = join(directory, "client.cnf");
   const port = url.port || "3306";
   const content = [
@@ -38,7 +38,7 @@ export function createMysqlDefaults(url) {
 }
 
 export function safeRestoreDatabaseName(name) {
-  return /^masari_restore_[a-z0-9_]+$/.test(name) && name.length <= 64;
+  return /^darb_restore_[a-z0-9_]+$/.test(name) && name.length <= 64;
 }
 
 export function databaseUrlFor(url, database) {

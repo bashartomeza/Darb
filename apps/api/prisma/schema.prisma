@@ -1287,11 +1287,11 @@ model Match {
 model ComparisonRun {
   id                         String   @id @default(cuid())
   scenario_key               String
-  masari_trips               Int
+  darb_trips               Int
   nearest_driver_trips       Int
-  masari_estimated_distance  Decimal  @db.Decimal(10, 2)
+  darb_estimated_distance  Decimal  @db.Decimal(10, 2)
   nearest_estimated_distance Decimal  @db.Decimal(10, 2)
-  masari_estimated_cost      Decimal  @db.Decimal(10, 2)
+  darb_estimated_cost      Decimal  @db.Decimal(10, 2)
   nearest_estimated_cost     Decimal  @db.Decimal(10, 2)
   parcel_batching_benefit    String   @db.Text
   driver_utilization         Decimal  @db.Decimal(5, 2)

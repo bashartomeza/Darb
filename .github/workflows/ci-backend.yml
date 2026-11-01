@@ -16,20 +16,20 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_DATABASE: masari_ci
-          MYSQL_USER: masari_ci
+          MYSQL_DATABASE: darb_ci
+          MYSQL_USER: darb_ci
           MYSQL_PASSWORD: ci-only-password
           MYSQL_ROOT_PASSWORD: ci-only-root-password
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -u masari_ci --password=ci-only-password"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u darb_ci --password=ci-only-password"
           --health-interval=5s --health-timeout=5s --health-retries=20
     env:
       APP_ENV: demo
       ENABLE_DEMO_FEATURES: "true"
       APP_RELEASE: ci-${{ github.sha }}
-      DATABASE_URL: mysql://masari_ci:ci-only-password@127.0.0.1:3306/masari_ci
+      DATABASE_URL: mysql://darb_ci:ci-only-password@127.0.0.1:3306/darb_ci
       JWT_SECRET: ci-only-jwt-secret-at-least-thirty-two-characters
       ACCESS_TOKEN_TTL_SECONDS: "3600"
       REFRESH_TOKEN_TTL_DAYS: "30"
@@ -39,7 +39,7 @@ jobs:
       LOG_LEVEL: silent
       PORT: "3000"
       DEMO_RESET_KEY: ci-only-reset-key
-      DEMO_RESET_ALLOWED_DATABASES: masari_ci,masari_canonical_matching_ci,masari_canonical_shared_ci
+      DEMO_RESET_ALLOWED_DATABASES: darb_ci,darb_canonical_matching_ci,darb_canonical_shared_ci
       DEMO_PASSENGER_PASSWORD: ci-only-passenger-password
       DEMO_DRIVER_PASSWORD: ci-only-driver-password
       DEMO_MERCHANT_PASSWORD: ci-only-merchant-password
@@ -57,7 +57,7 @@ jobs:
       ABUSE_KEY_PEPPER: ci-only-abuse-pepper-at-least-thirty-two-characters
       VITE_APP_ENV: production
       VITE_ENABLE_DEMO_FEATURES: "false"
-      VITE_API_BASE_URL: https://api.staging.masari.invalid
+      VITE_API_BASE_URL: https://api.staging.darb.invalid
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
@@ -74,7 +74,7 @@ jobs:
           MYSQL_PWD: ci-only-root-password
         run: |
           mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root \
-            --execute="SET GLOBAL log_bin_trust_function_creators = 1; GRANT SELECT ON performance_schema.data_lock_waits TO 'masari_ci'@'%';"
+            --execute="SET GLOBAL log_bin_trust_function_creators = 1; GRANT SELECT ON performance_schema.data_lock_waits TO 'darb_ci'@'%';"
       - name: Deploy migrations from empty database
         run: npm run db:migrate
       - name: Confirm migration deploy is idempotent
@@ -83,10 +83,10 @@ jobs:
       - name: Verify disposable migration upgrade from the prior history to current
         env:
           MYSQL_PWD: ci-only-root-password
-          DATABASE_URL: mysql://masari_ci:ci-only-password@127.0.0.1:3306/masari_upgrade_ci
+          DATABASE_URL: mysql://darb_ci:ci-only-password@127.0.0.1:3306/darb_upgrade_ci
         run: |
           mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root \
-            --execute="CREATE DATABASE masari_upgrade_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON masari_upgrade_ci.* TO 'masari_ci'@'%';"
+            --execute="CREATE DATABASE darb_upgrade_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON darb_upgrade_ci.* TO 'darb_ci'@'%';"
           mkdir -p .staging-data/migration-upgrade/prisma/migrations
           cp apps/api/prisma.config.ts .staging-data/migration-upgrade/
           cp apps/api/prisma/schema.prisma .staging-data/migration-upgrade/prisma/
@@ -97,11 +97,11 @@ jobs:
           prior_count=$((migration_count - 1))
           for migration in "${migrations[@]:0:$prior_count}"; do cp -R "$migration" .staging-data/migration-upgrade/prisma/migrations/; done
           node node_modules/prisma/build/index.js migrate deploy --config .staging-data/migration-upgrade/prisma.config.ts
-          test "$(mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root --batch --skip-column-names masari_upgrade_ci --execute='SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL')" -eq "$prior_count"
+          test "$(mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root --batch --skip-column-names darb_upgrade_ci --execute='SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL')" -eq "$prior_count"
           cp -R "${migrations[$prior_count]}" .staging-data/migration-upgrade/prisma/migrations/
           node node_modules/prisma/build/index.js migrate deploy --config .staging-data/migration-upgrade/prisma.config.ts
           node node_modules/prisma/build/index.js migrate deploy --config .staging-data/migration-upgrade/prisma.config.ts
-          test "$(mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root --batch --skip-column-names masari_upgrade_ci --execute='SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL')" -eq "$migration_count"
+          test "$(mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root --batch --skip-column-names darb_upgrade_ci --execute='SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL')" -eq "$migration_count"
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
@@ -144,20 +144,20 @@ jobs:
       - name: Real MySQL canonical single-demand integration
         env:
           MYSQL_PWD: ci-only-root-password
-          DATABASE_URL: mysql://masari_ci:ci-only-password@127.0.0.1:3306/masari_canonical_matching_ci
+          DATABASE_URL: mysql://darb_ci:ci-only-password@127.0.0.1:3306/darb_canonical_matching_ci
           APP_ENV: test
           MULTI_ROUTE_ENTRY_ENABLED: "true"
           MULTI_ROUTE_MATCHING_ENABLED: "true"
           CANONICAL_TRIP_CREATION_ENABLED: "true"
         run: |
           mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root \
-            --execute="CREATE DATABASE masari_canonical_matching_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON masari_canonical_matching_ci.* TO 'masari_ci'@'%';"
+            --execute="CREATE DATABASE darb_canonical_matching_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON darb_canonical_matching_ci.* TO 'darb_ci'@'%';"
           npm run db:migrate
           npm run test:integration:canonical-matching
       - name: Real MySQL canonical shared-trip integration
         env:
           MYSQL_PWD: ci-only-root-password
-          DATABASE_URL: mysql://masari_ci:ci-only-password@127.0.0.1:3306/masari_canonical_shared_ci
+          DATABASE_URL: mysql://darb_ci:ci-only-password@127.0.0.1:3306/darb_canonical_shared_ci
           APP_ENV: demo
           ENABLE_DEMO_FEATURES: "true"
           MULTI_ROUTE_ENTRY_ENABLED: "true"
@@ -166,12 +166,12 @@ jobs:
           CANONICAL_SHARED_TRIPS_ENABLED: "true"
         run: |
           mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=root \
-            --execute="CREATE DATABASE masari_canonical_shared_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON masari_canonical_shared_ci.* TO 'masari_ci'@'%';"
+            --execute="CREATE DATABASE darb_canonical_shared_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON darb_canonical_shared_ci.* TO 'darb_ci'@'%';"
           npm run db:migrate
           npm run test:integration:canonical-shared
       - name: Real MySQL canonical capacity expiry and exact replay
         env:
-          DATABASE_URL: mysql://masari_ci:ci-only-password@127.0.0.1:3306/masari_canonical_shared_ci
+          DATABASE_URL: mysql://darb_ci:ci-only-password@127.0.0.1:3306/darb_canonical_shared_ci
           APP_ENV: demo
           ENABLE_DEMO_FEATURES: "true"
           MULTI_ROUTE_ENTRY_ENABLED: "true"

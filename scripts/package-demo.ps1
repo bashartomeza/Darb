@@ -2,8 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $releaseRoot = [IO.Path]::GetFullPath((Join-Path $root "release"))
-$packageRoot = [IO.Path]::GetFullPath((Join-Path $releaseRoot "masari-hackathon-mysql-demo"))
-$zipPath = [IO.Path]::GetFullPath((Join-Path $releaseRoot "masari-hackathon-mysql-demo.zip"))
+$packageRoot = [IO.Path]::GetFullPath((Join-Path $releaseRoot "darb-hackathon-mysql-demo"))
+$zipPath = [IO.Path]::GetFullPath((Join-Path $releaseRoot "darb-hackathon-mysql-demo.zip"))
 
 if (-not $packageRoot.StartsWith($releaseRoot + [IO.Path]::DirectorySeparatorChar)) {
   throw "Refusing to package outside the release directory."
@@ -72,9 +72,9 @@ These are placeholder templates only. They contain no database password, JWT sec
 
 - Copy values into local process environment variables.
 - Never save the completed secret-bearing file in this package.
-- The reset-safe MySQL database name is masari_demo, the default port is 3306, and utf8mb4 is required.
-- The real/pilot masari database is permanently ineligible for demo reset.
-- Set DEMO_RESET_ALLOWED_DATABASES=masari_demo explicitly before rehearsal.
+- The reset-safe MySQL database name is darb_demo, the default port is 3306, and utf8mb4 is required.
+- The real/pilot darb database is permanently ineligible for demo reset.
+- Set DEMO_RESET_ALLOWED_DATABASES=darb_demo explicitly before rehearsal.
 - Apply schema changes from the source repository with npm run db:migrate; do not execute migration SQL manually.
 - The Android APK is already configured for http://10.0.2.2:3000.
 "@
@@ -101,17 +101,17 @@ $zip = [IO.Compression.ZipFile]::OpenRead($zipPath)
 try {
   $entries = $zip.Entries.FullName
   foreach ($required in @(
-    "masari-hackathon-mysql-demo/app-debug.apk",
-    "masari-hackathon-mysql-demo/APK_SHA256.txt",
-    "masari-hackathon-mysql-demo/DEMO_RUNBOOK.md",
-    "masari-hackathon-mysql-demo/JUDGE_SCRIPT.md",
-    "masari-hackathon-mysql-demo/BACKUP_DEMO.md",
-    "masari-hackathon-mysql-demo/MYSQL_MIGRATION.md",
-    "masari-hackathon-mysql-demo/PROJECT_MAP.md",
-    "masari-hackathon-mysql-demo/README_DEMO_START.md",
-    "masari-hackathon-mysql-demo/RELEASE_NOTES.md",
-    "masari-hackathon-mysql-demo/mysql-migrations/migration_lock.toml",
-    "masari-hackathon-mysql-demo/checksums/SHA256SUMS.txt"
+    "darb-hackathon-mysql-demo/app-debug.apk",
+    "darb-hackathon-mysql-demo/APK_SHA256.txt",
+    "darb-hackathon-mysql-demo/DEMO_RUNBOOK.md",
+    "darb-hackathon-mysql-demo/JUDGE_SCRIPT.md",
+    "darb-hackathon-mysql-demo/BACKUP_DEMO.md",
+    "darb-hackathon-mysql-demo/MYSQL_MIGRATION.md",
+    "darb-hackathon-mysql-demo/PROJECT_MAP.md",
+    "darb-hackathon-mysql-demo/README_DEMO_START.md",
+    "darb-hackathon-mysql-demo/RELEASE_NOTES.md",
+    "darb-hackathon-mysql-demo/mysql-migrations/migration_lock.toml",
+    "darb-hackathon-mysql-demo/checksums/SHA256SUMS.txt"
   )) {
     if ($entries -notcontains $required) {
       throw "ZIP is missing $required"

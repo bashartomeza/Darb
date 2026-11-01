@@ -34,7 +34,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   String? _routeKey;
 
   // ============================================================
-  // MASARI DESIGN SYSTEM
+  // DARB DESIGN SYSTEM
   // ============================================================
 
   static const Color _orange = Color(0xFFFA5F12);

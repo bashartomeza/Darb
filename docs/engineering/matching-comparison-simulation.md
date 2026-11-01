@@ -20,7 +20,7 @@ created, and the admin UI labels the output as such.
 | --- | --- |
 | Manual (WhatsApp-style) | One dispatcher handles requests in order. For each request they ask drivers who have not departed, in seeded random order; each reply takes `manualResponseDelayMin` x (0.5..1.5) minutes. A driver without free capacity declines; otherwise accepts with probability 0.6 (same direction) or 0.15 (wrong direction). Up to 8 asks, then the request is unmatched. The dispatcher is busy until the request is resolved, so a backlog builds. |
 | Nearest driver | Fixed 0.5 min processing. Picks the not-yet-departed driver with capacity whose start point is nearest to the pickup (haversine). Ignores direction. Each request is its own dispatch (no batching). |
-| Darb | Candidate filter, `scoreDriverRoute` scoring and tie-break order are the real legacy matcher's (`compareRankedRoutes`). Parcel orders are grouped using the limits in `createParcelBatch` (same merchant, pickups within 1 km, at most 20 orders / 50 parcels). A match takes `masariOfferDelayMin` (1.5 min) to be accepted. |
+| Darb | Candidate filter, `scoreDriverRoute` scoring and tie-break order are the real legacy matcher's (`compareRankedRoutes`). Parcel orders are grouped using the limits in `createParcelBatch` (same merchant, pickups within 1 km, at most 20 orders / 50 parcels). A match takes `darbOfferDelayMin` (1.5 min) to be accepted. |
 
 ## Metrics (per method, per scenario and pooled)
 
@@ -52,7 +52,7 @@ one method's behaviour never perturbs another's.
    are not simulated. Darb uses the legacy scoring (`scoreDriverRoute`), which only knows
    the forward corridor label, pickup distance from the route origin, seat/parcel fit and trust.
    Timing fit is the fixed constant the real code uses.
-3. Darb assumes the first-ranked driver accepts after `masariOfferDelayMin`. The real
+3. Darb assumes the first-ranked driver accepts after `darbOfferDelayMin`. The real
    system has a 5 min offer lifetime and retries; rejections are not modelled.
 4. The simulation does not split a parcel batch across drivers because the real matcher does
    not: a batch larger than any driver's parcel capacity is unmatched.

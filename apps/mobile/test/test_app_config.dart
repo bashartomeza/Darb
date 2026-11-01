@@ -8,6 +8,6 @@ const demoTestAppConfig = AppConfig(
 
 const productionTestAppConfig = AppConfig(
   appEnvironment: DarbAppEnvironment.production,
-  apiBaseUrl: 'https://api.masari.example',
+  apiBaseUrl: 'https://api.darb.example',
   demoFeaturesEnabled: false,
 );

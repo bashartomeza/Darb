@@ -1,6 +1,6 @@
 # MySQL backup and isolated restore
 
-The scripts read `DATABASE_URL` from the ignored `apps/api/.env` (or `MASARI_ENV_FILE`) and never place the password on the process command line. A restrictive temporary MySQL option file is deleted after each operation. Generated dumps and checksum sidecars are ignored under `backups/`.
+The scripts read `DATABASE_URL` from the ignored `apps/api/.env` (or `DARB_ENV_FILE`) and never place the password on the process command line. A restrictive temporary MySQL option file is deleted after each operation. Generated dumps and checksum sidecars are ignored under `backups/`.
 
 ## Backup
 
@@ -14,10 +14,10 @@ The command creates a timestamped SQL dump and SHA-256 sidecar. It uses a transa
 
 ## Isolated restore verification
 
-Choose a new lowercase database name beginning `masari_restore_`. The destination must not be the configured source and must be empty.
+Choose a new lowercase database name beginning `darb_restore_`. The destination must not be the configured source and must be empty.
 
 ```powershell
-npm run mysql:restore:verify -- -- --dump backups/mysql/<file>.sql --database masari_restore_rehearsal_yyyymmdd --confirm-isolated --cleanup
+npm run mysql:restore:verify -- -- --dump backups/mysql/<file>.sql --database darb_restore_rehearsal_yyyymmdd --confirm-isolated --cleanup
 ```
 
 The command validates the checksum, refuses unsafe/non-empty destinations, creates an `utf8mb4_0900_ai_ci` isolated database, restores, checks Prisma migration status and expected Darb tables, executes a read-only connectivity check, and drops only the validated isolated database when `--cleanup` is present. Omit `--cleanup` when an operator needs to inspect a failed rehearsal; remove it manually only after confirming the name.
@@ -27,7 +27,7 @@ The second `--` shown above preserves named arguments with npm 10 on Windows. Ca
 To rehearse a forward migration against an older valid backup, add `--migrate`. The script restores first, runs the repository's approved `db:migrate` command only inside the isolated destination, and then requires current migration status:
 
 ```powershell
-npm run mysql:restore:verify -- -- --dump backups/mysql/<older-file>.sql --database masari_restore_upgrade_yyyymmdd --confirm-isolated --migrate --cleanup
+npm run mysql:restore:verify -- -- --dump backups/mysql/<older-file>.sql --database darb_restore_upgrade_yyyymmdd --confirm-isolated --migrate --cleanup
 ```
 
 Never use `--migrate` against the configured source database; the restore tool rejects that destination.

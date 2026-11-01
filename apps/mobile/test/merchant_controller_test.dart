@@ -328,7 +328,7 @@ MerchantMatch _match({MerchantBatch? batch}) => MerchantMatch(
   id: 'match_1',
   status: 'proposed',
   score: 0.93,
-  method: 'masari_route_score',
+  method: 'darb_route_score',
   explanation: 'Safe explanation',
   breakdown: const ScoringBreakdown(
     corridorOverlap: 0.95,

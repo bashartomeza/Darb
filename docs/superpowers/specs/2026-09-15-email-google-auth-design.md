@@ -101,7 +101,7 @@ unidentified
   -> email_proof_pending | google_provider_verified
   -> legal_consent_present
   -> account_created(active, phone_required)
-  -> restricted_masari_session
+  -> restricted_darb_session
   -> phone_verification_pending
   -> profile_state=complete
   -> full_product_access

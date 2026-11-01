@@ -65,7 +65,7 @@ void main() {
                 request.url.path.endsWith('/complete-registration')) {
               completions.add(jsonDecode(request.body) as Map<String, dynamic>);
               return http.Response(
-                '{"token":"new-masari-session","user":{"id":"new","name":"Passenger","phone":null,"profile_state":"phone_required","role":"passenger","demo_account":false}}',
+                '{"token":"new-darb-session","user":{"id":"new","name":"Passenger","phone":null,"profile_state":"phone_required","role":"passenger","demo_account":false}}',
                 201,
               );
             }
@@ -149,7 +149,7 @@ void main() {
         expect(
           (await container.read(tokenStorageProvider).readBundle())
               ?.accessToken,
-          'new-masari-session',
+          'new-darb-session',
         );
       },
     );
@@ -187,7 +187,7 @@ void main() {
       await _pumpApp(
         tester,
         localeValues: {DomainLabels.localeStorageKey: 'en'},
-        secureValues: {TokenStorage.tokenKey: 'masari-session'},
+        secureValues: {TokenStorage.tokenKey: 'darb-session'},
         handler: (request) async {
           if (request.url.path.endsWith('/me')) {
             return http.Response(
@@ -258,7 +258,7 @@ void main() {
   ) async {
     await _pumpApp(
       tester,
-      secureValues: {TokenStorage.tokenKey: 'masari-session'},
+      secureValues: {TokenStorage.tokenKey: 'darb-session'},
       handler: (request) async {
         if (request.url.path.endsWith('/me')) {
           return http.Response(
@@ -287,7 +287,7 @@ void main() {
       await _pumpApp(
         tester,
         localeValues: {DomainLabels.localeStorageKey: 'en'},
-        secureValues: {TokenStorage.tokenKey: 'masari-session'},
+        secureValues: {TokenStorage.tokenKey: 'darb-session'},
         handler: (request) async {
           if (request.url.path.endsWith('/me')) {
             profileLoads++;
@@ -358,10 +358,10 @@ void main() {
   test('AppConfig validates explicit production values', () {
     final config = AppConfig.fromValues(
       appEnvironment: 'production',
-      apiBaseUrl: 'https://api.masari.example',
+      apiBaseUrl: 'https://api.darb.example',
       enableDemoFeatures: false,
     );
-    expect(config.apiBaseUrl, 'https://api.masari.example');
+    expect(config.apiBaseUrl, 'https://api.darb.example');
     expect(config.demoFeaturesEnabled, isFalse);
   });
 
@@ -377,7 +377,7 @@ void main() {
     expect(
       () => AppConfig.fromValues(
         appEnvironment: 'staging',
-        apiBaseUrl: 'http://api.masari.example',
+        apiBaseUrl: 'http://api.darb.example',
         enableDemoFeatures: false,
       ),
       throwsStateError,

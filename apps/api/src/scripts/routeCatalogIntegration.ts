@@ -60,7 +60,7 @@ async function lifecycleState(routeId: string, versionIds: string[]) {
 
 async function main() {
   const database = new URL(config.databaseUrl).pathname.replace(/^\//, "");
-  assert(database.endsWith("_ci") || database.startsWith("masari_route_"), "Route integration requires a disposable database");
+  assert(database.endsWith("_ci") || database.startsWith("darb_route_"), "Route integration requires a disposable database");
   assert(config.demoFeaturesEnabled, "Route integration requires demo/test isolation");
 
   await resetDemoData();

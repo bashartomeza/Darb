@@ -13,7 +13,7 @@
 ## Global constraints
 
 - Branch `admin/trips-management` from current `origin/production-readiness`; draft PR only.
-- No Prisma schema change, migration 22, real `masari` mutation, demo reset, Card 6, maps/GPS/realtime/payments, mobile lifecycle redesign, or matching/batching redesign.
+- No Prisma schema change, migration 22, real `darb` mutation, demo reset, Card 6, maps/GPS/realtime/payments, mobile lifecycle redesign, or matching/batching redesign.
 - Canonical/shared trips are read-only; Admin cancellation is disabled.
 - Preserve baseline API 329, Admin 101, Mobile 241 and zero moderate/high/critical audit findings.
 
@@ -109,7 +109,7 @@
 
 - [ ] Commit focused API and Admin changes, push `admin/trips-management`, and open one draft PR against `production-readiness`.
 - [ ] Wait for Backend/MySQL, Admin, Mobile, and Security CI on the exact head; fix only Card 5 regressions.
-- [x] Create an isolated disposable QA database from migrations 0 through 21; never touch real `masari`.
+- [x] Create an isolated disposable QA database from migrations 0 through 21; never touch real `darb`.
 - [x] Prepare clearly synthetic legacy states, one stale-conflict pair, canonical/shared read-only examples, and stored-location/no-location examples using real schema/contracts.
 - [x] Start QA API on 3100 and Admin on 5174 with QA-only ignored configuration.
 - [x] Verify list/detail/actions/409/auth/RTL/LTR/responsive behavior and leave fixtures ready for the human.

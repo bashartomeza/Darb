@@ -363,7 +363,7 @@ describe("admin fare API permissions and validation", () => {
   const secret = "test-only-jwt-secret-with-at-least-thirty-two-characters";
   const env = {
     APP_ENV: "local",
-    DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+    DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
     JWT_SECRET: secret,
     CORS_ORIGINS: "http://localhost:5173",
     LOG_LEVEL: "silent",

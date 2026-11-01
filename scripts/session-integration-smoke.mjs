@@ -11,8 +11,8 @@ const apiBaseUrl = `${apiOrigin}/api/v1`;
 const databaseUrl = process.env.DATABASE_URL;
 const databaseName = databaseUrl ? new URL(databaseUrl).pathname.slice(1) : "";
 const resetKey = process.env.DEMO_RESET_KEY;
-const passengerCredentials = ["demo.passenger@masari.app", process.env.DEMO_PASSENGER_PASSWORD];
-const adminCredentials = ["demo.admin@masari.app", process.env.DEMO_ADMIN_PASSWORD];
+const passengerCredentials = ["demo.passenger@darb.app", process.env.DEMO_PASSENGER_PASSWORD];
+const adminCredentials = ["demo.admin@darb.app", process.env.DEMO_ADMIN_PASSWORD];
 let mysqlDefaults;
 
 function assert(condition, message) {
@@ -92,7 +92,7 @@ async function reset() {
     headers: { "x-demo-reset-key": resetKey }
   });
   const verified = mysql(`SELECT email_verified_at IS NOT NULL AND phone_verified_at IS NOT NULL AND profile_state='complete'
-    FROM users WHERE email='demo.passenger@masari.app'`);
+    FROM users WHERE email='demo.passenger@darb.app'`);
   assert(verified === "1", "Demo reset did not create a verified complete passenger");
 }
 
@@ -114,7 +114,7 @@ async function run() {
   assert(databaseName.endsWith("_ci"), "Trusted-session integration refuses a database not ending in _ci");
   assert(/^[A-Za-z0-9_]+$/.test(databaseName), "Trusted-session integration requires a safe database name");
   const resetAllowedDatabases = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
-  assert(databaseName.toLowerCase() !== "masari" && resetAllowedDatabases.includes(databaseName), "Trusted-session integration requires an explicitly reset-safe database");
+  assert(databaseName.toLowerCase() !== "darb" && resetAllowedDatabases.includes(databaseName), "Trusted-session integration requires an explicitly reset-safe database");
   assert(resetKey && passengerCredentials[1] && adminCredentials[1], "Required demo credentials are unavailable");
   mysqlDefaults = createMysqlDefaults(new URL(databaseUrl));
   await reset();
@@ -221,7 +221,7 @@ async function run() {
   await reset();
   const concurrencyAdmin = await login(adminCredentials, "integration-admin-one");
   const secondAdminId = "integration_admin_2";
-  const secondAdminEmail = "integration.admin.2@masari.app";
+  const secondAdminEmail = "integration.admin.2@darb.app";
   const secondAdminPhone = "+970590000006";
   const secondAdminHash = await bcrypt.hash(adminCredentials[1], 4);
   mysql(`INSERT INTO users

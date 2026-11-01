@@ -7,7 +7,7 @@ import { Button, Card, CardHeader, DataTable, EmptyState, MeterBar, Notice, Stat
 const methods: Array<{ key: SimulationMethodKey; label: TranslationKey; tone: "success" | "info" | "neutral" }> = [
   { key: "manual", label: "simMethodManual", tone: "neutral" },
   { key: "nearest", label: "simMethodNearest", tone: "info" },
-  { key: "masari", label: "simMethodDarb", tone: "success" }
+  { key: "darb", label: "simMethodDarb", tone: "success" }
 ];
 
 const metricRows: Array<{ key: string; label: TranslationKey; read: (m: SimulationMetrics) => number }> = [

@@ -6,7 +6,7 @@ Set-StrictMode -Version Latest
 
 $script:Target = "Darb/DemoGmailAppPassword"
 
-if (-not ("Masari.MailCredentialStore" -as [type])) {
+if (-not ("Darb.MailCredentialStore" -as [type])) {
   Add-Type -Namespace Darb -Name MailCredentialStore -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 public struct CREDENTIAL {
@@ -37,14 +37,14 @@ function Save-MailPassword {
     $blob = [Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
     try {
       [Runtime.InteropServices.Marshal]::Copy($bytes, 0, $blob, $bytes.Length)
-      $credential = New-Object Masari.MailCredentialStore+CREDENTIAL
+      $credential = New-Object Darb.MailCredentialStore+CREDENTIAL
       $credential.Type = 1          # CRED_TYPE_GENERIC
       $credential.TargetName = $script:Target
       $credential.CredentialBlobSize = $bytes.Length
       $credential.CredentialBlob = $blob
       $credential.Persist = 2       # CRED_PERSIST_LOCAL_MACHINE
-      $credential.UserName = "masari-demo-gmail"
-      if (-not [Masari.MailCredentialStore]::CredWrite([ref]$credential, 0)) {
+      $credential.UserName = "darb-demo-gmail"
+      if (-not [Darb.MailCredentialStore]::CredWrite([ref]$credential, 0)) {
         throw "Windows refused to store the credential (error $([Runtime.InteropServices.Marshal]::GetLastWin32Error()))."
       }
     } finally {
@@ -58,8 +58,8 @@ function Save-MailPassword {
 
 function Test-MailPassword {
   $pointer = [IntPtr]::Zero
-  if ([Masari.MailCredentialStore]::CredRead($script:Target, 1, 0, [ref]$pointer)) {
-    [Masari.MailCredentialStore]::CredFree($pointer)
+  if ([Darb.MailCredentialStore]::CredRead($script:Target, 1, 0, [ref]$pointer)) {
+    [Darb.MailCredentialStore]::CredFree($pointer)
     return $true
   }
   return $false
@@ -69,19 +69,19 @@ function Test-MailPassword {
 # environment and never print or log it.
 function Get-MailPassword {
   $pointer = [IntPtr]::Zero
-  if (-not [Masari.MailCredentialStore]::CredRead($script:Target, 1, 0, [ref]$pointer)) {
+  if (-not [Darb.MailCredentialStore]::CredRead($script:Target, 1, 0, [ref]$pointer)) {
     throw "No partner key is stored. Run scripts/provider-key/set-partner-key.ps1 first."
   }
   try {
-    $credential = [Runtime.InteropServices.Marshal]::PtrToStructure($pointer, [type][Masari.MailCredentialStore+CREDENTIAL])
+    $credential = [Runtime.InteropServices.Marshal]::PtrToStructure($pointer, [type][Darb.MailCredentialStore+CREDENTIAL])
     return [Runtime.InteropServices.Marshal]::PtrToStringUni($credential.CredentialBlob, [int]($credential.CredentialBlobSize / 2))
   } finally {
-    [Masari.MailCredentialStore]::CredFree($pointer)
+    [Darb.MailCredentialStore]::CredFree($pointer)
   }
 }
 
 function Remove-MailPassword {
-  [void][Masari.MailCredentialStore]::CredDelete($script:Target, 1, 0)
+  [void][Darb.MailCredentialStore]::CredDelete($script:Target, 1, 0)
 }
 
 Export-ModuleMember -Function Save-MailPassword, Test-MailPassword, Get-MailPassword, Remove-MailPassword

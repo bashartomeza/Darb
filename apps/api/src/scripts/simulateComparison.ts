@@ -28,7 +28,7 @@ mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, `${JSON.stringify(result, null, 2)}
 `);
 
-const labels: Record<string, string> = { manual: "Manual (WhatsApp)", nearest: "Nearest driver", masari: "Darb" };
+const labels: Record<string, string> = { manual: "Manual (WhatsApp)", nearest: "Nearest driver", darb: "Darb" };
 const columns: Array<[string, (m: MethodMetrics) => string]> = [
   ["wait avg", (m) => m.waitingMin.avg.toFixed(1)],
   ["wait p50", (m) => m.waitingMin.median.toFixed(1)],

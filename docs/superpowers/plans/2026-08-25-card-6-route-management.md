@@ -17,8 +17,8 @@
 - `ROUTE_MAPS_ENABLED` remains disabled; no maps, providers, geocoding, GPS, geometry persistence, credentials, or canonical place catalog.
 - Legacy `DriverRoute` remains separate and unchanged.
 - Prisma schema stays byte-identical; Migration 22 is forbidden; total migrations remain 21.
-- All mutation/integration/QA database work targets only validated disposable databases, with human QA fixed to `masari_routes_qa`.
-- Real `masari` must not be migrated, reset, seeded, or mutated.
+- All mutation/integration/QA database work targets only validated disposable databases, with human QA fixed to `darb_routes_qa`.
+- Real `darb` must not be migrated, reset, seeded, or mutated.
 - Unknown backend errors are never rendered raw; all 409 conflicts suppress success and cause authoritative reload.
 - Arabic remains default RTL, English LTR; IDs, keys, and coordinates remain LTR.
 - Required regression floors: API >=341, Admin >=111, Mobile >=241; audit severities all zero.
@@ -188,7 +188,7 @@ npm run build:api
 npm run test:integration:mysql
 ```
 
-Expected: migration deploy 0->21, repeated deploy no-op, route concurrency assertions pass, cleanup passes. Never point this command at a manually supplied real `masari` URL.
+Expected: migration deploy 0->21, repeated deploy no-op, route concurrency assertions pass, cleanup passes. Never point this command at a manually supplied real `darb` URL.
 
 - [ ] **Step 7: Commit the authoritative lifecycle hardening**
 
@@ -387,11 +387,11 @@ git commit -m "feat(admin): complete route management workspace"
 
 **Interfaces:**
 - Consumes: existing route-management service and Prisma client.
-- Produces: `npm run qa:routes -- prepare|verify|cleanup`, hard-limited to `masari_routes_qa`.
+- Produces: `npm run qa:routes -- prepare|verify|cleanup`, hard-limited to `darb_routes_qa`.
 
 - [ ] **Step 1: Write the fixture guard as a failing script-level test**
 
-Add a small exported `assertRouteQaDatabase(databaseUrl)` and test it in `routeManagementService.test.ts` with literal URLs. It must accept only a local host plus exact database `masari_routes_qa`, and reject `masari`, remote hosts, missing database, or query-string tricks before Prisma connects.
+Add a small exported `assertRouteQaDatabase(databaseUrl)` and test it in `routeManagementService.test.ts` with literal URLs. It must accept only a local host plus exact database `darb_routes_qa`, and reject `darb`, remote hosts, missing database, or query-string tricks before Prisma connects.
 
 - [ ] **Step 2: Run the guard test and verify RED**
 
@@ -414,7 +414,7 @@ The script must:
 
 - [ ] **Step 4: Document process-local QA startup and cleanup**
 
-Document exact environment boundaries: DB `masari_routes_qa`, API 3100, Admin 5174, route management enabled, maps/provider disabled. Include fixture identities, manual checklist, and exact cleanup command. Do not embed credentials or legal/user data.
+Document exact environment boundaries: DB `darb_routes_qa`, API 3100, Admin 5174, route management enabled, maps/provider disabled. Include fixture identities, manual checklist, and exact cleanup command. Do not embed credentials or legal/user data.
 
 - [ ] **Step 5: Run the disposable QA lifecycle**
 
@@ -425,7 +425,7 @@ npm run qa:routes -- prepare --confirm-disposable
 npm run qa:routes -- verify --confirm-disposable
 ```
 
-Expected: all scenarios ready and remain in `masari_routes_qa` for human QA. Do not run cleanup before handoff; provide the cleanup command only.
+Expected: all scenarios ready and remain in `darb_routes_qa` for human QA. Do not run cleanup before handoff; provide the cleanup command only.
 
 - [ ] **Step 6: Commit QA tooling and documentation**
 
@@ -463,7 +463,7 @@ Run fresh commands:
 
 ```powershell
 npm ci
-$env:DATABASE_URL=('mysql://' + ('{0}:{1}' -f 'placeholder', 'placeholder') + '@127.0.0.1:3306/masari_card6_generate'); npm run prisma:generate
+$env:DATABASE_URL=('mysql://' + ('{0}:{1}' -f 'placeholder', 'placeholder') + '@127.0.0.1:3306/darb_card6_generate'); npm run prisma:generate
 npm test
 npm run test:admin
 npm run typecheck

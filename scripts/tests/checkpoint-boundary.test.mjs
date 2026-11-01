@@ -16,7 +16,7 @@ test("checkpoint mobile repository stays inside the authenticated API boundary",
 });
 
 test("artifact scan rejects a synthetic checkpoint credential without reporting its value", () => {
-  const dir = mkdtempSync(join(tmpdir(), "masari-artifact-fixture-"));
+  const dir = mkdtempSync(join(tmpdir(), "darb-artifact-fixture-"));
   const path = join(dir, "client.js");
   try {
     const synthetic = ["ar", "partner", "fixture", "e".repeat(40)].join("_");
@@ -31,7 +31,7 @@ test("artifact scan rejects a synthetic checkpoint credential without reporting 
 });
 
 test("secret scan detects partner credentials using a synthetic fixture", () => {
-  const dir = mkdtempSync(join(tmpdir(), "masari-secret-fixture-"));
+  const dir = mkdtempSync(join(tmpdir(), "darb-secret-fixture-"));
   const path = join(dir, "fixture.dart");
   try {
     const synthetic = ["ar", "partner", "fixture", "f".repeat(40)].join("_");

@@ -19,7 +19,7 @@ Use this only when a live surface cannot recover quickly. Keep the same eight-mi
 
 1. Keep admin and mobile open.
 2. In the API terminal, restore the same safe local environment values and run `npm run dev:api`.
-3. Confirm `http://localhost:3000/api/v1/health` returns `service: masari-api`.
+3. Confirm `http://localhost:3000/api/v1/health` returns `service: darb-api`.
 4. Select admin Refresh and mobile Retry. If state is uncertain, run the protected reset and restart the judge script.
 
 ### Admin failure
@@ -37,7 +37,7 @@ Use this only when a live surface cannot recover quickly. Keep the same eight-mi
 
 ### MySQL failure
 
-1. Start the existing `MySQL80` Windows service and use only the explicitly allow-listed disposable demo database; do not edit records manually or use `masari`.
+1. Start the existing `MySQL80` Windows service and use only the explicitly allow-listed disposable demo database; do not edit records manually or use `darb`.
 2. Run `npm run demo:preflight`.
 3. When every check passes, run `npm run db:migrate:status`, `npm run demo:smoke`, then the protected reset.
 

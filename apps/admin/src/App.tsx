@@ -67,7 +67,7 @@ export function App({
   legacyStore?: TokenStorage;
 } = {}) {
   const { direction, locale, toggleLocale, t, status } = useLocale();
-  const demoEnabled = demoUiEnabled(config, __MASARI_DEMO_BUILD__);
+  const demoEnabled = demoUiEnabled(config, __DARB_DEMO_BUILD__);
   const routeManagementEnabled = routeManagementUiEnabled(config);
   const [token, setToken] = useState(() => {
     legacyStore.removeItem(ADMIN_TOKEN_KEY);

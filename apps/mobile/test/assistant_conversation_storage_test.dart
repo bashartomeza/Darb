@@ -40,7 +40,7 @@ void main() {
     () async {
       const secure = FlutterSecureStorage();
       await secure.write(
-        key: 'masari_assistant_conversation_v1_passenger_1',
+        key: 'darb_assistant_conversation_v1_passenger_1',
         value: 'invalid',
       );
       expect(

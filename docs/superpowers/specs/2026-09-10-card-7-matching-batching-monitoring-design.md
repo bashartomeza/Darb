@@ -96,7 +96,7 @@ Overview has `range:{from,until}`, `pending_passenger_requests`, `submitted_merc
 
 These are complete response allowlists; no model spreading. Prisma select only required scalar fields and bounded singular relations; use filtered count aggregates for parcels. Internal predicate fields may be used in SQL without selecting/returning them.
 
-- MatchRow: id, status, created_at, score:string, method:'masari_route_score'|'unrecognized', demand_kind:'passenger_only'|'merchant_only'|'combined', driver_route:{id,status}, passenger_request:null|{id,status,passenger_count}, merchant_order:null|{id,status,parcel_count}, parcel_batch:null|{id,status}.
+- MatchRow: id, status, created_at, score:string, method:'darb_route_score'|'unrecognized', demand_kind:'passenger_only'|'merchant_only'|'combined', driver_route:{id,status}, passenger_request:null|{id,status,passenger_count}, merchant_order:null|{id,status,parcel_count}, parcel_batch:null|{id,status}.
 - BatchRow: id, status, created_at, merchant_order:{id,status,parcel_count}, selected_driver_route:null|{id,status}.
 - ParcelRow: id, status. Do not return size/priority free text or destination data. Parent order is already identified by the selected BatchRow.
 - Overview: only fields in section 5 and its explicit range. Status maps contain numeric counts for every current enum member, including zeros.
@@ -129,7 +129,7 @@ Each response is consistent within its transaction; separate calls are independe
 
 Privacy/security tests assert exact key allowlists and no sensitive marker leakage in every response; all roles, revoked/expired sessions, guessed excluded IDs and nested member access are tested. Known demo/canonical/seed records must not affect lists, counts or totals. Read-only tests reject any domain create/update/delete/executeRaw mutation. Auth session touch is the documented exception.
 
-Disposable MySQL integration verifies real predicate joins, counts, pagination, enum handling, parent/member eligibility and concurrent observations. Database guard rejects real masari and anything outside an explicitly allowed *_ci database before connection. No real database data is required. Measure queries with representative disposable volume; avoid N+1 and record timing/query plans. No schema/index changes allowed as a shortcut.
+Disposable MySQL integration verifies real predicate joins, counts, pagination, enum handling, parent/member eligibility and concurrent observations. Database guard rejects real darb and anything outside an explicitly allowed *_ci database before connection. No real database data is required. Measure queries with representative disposable volume; avoid N+1 and record timing/query plans. No schema/index changes allowed as a shortcut.
 
 ## 9. Implementation boundaries and approval
 

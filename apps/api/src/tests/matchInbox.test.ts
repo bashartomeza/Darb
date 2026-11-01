@@ -38,7 +38,7 @@ function matchRecord(id: string, createdAt: string) {
     id,
     status: "proposed",
     score: "0.9317",
-    method: "masari_route_score",
+    method: "darb_route_score",
     explanation: "Safe explanation",
     scoring_breakdown: { corridorOverlap: 0.95, finalScore: 0.9317 },
     created_at: new Date(createdAt),

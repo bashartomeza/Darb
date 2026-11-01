@@ -128,7 +128,7 @@ describe("reports API", () => {
     const response = await request(createApp()).get("/api/v1/admin/reports/export?dataset=orders").set(auth("admin_1")).expect(200);
 
     expect(response.headers["content-type"]).toContain("text/csv");
-    expect(response.headers["content-disposition"]).toContain("masari-orders.csv");
+    expect(response.headers["content-disposition"]).toContain("darb-orders.csv");
     expect(response.text).toContain("id,status,pickup,parcels,created_at");
     expect(response.text).toContain("'=cmd|");
     expect(prismaMock.merchantOrder.findMany.mock.calls[0][0].take).toBe(5000);

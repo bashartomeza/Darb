@@ -9,7 +9,7 @@ A synthetic dry run of the mechanism, using a random throwaway value and no prov
 | Check | Result |
 | --- | --- |
 | Credential Manager stores a value and reads it back identical, then removal works | Pass |
-| The launcher refuses a database whose name does not end in `_ci`, `_qa` or `_sim` (it refused the real `masari` database) | Pass |
+| The launcher refuses a database whose name does not end in `_ci`, `_qa` or `_sim` (it refused the real `darb` database) | Pass |
 | The API starts with only the limited partner-directory gate enabled and the key injected | Pass (live check 200) |
 | The key does not appear in the process arguments of the launcher or the API | Pass |
 | The key does not appear in the launcher's or the API's output | Pass |

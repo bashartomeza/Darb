@@ -384,7 +384,7 @@ void main() {
   test(
     'corrupt durable recovery fails closed and is not deleted or overwritten',
     () async {
-      const key = 'masari_merchant_order_v1:merchant_A';
+      const key = 'darb_merchant_order_v1:merchant_A';
       FlutterSecureStorage.setMockInitialValues({key: '{broken'});
       var calls = 0;
       await expectLater(

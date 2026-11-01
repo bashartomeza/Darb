@@ -211,7 +211,7 @@ Every canonical coordinate requires latitude/longitude, precision class (`survey
 
 Allowed source classes are:
 
-- `MASARI_SURVEYED`: documented field verification under Darb procedure;
+- `DARB_SURVEYED`: documented field verification under Darb procedure;
 - `ORGANIZATION_PROVIDED`: supplied by the responsible public organization with retainable permission;
 - `OPERATOR_VERIFIED`: independently checked by trained operators against an approved retainable source/process;
 - `COMPATIBLE_OPEN_DATA`: dataset whose license, attribution, and redistribution use are approved;
@@ -222,7 +222,7 @@ User submissions are untrusted duplicate/discovery leads, not canonical coordina
 
 ## 14. OSM/ODbL boundary
 
-OSM-derived place names, coordinates, or systematic extracts may create database, attribution, share-alike, derivation, and distribution questions. The exact ingestion process, combination with Masari-owned records, offline distribution, attribution surface, and produced-database obligations require qualified review. Classification: `LEGAL_REVIEW_REQUIRED`.
+OSM-derived place names, coordinates, or systematic extracts may create database, attribution, share-alike, derivation, and distribution questions. The exact ingestion process, combination with Darb-owned records, offline distribution, attribution surface, and produced-database obligations require qualified review. Classification: `LEGAL_REVIEW_REQUIRED`.
 
 This design gives no legal advice and does not resolve `CANONICAL_ROUTE_STORAGE=LEGAL_REVIEW_REQUIRED`.
 
@@ -240,7 +240,7 @@ Canonicalization is a separate admin operation that requires independently retai
 
 ### Google boundary
 
-Google remains `CONDITIONAL` for optional discovery. `GOOGLE_CANONICAL_PLACE_SOURCE=NOT_APPROVED` and Google content storage is restricted. A Google Place ID may be stored only in `PlaceExternalReference` after approval of a refresh/expiry policy and terms version. The token provides reconciliation to Google; it does not authorize retention of returned name, category, address, or coordinate as Masari-owned data.
+Google remains `CONDITIONAL` for optional discovery. `GOOGLE_CANONICAL_PLACE_SOURCE=NOT_APPROVED` and Google content storage is restricted. A Google Place ID may be stored only in `PlaceExternalReference` after approval of a refresh/expiry policy and terms version. The token provides reconciliation to Google; it does not authorize retention of returned name, category, address, or coordinate as Darb-owned data.
 
 ## 16. Verification and admin workflow
 
@@ -299,7 +299,7 @@ Recent canonical places, if later approved, store only stable canonical IDs with
 
 ## 21. Offline and low-connectivity search
 
-A limited Phase A catalog may be cached only if every included field is Masari-owned or explicitly licensed for that distribution. A signed/versioned manifest carries catalog version, normalization/ranking version, generated time, expiry/staleness policy, and checksum. Updates are full snapshots initially; deltas require atomic verification and fallback to the last valid snapshot.
+A limited Phase A catalog may be cached only if every included field is Darb-owned or explicitly licensed for that distribution. A signed/versioned manifest carries catalog version, normalization/ranking version, generated time, expiry/staleness policy, and checksum. Updates are full snapshots initially; deltas require atomic verification and fallback to the last valid snapshot.
 
 Offline search supports exact, approved alias, normalized, prefix, and bounded token matching. It does not call external discovery, approve data, merge records, or persist provider content. When stale beyond the approved grace period, the client labels results as stale and blocks operations that require current active status while still allowing safe display of already-referenced historical names. Catalog cache contains no private address, query history, GPS, or user identity.
 
@@ -398,7 +398,7 @@ No migration 19 is created in M7D1C.
 
 **Q9. What third-party data may be persisted?** Only fields explicitly permitted by reviewed terms/policy. A provider reference such as a Google Place ID may be isolated under an approved refresh policy; provider content is not presumed retainable.
 
-**Q10. What can work offline?** A signed/versioned subset of Masari-owned or distribution-approved canonical names, aliases, context, types, and search indexes—never provider discovery or private location data.
+**Q10. What can work offline?** A signed/versioned subset of Darb-owned or distribution-approved canonical names, aliases, context, types, and search indexes—never provider discovery or private location data.
 
 **Q11. How is >=95% quality tested?** A versioned deterministic bilingual corpus with exact expected top-1 IDs or ambiguity sets, category/language reporting, held-out adjudication, and no top-5 substitution.
 

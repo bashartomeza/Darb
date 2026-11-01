@@ -68,7 +68,7 @@ test("missing or malformed decoded manifest fails closed", () => {
 
 const scanner = fileURLToPath(new URL("../scan-production-artifacts.mjs", import.meta.url));
 function scan(content, encoding = "utf8") {
-  const directory = mkdtempSync(join(tmpdir(), "masari-artifact-policy-"));
+  const directory = mkdtempSync(join(tmpdir(), "darb-artifact-policy-"));
   try {
     writeFileSync(join(directory, "artifact.bin"), content, encoding);
     return spawnSync(process.execPath, [scanner, "--admin-dir", directory], { encoding: "utf8" });

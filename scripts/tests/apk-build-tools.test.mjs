@@ -8,7 +8,7 @@ import test from "node:test";
 
 const scanner = fileURLToPath(new URL("../scan-production-artifacts.mjs", import.meta.url));
 
-test("compiled APK manifests enforce location policy and retain artifact rules", { skip: process.env.MASARI_TEST_ANDROID_TOOLS !== "true" }, () => {
+test("compiled APK manifests enforce location policy and retain artifact rules", { skip: process.env.DARB_TEST_ANDROID_TOOLS !== "true" }, () => {
   const sdk = process.env.ANDROID_SDK_ROOT || process.env.ANDROID_HOME;
   assert.ok(sdk, "Android SDK is required for compiled-manifest tests");
   const latest = (directory, file) => readdirSync(directory)
@@ -17,7 +17,7 @@ test("compiled APK manifests enforce location policy and retain artifact rules",
   const aapt = process.env.AAPT || latest(join(sdk, "build-tools"), process.platform === "win32" ? "aapt.exe" : "aapt");
   const androidJar = latest(join(sdk, "platforms"), "android.jar");
   assert.ok(aapt && androidJar, "Installed Android build-tools and platform are required");
-  const directory = mkdtempSync(join(tmpdir(), "masari apk fixture "));
+  const directory = mkdtempSync(join(tmpdir(), "darb apk fixture "));
   try {
     mkdirSync(join(directory, "assets"));
     for (const [name, permission, component, payload, expected, element = "uses-permission"] of [
@@ -51,7 +51,7 @@ test("compiled APK manifests enforce location policy and retain artifact rules",
 });
 
 test("artifact scanner checks large binary payloads without unbounded decoding", () => {
-  const directory = mkdtempSync(join(tmpdir(), "masari artifact fixture "));
+  const directory = mkdtempSync(join(tmpdir(), "darb artifact fixture "));
   try {
     const payload = Buffer.alloc(1024 * 1024 + 512, 0x41);
     payload.write("ROUTE_PROVIDER_SECRET", 1024 * 1024 - 8, "utf8");

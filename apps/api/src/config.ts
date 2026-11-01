@@ -599,7 +599,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     jwtSecret: raw.JWT_SECRET,
     accessTokenTtlSeconds,
     refreshTokenTtlDays,
-    refreshTokenPepper: raw.REFRESH_TOKEN_PEPPER ?? `masari-non-production:${raw.JWT_SECRET}`,
+    refreshTokenPepper: raw.REFRESH_TOKEN_PEPPER ?? `darb-non-production:${raw.JWT_SECRET}`,
     authActions: raw.AUTH_ACTION_TOKEN_PEPPER
       ? {
           key: {

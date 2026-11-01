@@ -10,7 +10,7 @@ let url: URL;
 try { url = new URL(process.env.DATABASE_URL!); }
 catch { throw new Error("isolated_database_required"); }
 assert(["127.0.0.1", "localhost"].includes(url.hostname), "loopback_database_required");
-assert(/^masari_functional_[a-z_]+_[0-9a-f]{10}_ci$/.test(url.pathname.slice(1)), "isolated_database_required");
+assert(/^darb_functional_[a-z_]+_[0-9a-f]{10}_ci$/.test(url.pathname.slice(1)), "isolated_database_required");
 assert(url.protocol === "mysql:" && Number(url.port) > 0 && url.port !== "3306", "isolated_mysql_port_required");
 
 const { createApp } = await import("../app.js");

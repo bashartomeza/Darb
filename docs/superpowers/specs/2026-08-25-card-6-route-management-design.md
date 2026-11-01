@@ -75,20 +75,20 @@ Implementation follows red-green-refactor cycles.
 
 - Service/API tests cover bounded projections, search/filters, create, draft/clone/edit, stale revision, stop create/edit/retire, used-stop protection, stop replacement/reorder, invalid and stale writes, publication validation, current-pointer fencing, pause/resume/retirement, published immutability, authorization, and public-catalog regression.
 - Admin tests exercise directory states, filters, detail/history, draft lifecycle, stop editing, stop ordering, conflict reload, localized validation, publish/pause/resume/retire, distinct statuses, maps-disabled state, RTL/LTR, responsive structure, keyboard controls, and confirmations.
-- MySQL integration uses only disposable `masari_routes_qa` and proves real locking/concurrency behavior, including competing publish and stale current-pointer operations.
+- MySQL integration uses only disposable `darb_routes_qa` and proves real locking/concurrency behavior, including competing publish and stale current-pointer operations.
 - Full API, Admin, Mobile, MySQL, build/typecheck, security, migration-count, and deterministic-demo regressions run before delivery.
 
 ## Disposable QA environment
 
 Human QA uses only:
 
-- Database: `masari_routes_qa`
+- Database: `darb_routes_qa`
 - API: `http://localhost:3100`
 - Admin: `http://localhost:5174`
 - Route management: enabled process-locally
 - Maps/providers: disabled
 
-Synthetic fixtures cover active and retired stops; empty, draft, current published, paused, and retired versions; passenger- and parcel-compatible memberships; invalid publication; and multi-version history. Fixture creation and cleanup target only the disposable database. The real `masari` database is never migrated, reset, seeded, or mutated.
+Synthetic fixtures cover active and retired stops; empty, draft, current published, paused, and retired versions; passenger- and parcel-compatible memberships; invalid publication; and multi-version history. Fixture creation and cleanup target only the disposable database. The real `darb` database is never migrated, reset, seeded, or mutated.
 
 ## Explicit non-goals
 

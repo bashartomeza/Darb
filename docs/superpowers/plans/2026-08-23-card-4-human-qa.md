@@ -4,7 +4,7 @@
 
 **Goal:** Prove Card 4 User Management is complete, add genuinely missing focused tests, and prepare an isolated MySQL/Admin/API environment for human QA.
 
-**Architecture:** Keep the existing Admin-only directory/detail/status endpoints and React screen. Add route-level API tests and component-level Admin tests around the real contracts, then validate them against disposable MySQL while keeping the real `masari` database read-only.
+**Architecture:** Keep the existing Admin-only directory/detail/status endpoints and React screen. Add route-level API tests and component-level Admin tests around the real contracts, then validate them against disposable MySQL while keeping the real `darb` database read-only.
 
 **Tech Stack:** TypeScript, Express, Prisma/MySQL, React/Vite, Vitest/Supertest, Flutter, GitHub Actions.
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Do not merge or begin Card 5.
-- Do not mutate real Bashar/Ahmad data or reset the real `masari` database.
+- Do not mutate real Bashar/Ahmad data or reset the real `darb` database.
 - Keep migrations at 21 and do not change Prisma schema.
 - Use a normal merge commit only if production-readiness advanced and integration is safe.
 - Keep the pull request draft and require all hosted checks green.
@@ -55,10 +55,10 @@
 **Files:**
 - Create only ignored/local temporary environment or helper material, then remove helpers.
 
-- [ ] Create `masari_users_qa`, deploy migrations 0→21, repeat deploy, and confirm migration status.
+- [ ] Create `darb_users_qa`, deploy migrations 0→21, repeat deploy, and confirm migration status.
 - [ ] Populate the ten synthetic fixtures through schema-valid local-only operations without real numbers.
 - [ ] Start isolated API on 3100 and Admin on 5174, verify queue/directory/detail/status contracts, and leave fixtures intact.
-- [ ] Query real `masari` read-only to confirm Bashar is visible through the directory contract without exposing secrets.
+- [ ] Query real `darb` read-only to confirm Bashar is visible through the directory contract without exposing secrets.
 
 ### Task 5: Full merge gate
 

@@ -8,7 +8,7 @@ This branch runs Darb on MySQL while preserving the PostgreSQL release at tag `v
 - Observed version: MySQL Community Server 8.0.46.
 - Host requirement: a local or explicitly trusted MySQL host reachable by the API machine.
 - Port: 3306.
-- Database name: `masari`.
+- Database name: `darb`.
 - Required character set: `utf8mb4`.
 - Validated collation: `utf8mb4_0900_ai_ci` at database level; Prisma-created tables use `utf8mb4_unicode_ci`.
 - Migration 18 installs integrity triggers. On hosts with binary logging enabled, the
@@ -25,15 +25,15 @@ Copy `apps/api/.env.example` to the ignored `apps/api/.env` file and replace pla
 ```dotenv
 APP_ENV="local"
 ENABLE_DEMO_FEATURES="false"
-DATABASE_URL="mysql://<user>:<password>@localhost:3306/masari"
+DATABASE_URL="mysql://<user>:<password>@localhost:3306/darb"
 JWT_SECRET="<at-least-32-random-characters>"
 CORS_ORIGINS="http://localhost:5173"
 ```
 
 This is a normal local configuration with demo capabilities disabled. Use the separate ignored values represented by `apps/api/.env.demo.example` only for the isolated deterministic rehearsal.
-The real/pilot `masari` database is permanently ineligible for demo reset. The
-demo example instead uses `masari_demo` plus an exact
-`DEMO_RESET_ALLOWED_DATABASES=masari_demo` opt-in.
+The real/pilot `darb` database is permanently ineligible for demo reset. The
+demo example instead uses `darb_demo` plus an exact
+`DEMO_RESET_ALLOWED_DATABASES=darb_demo` opt-in.
 
 ## Apply the schema
 
@@ -58,8 +58,8 @@ npm run db:migrate:status
 
 ## Verification
 
-With API, admin, and emulator running against the isolated `masari_demo`
-configuration (never the real/pilot `masari` database):
+With API, admin, and emulator running against the isolated `darb_demo`
+configuration (never the real/pilot `darb` database):
 
 ```powershell
 npm run demo:preflight

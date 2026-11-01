@@ -18,7 +18,7 @@ const { createApp } = await import("../app.js");
 type Role = "passenger" | "driver" | "merchant";
 const environment = {
   APP_ENV: "local",
-  DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+  DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
   JWT_SECRET: "test-only-jwt-secret-with-at-least-thirty-two-characters",
   CORS_ORIGINS: "http://localhost:5173",
   LOG_LEVEL: "silent",
@@ -493,10 +493,10 @@ describe("M7C3A canonical matching APIs", () => {
   it("keeps the internal runner unavailable in production-like configuration", async () => {
     const production = createConfig({
       APP_ENV: "production",
-      DATABASE_URL: "mysql://database-user:database-password@db.internal:3306/masari",
+      DATABASE_URL: "mysql://database-user:database-password@db.internal:3306/darb",
       JWT_SECRET: "production-jwt-secret-with-more-than-thirty-two-characters",
       REFRESH_TOKEN_PEPPER: "production-refresh-secret-with-more-than-thirty-two-characters",
-      CORS_ORIGINS: "https://admin.masari.example",
+      CORS_ORIGINS: "https://admin.darb.example",
       APP_RELEASE: "m7c3a-test",
       TRUST_PROXY: "none"
     });

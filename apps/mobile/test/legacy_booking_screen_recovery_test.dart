@@ -45,7 +45,7 @@ void main() {
       final mutation = LegacyPassengerRequestMutation(
         storage: CanonicalOperationStorage(
           const FlutterSecureStorage(),
-          storageKey: 'masari_legacy_passenger_create_v1',
+          storageKey: 'darb_legacy_passenger_create_v1',
         ),
         currentActor: () => 'passenger-fixture',
         selectionStorage: _FailedSelectionStorage(),
@@ -154,7 +154,7 @@ void main() {
       final mutation = LegacyPassengerRequestMutation(
         storage: CanonicalOperationStorage(
           const FlutterSecureStorage(),
-          storageKey: 'masari_legacy_passenger_create_v1',
+          storageKey: 'darb_legacy_passenger_create_v1',
         ),
         currentActor: () => 'passenger-fixture',
       );
@@ -259,7 +259,7 @@ void main() {
         final mutation = LegacyPassengerRequestMutation(
           storage: CanonicalOperationStorage(
             const FlutterSecureStorage(),
-            storageKey: 'masari_legacy_passenger_create_v1',
+            storageKey: 'darb_legacy_passenger_create_v1',
           ),
           currentActor: () => 'passenger-fixture',
         );

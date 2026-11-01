@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-const DISPOSABLE_DATABASE = /^masari_auth_rehearsal_[a-z0-9_]+$/;
+const DISPOSABLE_DATABASE = /^darb_auth_rehearsal_[a-z0-9_]+$/;
 
 export function assertDisposableDatabase(name) {
   if (!DISPOSABLE_DATABASE.test(name)) {

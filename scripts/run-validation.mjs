@@ -4,7 +4,7 @@ const mode = process.argv[2] ?? "standard";
 const root = new URL("../", import.meta.url).pathname.replace(/^\/(\w:)/, "$1");
 const productionBuildEnv = {
   ...process.env,
-  VITE_API_BASE_URL: "https://api.staging.masari.invalid",
+  VITE_API_BASE_URL: "https://api.staging.darb.invalid",
   VITE_APP_ENV: "production",
   VITE_ENABLE_DEMO_FEATURES: "false",
   VITE_DEMO_ADMIN_PHONE: "",

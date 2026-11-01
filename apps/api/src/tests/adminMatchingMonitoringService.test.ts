@@ -14,7 +14,7 @@ const combinedMatch: Prisma.MatchGetPayload<{ select: typeof matchSelect }> = {
   status: "accepted",
   created_at: new Date("2026-09-09T10:00:00.000Z"),
   score: new Prisma.Decimal("0.8750"),
-  method: "masari_route_score",
+  method: "darb_route_score",
   driver_route: { id: "route_1", status: "completed" },
   passenger_request: { id: "request_1", status: "delivered", passenger_count: 2 },
   merchant_order: { id: "order_1", status: "completed", _count: { parcels: 3 } },
@@ -61,7 +61,7 @@ describe("admin matching monitoring service", () => {
       data: {
         items: [{
           id: "match_1", status: "accepted", created_at: "2026-09-09T10:00:00.000Z",
-          score: "0.875", method: "masari_route_score", demand_kind: "combined",
+          score: "0.875", method: "darb_route_score", demand_kind: "combined",
           driver_route: { id: "route_1", status: "completed" },
           passenger_request: { id: "request_1", status: "delivered", passenger_count: 2 },
           merchant_order: { id: "order_1", status: "completed", parcel_count: 3 },

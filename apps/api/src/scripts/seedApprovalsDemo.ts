@@ -8,7 +8,7 @@ import { prisma } from "../lib/prisma.js";
 
 const databaseName = new URL(process.env.DATABASE_URL ?? "mysql://invalid/").pathname.slice(1);
 const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
-if (databaseName.toLowerCase() === "masari" || !allowed.includes(databaseName)) {
+if (databaseName.toLowerCase() === "darb" || !allowed.includes(databaseName)) {
   throw new Error("Approval demo seed refuses a database that is not explicitly reset-safe");
 }
 const merchantPassword = process.env.DEMO_MERCHANT_PASSWORD;
@@ -17,9 +17,9 @@ if (!merchantPassword || !driverPassword) throw new Error("DEMO_MERCHANT_PASSWOR
 
 const PHONES = { merchant: "+970590000006", rejectedDriver: "+970590000007", pendingDriver: "+970590000008" } as const;
 const EMAILS: Record<string, string> = {
-  [PHONES.merchant]: "demo.pending.merchant@masari.app",
-  [PHONES.rejectedDriver]: "demo.rejected.driver@masari.app",
-  [PHONES.pendingDriver]: "demo.pending.driver@masari.app"
+  [PHONES.merchant]: "demo.pending.merchant@darb.app",
+  [PHONES.rejectedDriver]: "demo.rejected.driver@darb.app",
+  [PHONES.pendingDriver]: "demo.pending.driver@darb.app"
 };
 
 async function account(phone: string, name: string, role: "merchant" | "driver", password: string) {

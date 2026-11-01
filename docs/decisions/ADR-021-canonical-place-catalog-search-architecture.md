@@ -39,7 +39,7 @@ Existing immutable route history remains authoritative. A future implementation 
 - Search behavior is reproducible, testable, bilingual, and reviewable.
 - Catalog curation and dual-control approval add operational work.
 - Aliases, coordinates, merges, and deprecations require audit events and non-destructive history.
-- Only Masari-owned or explicitly retainable canonical data may be distributed for offline search.
+- Only Darb-owned or explicitly retainable canonical data may be distributed for offline search.
 - MySQL remains the beta storage/retrieval foundation; a search engine requires later evidence and approval.
 - M7D1C changes no application code, Prisma schema, migration, API, Flutter, Admin behavior, or production provider configuration.
 

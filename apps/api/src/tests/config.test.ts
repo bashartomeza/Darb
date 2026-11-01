@@ -7,10 +7,10 @@ const safeRefreshPepper = "a-safe-refresh-pepper-with-more-than-thirty-two-chara
 function environment(overrides: Record<string, string | undefined> = {}) {
   return {
     APP_ENV: "production",
-    DATABASE_URL: "mysql://database-user:database-password@db.internal:3306/masari",
+    DATABASE_URL: "mysql://database-user:database-password@db.internal:3306/darb",
     JWT_SECRET: safeJwt,
     REFRESH_TOKEN_PEPPER: safeRefreshPepper,
-    CORS_ORIGINS: "https://admin.masari.example",
+    CORS_ORIGINS: "https://admin.darb.example",
     APP_RELEASE: "m6b1a-test",
     TRUST_PROXY: "none",
     ...overrides
@@ -235,20 +235,20 @@ describe("fail-closed application configuration", () => {
       ...process.env,
       APP_ENV: "demo",
       ENABLE_DEMO_FEATURES: "true",
-      DEMO_RESET_ALLOWED_DATABASES: "masari_demo,masari_demo_ci"
+      DEMO_RESET_ALLOWED_DATABASES: "darb_demo,darb_demo_ci"
     });
-    expect(parsed.demoResetAllowedDatabases).toEqual(["masari_demo", "masari_demo_ci"]);
+    expect(parsed.demoResetAllowedDatabases).toEqual(["darb_demo", "darb_demo_ci"]);
     expect(() => createConfig({
       ...process.env,
       APP_ENV: "demo",
       ENABLE_DEMO_FEATURES: "true",
-      DEMO_RESET_ALLOWED_DATABASES: "masari_*_ci"
+      DEMO_RESET_ALLOWED_DATABASES: "darb_*_ci"
     })).toThrow(/exact comma-separated database names/);
     expect(() => createConfig({
       ...process.env,
       APP_ENV: "demo",
       ENABLE_DEMO_FEATURES: "true",
-      DEMO_RESET_ALLOWED_DATABASES: "masari_demo,masari_demo"
+      DEMO_RESET_ALLOWED_DATABASES: "darb_demo,darb_demo"
     })).toThrow(/must not contain duplicate/);
   });
 });
@@ -257,7 +257,7 @@ describe("SMTP email delivery configuration", () => {
   const pepper = "separate-auth-action-secret-with-over-thirty-two-characters";
   const smtp = {
     EMAIL_DELIVERY: "smtp", SMTP_HOST: "smtp.mail.example", SMTP_PORT: "587", SMTP_SECURE: "starttls",
-    SMTP_USER: "mailer", SMTP_PASSWORD: "a-real-smtp-password", EMAIL_FROM_ADDRESS: "no-reply@masari.example",
+    SMTP_USER: "mailer", SMTP_PASSWORD: "a-real-smtp-password", EMAIL_FROM_ADDRESS: "no-reply@darb.example",
     EMAIL_FROM_NAME: "Darb", AUTH_ACTION_TOKEN_PEPPER: pepper
   };
 
@@ -268,7 +268,7 @@ describe("SMTP email delivery configuration", () => {
   it.each(["staging", "production"])("accepts a complete smtp configuration in %s", (appEnv) => {
     const config = createConfig(environment({ APP_ENV: appEnv, ...smtp }));
     expect(config.email.smtp).toEqual({ host: "smtp.mail.example", port: 587, secure: "starttls", user: "mailer",
-      password: "a-real-smtp-password", fromAddress: "no-reply@masari.example", fromName: "Darb" });
+      password: "a-real-smtp-password", fromAddress: "no-reply@darb.example", fromName: "Darb" });
   });
   it("defaults the port from the secure mode and the sender name", () => {
     const tlsConfig = createConfig(environment({ ...smtp, SMTP_PORT: "", SMTP_SECURE: "tls", EMAIL_FROM_NAME: "" }));
@@ -290,8 +290,8 @@ describe("SMTP email delivery configuration", () => {
   });
   it("ignores smtp settings when delivery is disabled and allows credential-less relays outside production", () => {
     expect(createConfig(environment({ ...smtp, EMAIL_DELIVERY: "disabled", SMTP_PASSWORD: undefined })).email).toEqual({ delivery: "disabled" });
-    const local = createConfig(environment({ APP_ENV: "local", EMAIL_DELIVERY: "smtp", SMTP_HOST: "localhost", EMAIL_FROM_ADDRESS: "dev@masari.example" }));
+    const local = createConfig(environment({ APP_ENV: "local", EMAIL_DELIVERY: "smtp", SMTP_HOST: "localhost", EMAIL_FROM_ADDRESS: "dev@darb.example" }));
     expect(local.email.smtp).toMatchObject({ host: "localhost", user: undefined, password: undefined });
-    expect(() => createConfig(environment({ APP_ENV: "local", EMAIL_DELIVERY: "smtp", SMTP_HOST: "localhost", EMAIL_FROM_ADDRESS: "dev@masari.example", SMTP_USER: "u" }))).toThrow(/together/);
+    expect(() => createConfig(environment({ APP_ENV: "local", EMAIL_DELIVERY: "smtp", SMTP_HOST: "localhost", EMAIL_FROM_ADDRESS: "dev@darb.example", SMTP_USER: "u" }))).toThrow(/together/);
   });
 });

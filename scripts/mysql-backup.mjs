@@ -9,8 +9,8 @@ import {
 } from "./lib/mysql-tools.mjs";
 
 const root = resolve(new URL("../", import.meta.url).pathname.replace(/^\/(\w:)/, "$1"));
-const envPath = resolve(root, process.env.MASARI_ENV_FILE ?? "apps/api/.env");
-const outputDirectory = resolve(root, process.env.MASARI_BACKUP_DIR ?? "backups/mysql");
+const envPath = resolve(root, process.env.DARB_ENV_FILE ?? "apps/api/.env");
+const outputDirectory = resolve(root, process.env.DARB_BACKUP_DIR ?? "backups/mysql");
 let defaults;
 let dumpPath;
 try {
@@ -18,7 +18,7 @@ try {
   defaults = createMysqlDefaults(url);
   mkdirSync(outputDirectory, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  dumpPath = resolve(outputDirectory, `masari-${timestamp}.sql`);
+  dumpPath = resolve(outputDirectory, `darb-${timestamp}.sql`);
   const result = spawnSync("mysqldump", [
     `--defaults-extra-file=${defaults.path}`,
     "--single-transaction", "--quick", "--routines", "--triggers", "--events",

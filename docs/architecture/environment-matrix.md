@@ -3,7 +3,7 @@
 `APP_ENV` is the backend and Flutter product-capability boundary. `VITE_APP_ENV` is its admin-build equivalent. `NODE_ENV` and Vite modes may control framework behavior, but they do not enable Darb demo capabilities.
 
 Demo features do not authorize destructive reset. Reset additionally requires
-an exact database name in `DEMO_RESET_ALLOWED_DATABASES`; `masari` is permanently
+an exact database name in `DEMO_RESET_ALLOWED_DATABASES`; `darb` is permanently
 protected, and a Serializable guard rejects any database containing a non-demo
 user. Missing reset isolation configuration leaves normal API usage available
 while advertising reset as unavailable.

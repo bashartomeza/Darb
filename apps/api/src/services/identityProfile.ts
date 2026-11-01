@@ -55,7 +55,7 @@ export class IdentityProfileService {
     return user;
   }
   private subject(user: { id: string; security_version: number; email: string | null }) { return `google-link:${user.id}:${user.security_version}:${user.email}`; }
-  private matches(digest: string | null, value: string) { return digest !== null && hexDigestMatches(digest, keyedDigest("masari:auth-action-subject", value, this.key())); }
+  private matches(digest: string | null, value: string) { return digest !== null && hexDigestMatches(digest, keyedDigest("darb:auth-action-subject", value, this.key())); }
   private async consume(tx: Prisma.TransactionClient, raw: string, purpose: "email_verification" | "phone_verification") {
     try { return await consumeAuthAction(tx, raw, purpose, { key: this.key() }); }
     catch (e) { if (e instanceof AuthActionError) throw new HttpError(400, "auth_action_invalid"); throw e; }
@@ -128,7 +128,7 @@ export class IdentityProfileService {
   }
   async phoneStart(id: string, version: number, input: z.infer<typeof phoneStartSchema>) {
     const sender = this.sender(this.phoneProvider, "phone_verification_unavailable");
-    const code = generateOtpCode(); const phoneDigest = keyedDigest("masari:auth-profile-phone", input.phone, this.key());
+    const code = generateOtpCode(); const phoneDigest = keyedDigest("darb:auth-profile-phone", input.phone, this.key());
     let email: string | undefined;
     const proof = await this.transaction(async (tx) => {
       const user = await this.user(tx, id, version);

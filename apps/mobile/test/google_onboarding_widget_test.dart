@@ -48,7 +48,7 @@ void main() {
             completions.add(jsonDecode(request.body) as Map<String, dynamic>);
             return http.Response(
               jsonEncode({
-                'token': 'new-masari-session',
+                'token': 'new-darb-session',
                 'user': {
                   'id': 'new',
                   'name': 'Rana H',
@@ -134,7 +134,7 @@ void main() {
       });
       expect(
         (await container.read(tokenStorageProvider).readBundle())?.accessToken,
-        'new-masari-session',
+        'new-darb-session',
       );
       expect(
         GoRouter.of(

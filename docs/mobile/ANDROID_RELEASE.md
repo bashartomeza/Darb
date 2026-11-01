@@ -7,11 +7,11 @@ Application id: `ps.darb.mobile`. Closes gap G4 in `docs/deployment/DEPLOY_RUNBO
 `apps/mobile/android/app/build.gradle.kts` reads release signing material from, in order:
 
 1. `apps/mobile/android/key.properties` (git-ignored) with `storeFile`, `storePassword`, `keyAlias`, `keyPassword`.
-2. Environment variables (for CI): `MASARI_KEYSTORE_FILE`, `MASARI_KEYSTORE_PASSWORD`, `MASARI_KEY_ALIAS`, `MASARI_KEY_PASSWORD`.
+2. Environment variables (for CI): `DARB_KEYSTORE_FILE`, `DARB_KEYSTORE_PASSWORD`, `DARB_KEY_ALIAS`, `DARB_KEY_PASSWORD`.
 
 If neither is complete, packaging a release build (`assembleRelease`, `bundleRelease`, `flutter build apk|appbundle --release`) fails with "Release signing is not configured". Debug builds are unaffected.
 
-The only bypass is `-PallowDebugSigning=true` (or the environment variable `MASARI_ALLOW_DEBUG_SIGNING=true`, which is how `flutter build` can receive it). It signs with the debug key and is used only by the CI job `ci-mobile.yml` so it can build and scan an APK without secrets. Never distribute such an APK.
+The only bypass is `-PallowDebugSigning=true` (or the environment variable `DARB_ALLOW_DEBUG_SIGNING=true`, which is how `flutter build` can receive it). It signs with the debug key and is used only by the CI job `ci-mobile.yml` so it can build and scan an APK without secrets. Never distribute such an APK.
 
 Minify/shrink (R8) is deliberately left off. It has not been verified against the plugin set (flutter_secure_storage, google_sign_in, geolocator, file_picker and others) and a broken release would only show at runtime. Enable it only together with a device test of sign-in, secure storage, location and file upload, adding keep rules to `android/app/proguard-rules.pro` as needed.
 
@@ -51,7 +51,7 @@ Enrol the app in Play App Signing. Google keeps the real app-signing key; the ke
 
 ## Build
 
-The app appends `/api/v1` itself, so `API_BASE_URL` is the origin only (`https://masari.aynur.ps`), not `.../api/v1`. It must be HTTPS in staging and production.
+The app appends `/api/v1` itself, so `API_BASE_URL` is the origin only (`https://darb.aynur.ps`), not `.../api/v1`. It must be HTTPS in staging and production.
 
 Dart-defines the app reads:
 
@@ -71,7 +71,7 @@ cd apps/mobile
 flutter build appbundle --release --build-number=<N> \
   --dart-define=APP_ENV=production \
   --dart-define=ENABLE_DEMO_FEATURES=false \
-  --dart-define=API_BASE_URL=https://masari.aynur.ps \
+  --dart-define=API_BASE_URL=https://darb.aynur.ps \
   --dart-define=GOOGLE_SERVER_CLIENT_ID=<SERVER_CLIENT_ID>
 ```
 
@@ -85,7 +85,7 @@ apksigner verify --print-certs app-release.apk   # must not say "Android Debug"
 
 ## CI
 
-- `ci-mobile.yml` (PRs): builds with `MASARI_ALLOW_DEBUG_SIGNING=true` against a staging host and scans the APK. It needs no secrets and its output is not distributable.
+- `ci-mobile.yml` (PRs): builds with `DARB_ALLOW_DEBUG_SIGNING=true` against a staging host and scans the APK. It needs no secrets and its output is not distributable.
 - `release-android.yml` (manual `workflow_dispatch` only, not required for PRs): builds a signed AAB and uploads it as an artifact. The repository owner must first add the secrets `ANDROID_KEYSTORE_BASE64` (`base64 -w0 masari-upload.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. Until then it fails at the first step by design.
 
 ## Checklist
