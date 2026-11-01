@@ -11,9 +11,11 @@ import 'package:darb_mobile/features/driver/application/driver_controller.dart';
 import 'package:darb_mobile/features/driver/data/driver_models.dart';
 import 'package:darb_mobile/features/driver/data/driver_repository.dart';
 import 'package:darb_mobile/features/driver/presentation/driver_route_screen.dart';
+import 'package:darb_mobile/features/legacy_corridor/data/legacy_corridor_repository.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/legacy_corridor_fixture.dart';
 
 void main() {
   testWidgets(
@@ -261,7 +263,10 @@ Future<Object?> _error(Future<Object?> work) =>
 
 ProviderContainer _container(_Repository repository, {bool bind = true}) {
   final container = ProviderContainer(
-    overrides: [driverRepositoryProvider.overrideWithValue(repository)],
+    overrides: [
+      driverRepositoryProvider.overrideWithValue(repository),
+      legacyCorridorProvider.overrideWith((ref) async => testCorridor()),
+    ],
   );
   if (bind) {
     container.read(authenticatedActorBindingProvider).bind('synthetic-driver');
@@ -339,13 +344,13 @@ class _Repository extends DriverRepository {
 
 DriverRoute _route({required int seats, int parcels = 4}) => DriverRoute(
   id: 'synthetic-route',
-  originLabel: lockedDriverOriginLabel,
-  originLat: lockedDriverOriginLat,
-  originLng: lockedDriverOriginLng,
-  destinationLabel: lockedDriverDestinationLabel,
-  destinationLat: lockedDriverDestinationLat,
-  destinationLng: lockedDriverDestinationLng,
-  corridorKey: lockedDriverCorridorKey,
+  originLabel: corridorOriginLabel,
+  originLat: corridorOriginLat,
+  originLng: corridorOriginLng,
+  destinationLabel: corridorDestinationLabel,
+  destinationLat: corridorDestinationLat,
+  destinationLng: corridorDestinationLng,
+  corridorKey: corridorKey,
   seatsAvailable: seats,
   parcelCapacityAvailable: parcels,
   status: 'active',

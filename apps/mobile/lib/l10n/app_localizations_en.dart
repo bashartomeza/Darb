@@ -1006,6 +1006,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Routes are temporarily unavailable. Refresh before submitting.';
 
   @override
+  String get corridorPlacesLoadFailed =>
+      'Couldn\'t load the route\'s places. Check your connection and retry.';
+
+  @override
+  String get corridorPlacesUnavailable =>
+      'No places are open on this route right now.';
+
+  @override
   String get noPublishedRoutes => 'No eligible published routes are available.';
 
   @override
@@ -1191,6 +1199,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get returnToDashboard => 'Return to dashboard';
+
+  @override
+  String get viewRouteRequests => 'View my route requests';
 
   @override
   String get canonicalDriverOffers => 'Route offers';
@@ -1837,6 +1848,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'The assistant service is not available in this build. No result was created.';
 
   @override
+  String get assistantHistoryErrorTitle => 'Couldn’t load your chat';
+
+  @override
+  String get assistantHistoryErrorBody =>
+      'Your chat with the assistant is saved to your account. Check your connection and try again.';
+
+  @override
+  String get assistantNewChat => 'New chat';
+
+  @override
+  String get assistantNewChatTitle => 'Start a new chat?';
+
+  @override
+  String get assistantNewChatBody =>
+      'This chat will be deleted from your account. Trips you already booked are not affected.';
+
+  @override
+  String get assistantNewChatFailed =>
+      'Couldn\'t start a new chat. Check your connection and try again.';
+
+  @override
   String get assistantClarificationLabel =>
       'Darb assistant needs clarification';
 
@@ -2171,6 +2203,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get incidentCategoryOther => 'Other';
+
+  @override
+  String get myIncidentReports => 'My reports';
+
+  @override
+  String get myIncidentReportsEmpty => 'You have not sent any reports yet.';
+
+  @override
+  String get myIncidentReportsFailed => 'Could not load your reports.';
+
+  @override
+  String get incidentStatusOpen => 'Open';
+
+  @override
+  String get incidentStatusReviewing => 'Under review';
+
+  @override
+  String get incidentStatusResolved => 'Resolved';
 
   @override
   String get notifIncidentUpdatedTitle => 'Update on your report';

@@ -12,6 +12,7 @@ import 'package:darb_mobile/features/merchant/data/merchant_order_operation_stor
 import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/legacy_corridor_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -34,13 +35,13 @@ void main() {
       apiClient: TestAuthenticatedClient(handler: handler).client,
     ),
   );
-  const drafts = [ParcelDraft()];
-  final body = MerchantRepository.createOrderBody(drafts);
+  final drafts = [ParcelDraft.to(testDropoff)];
+  final body = MerchantRepository.createOrderBody(testPickup, drafts);
   http.Response saved([int status = 200]) => http.Response(
     jsonEncode({
       'order': {
         'id': 'saved_order',
-        'pickup_label': 'Hebron Merchant Pickup',
+        'pickup_label': testPickup.label,
         'status': 'submitted',
         'created_at': '2026-10-21T00:00:00Z',
         'parcels': [
@@ -72,7 +73,10 @@ void main() {
         expect(pending?.payload, body);
         throw http.ClientException('response lost after commit');
       });
-      await expectLater(first.submit(drafts), throwsA(isA<ApiException>()));
+      await expectLater(
+        first.submit(testPickup, drafts),
+        throwsA(isA<ApiException>()),
+      );
       final before = await storage.read('merchant_A');
       expect(before, isNotNull);
       final restarted = runner((request) async {
@@ -101,7 +105,10 @@ void main() {
         }
         return saved(201);
       });
-      await expectLater(service.submit(drafts), throwsA(isA<ApiException>()));
+      await expectLater(
+        service.submit(testPickup, drafts),
+        throwsA(isA<ApiException>()),
+      );
       expect((await service.resume()).id, 'saved_order');
       expect(requests.map((r) => r.method), ['POST', 'GET', 'POST']);
       expect(
@@ -118,10 +125,13 @@ void main() {
       calls++;
       throw http.ClientException('lost');
     });
-    await expectLater(service.submit(drafts), throwsA(isA<ApiException>()));
+    await expectLater(
+      service.submit(testPickup, drafts),
+      throwsA(isA<ApiException>()),
+    );
     final original = await storage.read('merchant_A');
     await expectLater(
-      service.submit(const [ParcelDraft(size: 'L')]),
+      service.submit(testPickup, [ParcelDraft.to(testDropoff, size: 'L')]),
       throwsA(isA<MerchantOrderRecoveryException>()),
     );
     expect(calls, 1);
@@ -140,7 +150,10 @@ void main() {
         http.Response('{"order":{"id":"bad"}}', 201),
       ]) {
         final service = runner((_) async => response);
-        await expectLater(service.submit(drafts), throwsA(anything));
+        await expectLater(
+          service.submit(testPickup, drafts),
+          throwsA(anything),
+        );
         expect(await storage.read('merchant_A'), isNotNull);
         FlutterSecureStorage.setMockInitialValues({});
       }
@@ -152,7 +165,7 @@ void main() {
     () async {
       final invalid = http.Response('{"error":"validation_error"}', 400);
       await expectLater(
-        runner((_) async => invalid).submit(drafts),
+        runner((_) async => invalid).submit(testPickup, drafts),
         throwsA(isA<ApiException>()),
       );
       expect(await storage.read('merchant_A'), isNull);
@@ -178,10 +191,10 @@ void main() {
         started.complete();
         return gate.future;
       });
-      final first = service.submit(drafts);
+      final first = service.submit(testPickup, drafts);
       await started.future;
       await expectLater(
-        service.submit(drafts),
+        service.submit(testPickup, drafts),
         throwsA(isA<MerchantOrderRecoveryException>()),
       );
       gate.complete(saved(201));
@@ -199,7 +212,7 @@ void main() {
         started.complete();
         return gate.future;
       });
-      final future = service.submit(drafts);
+      final future = service.submit(testPickup, drafts);
       await started.future;
       final pending = await storage.read('merchant_A');
       binding.clear();
@@ -222,7 +235,7 @@ void main() {
         runner((_) async {
           sends++;
           return saved();
-        }, store: switching).submit(drafts),
+        }, store: switching).submit(testPickup, drafts),
         throwsA(isA<MerchantOrderRecoveryException>()),
       );
       expect(sends, 0);
@@ -295,10 +308,13 @@ void main() {
     () async {
       var sends = 0;
       await expectLater(
-        runner((_) async {
-          sends++;
-          return saved();
-        }, store: _FailingStorage(saveFailure: true)).submit(drafts),
+        runner(
+          (_) async {
+            sends++;
+            return saved();
+          },
+          store: _FailingStorage(saveFailure: true),
+        ).submit(testPickup, drafts),
         throwsA(anything),
       );
       expect(sends, 0);
@@ -306,7 +322,7 @@ void main() {
         runner(
           (_) async => saved(201),
           store: _FailingStorage(),
-        ).submit(drafts),
+        ).submit(testPickup, drafts),
         throwsA(anything),
       );
       expect(await storage.read('merchant_A'), isNotNull);
@@ -323,7 +339,7 @@ void main() {
         (_) async => saved(201),
         store: MerchantOrderOperationStorage(secure),
       );
-      final future = service.submit(drafts);
+      final future = service.submit(testPickup, drafts);
       await secure.started.future;
       final original = await storage.read('merchant_A');
       binding.clear();
@@ -352,7 +368,7 @@ void main() {
         sends++;
         return saved(201);
       }, store: MerchantOrderOperationStorage(secure));
-      final future = service.submit(drafts);
+      final future = service.submit(testPickup, drafts);
       await secure.started.future;
       binding.clear();
       binding.bind('merchant_A');
@@ -360,7 +376,7 @@ void main() {
       secure.release.complete();
       await expectLater(future, throwsA(isA<MerchantOrderRecoveryException>()));
       await expectLater(
-        service.submit(drafts),
+        service.submit(testPickup, drafts),
         throwsA(isA<MerchantOrderRecoveryException>()),
       );
       expect(sends, 1);
@@ -375,7 +391,7 @@ void main() {
       });
       final service = runner((_) async => saved(201), store: store);
       await expectLater(
-        service.submit(drafts),
+        service.submit(testPickup, drafts),
         throwsA(isA<MerchantOrderRecoveryException>()),
       );
       expect(await storage.read('merchant_A'), isNotNull);
@@ -391,7 +407,7 @@ void main() {
         runner((_) async {
           calls++;
           return saved();
-        }).submit(drafts),
+        }).submit(testPickup, drafts),
         throwsA(anything),
       );
       expect(calls, 0);

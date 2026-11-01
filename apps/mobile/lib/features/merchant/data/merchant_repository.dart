@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/data/authenticated_api_client.dart';
+import '../../legacy_corridor/data/legacy_corridor_models.dart';
 import '../../trips/data/trip_models.dart';
 import 'merchant_bulk_models.dart';
 import 'merchant_models.dart';
@@ -32,18 +33,24 @@ class MerchantRepository {
     return MerchantOrder.fromJson(json['order'] as Map<String, dynamic>);
   }
 
-  static Map<String, dynamic> createOrderBody(List<ParcelDraft> parcels) => {
-    'pickup_label': merchantPickupLabel,
-    'pickup_lat': merchantPickupLat,
-    'pickup_lng': merchantPickupLng,
+  /// The pickup is one of the corridor's parcel pickup stops, sent with that
+  /// stop's own coordinates.
+  static Map<String, dynamic> createOrderBody(
+    CorridorPlace pickup,
+    List<ParcelDraft> parcels,
+  ) => {
+    'pickup_label': pickup.label,
+    'pickup_lat': pickup.lat,
+    'pickup_lng': pickup.lng,
     'parcels': parcels.map((parcel) => parcel.toJson()).toList(),
   };
 
   Future<MerchantOrder> createOrder(
+    CorridorPlace pickup,
     List<ParcelDraft> parcels, {
     String? idempotencyKey,
   }) => createOrderPayload(
-    createOrderBody(parcels),
+    createOrderBody(pickup, parcels),
     idempotencyKey: idempotencyKey,
   );
 

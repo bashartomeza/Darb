@@ -307,6 +307,12 @@ function passengerDemandFromSearch(input: PassengerMatchSearchInput): PassengerD
 
 async function createBestMatch(req: AuthenticatedRequest, input: MatchInput) {
   const { passengerRequest, merchantOrder } = await loadAuthorizedInput(req, input);
+  // A route picked at booking is saved on the request; matching never swaps it.
+  const pinnedRouteId = passengerRequest?.selected_driver_route_id ?? null;
+  if (pinnedRouteId && input.driverRouteId && input.driverRouteId !== pinnedRouteId) {
+    throw new HttpError(409, "selected_driver_route_unavailable");
+  }
+  const driverRouteId = pinnedRouteId ?? input.driverRouteId;
   if (merchantOrder && !["submitted", "batched", "matched"].includes(merchantOrder.status)) {
     throw new HttpError(409, "merchant_order_not_matchable");
   }
@@ -335,13 +341,13 @@ async function createBestMatch(req: AuthenticatedRequest, input: MatchInput) {
     excludeRouteIds: new Set(rejectedRoutes.map((item) => item.driver_route_id))
   });
 
-  const best = input.driverRouteId
-    ? candidates.find((candidate) => candidate.route.id === input.driverRouteId)
+  const best = driverRouteId
+    ? candidates.find((candidate) => candidate.route.id === driverRouteId)
     : candidates[0];
   if (!best) {
     throw new HttpError(
-      input.driverRouteId ? 409 : 404,
-      input.driverRouteId ? "selected_driver_route_unavailable" : "no_compatible_driver_route"
+      driverRouteId ? 409 : 404,
+      driverRouteId ? "selected_driver_route_unavailable" : "no_compatible_driver_route"
     );
   }
 

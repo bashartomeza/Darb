@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/darb_card.dart';
+import '../../legacy_corridor/data/legacy_corridor_repository.dart';
 import '../application/driver_controller.dart';
 import '../application/legacy_driver_route_mutation.dart';
-import '../data/driver_models.dart';
 import 'driver_ui.dart';
 
 class DriverRouteScreen extends ConsumerStatefulWidget {
@@ -101,7 +102,9 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
     final routeState = ref.watch(driverRouteControllerProvider);
+    final corridor = ref.watch(legacyCorridorProvider);
     return ForegroundRefresh(
       refresh: () async {
         await ref.read(driverRouteControllerProvider.notifier).refresh();
@@ -130,17 +133,38 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
                 ),
                 data: (state) {
                   final route = state.currentRoute;
+                  // Before a route exists, its ends are the server's corridor.
+                  final origin =
+                      route?.originLabel ??
+                      corridor.value?.driverRoute.originLabel;
+                  final destination =
+                      route?.destinationLabel ??
+                      corridor.value?.driverRoute.destinationLabel;
                   return DarbCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          '${l10n.origin}: ${localizedOrigin(context, route?.originLabel ?? lockedDriverOriginLabel)}',
-                        ),
-                        Text('${l10n.destination}: ${l10n.bethlehem}'),
-                        Text(
-                          '${l10n.lockedCorridorLabel}: ${l10n.lockedCorridor}',
-                        ),
+                        if (origin != null)
+                          Text(
+                            '${l10n.origin}: ${localizedOrigin(context, origin)}',
+                          ),
+                        if (destination != null)
+                          Text(
+                            '${l10n.destination}: ${localizedCorridorPlace(context, destination)}',
+                          ),
+                        if (corridor.value case final value?)
+                          Text(
+                            '${l10n.lockedCorridorLabel}: ${value.displayName(arabic: arabic)}',
+                          )
+                        else if (corridor.hasError)
+                          TextButton(
+                            key: const ValueKey('driverCorridorRetry'),
+                            onPressed: () =>
+                                ref.invalidate(legacyCorridorProvider),
+                            child: Text(
+                              '${l10n.corridorPlacesLoadFailed} ${l10n.retry}',
+                            ),
+                          ),
                         const SizedBox(height: AppTokens.spaceMedium),
                         if (route == null || _recovering) ...[
                           DropdownButtonFormField<int>(

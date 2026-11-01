@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import type { AppConfig } from "../config.js";
@@ -10,6 +9,11 @@ import {
   type PassengerAssistantReply,
   type PassengerAssistantService
 } from "../services/passengerAssistant.js";
+import {
+  createPrismaAssistantHistoryStore,
+  type AssistantHistoryConversation,
+  type PassengerAssistantHistoryStore
+} from "../services/passengerAssistantHistory.js";
 import {
   prismaUncertainRequestRecorder,
   type UncertainRequestRecorder
@@ -24,6 +28,27 @@ const assistantMessageSchema = z.object({
     text: z.string().trim().min(1).max(2_000)
   }).strict()).max(8).default([])
 }).strict();
+
+const savedRequestLinkSchema = z.object({
+  conversation_id: z.string().trim().min(1).max(128),
+  saved_request_id: z.string().trim().min(1).max(191)
+}).strict();
+
+function publicConversation(conversation: AssistantHistoryConversation) {
+  return {
+    id: conversation.id,
+    saved_request_id: conversation.saved_request_id,
+    created_at: conversation.created_at.toISOString(),
+    updated_at: conversation.updated_at.toISOString(),
+    messages: conversation.messages.map((message) => ({
+      id: message.id,
+      role: message.role,
+      text: message.text,
+      payload: message.payload ?? null,
+      created_at: message.created_at.toISOString()
+    }))
+  };
+}
 
 /** Structured intent as returned to the app (snake_case, no internal fields). */
 function publicIntent(reply: PassengerAssistantReply) {
@@ -45,10 +70,41 @@ function publicIntent(reply: PassengerAssistantReply) {
 export function createPassengerAssistantRouter(
   appConfig: AppConfig,
   service: PassengerAssistantService = createPassengerAssistantService(appConfig),
-  recorder: UncertainRequestRecorder = prismaUncertainRequestRecorder
+  recorder: UncertainRequestRecorder = prismaUncertainRequestRecorder,
+  history: PassengerAssistantHistoryStore = createPrismaAssistantHistoryStore()
 ) {
   const router = Router();
   router.use("/passenger/assistant", requireAuth, requireRole("passenger"));
+
+  router.get("/passenger/assistant/conversation", async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const conversation = await history.latest(req.user!.id);
+      res.json({ conversation: conversation ? publicConversation(conversation) : null });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete("/passenger/assistant/conversation", async (req: AuthenticatedRequest, res, next) => {
+    try {
+      await history.clear(req.user!.id);
+      res.json({ deleted: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.patch("/passenger/assistant/conversation", async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const input = savedRequestLinkSchema.parse(req.body);
+      const result = await history.linkSavedRequest(req.user!.id, input.conversation_id, input.saved_request_id);
+      if (result === "conversation_not_found") throw new HttpError(404, "assistant_conversation_not_found");
+      if (result === "request_not_found") throw new HttpError(404, "passenger_request_not_found");
+      res.json({ conversation_id: input.conversation_id, saved_request_id: input.saved_request_id });
+    } catch (error) {
+      next(error);
+    }
+  });
 
   router.post("/passenger/assistant/messages", async (req: AuthenticatedRequest, res, next) => {
     try {
@@ -59,7 +115,6 @@ export function createPassengerAssistantRouter(
         locale: input.locale,
         history: input.history
       });
-      const conversationId = input.conversation_id ?? randomUUID();
       const intent = reply.intent ? publicIntent(reply) : undefined;
 
       if (reply.degraded && reply.degraded !== "unavailable") {
@@ -86,11 +141,8 @@ export function createPassengerAssistantRouter(
         }
       }
 
-      if (reply.status === "request_review") {
-        res.json({
-          status: "request_review",
-          message: reply.message,
-          extracted: {
+      const extracted = reply.status === "request_review"
+        ? {
             pickup_key: reply.request!.pickupKey,
             pickup_label: reply.request!.pickupLabel,
             destination_key: reply.request!.destinationKey,
@@ -101,7 +153,28 @@ export function createPassengerAssistantRouter(
             pickup_lng: reply.request!.pickupLng,
             destination_lat: reply.request!.destinationLat,
             destination_lng: reply.request!.destinationLng
-          },
+          }
+        : undefined;
+      // Both sides are saved only once there is a reply, so a failed attempt the
+      // app retries is not stored twice. Only what the app shows is kept; the
+      // JSON round trip drops absent fields, which a JSON column cannot hold.
+      const conversationId = await history.appendExchange({
+        passengerId: req.user!.id,
+        conversationId: input.conversation_id,
+        userText: input.message,
+        assistantText: reply.message.slice(0, 2_000),
+        assistantPayload: JSON.parse(JSON.stringify({
+          status: reply.status,
+          suggestions: reply.status === "clarification" ? reply.suggestions : [],
+          extracted
+        }))
+      });
+
+      if (reply.status === "request_review") {
+        res.json({
+          status: "request_review",
+          message: reply.message,
+          extracted,
           intent,
           suggestions: [],
           conversation_id: conversationId

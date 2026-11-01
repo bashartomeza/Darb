@@ -13,6 +13,7 @@ class PassengerRequest {
     required this.passengerCount,
     required this.status,
     required this.createdAt,
+    this.selectedDriverRouteId,
   });
 
   final String id;
@@ -29,6 +30,10 @@ class PassengerRequest {
   final int passengerCount;
   final String status;
   final DateTime createdAt;
+
+  /// The driver route the passenger picked when booking, saved on the request
+  /// by the server. Null when matching may choose the best compatible route.
+  final String? selectedDriverRouteId;
 
   bool get canCancel =>
       status == 'pending' || status == 'matched' || status == 'accepted';
@@ -54,14 +59,18 @@ class PassengerRequest {
       status: _string(json, 'status'),
 
       createdAt: DateTime.parse(_string(json, 'created_at')).toLocal(),
+
+      selectedDriverRouteId: switch (json['selected_driver_route_id']) {
+        final String id when id.isNotEmpty => id,
+        _ => null,
+      },
     );
   }
 }
 
 /// A location selected by the passenger on the map.
 ///
-/// Unlike the old PickupPreset, this is not restricted
-/// to predefined locations.
+/// It is not restricted to predefined locations.
 class PassengerLocation {
   const PassengerLocation({
     required this.label,
@@ -72,25 +81,6 @@ class PassengerLocation {
   final String label;
   final double latitude;
   final double longitude;
-}
-
-/// Legacy pickup preset.
-///
-/// Kept temporarily so other parts of the app that may still
-/// reference it do not break. New passenger requests should
-/// use PassengerLocation instead.
-class PickupPreset {
-  const PickupPreset({
-    required this.key,
-    required this.label,
-    required this.lat,
-    required this.lng,
-  });
-
-  final String key;
-  final String label;
-  final double lat;
-  final double lng;
 }
 
 /// An active driver availability a passenger could still book.
@@ -165,34 +155,6 @@ class AvailableDeparture {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// LEGACY CONSTANTS
-// ---------------------------------------------------------------------------
-//
-// These are kept temporarily for compatibility with any old screen that
-// still imports them. They are NO LONGER used by CreateRequestScreen or
-// PassengerRepository.createRequest().
-//
-// Once we confirm there are no remaining references in the project,
-// they can be deleted.
-// ---------------------------------------------------------------------------
-
-const lockedPickupPresets = [
-  PickupPreset(key: 'ppu', label: 'PPU Main Gate', lat: 31.55, lng: 35.1),
-  PickupPreset(
-    key: 'bab_al_zawiya',
-    label: 'Bab Al-Zawiya',
-    lat: 31.5326,
-    lng: 35.0998,
-  ),
-];
-
-const lockedDestinationLabel = 'Bethlehem Center';
-
-const lockedDestinationLat = 31.7054;
-
-const lockedDestinationLng = 35.2024;
 
 // ---------------------------------------------------------------------------
 // JSON HELPERS
