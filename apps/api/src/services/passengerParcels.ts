@@ -520,10 +520,12 @@ export async function listPassengerParcelsForAdmin(db: PrismaClient = prisma, li
         select: {
           status: true,
           pickup_label: true,
+          pickup_details: true,
           requested_departure_from: true,
           requested_departure_until: true,
-          parcels: { select: { status: true, destination_label: true } },
-          canonical_dispatch: { select: { status: true } }
+          parcels: { select: { status: true, destination_label: true, dropoff_details: true } },
+          canonical_dispatch: { select: { status: true } },
+          route_version: routeSummarySelect
         }
       }
     }
@@ -532,8 +534,11 @@ export async function listPassengerParcelsForAdmin(db: PrismaClient = prisma, li
     id: row.order_id,
     sender: row.sender,
     size: row.size,
+    ...routeFields(row.order.route_version),
     pickup_label: row.order.pickup_label,
     dropoff_label: row.order.parcels[0]?.destination_label ?? null,
+    pickup_details: row.order.pickup_details ?? null,
+    dropoff_details: row.order.parcels[0]?.dropoff_details ?? null,
     tracking_state: passengerParcelTrackingState(row.order, row.order.parcels[0]?.status),
     dispatch_status: row.order.canonical_dispatch?.status ?? null,
     requested_departure_from: row.order.requested_departure_from,
