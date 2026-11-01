@@ -1005,6 +1005,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.';
 
   @override
+  String get corridorPlacesLoadFailed =>
+      'تعذّر تحميل أماكن المسار. تحقّق من الاتصال وأعد المحاولة.';
+
+  @override
+  String get corridorPlacesUnavailable =>
+      'لا توجد أماكن متاحة على هذا المسار حالياً.';
+
+  @override
   String get noPublishedRoutes => 'لا توجد مسارات منشورة ومؤهلة حالياً.';
 
   @override

@@ -778,6 +778,7 @@ Implemented endpoints:
 - `POST /api/v1/merchant/orders`.
 - `GET /api/v1/merchant/orders`.
 - `GET /api/v1/merchant/orders/:id`.
+- `GET /api/v1/legacy-corridor` (any signed-in role): the locked corridor's driver-route ends and the active stops of its published route version, with their pickup/drop-off flags and coordinates. The mobile legacy passenger assistant, driver route and merchant order screens take their places from it.
 - `GET /api/v1/admin/dashboard`.
 - `GET /api/v1/admin/drivers`.
 - `GET /api/v1/admin/requests`.

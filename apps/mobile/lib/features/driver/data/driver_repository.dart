@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import '../../auth/data/authenticated_api_client.dart';
+import '../../legacy_corridor/data/legacy_corridor_repository.dart';
 import '../../trips/data/trip_models.dart';
 import 'driver_models.dart';
 
@@ -119,14 +120,19 @@ class DriverRepository {
     String? idempotencyKey,
     Future<void> Function()? beforeRetry,
   }) async {
+    // The server locks legacy routes to one corridor; send its own ends back
+    // rather than a copy compiled into the app.
+    final corridor = await LegacyCorridorRepository(
+      apiClient: apiClient,
+    ).fetch();
     final json = await apiClient.postJson(
       '/driver/routes',
       headers: {'Idempotency-Key': ?idempotencyKey},
       beforeRetry: beforeRetry,
       body: {
-        'origin_label': lockedDriverOriginLabel,
-        'destination_label': lockedDriverDestinationLabel,
-        'corridor_key': lockedDriverCorridorKey,
+        'origin_label': corridor.driverRoute.originLabel,
+        'destination_label': corridor.driverRoute.destinationLabel,
+        'corridor_key': corridor.key,
         'seats_available': seatsAvailable,
         'parcel_capacity_available': parcelCapacityAvailable,
       },

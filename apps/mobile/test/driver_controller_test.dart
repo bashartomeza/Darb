@@ -24,6 +24,7 @@ import 'package:darb_mobile/features/trips/data/trip_models.dart';
 import 'support/auth_test_support.dart';
 import 'test_app_config.dart';
 import 'support/booking_recovery_test_support.dart';
+import 'support/legacy_corridor_fixture.dart';
 import 'package:darb_mobile/features/driver/application/legacy_driver_route_mutation.dart';
 
 void main() {
@@ -703,13 +704,13 @@ DriverRoute _route({
   int parcels = 5,
 }) => DriverRoute(
   id: 'route_1',
-  originLabel: lockedDriverOriginLabel,
-  originLat: lockedDriverOriginLat,
-  originLng: lockedDriverOriginLng,
-  destinationLabel: lockedDriverDestinationLabel,
-  destinationLat: lockedDriverDestinationLat,
-  destinationLng: lockedDriverDestinationLng,
-  corridorKey: lockedDriverCorridorKey,
+  originLabel: corridorOriginLabel,
+  originLat: corridorOriginLat,
+  originLng: corridorOriginLng,
+  destinationLabel: corridorDestinationLabel,
+  destinationLat: corridorDestinationLat,
+  destinationLng: corridorDestinationLng,
+  corridorKey: corridorKey,
   seatsAvailable: seats,
   parcelCapacityAvailable: parcels,
   status: status,
@@ -734,9 +735,9 @@ DriverMatch _match(String status, DateTime createdAt) => DriverMatch(
   createdAt: createdAt,
   route: const DriverRouteSummary(
     id: 'route_1',
-    originLabel: lockedDriverOriginLabel,
-    destinationLabel: lockedDriverDestinationLabel,
-    corridorKey: lockedDriverCorridorKey,
+    originLabel: corridorOriginLabel,
+    destinationLabel: corridorDestinationLabel,
+    corridorKey: corridorKey,
     seatsAvailable: 2,
     parcelCapacityAvailable: 5,
     status: 'active',

@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../legacy_corridor/data/legacy_corridor_models.dart';
 import '../../trips/data/trip_models.dart';
 import '../data/merchant_models.dart';
 import '../data/merchant_repository.dart';
@@ -105,8 +106,24 @@ class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
   bool get canAdd => state.length < 10;
   bool get canRemove => state.length > 1;
 
-  void addParcel() {
-    if (canAdd) state = [...state, const ParcelDraft()];
+  void addParcel({CorridorPlace? destination}) {
+    if (!canAdd) return;
+    state = [
+      ...state,
+      destination == null ? const ParcelDraft() : ParcelDraft.to(destination),
+    ];
+  }
+
+  /// Gives every parcel still without a destination [destination], once the
+  /// corridor's places have loaded. Chosen destinations are left alone.
+  void fillMissingDestinations(CorridorPlace destination) {
+    if (state.every((parcel) => parcel.hasDestination)) return;
+    state = [
+      for (final parcel in state)
+        parcel.hasDestination
+            ? parcel
+            : parcel.copyWith(destination: destination),
+    ];
   }
 
   void removeParcel(int index) {
@@ -116,14 +133,14 @@ class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
 
   void updateParcel(
     int index, {
-    String? destinationLabel,
+    CorridorPlace? destination,
     String? size,
     String? priority,
   }) {
     if (index < 0 || index >= state.length) return;
     final updated = [...state];
     updated[index] = updated[index].copyWith(
-      destinationLabel: destinationLabel,
+      destination: destination,
       size: size,
       priority: priority,
     );

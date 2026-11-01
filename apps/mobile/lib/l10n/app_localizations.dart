@@ -2006,6 +2006,18 @@ abstract class AppLocalizations {
   /// **'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.'**
   String get routeCatalogUnavailable;
 
+  /// No description provided for @corridorPlacesLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل أماكن المسار. تحقّق من الاتصال وأعد المحاولة.'**
+  String get corridorPlacesLoadFailed;
+
+  /// No description provided for @corridorPlacesUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد أماكن متاحة على هذا المسار حالياً.'**
+  String get corridorPlacesUnavailable;
+
   /// No description provided for @noPublishedRoutes.
   ///
   /// In ar, this message translates to:
