@@ -334,26 +334,31 @@ void main() {
       await _pump(tester, handler);
       await _select(
         tester,
-        'اختاري موقع الانطلاق',
+        'Select pickup location',
         'Saved origin',
         const LatLng(31.72, 35.21),
       );
       await _select(
         tester,
-        'اختاري الوجهة',
+        'Select destination',
         'Saved destination',
         const LatLng(32.21, 35.29),
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Submit request'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Search a Ride'));
       await tester.pumpAndSettle();
       expect(find.text('Verify booking'), findsOneWidget);
       expect(keys.single, isNotEmpty);
       expect(
         tester
-            .widget<DropdownButtonFormField<int>>(
-              find.byType(DropdownButtonFormField<int>),
+            .widget<InkWell>(
+              find
+                  .ancestor(
+                    of: find.byIcon(Icons.add),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
             )
-            .onChanged,
+            .onTap,
         isNull,
       );
       await tester.pumpWidget(const SizedBox.shrink());
@@ -388,17 +393,17 @@ void main() {
     });
     await _select(
       tester,
-      'اختاري موقع الانطلاق',
+      'Select pickup location',
       'Origin square',
       const LatLng(31.72, 35.21),
     );
     await _select(
       tester,
-      'اختاري الوجهة',
+      'Select destination',
       'Destination station',
       const LatLng(32.21, 35.29),
     );
-    await tester.tap(find.byIcon(Icons.schedule_rounded));
+    await tester.tap(find.byIcon(Icons.calendar_today_rounded));
     await tester.pumpAndSettle();
     // The form's initial time is tomorrow near midnight. Select today
     // explicitly so this regression always exercises a past timestamp.
@@ -409,13 +414,15 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('OK').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.schedule_rounded));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.keyboard_outlined));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, '00');
     await tester.enterText(find.byType(TextField).last, '00');
     await tester.tap(find.text('OK').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Submit request'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Search a Ride'));
     await tester.pumpAndSettle();
     expect(calls, 0);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -442,17 +449,17 @@ void main() {
       });
       await _select(
         tester,
-        'اختاري موقع الانطلاق',
+        'Select pickup location',
         'Origin',
         const LatLng(31.72, 35.21),
       );
       await _select(
         tester,
-        'اختاري الوجهة',
+        'Select destination',
         'Destination',
         const LatLng(32.21, 35.29),
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Submit request'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Search a Ride'));
       await tester.pumpAndSettle();
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       await tester.pump();
@@ -480,19 +487,19 @@ void main() {
     });
     await _select(
       tester,
-      'اختاري موقع الانطلاق',
+      'Select pickup location',
       'Origin square',
       const LatLng(31.72, 35.21),
     );
     await _select(
       tester,
-      'اختاري الوجهة',
+      'Select destination',
       'Destination station',
       const LatLng(32.21, 35.29),
     );
     final submit = tester
         .widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Submit request'),
+          find.widgetWithText(FilledButton, 'Search a Ride'),
         )
         .onPressed!;
     submit();

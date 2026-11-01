@@ -9,6 +9,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
+import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_card.dart';
 import '../../onboarding/application/onboarding_controller.dart';
@@ -90,191 +91,172 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: LanguageSwitch(),
                 ),
                 const SizedBox(height: AppTokens.spaceMedium),
+                const SizedBox(height: AppTokens.spaceLarge),
                 Center(
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary,
-                      borderRadius: BorderRadius.circular(
-                        AppTokens.radiusMedium,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.alt_route,
-                      color: AppTheme.onPrimary,
-                      size: 32,
-                    ),
-                  ),
+                  child: BrandLogo(width: 200, semanticLabel: l10n.appTitle),
                 ),
-                const SizedBox(height: AppTokens.spaceMedium),
+                const SizedBox(height: AppTokens.spaceLarge),
                 Text(
-                  l10n.appTitle,
+                  l10n.loginWelcomeBack,
                   textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.displayMedium?.copyWith(color: AppTheme.primary),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppTheme.primaryText,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: AppTokens.spaceExtraSmall),
                 Text(
-                  l10n.signInWelcome,
+                  l10n.loginWelcomeSubtitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: AppTokens.spaceLarge),
-                MasariCard(
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+                const SizedBox(height: AppTokens.spaceExtraLarge),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        key: const ValueKey('emailField'),
+                        controller: _emailController,
+                        onChanged: (_) => _clearAttemptError(),
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                          LengthLimitingTextInputFormatter(191),
+                        ],
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          hintText: l10n.emailOrPhone,
+                          prefixIcon: const Icon(Icons.email_rounded),
+                        ),
+                        validator: (value) => _validateIdentifier(l10n, value),
+                      ),
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      TextFormField(
+                        key: const ValueKey('passwordField'),
+                        controller: _passwordController,
+                        onChanged: (_) => _clearAttemptError(),
+                        obscureText: !_showPassword,
+                        autofillHints: const [AutofillHints.password],
+                        onFieldSubmitted: (_) => _login(),
+                        decoration: InputDecoration(
+                          hintText: l10n.password,
+                          prefixIcon: const Icon(Icons.lock_rounded),
+                          suffixIcon: IconButton(
+                            tooltip: _showPassword
+                                ? l10n.hidePassword
+                                : l10n.showPassword,
+                            onPressed: () =>
+                                setState(() => _showPassword = !_showPassword),
+                            icon: Icon(
+                              _showPassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                        validator: (value) => (value == null || value.isEmpty)
+                            ? l10n.passwordRequired
+                            : null,
+                      ),
+                      if (error != null || _googleErrorKey != null) ...[
+                        const SizedBox(height: AppTokens.spaceMedium),
                         Text(
-                          l10n.signIn,
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: AppTokens.spaceMedium),
-                        TextFormField(
-                          key: const ValueKey('emailField'),
-                          controller: _emailController,
-                          onChanged: (_) => _clearAttemptError(),
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.email],
-                          inputFormatters: [
-                            FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                            LengthLimitingTextInputFormatter(191),
-                          ],
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: l10n.emailOrPhone,
-                          ),
-                          validator: (value) =>
-                              _validateIdentifier(l10n, value),
-                        ),
-                        const SizedBox(height: AppTokens.spaceMedium),
-                        TextFormField(
-                          key: const ValueKey('passwordField'),
-                          controller: _passwordController,
-                          onChanged: (_) => _clearAttemptError(),
-                          obscureText: !_showPassword,
-                          autofillHints: const [AutofillHints.password],
-                          onFieldSubmitted: (_) => _login(),
-                          decoration: InputDecoration(
-                            labelText: l10n.password,
-                            suffixIcon: IconButton(
-                              tooltip: _showPassword
-                                  ? l10n.hidePassword
-                                  : l10n.showPassword,
-                              onPressed: () => setState(
-                                () => _showPassword = !_showPassword,
-                              ),
-                              icon: Icon(
-                                _showPassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                              ),
-                            ),
-                          ),
-                          validator: (value) => (value == null || value.isEmpty)
-                              ? l10n.passwordRequired
-                              : null,
-                        ),
-                        if (error != null || _googleErrorKey != null) ...[
-                          const SizedBox(height: AppTokens.spaceMedium),
-                          Text(
-                            _googleErrorKey != null
-                                ? _googleMessage(l10n, _googleErrorKey!)
-                                : error is ApiException &&
-                                      [
-                                        'explicit_link_required',
-                                        'email_verification_required',
-                                        'google_signup_unavailable',
-                                      ].contains(error.message)
-                                ? authFailure(context, error)
-                                : _errorMessage(l10n, error!),
-                            key: const ValueKey('loginError'),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ],
-                        if (sessionEndReason != null) ...[
-                          const SizedBox(height: AppTokens.spaceMedium),
-                          Text(
-                            _sessionEndMessage(l10n, sessionEndReason),
-                            key: const ValueKey('sessionEndedMessage'),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: AppTokens.spaceLarge),
-                        FilledButton(
-                          key: const ValueKey('loginButton'),
-                          onPressed: loading ? null : _login,
-                          child: loading
-                              ? const SizedBox.square(
-                                  dimension: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(l10n.signIn),
-                        ),
-                        const SizedBox(height: AppTokens.spaceMedium),
-                        AuthDivider(label: l10n.orSeparator),
-                        const SizedBox(height: AppTokens.spaceMedium),
-                        GoogleAuthButton(
-                          enabled: !loading,
-                          onIdToken: _loginWithGoogle,
-                          onError: _handleGoogleError,
-                        ),
-                        const SizedBox(height: AppTokens.spaceSmall),
-                        TextButton(
-                          key: const ValueKey('goToSignUpButton'),
-                          onPressed: loading ? null : _openSignUp,
-                          child: Text(l10n.newToMasari),
-                        ),
-                        TextButton(
-                          key: const ValueKey('passwordRecovery'),
-                          onPressed: loading
-                              ? null
-                              : () => openCredentialAction(context, 'reset'),
-                          child: Text(
-                            authText(
-                              context,
-                              'Forgot password?',
-                              'نسيت كلمة المرور؟',
-                            ),
+                          _googleErrorKey != null
+                              ? _googleMessage(l10n, _googleErrorKey!)
+                              : error is ApiException &&
+                                    [
+                                      'explicit_link_required',
+                                      'email_verification_required',
+                                      'google_signup_unavailable',
+                                    ].contains(error.message)
+                              ? authFailure(context, error)
+                              : _errorMessage(l10n, error!),
+                          key: const ValueKey('loginError'),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
                           ),
                         ),
-                        TextButton(
-                          key: const ValueKey('emailVerification'),
-                          onPressed: loading
-                              ? null
-                              : () => openCredentialAction(context, 'verify'),
-                          child: Text(
-                            authText(
-                              context,
-                              'Verify email',
-                              'التحقق من البريد الإلكتروني',
-                            ),
-                          ),
-                        ),
-                        if (onboardingEnabled) ...[
-                          const Divider(height: AppTokens.spaceLarge),
-                          TextButton(
-                            key: const ValueKey('checkApplicationStatusButton'),
-                            onPressed: loading
-                                ? null
-                                : () => _openOnboarding('/onboarding/recover'),
-                            child: Text(l10n.checkApplicationStatus),
-                          ),
-                        ],
                       ],
-                    ),
+                      if (sessionEndReason != null) ...[
+                        const SizedBox(height: AppTokens.spaceMedium),
+                        Text(
+                          _sessionEndMessage(l10n, sessionEndReason),
+                          key: const ValueKey('sessionEndedMessage'),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      FilledButton(
+                        key: const ValueKey('loginButton'),
+                        onPressed: loading ? null : _login,
+                        child: loading
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(l10n.signIn),
+                      ),
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      AuthDivider(label: l10n.orSeparator),
+                      const SizedBox(height: AppTokens.spaceSmall),
+                      TextButton(
+                        key: const ValueKey('goToSignUpButton'),
+                        onPressed: loading ? null : _openSignUp,
+                        child: Text(l10n.newToDarb),
+                      ),
+                      const SizedBox(height: AppTokens.spaceSmall),
+                      GoogleAuthButton(
+                        enabled: !loading,
+                        onIdToken: _loginWithGoogle,
+                        onError: _handleGoogleError,
+                      ),
+                      const SizedBox(height: AppTokens.spaceSmall),
+                      TextButton(
+                        key: const ValueKey('passwordRecovery'),
+                        onPressed: loading
+                            ? null
+                            : () => openCredentialAction(context, 'reset'),
+                        child: Text(
+                          authText(
+                            context,
+                            'Forgot password?',
+                            'نسيت كلمة المرور؟',
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        key: const ValueKey('emailVerification'),
+                        onPressed: loading
+                            ? null
+                            : () => openCredentialAction(context, 'verify'),
+                        child: Text(
+                          authText(
+                            context,
+                            'Verify email',
+                            'التحقق من البريد الإلكتروني',
+                          ),
+                        ),
+                      ),
+                      if (onboardingEnabled) ...[
+                        const Divider(height: AppTokens.spaceLarge),
+                        TextButton(
+                          key: const ValueKey('checkApplicationStatusButton'),
+                          onPressed: loading
+                              ? null
+                              : () => _openOnboarding('/onboarding/recover'),
+                          child: Text(l10n.checkApplicationStatus),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 if (demoAccounts.isNotEmpty) ...[

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:masari_mobile/core/widgets/brand_logo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -194,7 +195,7 @@ void main() {
       authenticated: false,
       handler: _roleHandler('driver'),
     );
-    GoRouter.of(tester.element(find.text('مساري'))).go('/driver/route');
+    GoRouter.of(tester.element(find.byType(BrandLogo))).go('/driver/route');
     await tester.pumpAndSettle();
     expect(find.text('تسجيل الدخول'), findsWidgets);
     expect(find.text('تفاصيل المسار'), findsNothing);

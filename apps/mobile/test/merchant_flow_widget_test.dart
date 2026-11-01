@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:masari_mobile/core/widgets/brand_logo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -214,7 +215,9 @@ void main() {
     tester,
   ) async {
     await _pumpMerchant(tester, _MerchantHandler(), authenticated: false);
-    GoRouter.of(tester.element(find.text('مساري'))).go('/merchant/order/new');
+    GoRouter.of(
+      tester.element(find.byType(BrandLogo)),
+    ).go('/merchant/order/new');
     await tester.pumpAndSettle();
     expect(find.text('تسجيل الدخول'), findsWidgets);
     expect(find.text('إنشاء طلب'), findsNothing);

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:masari_mobile/core/widgets/brand_logo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -106,7 +107,7 @@ void main() {
   ) async {
     await _pumpApp(tester);
 
-    GoRouter.of(tester.element(find.text('مساري'))).go('/onboarding');
+    GoRouter.of(tester.element(find.byType(BrandLogo))).go('/onboarding');
     await tester.pumpAndSettle();
 
     expect(find.text('التسجيل غير متاح مؤقتاً.'), findsOneWidget);

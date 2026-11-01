@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:masari_mobile/core/widgets/brand_logo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -408,10 +409,10 @@ void main() {
   testWidgets('Arabic login screen defaults to RTL', (tester) async {
     await _pumpApp(tester);
 
-    expect(find.text('مساري'), findsOneWidget);
+    expect(find.byType(BrandLogo), findsOneWidget);
     expect(find.text('تسجيل الدخول'), findsWidgets);
     expect(
-      Directionality.of(tester.element(find.text('مساري'))),
+      Directionality.of(tester.element(find.byType(BrandLogo))),
       TextDirection.rtl,
     );
     expect(find.textContaining('counter', findRichText: true), findsNothing);
@@ -423,9 +424,9 @@ void main() {
     await tester.tap(find.byTooltip('English'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Masari'), findsOneWidget);
+    expect(find.byType(BrandLogo), findsOneWidget);
     expect(
-      Directionality.of(tester.element(find.text('Masari'))),
+      Directionality.of(tester.element(find.byType(BrandLogo))),
       TextDirection.ltr,
     );
     final preferences = await SharedPreferences.getInstance();
@@ -437,7 +438,7 @@ void main() {
 
     expect(find.text('Sign in'), findsWidgets);
     expect(
-      Directionality.of(tester.element(find.text('Masari'))),
+      Directionality.of(tester.element(find.byType(BrandLogo))),
       TextDirection.ltr,
     );
   });

@@ -9,6 +9,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/masari_button.dart';
 import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/route_summary_card.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_back_button.dart';
@@ -393,6 +394,29 @@ class _TripSearchResults extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: AppTokens.spaceSmall),
+          RouteSummaryCard(
+            from: localizedCorridorPlace(context, options.first.fromLabel),
+            to: localizedCorridorPlace(context, options.first.toLabel),
+            chips: [
+              if (options.first.departureAt != null) ...[
+                InfoPill(
+                  icon: Icons.calendar_today_outlined,
+                  label: MaterialLocalizations.of(
+                    context,
+                  ).formatMediumDate(options.first.departureAt!.toLocal()),
+                ),
+                InfoPill(
+                  icon: Icons.schedule_rounded,
+                  label: MaterialLocalizations.of(context).formatTimeOfDay(
+                    TimeOfDay.fromDateTime(
+                      options.first.departureAt!.toLocal(),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceMedium),
           for (final option in options) ...[
             TripOfferCard(
               offer: _offerFor(option),

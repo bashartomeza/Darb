@@ -584,8 +584,8 @@ void main() {
       );
       expect(find.byKey(const ValueKey('bookOffer-route_1')), findsOneWidget);
       expect(find.text('Driver One'), findsOneWidget);
-      expect(find.text('باب الزاوية'), findsOneWidget);
-      expect(find.text('وسط بيت لحم'), findsOneWidget);
+      expect(find.text('باب الزاوية'), findsNWidgets(2));
+      expect(find.text('وسط بيت لحم'), findsNWidgets(2));
     });
 
     testWidgets('selecting an AI result continues to the match booking flow', (

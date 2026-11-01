@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/config/app_config.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_card.dart';
 
@@ -27,11 +27,9 @@ class WelcomeScreen extends StatelessWidget {
               child: LanguageSwitch(),
             ),
             const SizedBox(height: AppTokens.spaceLarge),
-            Text(
-              l10n.appTitle,
-              style: textTheme.headlineLarge?.copyWith(
-                color: AppTheme.deepGreen,
-              ),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: BrandLogo(width: 180, semanticLabel: l10n.appTitle),
             ),
             const SizedBox(height: AppTokens.spaceSmall),
             Text(l10n.tagline, style: textTheme.titleLarge),
