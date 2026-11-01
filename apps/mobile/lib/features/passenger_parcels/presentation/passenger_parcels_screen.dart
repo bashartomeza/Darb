@@ -8,6 +8,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/timeline_tracker.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
@@ -176,6 +177,7 @@ class _ParcelCardState extends ConsumerState<ParcelCard> {
     final l10n = AppLocalizations.of(context);
     final parcel = widget.parcel;
     final theme = Theme.of(context);
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
     return DarbCard(
       key: ValueKey('parcel-${parcel.id}'),
       child: Column(
@@ -193,14 +195,33 @@ class _ParcelCardState extends ConsumerState<ParcelCard> {
             ],
           ),
           const SizedBox(height: AppTokens.spaceSmall),
-          RouteChip(
-            from: parcel.pickupLabel,
-            to: parcel.dropoffLabel ?? '',
-            compact: true,
-          ),
-          if (parcel.departureFrom != null) ...[
+          if (parcel.routeName(arabic: arabic) case final route?) ...[
+            Text(
+              route,
+              key: ValueKey('parcelRoute-${parcel.id}'),
+              style: theme.textTheme.titleSmall,
+            ),
+            if (parcel.pickupDetails != null)
+              DetailRow(
+                label: l10n.passengerPickupPoint,
+                value: parcel.pickupDetails!,
+                icon: Icons.trip_origin_rounded,
+              ),
+            if (parcel.dropoffDetails != null)
+              DetailRow(
+                label: l10n.passengerDropoffPoint,
+                value: parcel.dropoffDetails!,
+                icon: Icons.location_on_outlined,
+              ),
+          ] else
+            RouteChip(
+              from: parcel.pickupLabel,
+              to: parcel.dropoffLabel ?? '',
+              compact: true,
+            ),
+          if (parcel.collectionTime != null) ...[
             const SizedBox(height: AppTokens.spaceSmall),
-            Text(dateTimeLabel(context, parcel.departureFrom!)),
+            Text(dateTimeLabel(context, parcel.collectionTime!)),
           ],
           const SizedBox(height: AppTokens.spaceSmall),
           if (parcel.receiverDetailsRemoved)

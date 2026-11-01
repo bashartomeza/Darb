@@ -8,12 +8,12 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../../core/theme/passenger_theme.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../notifications/application/notifications_controller.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../trips/data/trip_models.dart';
 import '../application/passenger_controller.dart';
 import '../data/passenger_models.dart';
+import 'passenger_request_labels.dart';
 
 /// The passenger's home, built to the Figma "Home-Passenger" frame.
 ///
@@ -638,10 +638,14 @@ class _RequestCard extends StatelessWidget {
     final connected = trip;
     return _UpcomingCard(
       key: ValueKey('passengerActiveRequest-${request.id}'),
-      title: _route(context, request.pickupLabel, request.destinationLabel),
+      // The route's name, then the exact pickup the passenger typed.
+      title: request.routeTitle(context),
       titleColor: PassengerStyle.ink,
       iconColor: PassengerStyle.orange,
-      body: '${passengerStatusLabel(l10n, request.status)} · $when',
+      body: [
+        '${passengerStatusLabel(l10n, request.status)} · $when',
+        ?request.pickupDetails,
+      ].join('\n'),
       onTap: () => context.go(
         connected == null
             ? '/passenger/request/${request.id}'
@@ -675,17 +679,13 @@ class _TripCard extends StatelessWidget {
   }
 }
 
-/// Entry to sending a parcel, shown only where canonical routes are on.
-class _ParcelEntryCard extends ConsumerWidget {
+/// Entry to sending a parcel along one of the predefined routes. Always
+/// offered: passenger parcels need no feature flag.
+class _ParcelEntryCard extends StatelessWidget {
   const _ParcelEntryCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Any failure to learn the capability simply hides the card.
-    final available =
-        ref.watch(mobileCapabilitiesProvider).value?.multiRouteEntryAvailable ??
-        false;
-    if (!available) return const SizedBox.shrink();
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 12),

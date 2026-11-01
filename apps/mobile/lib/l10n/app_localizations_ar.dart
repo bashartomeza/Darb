@@ -1860,6 +1860,93 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.';
 
   @override
+  String get passengerRouteLabel => 'المسار';
+
+  @override
+  String get passengerRouteHint => 'اختر المسار';
+
+  @override
+  String get passengerRoutesLoading => 'جارٍ تحميل المسارات…';
+
+  @override
+  String get passengerRoutesLoadFailed =>
+      'تعذّر تحميل المسارات. تحقّق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get passengerRoutesEmpty =>
+      'لا توجد مسارات متاحة حاليًا. يُرجى المحاولة لاحقًا.';
+
+  @override
+  String get passengerRouteRequired => 'اختر المسار للمتابعة.';
+
+  @override
+  String get passengerRouteUnavailable =>
+      'هذا المسار لم يعد متاحًا. اختر مسارًا آخر.';
+
+  @override
+  String get passengerPickupDetailsLabel => 'مكان الصعود بالتحديد';
+
+  @override
+  String get passengerPickupDetailsHint =>
+      'مثال: أمام البوابة الرئيسية لجامعة بوليتكنك فلسطين';
+
+  @override
+  String get passengerDropoffDetailsLabel => 'مكان النزول بالتحديد';
+
+  @override
+  String get passengerDropoffDetailsHint =>
+      'مثال: مجمّع سيارات بيت لحم، بجانب الصيدلية';
+
+  @override
+  String get passengerDetailsHelper =>
+      'صِف المكان بوضوح ليصل إليه السائق بسهولة.';
+
+  @override
+  String get passengerDetailsTooShort => 'اكتب 3 أحرف على الأقل.';
+
+  @override
+  String get passengerPickupPoint => 'مكان الصعود';
+
+  @override
+  String get passengerDropoffPoint => 'مكان النزول';
+
+  @override
+  String get assistantRouteChoose =>
+      'اختر المسار المناسب لرحلتك، ثم تأكّد من مكانَي الصعود والنزول.';
+
+  @override
+  String get passengerParcelRouteIntro =>
+      'اختر المسار، وصِف مكان استلام الطرد ومكان تسليمه، ثم أخبرنا من سيستلمه.';
+
+  @override
+  String get passengerParcelPickupDetailsLabel => 'مكان استلام الطرد منك';
+
+  @override
+  String get passengerParcelPickupDetailsHint =>
+      'مثال: المحل المجاور لدوار ابن رشد في الخليل';
+
+  @override
+  String get passengerParcelDropoffDetailsLabel => 'مكان تسليم الطرد';
+
+  @override
+  String get passengerParcelDropoffDetailsHint =>
+      'مثال: بيت المستلم، قرب كنيسة المهد';
+
+  @override
+  String get passengerParcelPreferredTime => 'الوقت المفضّل للاستلام';
+
+  @override
+  String get welcomeRoutesTitle => 'المسارات التي نخدمها';
+
+  @override
+  String welcomeRoutesMore(int count) {
+    return 'و$count أخرى';
+  }
+
+  @override
+  String get welcomeRoutesOffline => 'ستظهر المسارات عند الاتصال بالإنترنت.';
+
+  @override
   String get assistantClarificationLabel => 'يحتاج مساعد درب إلى توضيح';
 
   @override

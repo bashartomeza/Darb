@@ -63,6 +63,12 @@ class PassengerParcel {
     this.departureFrom,
     this.departureUntil,
     this.replayed = false,
+    this.serviceRouteId,
+    this.routeNameAr,
+    this.routeNameEn,
+    this.pickupDetails,
+    this.dropoffDetails,
+    this.preferredTime,
   });
 
   final String id;
@@ -82,6 +88,27 @@ class PassengerParcel {
   final DateTime? departureUntil;
   final bool replayed;
 
+  /// The predefined route and the exact places typed by the sender; null for
+  /// parcels sent before routes existed, which keep their stop labels.
+  final String? serviceRouteId;
+  final String? routeNameAr;
+  final String? routeNameEn;
+  final String? pickupDetails;
+  final String? dropoffDetails;
+  final DateTime? preferredTime;
+
+  /// The route's name in the reading language, or null for older parcels.
+  String? routeName({required bool arabic}) {
+    final ar = routeNameAr;
+    final en = routeNameEn;
+    if (arabic && ar != null) return ar;
+    return en ?? ar;
+  }
+
+  /// When the sender wants the parcel collected: the preferred time, or the
+  /// start of the window older parcels were sent with.
+  DateTime? get collectionTime => preferredTime ?? departureFrom;
+
   factory PassengerParcel.fromJson(
     Map<String, dynamic> json, {
     bool replayed = false,
@@ -98,7 +125,8 @@ class PassengerParcel {
 
     final id = optionalString('id');
     final size = optionalString('size');
-    final pickup = optionalString('pickup_label');
+    final pickupDetails = optionalString('pickup_details');
+    final pickup = optionalString('pickup_label') ?? pickupDetails;
     final created = optionalDate('created_at');
     if (id == null || size == null || pickup == null || created == null) {
       throw const FormatException('Invalid parcel');
@@ -118,6 +146,12 @@ class PassengerParcel {
       departureFrom: optionalDate('requested_departure_from'),
       departureUntil: optionalDate('requested_departure_until'),
       replayed: replayed,
+      serviceRouteId: optionalString('service_route_id'),
+      routeNameAr: optionalString('route_name_ar'),
+      routeNameEn: optionalString('route_name_en'),
+      pickupDetails: pickupDetails,
+      dropoffDetails: optionalString('dropoff_details'),
+      preferredTime: optionalDate('preferred_time'),
     );
   }
 }
