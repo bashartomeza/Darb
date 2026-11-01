@@ -107,9 +107,21 @@ class AuthController extends AsyncNotifier<AuthState> {
       _authAttempt++;
       _coordinator.setListener(null);
     });
-    final bundle = await _coordinator.restoreBundle();
-    if (bundle == null) return const AuthState.unauthenticated();
-    return _restoreLoadedSession();
+    try {
+      final bundle = await _coordinator.restoreBundle();
+      if (bundle == null) return const AuthState.unauthenticated();
+      return await _restoreLoadedSession();
+    } on ApiException catch (error) {
+      if (error.type == ApiErrorType.network ||
+          error.type == ApiErrorType.timeout ||
+          error.type == ApiErrorType.server) {
+        return AuthState.restoreFailed(error);
+      }
+      return const AuthState.unauthenticated();
+    } catch (_) {
+      // Unreadable stored credentials are not a login failure: start signed out.
+      return const AuthState.unauthenticated();
+    }
   }
 
   Future<void> retryRestore() async {

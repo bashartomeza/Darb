@@ -37,6 +37,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _googleErrorKey;
 
   @override
+  void initState() {
+    super.initState();
+    // A failure left by an earlier attempt (or another screen) must not greet
+    // a freshly opened login form. An attempt still in flight is kept so its
+    // result survives router page recreation.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final current = ref.read(authControllerProvider);
+      if (current.value?.status == AuthStatus.authenticating) return;
+      ref.read(authControllerProvider.notifier).clearError();
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -53,7 +67,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _openingOnboarding ||
         auth.value?.status == AuthStatus.authenticating;
     final loginFailure = ref.read(authControllerProvider.notifier).loginFailure;
-    final error = _showAttemptError || identical(loginFailure, auth.error)
+    // Only a failure from a login attempt is shown here; a restore failure or
+    // any other provider error never surfaces as a login error.
+    final error =
+        auth.error != null &&
+            (_showAttemptError || identical(loginFailure, auth.error))
         ? auth.error
         : null;
     final sessionEndReason = auth.value?.sessionEndReason;
