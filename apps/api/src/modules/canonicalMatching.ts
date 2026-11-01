@@ -147,6 +147,13 @@ function statusResponse(resource: Record<string, any>, sharedPresentationAvailab
     updated_at: dispatch?.updated_at ?? resource.created_at,
     ...(resource.parcels
       ? {
+          // The mobile assignment model reads these two summary fields for
+          // merchant orders; without them the order card showed no parcel count
+          // or destinations even though the order was saved and dispatched.
+          parcel_count: resource.parcels.length,
+          destination_stop_ids: resource.parcels.map(
+            (parcel: Record<string, unknown>) => parcel.destination_stop_id
+          ),
           parcels: resource.parcels.map((parcel: Record<string, unknown>) => ({
             id: parcel.id,
             status: parcel.status,

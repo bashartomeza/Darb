@@ -9,6 +9,10 @@ final osrmRouteServiceProvider = Provider<OsrmRouteService>(
   (ref) => OsrmRouteService(client: ref.watch(httpClientProvider)),
 );
 
+/// Coordinate component of a route cache key, rounded to ~110 m so GPS jitter
+/// does not trigger a new routing request on every location update.
+String routeCoordKey(double value) => value.toStringAsFixed(3);
+
 class OsrmRouteResult {
   const OsrmRouteResult({
     required this.points,

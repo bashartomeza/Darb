@@ -1525,9 +1525,15 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
     final oldLocation = oldWidget.location;
     final newLocation = widget.location;
 
+    // Only re-request the remaining route once the driver moved ~100 m;
+    // every GPS tick would otherwise hit the routing service.
     final locationChanged =
-        oldLocation?.lat != newLocation?.lat ||
-        oldLocation?.lng != newLocation?.lng;
+        (oldLocation == null) != (newLocation == null) ||
+        (oldLocation != null &&
+            newLocation != null &&
+            (routeCoordKey(oldLocation.lat) != routeCoordKey(newLocation.lat) ||
+                routeCoordKey(oldLocation.lng) !=
+                    routeCoordKey(newLocation.lng)));
 
     if (routeChanged) {
       _routeFuture = _loadRoute();
@@ -1538,21 +1544,17 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
     }
   }
 
-  // ----------------------------------------------------------
-  // VALIDATE CHECKPOINT COORDINATES
-  // ----------------------------------------------------------
+  // Checkpoint markers only depend on the snapshot, so rebuild them only
+  // when it changes (not on every GPS tick / setState).
+  CheckpointSnapshot? _markerSnapshot;
+  List<MasariMapMarker> _checkpointMarkers = const [];
 
-  bool _hasValidCheckpointPosition(Checkpoint checkpoint) {
-    final lat = checkpoint.position.latitude;
-    final lng = checkpoint.position.longitude;
-
-    return lat.isFinite &&
-        lng.isFinite &&
-        lat >= -90 &&
-        lat <= 90 &&
-        lng >= -180 &&
-        lng <= 180 &&
-        !(lat == 0 && lng == 0);
+  List<MasariMapMarker> _markersFor(CheckpointSnapshot snapshot) {
+    if (!identical(_markerSnapshot, snapshot)) {
+      _markerSnapshot = snapshot;
+      _checkpointMarkers = checkpointTrafficMarkers(snapshot.checkpoints);
+    }
+    return _checkpointMarkers;
   }
 
   // ----------------------------------------------------------
@@ -1604,9 +1606,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
       // --------------------------------------------------------
       // CHECKPOINTS
       // --------------------------------------------------------
-      for (final checkpoint in widget.snapshot.checkpoints)
-        if (_hasValidCheckpointPosition(checkpoint))
-          checkpointTrafficMarker(checkpoint),
+      ..._markersFor(widget.snapshot),
 
       // --------------------------------------------------------
       // ORIGIN
@@ -1787,7 +1787,8 @@ class _DriverEtaCardState extends ConsumerState<_DriverEtaCard> {
     final destinationLat = destination.latitude;
     final destinationLng = destination.longitude;
     final key =
-        '${widget.trip.id}|$startLat,$startLng|$destinationLat,$destinationLng';
+        '${widget.trip.id}|${routeCoordKey(startLat)},${routeCoordKey(startLng)}|'
+        '$destinationLat,$destinationLng';
 
     if (_future != null && _key == key) {
       return;
@@ -2458,18 +2459,18 @@ _CheckpointStatusStyle _checkpointStatusStyle(
   final theme = Theme.of(context);
   switch (parseCheckpointStatus(status)) {
     case CheckpointStatus.open:
-      return const _CheckpointStatusStyle(
-        color: SemanticColors.success,
+      return _CheckpointStatusStyle(
+        color: checkpointStatusColor(CheckpointStatus.open),
         icon: Icons.check_circle_rounded,
       );
     case CheckpointStatus.congested:
-      return const _CheckpointStatusStyle(
-        color: SemanticColors.warning,
+      return _CheckpointStatusStyle(
+        color: checkpointStatusColor(CheckpointStatus.congested),
         icon: Icons.traffic_rounded,
       );
     case CheckpointStatus.closed:
-      return const _CheckpointStatusStyle(
-        color: SemanticColors.error,
+      return _CheckpointStatusStyle(
+        color: checkpointStatusColor(CheckpointStatus.closed),
         icon: Icons.block_rounded,
       );
     case CheckpointStatus.unknown:

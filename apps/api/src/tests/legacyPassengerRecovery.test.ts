@@ -100,6 +100,23 @@ describe("legacy passenger creation recovery", () => {
     });
   });
 
+  it("persists and returns the place names together with their coordinates", async () => {
+    const payload = { ...body(), pickup_label: "جامعة بوليتكنك فلسطين", destination_label: "Selected place" };
+    const response = await create("passenger_names", payload, "names-key-1");
+    expect(response.status).toBe(201);
+    expect(response.body.request).toMatchObject({
+      pickup_label: "جامعة بوليتكنك فلسطين", pickup_lat: "31.532600", pickup_lng: "35.099800",
+      destination_label: "Selected place", destination_lat: "31.705400", destination_lng: "35.202400",
+    });
+    expect(rows[0]).toMatchObject({ pickup_label: "جامعة بوليتكنك فلسطين", destination_label: "Selected place" });
+  });
+
+  it("rejects a request without a place name instead of saving bare coordinates", async () => {
+    const response = await create("passenger_noname", { ...body(), pickup_label: "" }, "names-key-2");
+    expect(response.status).toBe(400);
+    expect(rows).toHaveLength(0);
+  });
+
   it("rolls resource creation back if mandatory audit insertion fails, then safely retries", async () => {
     const payload = body();
     db.auditEvent.create.mockRejectedValueOnce(new Error("audit unavailable"));
@@ -118,6 +135,43 @@ describe("legacy passenger creation recovery", () => {
     expect(replay.body.request.id).toBe(first.body.request.id);
     expect(rows).toHaveLength(1);
     expect(audits).toHaveLength(1);
+  });
+
+  it("rejects a past departure with a clear code and leaves no reservation, claim or audit behind", async () => {
+    const past = { ...body(), preferred_time: new Date(Date.now() - 60_000).toISOString() };
+    const response = await create("passenger_1", past, "past-trip-key").expect(400);
+    expect(response.body.error).toBe("preferred_time_in_past");
+    expect(rows).toHaveLength(0);
+    expect(records).toHaveLength(0);
+    expect(audits).toHaveLength(0);
+  });
+
+  it("treats the exact departure instant as expired and the next millisecond as bookable", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const now = new Date("2030-06-01T10:00:00.000Z"); // 13:00 in Asia/Hebron (UTC+3); instants are zone-independent
+      vi.setSystemTime(now);
+      const exact = await create("passenger_1", { ...body(), preferred_time: now.toISOString() }, "boundary-exact").expect(400);
+      expect(exact.body.error).toBe("preferred_time_in_past");
+      await create("passenger_1", { ...body(), preferred_time: new Date(now.getTime() + 1).toISOString() }, "boundary-next").expect(201);
+      expect(rows).toHaveLength(1);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("still replays the committed booking after its departure time has passed, without a second reservation", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2030-06-01T10:00:00.000Z"));
+      const payload = { ...body(), preferred_time: "2030-06-01T10:30:00.000Z" };
+      const first = await create("passenger_1", payload, "late-replay-key").expect(201);
+      vi.setSystemTime(new Date("2030-06-01T11:00:00.000Z"));
+      const replay = await create("passenger_1", payload, "late-replay-key").expect(201);
+      expect(replay.body.request.id).toBe(first.body.request.id);
+      expect(rows).toHaveLength(1);
+      // A fresh key for the same expired time is a new booking attempt and must be refused.
+      await create("passenger_1", payload, "late-new-key").expect(400);
+      expect(rows).toHaveLength(1);
+    } finally { vi.useRealTimers(); }
   });
 
   it("binds a key to exact payload while keeping different actors independent", async () => {

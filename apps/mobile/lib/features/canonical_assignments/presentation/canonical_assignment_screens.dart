@@ -5,6 +5,7 @@ import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/masari_card.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
@@ -46,89 +47,97 @@ class _DriverCanonicalOfferListScreenState
     final l10n = AppLocalizations.of(context);
     final capabilities = ref.watch(mobileCapabilitiesProvider);
     final offers = ref.watch(driverCanonicalOffersProvider);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.canonicalDriverOffers)),
-      body: capabilities.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorPanel(
-          error: error,
-          onRetry: () =>
-              ref.read(mobileCapabilitiesProvider.notifier).refresh(),
-        ),
-        data: (value) {
-          if (!value.driverCanonicalOffersAvailable) {
-            return _UnavailablePanel(message: l10n.featureUnavailable);
-          }
-          return offers.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => _ErrorPanel(
-              error: error,
-              onRetry: () =>
-                  ref.read(driverCanonicalOffersProvider.notifier).refresh(),
-            ),
-            data: (state) => RefreshIndicator(
-              onRefresh: () =>
-                  ref.read(driverCanonicalOffersProvider.notifier).refresh(),
-              child: ListView(
-                padding: const EdgeInsets.all(AppTokens.spaceLarge),
-                children: [
-                  if (capabilities
-                          .value
-                          ?.canonicalSharedDriverOffersAvailable ==
-                      true) ...[
-                    SegmentedButton<String>(
-                      segments: [
-                        ButtonSegment(
-                          value: 'individual',
-                          label: Text(l10n.individualOffers),
-                        ),
-                        ButtonSegment(
-                          value: 'shared',
-                          label: Text(l10n.sharedOffers),
-                        ),
-                      ],
-                      selected: const {'individual'},
-                      onSelectionChanged: (selection) {
-                        if (selection.contains('shared')) {
-                          context.go('/driver/shared-offers');
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppTokens.spaceMedium),
-                  ],
-                  Text(l10n.canonicalDriverOffersBody),
-                  Text(
-                    l10n.manualRefreshNotice,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: AppTokens.spaceMedium),
-                  if (state.offers.isEmpty)
-                    MasariCard(child: Text(l10n.noCanonicalOffers))
-                  else
-                    for (final offer in state.offers) ...[
-                      _OfferCard(offer: offer, serverNow: state.serverNow),
+    // New offers are created by the server-side matcher after the merchant or
+    // sender submits, so the visible list re-reads on the project's standard
+    // foreground cadence instead of waiting for a manual pull.
+    return ForegroundRefresh(
+      refresh: () => ref.read(driverCanonicalOffersProvider.notifier).refresh(),
+      child: Scaffold(
+        appBar: AppBar(title: Text(l10n.canonicalDriverOffers)),
+        body: capabilities.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => _ErrorPanel(
+            error: error,
+            onRetry: () =>
+                ref.read(mobileCapabilitiesProvider.notifier).refresh(),
+          ),
+          data: (value) {
+            if (!value.driverCanonicalOffersAvailable) {
+              return _UnavailablePanel(message: l10n.featureUnavailable);
+            }
+            return offers.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _ErrorPanel(
+                error: error,
+                onRetry: () =>
+                    ref.read(driverCanonicalOffersProvider.notifier).refresh(),
+              ),
+              data: (state) => RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(driverCanonicalOffersProvider.notifier).refresh(),
+                child: ListView(
+                  padding: const EdgeInsets.all(AppTokens.spaceLarge),
+                  children: [
+                    if (capabilities
+                            .value
+                            ?.canonicalSharedDriverOffersAvailable ==
+                        true) ...[
+                      SegmentedButton<String>(
+                        segments: [
+                          ButtonSegment(
+                            value: 'individual',
+                            label: Text(l10n.individualOffers),
+                          ),
+                          ButtonSegment(
+                            value: 'shared',
+                            label: Text(l10n.sharedOffers),
+                          ),
+                        ],
+                        selected: const {'individual'},
+                        onSelectionChanged: (selection) {
+                          if (selection.contains('shared')) {
+                            context.go('/driver/shared-offers');
+                          }
+                        },
+                      ),
                       const SizedBox(height: AppTokens.spaceMedium),
                     ],
-                  if (state.nextCursor != null)
-                    FilledButton.tonal(
-                      key: const ValueKey('loadMoreCanonicalOffers'),
-                      onPressed: state.loadingMore
-                          ? null
-                          : () => ref
-                                .read(driverCanonicalOffersProvider.notifier)
-                                .loadMore(),
-                      child: state.loadingMore
-                          ? const SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(l10n.loadMore),
+                    Text(l10n.canonicalDriverOffersBody),
+                    Text(
+                      l10n.manualRefreshNotice,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                ],
+                    const SizedBox(height: AppTokens.spaceMedium),
+                    if (state.offers.isEmpty)
+                      MasariCard(child: Text(l10n.noCanonicalOffers))
+                    else
+                      for (final offer in state.offers) ...[
+                        _OfferCard(offer: offer, serverNow: state.serverNow),
+                        const SizedBox(height: AppTokens.spaceMedium),
+                      ],
+                    if (state.nextCursor != null)
+                      FilledButton.tonal(
+                        key: const ValueKey('loadMoreCanonicalOffers'),
+                        onPressed: state.loadingMore
+                            ? null
+                            : () => ref
+                                  .read(driverCanonicalOffersProvider.notifier)
+                                  .loadMore(),
+                        child: state.loadingMore
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(l10n.loadMore),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -254,136 +263,145 @@ class _DriverCanonicalOfferDetailScreenState
     final detail = ref.watch(
       driverCanonicalOfferDetailProvider(widget.offerId),
     );
-    return PopScope(
-      canPop: !_dirty,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop || !await _confirmLeave() || !context.mounted) return;
-        context.pop();
-      },
-      child: Scaffold(
-        appBar: AppBar(title: Text(l10n.offerDetails)),
-        body: detail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => _ErrorPanel(
-            error: error,
-            onRetry: () => ref
-                .read(
-                  driverCanonicalOfferDetailProvider(widget.offerId).notifier,
-                )
-                .refresh(),
-          ),
-          data: (state) {
-            final offer = state.offer;
-            final actionable =
-                offer.actionable && !offer.expiredAt(state.serverNow);
-            return RefreshIndicator(
-              onRefresh: () => ref
+    return ForegroundRefresh(
+      refresh: () => ref
+          .read(driverCanonicalOfferDetailProvider(widget.offerId).notifier)
+          .refresh(),
+      child: PopScope(
+        canPop: !_dirty,
+        onPopInvokedWithResult: (didPop, _) async {
+          if (didPop || !await _confirmLeave() || !context.mounted) return;
+          context.pop();
+        },
+        child: Scaffold(
+          appBar: AppBar(title: Text(l10n.offerDetails)),
+          body: detail.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => _ErrorPanel(
+              error: error,
+              onRetry: () => ref
                   .read(
                     driverCanonicalOfferDetailProvider(widget.offerId).notifier,
                   )
                   .refresh(),
-              child: ListView(
-                padding: const EdgeInsets.all(AppTokens.spaceLarge),
-                children: [
-                  _OfferSummary(offer: offer, serverNow: state.serverNow),
-                  if (state.uncertain || state.recoveryPending) ...[
-                    const SizedBox(height: AppTokens.spaceMedium),
-                    Semantics(
-                      liveRegion: true,
-                      child: MasariCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(l10n.operationResultUncertain),
-                            FilledButton.tonal(
-                              key: const ValueKey(
-                                'recoverCanonicalOfferOperation',
+            ),
+            data: (state) {
+              final offer = state.offer;
+              final actionable =
+                  offer.actionable && !offer.expiredAt(state.serverNow);
+              return RefreshIndicator(
+                onRefresh: () => ref
+                    .read(
+                      driverCanonicalOfferDetailProvider(
+                        widget.offerId,
+                      ).notifier,
+                    )
+                    .refresh(),
+                child: ListView(
+                  padding: const EdgeInsets.all(AppTokens.spaceLarge),
+                  children: [
+                    _OfferSummary(offer: offer, serverNow: state.serverNow),
+                    if (state.uncertain || state.recoveryPending) ...[
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      Semantics(
+                        liveRegion: true,
+                        child: MasariCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(l10n.operationResultUncertain),
+                              FilledButton.tonal(
+                                key: const ValueKey(
+                                  'recoverCanonicalOfferOperation',
+                                ),
+                                onPressed: state.mutating
+                                    ? null
+                                    : () => _run(
+                                        () => ref
+                                            .read(
+                                              driverCanonicalOfferDetailProvider(
+                                                widget.offerId,
+                                              ).notifier,
+                                            )
+                                            .recover(),
+                                      ),
+                                child: Text(l10n.recoverOperation),
                               ),
-                              onPressed: state.mutating
-                                  ? null
-                                  : () => _run(
-                                      () => ref
-                                          .read(
-                                            driverCanonicalOfferDetailProvider(
-                                              widget.offerId,
-                                            ).notifier,
-                                          )
-                                          .recover(),
-                                    ),
-                              child: Text(l10n.recoverOperation),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                  if (actionable) ...[
+                    ],
+                    if (actionable) ...[
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      FilledButton(
+                        key: const ValueKey('acceptCanonicalOffer'),
+                        onPressed: state.mutating
+                            ? null
+                            : () => _confirmAndRun(
+                                l10n.confirmAcceptOffer,
+                                () => ref
+                                    .read(
+                                      driverCanonicalOfferDetailProvider(
+                                        widget.offerId,
+                                      ).notifier,
+                                    )
+                                    .accept(),
+                              ),
+                        child: Text(l10n.acceptOffer),
+                      ),
+                      const SizedBox(height: AppTokens.spaceSmall),
+                      DropdownButtonFormField<CanonicalRejectReason>(
+                        key: const ValueKey('canonicalRejectReason'),
+                        initialValue: _reason,
+                        decoration: InputDecoration(
+                          labelText: l10n.rejectReason,
+                        ),
+                        items: CanonicalRejectReason.values
+                            .map(
+                              (reason) => DropdownMenuItem(
+                                value: reason,
+                                child: Text(_rejectReasonLabel(l10n, reason)),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: state.mutating
+                            ? null
+                            : (value) => setState(() => _reason = value),
+                      ),
+                      OutlinedButton(
+                        key: const ValueKey('rejectCanonicalOffer'),
+                        onPressed: state.mutating || _reason == null
+                            ? null
+                            : () => _confirmAndRun(
+                                l10n.confirmRejectOffer,
+                                () => ref
+                                    .read(
+                                      driverCanonicalOfferDetailProvider(
+                                        widget.offerId,
+                                      ).notifier,
+                                    )
+                                    .reject(_reason!),
+                              ),
+                        child: Text(l10n.rejectOffer),
+                      ),
+                    ],
                     const SizedBox(height: AppTokens.spaceMedium),
-                    FilledButton(
-                      key: const ValueKey('acceptCanonicalOffer'),
-                      onPressed: state.mutating
-                          ? null
-                          : () => _confirmAndRun(
-                              l10n.confirmAcceptOffer,
-                              () => ref
-                                  .read(
-                                    driverCanonicalOfferDetailProvider(
-                                      widget.offerId,
-                                    ).notifier,
-                                  )
-                                  .accept(),
-                            ),
-                      child: Text(l10n.acceptOffer),
-                    ),
-                    const SizedBox(height: AppTokens.spaceSmall),
-                    DropdownButtonFormField<CanonicalRejectReason>(
-                      key: const ValueKey('canonicalRejectReason'),
-                      initialValue: _reason,
-                      decoration: InputDecoration(labelText: l10n.rejectReason),
-                      items: CanonicalRejectReason.values
-                          .map(
-                            (reason) => DropdownMenuItem(
-                              value: reason,
-                              child: Text(_rejectReasonLabel(l10n, reason)),
-                            ),
-                          )
-                          .toList(growable: false),
-                      onChanged: state.mutating
-                          ? null
-                          : (value) => setState(() => _reason = value),
-                    ),
                     OutlinedButton(
-                      key: const ValueKey('rejectCanonicalOffer'),
-                      onPressed: state.mutating || _reason == null
-                          ? null
-                          : () => _confirmAndRun(
-                              l10n.confirmRejectOffer,
-                              () => ref
-                                  .read(
-                                    driverCanonicalOfferDetailProvider(
-                                      widget.offerId,
-                                    ).notifier,
-                                  )
-                                  .reject(_reason!),
-                            ),
-                      child: Text(l10n.rejectOffer),
+                      onPressed: () => ref
+                          .read(
+                            driverCanonicalOfferDetailProvider(
+                              widget.offerId,
+                            ).notifier,
+                          )
+                          .refresh(),
+                      child: Text(l10n.refresh),
                     ),
                   ],
-                  const SizedBox(height: AppTokens.spaceMedium),
-                  OutlinedButton(
-                    onPressed: () => ref
-                        .read(
-                          driverCanonicalOfferDetailProvider(
-                            widget.offerId,
-                          ).notifier,
-                        )
-                        .refresh(),
-                    child: Text(l10n.refresh),
-                  ),
-                ],
-              ),
-            );
-          },
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -549,36 +567,39 @@ class _CanonicalAssignmentListScreenState
     final assignments = widget.role == 'passenger'
         ? ref.watch(passengerCanonicalAssignmentsProvider)
         : ref.watch(merchantCanonicalAssignmentsProvider);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.canonicalAssignments)),
-      body: assignments.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorPanel(error: error, onRetry: _refresh),
-        data: (items) => RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView(
-            padding: const EdgeInsets.all(AppTokens.spaceLarge),
-            children: [
-              Text(l10n.manualRefreshNotice),
-              const SizedBox(height: AppTokens.spaceMedium),
-              if (items.isEmpty)
-                MasariCard(child: Text(l10n.noCanonicalAssignments))
-              else
-                for (final item in items) ...[
-                  _AssignmentCard(
-                    assignment: item,
-                    sharedPresentationAvailable:
-                        capabilities
-                            .value
-                            ?.canonicalSharedAssignmentStatusAvailable ==
-                        true,
-                    onTap: () => context.go(
-                      '/${widget.role}/canonical-assignments/${item.id}',
+    return ForegroundRefresh(
+      refresh: _refresh,
+      child: Scaffold(
+        appBar: AppBar(title: Text(l10n.canonicalAssignments)),
+        body: assignments.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => _ErrorPanel(error: error, onRetry: _refresh),
+          data: (items) => RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: const EdgeInsets.all(AppTokens.spaceLarge),
+              children: [
+                Text(l10n.manualRefreshNotice),
+                const SizedBox(height: AppTokens.spaceMedium),
+                if (items.isEmpty)
+                  MasariCard(child: Text(l10n.noCanonicalAssignments))
+                else
+                  for (final item in items) ...[
+                    _AssignmentCard(
+                      assignment: item,
+                      sharedPresentationAvailable:
+                          capabilities
+                              .value
+                              ?.canonicalSharedAssignmentStatusAvailable ==
+                          true,
+                      onTap: () => context.go(
+                        '/${widget.role}/canonical-assignments/${item.id}',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppTokens.spaceMedium),
-                ],
-            ],
+                    const SizedBox(height: AppTokens.spaceMedium),
+                  ],
+              ],
+            ),
           ),
         ),
       ),
@@ -701,41 +722,50 @@ class _CanonicalAssignmentDetailScreenState
       );
     }
     final detail = ref.watch(canonicalAssignmentDetailProvider(_target));
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.canonicalAssignmentStatus)),
-      body: detail.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorPanel(
-          error: error,
-          onRetry: () => ref
-              .read(canonicalAssignmentDetailProvider(_target).notifier)
-              .refresh(),
-        ),
-        data: (envelope) =>
-            envelope.assignment.tripVersion == CanonicalTripVersion.shared &&
-                capabilities.value?.canonicalSharedAssignmentStatusAvailable !=
-                    true
-            ? _UnavailablePanel(message: l10n.sharedAssignmentUnavailable)
-            : RefreshIndicator(
-                onRefresh: () => ref
-                    .read(canonicalAssignmentDetailProvider(_target).notifier)
-                    .refresh(),
-                child: ListView(
-                  padding: const EdgeInsets.all(AppTokens.spaceLarge),
-                  children: [
-                    _AssignmentSummary(assignment: envelope.assignment),
-                    const SizedBox(height: AppTokens.spaceMedium),
-                    OutlinedButton(
-                      onPressed: () => ref
-                          .read(
-                            canonicalAssignmentDetailProvider(_target).notifier,
-                          )
-                          .refresh(),
-                      child: Text(l10n.refresh),
-                    ),
-                  ],
+    return ForegroundRefresh(
+      refresh: () => ref
+          .read(canonicalAssignmentDetailProvider(_target).notifier)
+          .refresh(),
+      child: Scaffold(
+        appBar: AppBar(title: Text(l10n.canonicalAssignmentStatus)),
+        body: detail.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => _ErrorPanel(
+            error: error,
+            onRetry: () => ref
+                .read(canonicalAssignmentDetailProvider(_target).notifier)
+                .refresh(),
+          ),
+          data: (envelope) =>
+              envelope.assignment.tripVersion == CanonicalTripVersion.shared &&
+                  capabilities
+                          .value
+                          ?.canonicalSharedAssignmentStatusAvailable !=
+                      true
+              ? _UnavailablePanel(message: l10n.sharedAssignmentUnavailable)
+              : RefreshIndicator(
+                  onRefresh: () => ref
+                      .read(canonicalAssignmentDetailProvider(_target).notifier)
+                      .refresh(),
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppTokens.spaceLarge),
+                    children: [
+                      _AssignmentSummary(assignment: envelope.assignment),
+                      const SizedBox(height: AppTokens.spaceMedium),
+                      OutlinedButton(
+                        onPressed: () => ref
+                            .read(
+                              canonicalAssignmentDetailProvider(
+                                _target,
+                              ).notifier,
+                            )
+                            .refresh(),
+                        child: Text(l10n.refresh),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }
