@@ -2564,4 +2564,190 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tripsFilterAll => 'الكل';
+
+  @override
+  String get communityReportsTitle => 'بلاغات المجتمع';
+
+  @override
+  String get communityReportsNote =>
+      'بلاغات غير مؤكدة من المستخدمين. التصويت رأي المجتمع فقط ولا يغيّر حالة الحواجز أو الطرق.';
+
+  @override
+  String get communityReportsAdd => 'إضافة بلاغ';
+
+  @override
+  String get communityReportsEmpty => 'لا توجد بلاغات حالياً.';
+
+  @override
+  String get communityReportsLoadFailed => 'تعذّر تحميل البلاغات.';
+
+  @override
+  String get communityFilterAll => 'الكل';
+
+  @override
+  String get communityGroupRoad => 'الطرق';
+
+  @override
+  String get communityGroupCheckpoint => 'الحواجز';
+
+  @override
+  String get communityGroupSafety => 'السلامة';
+
+  @override
+  String get communityGroupOther => 'أخرى';
+
+  @override
+  String get communitySortRecent => 'الأحدث';
+
+  @override
+  String get communitySortTop => 'الأكثر تأييداً';
+
+  @override
+  String get communitySortDisputed => 'المتنازع عليها';
+
+  @override
+  String get communityBadgeRecent => 'حديث';
+
+  @override
+  String get communityBadgeDisputed => 'محل خلاف';
+
+  @override
+  String get communityBadgeWellSupported => 'مدعوم من المجتمع';
+
+  @override
+  String get communityAwaitingReview => 'بانتظار تحقق الإدارة';
+
+  @override
+  String get communityUnverifiedPrefix => 'بلاغ غير مؤكد: ';
+
+  @override
+  String get communityCategoryRoadClosure => 'إغلاق طريق';
+
+  @override
+  String get communityCategoryRoadReopened => 'إعادة فتح طريق';
+
+  @override
+  String get communityCategoryRoadCongestion => 'ازدحام';
+
+  @override
+  String get communityCategoryCheckpointOpenMarkedClosed =>
+      'حاجز مفتوح لكنه معروض مغلقاً';
+
+  @override
+  String get communityCategoryCheckpointClosedMarkedOpen =>
+      'حاجز مغلق لكنه معروض مفتوحاً';
+
+  @override
+  String get communityCategoryCheckpointOutdated => 'معلومات حاجز قديمة';
+
+  @override
+  String get communityCategorySafetyAlert => 'تنبيه سلامة أو أمن';
+
+  @override
+  String get communityCategoryDriverReport => 'ملاحظة عن رحلة أو سائق';
+
+  @override
+  String get communityCategoryIncorrectMapInfo => 'معلومة خاطئة على الخريطة';
+
+  @override
+  String get communityCategoryOther => 'أخرى';
+
+  @override
+  String get communitySheetTitle => 'إضافة بلاغ';
+
+  @override
+  String get communitySensitiveNote =>
+      'صف ما رأيته فقط. لا تذكر اسم شخص أو رقم مركبة أو أي بيانات شخصية. سيظهر البلاغ للآخرين كبلاغ غير مؤكد.';
+
+  @override
+  String get communityFieldCategory => 'نوع البلاغ';
+
+  @override
+  String get communityFieldDescription => 'ماذا حدث؟';
+
+  @override
+  String get communityFieldLocation => 'اسم المكان';
+
+  @override
+  String get communityAttachLocation => 'إرفاق موقعي الحالي على الخريطة';
+
+  @override
+  String get communitySubmit => 'إرسال البلاغ';
+
+  @override
+  String get communitySubmitted => 'تم نشر البلاغ.';
+
+  @override
+  String get communitySubmitFailed => 'تعذّر إرسال البلاغ. حاول مرة أخرى.';
+
+  @override
+  String get communityTooMany => 'أرسلت بلاغات كثيرة. حاول لاحقاً.';
+
+  @override
+  String get communityUpvote => 'أؤيد البلاغ';
+
+  @override
+  String get communityDownvote => 'لا أؤيد البلاغ';
+
+  @override
+  String get communityVoteFailed => 'تعذّر تسجيل صوتك.';
+
+  @override
+  String get communityOwnReportVote => 'لا يمكنك التصويت على بلاغك.';
+
+  @override
+  String get communityFlag => 'الإبلاغ عن بلاغ مضلّل';
+
+  @override
+  String get communityFlagged => 'شكراً. سيراجع فريقنا البلاغ.';
+
+  @override
+  String get communityFlagFailed => 'تعذّر إرسال الإشعار.';
+
+  @override
+  String get communityJustNow => 'الآن';
+
+  @override
+  String communityMinutesAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'قبل $count دقيقة',
+      few: 'قبل $count دقائق',
+      two: 'قبل دقيقتين',
+      one: 'قبل دقيقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityHoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'قبل $count ساعة',
+      few: 'قبل $count ساعات',
+      two: 'قبل ساعتين',
+      one: 'قبل ساعة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'قبل $count يوماً',
+      few: 'قبل $count أيام',
+      two: 'قبل يومين',
+      one: 'قبل يوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityVoteCounts(int up, int down) {
+    return '$up تأييد، $down اعتراض';
+  }
 }

@@ -9,6 +9,8 @@ import 'package:masari_mobile/features/auth/application/auth_controller.dart';
 import 'package:masari_mobile/features/auth/data/session_coordinator.dart';
 import 'package:masari_mobile/features/checkpoints/presentation/checkpoint_sheet.dart';
 import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:masari_mobile/features/community_reports/application/community_reports_controller.dart';
+import 'package:masari_mobile/features/community_reports/data/community_report_models.dart';
 import 'package:masari_mobile/features/driver/application/driver_controller.dart';
 import 'package:masari_mobile/features/driver/data/driver_models.dart';
 import 'package:masari_mobile/features/driver/presentation/driver_trip_screen.dart';
@@ -48,6 +50,7 @@ void main() {
                     ),
                   ),
                   currentPositionProvider.overrideWith(_NoPosition.new),
+                  communityReportsProvider.overrideWith(_NoReports.new),
                   driverTripControllerProvider(
                     'trip',
                   ).overrideWith(_FixtureDriverTrip.new),
@@ -296,6 +299,11 @@ void main() {
 class _NoPosition extends CurrentPositionNotifier {
   @override
   Future<GeoPoint?> build() async => null;
+}
+
+class _NoReports extends CommunityReportsNotifier {
+  @override
+  Future<List<CommunityReport>> build() async => const [];
 }
 
 class _FixtureDriverTrip extends DriverTripController {
