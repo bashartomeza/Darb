@@ -85,6 +85,9 @@ class SemanticColors {
   static const checkpointClosed = Color(0xFFEB3223);
   static const checkpointCongested = Color(0xFFFA5F12);
 
+  /// No published state (e.g. the partner feed only gives change times).
+  static const checkpointUnknown = Color(0xFF64748B);
+
   // ---------------------------------------------------------------------------
   // Role & entity indicators — §B "Semantic & map colors". Used for map
   // markers, avatars and badges so a role reads the same way everywhere.

@@ -1,3 +1,4 @@
+import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../legacy_corridor/data/legacy_corridor_models.dart';
 import '../../matching/data/matching_models.dart';
@@ -79,6 +80,7 @@ class MerchantParcel {
     required this.size,
     required this.priority,
     required this.status,
+    this.destinationPosition,
   });
 
   final String id;
@@ -87,12 +89,16 @@ class MerchantParcel {
   final String priority;
   final String status;
 
+  /// The drop-off stored with the parcel; null when the record has none.
+  final GeoPoint? destinationPosition;
+
   factory MerchantParcel.fromJson(Map<String, dynamic> json) => MerchantParcel(
     id: _string(json, 'id'),
     destinationLabel: _string(json, 'destination_label'),
     size: _string(json, 'size'),
     priority: _string(json, 'priority'),
     status: _string(json, 'status'),
+    destinationPosition: _point(json, 'destination_lat', 'destination_lng'),
   );
 }
 
@@ -162,10 +168,14 @@ class MerchantOrder {
     required this.parcels,
     required this.batches,
     this.handover,
+    this.pickupPosition,
   });
 
   final String id;
   final String pickupLabel;
+
+  /// The pickup stored with the order; null when the record has none.
+  final GeoPoint? pickupPosition;
   final String status;
   final DateTime createdAt;
   final List<MerchantParcel> parcels;
@@ -178,6 +188,33 @@ class MerchantOrder {
   bool get canCancel =>
       const {'submitted', 'batched', 'matched'}.contains(status);
   MerchantBatch? get latestBatch => batches.isEmpty ? null : batches.first;
+
+  /// The order's route from its own record: pickup, then each distinct parcel
+  /// drop-off in order. Empty when the pickup or every drop-off is unknown.
+  List<GeoPoint> get routeWaypoints {
+    final pickup = pickupPosition;
+    if (pickup == null) return const [];
+    final drops = <GeoPoint>[];
+    for (final parcel in parcels) {
+      final drop = parcel.destinationPosition;
+      if (drop != null && !drops.contains(drop) && drop != pickup) {
+        drops.add(drop);
+      }
+    }
+    return drops.isEmpty ? const [] : List.unmodifiable([pickup, ...drops]);
+  }
+
+  /// Drop-off labels matching the stops of [routeWaypoints] after the pickup.
+  List<String> get routeDropLabels {
+    final seen = <GeoPoint>{};
+    return [
+      for (final parcel in parcels)
+        if (parcel.destinationPosition != null &&
+            parcel.destinationPosition != pickupPosition &&
+            seen.add(parcel.destinationPosition!))
+          parcel.destinationLabel,
+    ];
+  }
 
   factory MerchantOrder.fromJson(Map<String, dynamic> json) {
     final parcels = json['parcels'];
@@ -202,6 +239,7 @@ class MerchantOrder {
       handover: json['handover'] is Map<String, dynamic>
           ? HandoverStatus.fromJson(json['handover'] as Map<String, dynamic>)
           : null,
+      pickupPosition: _point(json, 'pickup_lat', 'pickup_lng'),
     );
   }
 }
@@ -352,6 +390,25 @@ double _double(Map<String, dynamic> json, String key) {
   if (value is num) return value.toDouble();
   if (value is String) return double.parse(value);
   throw FormatException('Missing $key');
+}
+
+/// A stored coordinate pair (numbers or decimal strings), or null when either
+/// part is missing or invalid. Never filled in with a default place.
+GeoPoint? _point(Map<String, dynamic> json, String latKey, String lngKey) {
+  double? read(Object? value, double limit) {
+    final number = value is num
+        ? value.toDouble()
+        : value is String
+        ? double.tryParse(value.trim())
+        : null;
+    return number != null && number.isFinite && number.abs() <= limit
+        ? number
+        : null;
+  }
+
+  final lat = read(json[latKey], 90);
+  final lng = read(json[lngKey], 180);
+  return lat == null || lng == null ? null : GeoPoint(lat, lng);
 }
 
 int _intOrZero(Object? value) => value is num ? value.toInt() : 0;

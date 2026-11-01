@@ -234,6 +234,8 @@ describe("demo reset", () => {
     expect(tx.invitation.deleteMany).toHaveBeenCalledOnce();
     expect(tx.otpChallenge.deleteMany).toHaveBeenCalledOnce();
     expect(tx.consentRelease.deleteMany).toHaveBeenCalledOnce();
+    // The real provider's key budget survives a demo reset.
+    expect(tx.abuseCounter.deleteMany).toHaveBeenCalledWith({ where: { bucket_type: { not: "checkpoint_partner_budget" } } });
     expect(tx.refreshToken.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
       tx.authSession.deleteMany.mock.invocationCallOrder[0]
     );

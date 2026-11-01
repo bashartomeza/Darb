@@ -323,6 +323,11 @@ void main() {
     await _pump(tester, repo);
     await tester.tap(find.byKey(const ValueKey('communityAdd')));
     await tester.pumpAndSettle();
+    // "Other" needs no place on the map, so the sheet can be sent as is.
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('communityCategory-other')),
+    );
+    await tester.tap(find.byKey(const ValueKey('communityCategory-other')));
     await tester.enterText(
       find.byKey(const ValueKey('communityDescription')),
       'Heavy traffic',
@@ -332,6 +337,7 @@ void main() {
       'Ramallah',
     );
     await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('communitySubmit')));
     await tester.tap(find.byKey(const ValueKey('communitySubmit')));
     await tester.pumpAndSettle();
     expect(find.text('You have sent many reports. Try again later.'), findsOne);

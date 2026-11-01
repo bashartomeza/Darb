@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -5,8 +8,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
+import '../../features/checkpoints/domain/checkpoint_models.dart';
 import '../maps/map_tile_cache.dart';
+import '../maps/service_area.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import '../theme/semantic_colors.dart';
 
 /// Defines the visual purpose of a Darb map marker.
 enum DarbMapMarkerType {
@@ -27,9 +34,13 @@ enum DarbMapMarkerType {
 
   /// Closed entrance or road access.
   closure,
+
+  /// Unverified community report.
+  report,
 }
 
 /// A pin the map can draw.
+@immutable
 class DarbMapMarker {
   const DarbMapMarker({
     required this.position,
@@ -39,6 +50,10 @@ class DarbMapMarker {
     this.foreground = Colors.white,
     this.size = 34,
     this.type = DarbMapMarkerType.normal,
+    this.fit,
+    this.ringColor,
+    this.badgeIcon,
+    this.dimmed = false,
   });
 
   final GeoPoint position;
@@ -53,9 +68,60 @@ class DarbMapMarker {
 
   /// Controls the visual treatment of the marker.
   final DarbMapMarkerType type;
+
+  /// Whether the camera frames this marker. Defaults to true for the trip's
+  /// own points and false for background layers (checkpoints, reports), so a
+  /// city-wide layer never zooms the map out away from the trip.
+  final bool? fit;
+
+  /// Outer ring colour, e.g. what the community reports about a checkpoint
+  /// (kept separate from [color], which is the official state).
+  final Color? ringColor;
+
+  /// Small corner badge (e.g. a community or well-supported mark).
+  final IconData? badgeIcon;
+
+  /// Drawn faded, e.g. a disputed community report.
+  final bool dimmed;
+
+  bool get fitsCamera =>
+      fit ??
+      (type != DarbMapMarkerType.checkpoint &&
+          type != DarbMapMarkerType.report);
+
+  @override
+  bool operator ==(Object other) =>
+      other is DarbMapMarker &&
+      other.position == position &&
+      other.icon == icon &&
+      other.color == color &&
+      other.label == label &&
+      other.foreground == foreground &&
+      other.size == size &&
+      other.type == type &&
+      other.fit == fit &&
+      other.ringColor == ringColor &&
+      other.badgeIcon == badgeIcon &&
+      other.dimmed == dimmed;
+
+  @override
+  int get hashCode => Object.hash(
+    position,
+    icon,
+    color,
+    label,
+    foreground,
+    size,
+    type,
+    fit,
+    ringColor,
+    badgeIcon,
+    dimmed,
+  );
 }
 
 /// A line the map can draw.
+@immutable
 class DarbMapPath {
   const DarbMapPath({
     required this.points,
@@ -68,20 +134,119 @@ class DarbMapPath {
   final Color color;
   final double width;
 
-  /// Used for a leg that is planned rather than confirmed.
+  /// Used for a leg that is planned rather than confirmed, and for the
+  /// straight fallback when no road route is available.
   final bool dashed;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DarbMapPath &&
+      other.color == color &&
+      other.width == width &&
+      other.dashed == dashed &&
+      (identical(other.points, points) || listEquals(other.points, points));
+
+  @override
+  int get hashCode => Object.hash(color, width, dashed, points.length);
+}
+
+/// Load state of the map's base tiles, shown so a blank map is never silent.
+enum MapTileLoadState { loading, loaded, failed }
+
+/// Follows tile loads of one map: `loaded` once any tile arrived, `failed`
+/// when tiles keep failing and none arrived.
+class MapTileLoadTracker extends ValueNotifier<MapTileLoadState> {
+  MapTileLoadTracker() : super(MapTileLoadState.loading);
+
+  /// Failures with no success before the map reports itself as failed.
+  static const failuresBeforeFailed = 3;
+
+  int _failures = 0;
+  bool _disposed = false;
+
+  ImageProvider watch(ImageProvider provider) {
+    final stream = provider.resolve(ImageConfiguration.empty);
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (_, _) {
+        stream.removeListener(listener);
+        _later(() => value = MapTileLoadState.loaded);
+      },
+      onError: (_, _) {
+        stream.removeListener(listener);
+        _later(() {
+          if (value == MapTileLoadState.loaded) return;
+          if (++_failures >= failuresBeforeFailed) {
+            value = MapTileLoadState.failed;
+          }
+        });
+      },
+    );
+    stream.addListener(listener);
+    return provider;
+  }
+
+  /// Starts counting again after the user asked to retry.
+  void reset() {
+    _failures = 0;
+    value = MapTileLoadState.loading;
+  }
+
+  // Tiles may resolve synchronously while the tile layer builds; notifying
+  // listeners then would rebuild widgets mid-build.
+  void _later(VoidCallback change) => scheduleMicrotask(() {
+    if (!_disposed) change();
+  });
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+}
+
+/// Wraps the real tile provider to observe loads. It shares the inner
+/// provider's headers (the tile layer adds the User-Agent there).
+class _TrackingTileProvider extends TileProvider {
+  _TrackingTileProvider(this.inner, this.tracker)
+    : super(headers: inner.headers);
+
+  final TileProvider inner;
+  final MapTileLoadTracker tracker;
+
+  @override
+  bool get supportsCancelLoading => inner.supportsCancelLoading;
+
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
+      tracker.watch(inner.getImage(coordinates, options));
+
+  @override
+  ImageProvider getImageWithCancelLoadingSupport(
+    TileCoordinates coordinates,
+    TileLayer options,
+    Future<void> cancelLoading,
+  ) => tracker.watch(
+    inner.getImageWithCancelLoadingSupport(coordinates, options, cancelLoading),
+  );
+
+  @override
+  void dispose() => inner.dispose();
 }
 
 /// Modern Darb map surface.
 ///
-/// Supports:
-/// - Route paths
-/// - Custom markers
-/// - Checkpoint traffic markers
-/// - Marker callouts
-/// - Zoom controls
-/// - Fit-to-content
-/// - Map tapping
+/// Supports route paths, custom markers, checkpoint traffic markers, marker
+/// callouts, zoom controls, fit-to-content, map tapping and short status notes.
+///
+/// The camera always stays on Darb's service area ([DarbServiceArea]): points
+/// outside it (an emulator's default GPS in California, a bad record) are
+/// drawn if visible but never move the camera, and the view cannot be panned
+/// away. With nothing in the area to show, the map opens on Hebron.
+///
+/// One tile layer and one tile provider live as long as the map: content
+/// changes and camera fits move the camera through [MapController] and the
+/// tile layer loads the new view from the camera events.
 class DarbMap extends StatefulWidget {
   const DarbMap({
     required this.emptyLabel,
@@ -91,6 +256,7 @@ class DarbMap extends StatefulWidget {
     this.height = 420,
     this.overlay,
     this.banner,
+    this.notes = const [],
     this.interactive = true,
     this.onTap,
     this.controlsTop,
@@ -121,6 +287,10 @@ class DarbMap extends StatefulWidget {
   /// Optional status banner shown near the top.
   final Widget? banner;
 
+  /// Short, honest status lines shown as small chips under the banner, e.g.
+  /// "checkpoint data unavailable" or "road route unavailable: straight line".
+  final List<String> notes;
+
   final bool interactive;
 
   /// Called whenever the user taps the map.
@@ -146,53 +316,55 @@ class DarbMap extends StatefulWidget {
 
 class _DarbMapState extends State<DarbMap> {
   final MapController _controller = MapController();
+  final MapTileLoadTracker _tiles = MapTileLoadTracker();
+  final StreamController<void> _resetTiles = StreamController<void>.broadcast();
+
+  late TileProvider _tileProvider;
+  late MapOptions _options;
+  late List<Polyline> _polylines;
+  late List<Marker> _markers;
 
   String? _selectedLabel;
 
+  /// The framed points the camera was last fitted to.
+  String _fittedSignature = '';
+  bool _mapReady = false;
+
+  /// Set once the user pans or zooms: content updates (a 5-second refresh, a
+  /// moving driver) then no longer yank the camera. The reset button clears it.
+  bool _userMovedCamera = false;
+
   MapTileCache get _tileCache => widget.tileCache ?? MapTileCache.shared;
-
-  // The tile layer disposes its provider with itself, so a rebuilt layer
-  // (see _reloadTiles) needs a fresh one.
-  TileProvider? _ownedProvider;
-  int _ownedProviderEpoch = -1;
-
-  TileProvider _provider() {
-    final injected = widget.tileProvider;
-    if (injected != null) return injected;
-    if (_ownedProviderEpoch != _tileEpoch || _ownedProvider == null) {
-      _ownedProviderEpoch = _tileEpoch;
-      _ownedProvider = NetworkTileProvider(cachingProvider: _tileCache);
-    }
-    return _ownedProvider!;
-  }
-
-  /// Default Darb geographic area.
-  static const LatLng _defaultCenter = LatLng(31.6, 35.15);
-
-  static const double _defaultZoom = 11;
 
   @override
   void initState() {
     super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      _fitToContent();
-    });
+    _tileProvider = _TrackingTileProvider(
+      widget.tileProvider ?? NetworkTileProvider(cachingProvider: _tileCache),
+      _tiles,
+    );
+    _polylines = _buildPolylines();
+    _markers = _buildMarkers();
+    final fit = _fitPoints();
+    _fittedSignature = _signature(fit);
+    _options = _buildOptions(fit);
   }
 
   @override
   void didUpdateWidget(covariant DarbMap oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (!_sameMapContent(oldWidget)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-
-        _fitToContent();
-      });
+    if (!listEquals(oldWidget.paths, widget.paths)) {
+      _polylines = _buildPolylines();
     }
+    if (!listEquals(oldWidget.markers, widget.markers)) {
+      _markers = _buildMarkers();
+    }
+    if (oldWidget.interactive != widget.interactive) {
+      _options = _buildOptions(_fitPoints());
+    }
+
+    _fitIfContentMoved();
 
     // Clear an old marker callout if the selected marker no longer exists.
     if (_selectedLabel != null &&
@@ -204,6 +376,8 @@ class _DarbMapState extends State<DarbMap> {
   @override
   void dispose() {
     _controller.dispose();
+    _tiles.dispose();
+    _resetTiles.close();
     super.dispose();
   }
 
@@ -211,122 +385,151 @@ class _DarbMapState extends State<DarbMap> {
   // MAP CONTENT
   // ===========================================================================
 
-  /// All coordinates currently displayed on the map.
-  ///
-  /// Route geometry comes directly from [widget.paths].
-  /// Markers, including checkpoints, are also included so the camera
-  /// can automatically fit around the complete visible content.
-  List<LatLng> get _allPoints => [
-    for (final path in widget.paths) ...path.points.map(_toLatLng),
-    for (final marker in widget.markers) _toLatLng(marker.position),
-  ];
-
   static LatLng _toLatLng(GeoPoint point) {
     return LatLng(point.latitude, point.longitude);
   }
 
-  /// Checks whether route/marker content changed.
-  ///
-  /// Marker visual properties are included here because a checkpoint can
-  /// keep the same coordinates while its traffic state changes from:
-  /// Salek -> Medium congestion -> Congestion.
-  bool _sameMapContent(DarbMap oldWidget) {
-    if (oldWidget.paths.length != widget.paths.length) {
-      return false;
+  List<Polyline> _buildPolylines() => [
+    for (final path in widget.paths)
+      if (path.points.length >= 2 &&
+          path.points.every((p) => p.latitude.isFinite && p.longitude.isFinite))
+        Polyline(
+          points: path.points.map(_toLatLng).toList(growable: false),
+          color: path.color,
+          strokeWidth: path.width,
+          borderColor: Colors.white.withValues(alpha: 0.85),
+          borderStrokeWidth: path.dashed ? 0 : 2.0,
+          pattern: path.dashed
+              ? StrokePattern.dashed(segments: const [10, 7])
+              : const StrokePattern.solid(),
+        ),
+  ];
+
+  List<Marker> _buildMarkers() => [
+    for (final marker in widget.markers)
+      if (marker.position.latitude.isFinite &&
+          marker.position.longitude.isFinite)
+        _pin(marker),
+  ];
+
+  /// Points that place the camera, inside the service area only: the trip's
+  /// own paths and markers; when there are none, the background layers
+  /// (checkpoints, reports) so an overview map shows them; when nothing is in
+  /// the area, none (the map then opens on Hebron).
+  List<LatLng> _fitPoints() {
+    final own = DarbServiceArea.inArea([
+      for (final path in widget.paths) ...path.points.map(_toLatLng),
+      for (final marker in widget.markers)
+        if (marker.fitsCamera) _toLatLng(marker.position),
+    ]);
+    if (own.isNotEmpty) return own;
+    return DarbServiceArea.inArea([
+      for (final marker in widget.markers) _toLatLng(marker.position),
+    ]);
+  }
+
+  /// Cheap identity of the framed area, rounded to ~10 m so jitter does not
+  /// refit the camera.
+  static String _signature(List<LatLng> points) {
+    if (points.isEmpty) return '';
+    if (points.length == 1) {
+      return '${points.first.latitude.toStringAsFixed(4)},'
+          '${points.first.longitude.toStringAsFixed(4)}';
     }
-
-    for (var i = 0; i < oldWidget.paths.length; i++) {
-      final oldPath = oldWidget.paths[i];
-      final newPath = widget.paths[i];
-
-      if (oldPath.points.length != newPath.points.length) {
-        return false;
-      }
-
-      if (oldPath.color != newPath.color ||
-          oldPath.width != newPath.width ||
-          oldPath.dashed != newPath.dashed) {
-        return false;
-      }
-
-      for (var j = 0; j < oldPath.points.length; j++) {
-        final oldPoint = oldPath.points[j];
-        final newPoint = newPath.points[j];
-
-        if (oldPoint.latitude != newPoint.latitude ||
-            oldPoint.longitude != newPoint.longitude) {
-          return false;
-        }
-      }
-    }
-
-    if (oldWidget.markers.length != widget.markers.length) {
-      return false;
-    }
-
-    for (var i = 0; i < oldWidget.markers.length; i++) {
-      final oldMarker = oldWidget.markers[i];
-      final newMarker = widget.markers[i];
-
-      if (oldMarker.position.latitude != newMarker.position.latitude ||
-          oldMarker.position.longitude != newMarker.position.longitude) {
-        return false;
-      }
-
-      if (oldMarker.icon != newMarker.icon ||
-          oldMarker.color != newMarker.color ||
-          oldMarker.foreground != newMarker.foreground ||
-          oldMarker.size != newMarker.size ||
-          oldMarker.type != newMarker.type ||
-          oldMarker.label != newMarker.label) {
-        return false;
-      }
-    }
-
-    return true;
+    final bounds = LatLngBounds.fromPoints(points);
+    return [
+      bounds.south,
+      bounds.west,
+      bounds.north,
+      bounds.east,
+    ].map((v) => v.toStringAsFixed(4)).join(',');
   }
 
   // ===========================================================================
   // CAMERA
   // ===========================================================================
 
-  void _fitToContent() {
-    final points = _allPoints;
+  MapOptions _buildOptions(List<LatLng> fit) {
+    return MapOptions(
+      initialCenter: fit.length == 1
+          ? fit.first
+          : DarbServiceArea.fallbackCenter,
+      initialZoom: fit.length == 1
+          ? DarbServiceArea.singlePointZoom
+          : DarbServiceArea.fallbackZoom,
+      // Start already framed: the first tiles requested are the right ones.
+      initialCameraFit: fit.length >= 2 ? _cameraFit(fit) : null,
+      cameraConstraint: DarbServiceArea.cameraConstraint,
+      minZoom: DarbServiceArea.minZoom,
+      maxZoom: DarbServiceArea.maxZoom,
+      interactionOptions: InteractionOptions(
+        flags: widget.interactive
+            ? InteractiveFlag.all & ~InteractiveFlag.rotate
+            : InteractiveFlag.none,
+      ),
+      onMapReady: () {
+        _mapReady = true;
+        // Content may have changed between the first build and now.
+        _fitIfContentMoved();
+      },
+      onPositionChanged: (_, hasGesture) {
+        if (hasGesture) _userMovedCamera = true;
+      },
+      onTap: (_, point) {
+        widget.onTap?.call(point);
 
-    if (points.length < 2) {
-      if (points.length == 1) {
-        _controller.move(points.first, 14);
-      } else {
-        _controller.move(_defaultCenter, _defaultZoom);
-      }
-
-      return;
-    }
-
-    _controller.fitCamera(_cameraFit(points));
-    _reloadTiles();
+        if (_selectedLabel != null) {
+          setState(() {
+            _selectedLabel = null;
+          });
+        }
+      },
+    );
   }
 
-  /// Incremented to rebuild the tile layer after the camera was moved by code.
-  int _tileEpoch = 0;
+  void _fitIfContentMoved() {
+    final fit = _fitPoints();
+    final signature = _signature(fit);
+    if (signature == _fittedSignature) return;
+    if (!_mapReady || _userMovedCamera) return;
+    _fittedSignature = signature;
+    _moveCamera(fit);
+  }
 
-  /// A programmatic camera move (fitting the route) is not picked up by an
-  /// already-running tile layer: it keeps the tiles of the starting view and
-  /// the map stays blank until the user touches it. Recreating the layer makes
-  /// it load the tiles for the camera as it is now.
-  void _reloadTiles() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() => _tileEpoch++);
-    });
+  void _resetCamera() {
+    _userMovedCamera = false;
+    final fit = _fitPoints();
+    _fittedSignature = _signature(fit);
+    _moveCamera(fit);
+  }
+
+  /// Moves the camera with the controller; the tile layer follows the camera
+  /// events, so no layer is rebuilt.
+  void _moveCamera(List<LatLng> fit) {
+    if (!_mapReady) return;
+    if (fit.length >= 2) {
+      _controller.fitCamera(_cameraFit(fit));
+    } else if (fit.length == 1) {
+      _controller.move(fit.first, DarbServiceArea.singlePointZoom);
+    } else {
+      _controller.move(
+        DarbServiceArea.fallbackCenter,
+        DarbServiceArea.fallbackZoom,
+      );
+    }
   }
 
   CameraFit _cameraFit(List<LatLng> points) {
     return CameraFit.bounds(
       bounds: LatLngBounds.fromPoints(points),
       padding: const EdgeInsets.all(55),
-      maxZoom: 13,
+      maxZoom: 15,
     );
+  }
+
+  void _retryTiles() {
+    _tiles.reset();
+    _resetTiles.add(null);
   }
 
   // ===========================================================================
@@ -335,21 +538,20 @@ class _DarbMapState extends State<DarbMap> {
 
   @override
   Widget build(BuildContext context) {
-    final points = _allPoints;
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
       child: SizedBox(
         height: widget.height,
         width: double.infinity,
-        child: _map(context, points),
+        child: _map(context),
       ),
     );
   }
 
-  Widget _map(BuildContext context, List<LatLng> points) {
-    final single = points.length == 1;
-    final hasPoints = points.isNotEmpty;
+  Widget _map(BuildContext context) {
+    final hasContent =
+        widget.paths.any((p) => p.points.length >= 2) ||
+        widget.markers.any((m) => m.fitsCamera);
 
     return Stack(
       children: [
@@ -360,53 +562,24 @@ class _DarbMapState extends State<DarbMap> {
           textDirection: TextDirection.ltr,
           child: FlutterMap(
             mapController: _controller,
-            options: MapOptions(
-              initialCenter: single ? points.first : _defaultCenter,
-              initialZoom: single ? 14 : _defaultZoom,
-              // Start already fitted to the route: fitting only after the first
-              // frame left the tile layer blank until the user touched the map.
-              initialCameraFit: points.length >= 2 ? _cameraFit(points) : null,
-
-              interactionOptions: InteractionOptions(
-                flags: widget.interactive
-                    ? InteractiveFlag.all & ~InteractiveFlag.rotate
-                    : InteractiveFlag.none,
-              ),
-
-              onMapReady: () {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-
-                  _fitToContent();
-                });
-              },
-
-              // ==============================================================
-              // MAP TAP
-              // ==============================================================
-              onTap: (_, point) {
-                widget.onTap?.call(point);
-
-                if (_selectedLabel != null) {
-                  setState(() {
-                    _selectedLabel = null;
-                  });
-                }
-              },
-            ),
-
+            options: _options,
             children: [
               // ==============================================================
               // MAP TILES
               // ==============================================================
               TileLayer(
-                key: ValueKey('tiles-$_tileEpoch'),
                 urlTemplate: MapTileConfig.tileUrlTemplate,
                 userAgentPackageName: MapTileConfig.userAgentPackageName,
-                tileProvider: _provider(),
+                tileProvider: _tileProvider,
                 errorTileCallback: (tile, error, stackTrace) =>
                     _tileCache.reportTileError(),
                 maxNativeZoom: 19,
+                // Tiles appear as soon as they arrive (no fade), and a ring of
+                // neighbours is kept and preloaded so panning is not blank.
+                tileDisplay: const TileDisplay.instantaneous(),
+                keepBuffer: 3,
+                panBuffer: 1,
+                reset: _resetTiles.stream,
                 // A tile that failed once is retried when it scrolls back into view.
                 evictErrorTileStrategy:
                     EvictErrorTileStrategy.notVisibleRespectMargin,
@@ -415,33 +588,12 @@ class _DarbMapState extends State<DarbMap> {
               // ==============================================================
               // ROUTES
               // ==============================================================
-              if (widget.paths.any((path) => path.points.length >= 2))
-                PolylineLayer(
-                  polylines: [
-                    for (var i = 0; i < widget.paths.length; i++)
-                      if (widget.paths[i].points.length >= 2)
-                        Polyline(
-                          points: widget.paths[i].points
-                              .map(_toLatLng)
-                              .toList(),
-                          color: widget.paths[i].color,
-                          strokeWidth: widget.paths[i].width,
-                          borderColor: Colors.white.withValues(alpha: 0.85),
-                          borderStrokeWidth: widget.paths[i].dashed ? 0 : 2.0,
-                          pattern: widget.paths[i].dashed
-                              ? StrokePattern.dashed(segments: const [10, 7])
-                              : const StrokePattern.solid(),
-                        ),
-                  ],
-                ),
+              if (_polylines.isNotEmpty) PolylineLayer(polylines: _polylines),
 
               // ==============================================================
               // MARKERS
               // ==============================================================
-              if (widget.markers.isNotEmpty)
-                MarkerLayer(
-                  markers: [for (final marker in widget.markers) _pin(marker)],
-                ),
+              if (_markers.isNotEmpty) MarkerLayer(markers: _markers),
             ],
           ),
         ),
@@ -452,21 +604,57 @@ class _DarbMapState extends State<DarbMap> {
         Positioned(
           top: 12,
           left: 12,
-          right: 12,
+          right: 64,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (widget.banner != null) _FloatingBanner(child: widget.banner!),
 
-              if (!hasPoints && widget.banner == null)
+              if (!hasContent && widget.banner == null)
                 _EmptyMapMessage(label: widget.emptyLabel),
+
+              for (var i = 0; i < widget.notes.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: _MapNote(
+                    key: ValueKey('mapNote-$i'),
+                    label: widget.notes[i],
+                  ),
+                ),
 
               if (_selectedLabel != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: _Callout(label: _selectedLabel!),
+                  child: _Callout(
+                    label: _selectedLabel!,
+                    marker: widget.markers
+                        .where((m) => m.label == _selectedLabel)
+                        .firstOrNull,
+                  ),
                 ),
             ],
+          ),
+        ),
+
+        // ====================================================================
+        // TILE LOADING / FAILURE
+        // ====================================================================
+        Positioned.fill(
+          child: ValueListenableBuilder<MapTileLoadState>(
+            valueListenable: _tiles,
+            builder: (context, state, _) => switch (state) {
+              MapTileLoadState.loaded => const SizedBox.shrink(),
+              MapTileLoadState.loading => const Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 30),
+                  child: _TileLoadingChip(),
+                ),
+              ),
+              MapTileLoadState.failed => Center(
+                child: _TileFailedCard(onRetry: _retryTiles),
+              ),
+            },
           ),
         ),
 
@@ -476,21 +664,19 @@ class _DarbMapState extends State<DarbMap> {
         Positioned(
           top:
               widget.controlsTop ??
-              (widget.banner != null || !hasPoints ? 72 : 14),
+              (widget.banner != null || !hasContent ? 72 : 14),
           right: 12,
           child: _MapControls(
             enabled: widget.interactive,
             onZoomIn: () {
-              final currentZoom = _controller.camera.zoom;
-
-              _controller.move(_controller.camera.center, currentZoom + 1);
+              final camera = _controller.camera;
+              _controller.move(camera.center, camera.zoom + 1);
             },
             onZoomOut: () {
-              final currentZoom = _controller.camera.zoom;
-
-              _controller.move(_controller.camera.center, currentZoom - 1);
+              final camera = _controller.camera;
+              _controller.move(camera.center, camera.zoom - 1);
             },
-            onReset: _fitToContent,
+            onReset: _resetCamera,
           ),
         ),
 
@@ -537,8 +723,8 @@ class _DarbMapState extends State<DarbMap> {
   Marker _pin(DarbMapMarker marker) {
     return Marker(
       point: _toLatLng(marker.position),
-      width: marker.size + 18,
-      height: marker.size + 18,
+      width: marker.size + 22,
+      height: marker.size + 22,
       alignment: Alignment.center,
       child: Semantics(
         label: marker.label,
@@ -590,7 +776,7 @@ class _ModernPin extends StatelessWidget {
         ? marker.size + 2
         : marker.size;
 
-    return Stack(
+    final pin = Stack(
       alignment: Alignment.center,
       children: [
         // ================================================================
@@ -615,7 +801,12 @@ class _ModernPin extends StatelessWidget {
             height: pinSize + 10,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: marker.color.withValues(alpha: 0.14),
+              color: (marker.ringColor ?? marker.color).withValues(
+                alpha: marker.ringColor == null ? 0.14 : 0.32,
+              ),
+              border: marker.ringColor == null
+                  ? null
+                  : Border.all(color: marker.ringColor!, width: 2.5),
             ),
           ),
 
@@ -648,7 +839,154 @@ class _ModernPin extends StatelessWidget {
             color: marker.foreground,
           ),
         ),
+
+        // ================================================================
+        // CORNER BADGE (e.g. community information)
+        // ================================================================
+        if (marker.badgeIcon != null)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: marker.ringColor ?? marker.color,
+                  width: 1.5,
+                ),
+              ),
+              child: Icon(
+                marker.badgeIcon,
+                size: 11,
+                color: marker.ringColor ?? marker.color,
+              ),
+            ),
+          ),
       ],
+    );
+    return marker.dimmed ? Opacity(opacity: 0.55, child: pin) : pin;
+  }
+}
+
+/// Small note on the map, e.g. "checkpoint data unavailable".
+class _MapNote extends StatelessWidget {
+  const _MapNote({required this.label, super.key});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Align(
+      alignment: AlignmentDirectional.topStart,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(AppTokens.radiusFull),
+          border: Border.all(color: SemanticColors.pendingContainer),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.info_outline_rounded,
+              size: 14,
+              color: SemanticColors.pending,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppTheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Map surfaces are also embedded in hosts without app localizations.
+AppLocalizations? _maybeL10n(BuildContext context) =>
+    Localizations.of<AppLocalizations>(context, AppLocalizations);
+
+class _TileLoadingChip extends StatelessWidget {
+  const _TileLoadingChip();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      key: const ValueKey('mapTilesLoading'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(AppTokens.radiusFull),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Static on purpose: an endless spinner over every map would keep
+          // the frame scheduler busy while tiles are slow.
+          const Icon(
+            Icons.downloading_rounded,
+            size: 14,
+            color: SemanticColors.pending,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _maybeL10n(context)?.mapLoading ?? '',
+            style: theme.textTheme.labelSmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TileFailedCard extends StatelessWidget {
+  const _TileFailedCard({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = _maybeL10n(context);
+    final theme = Theme.of(context);
+    return Material(
+      key: const ValueKey('mapTilesFailed'),
+      color: Colors.white,
+      elevation: AppTokens.elevationFloating,
+      borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTokens.spaceMedium),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded, color: SemanticColors.pending),
+            const SizedBox(height: AppTokens.spaceSmall),
+            if (l10n != null)
+              Text(l10n.mapLoadFailed, style: theme.textTheme.titleSmall),
+            const SizedBox(height: AppTokens.spaceSmall),
+            FilledButton.icon(
+              key: const ValueKey('mapTilesRetry'),
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(
+                l10n?.retry ?? MaterialLocalizations.of(context).okButtonLabel,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -815,9 +1153,10 @@ class _FloatingBanner extends StatelessWidget {
 // ============================================================================
 
 class _Callout extends StatelessWidget {
-  const _Callout({required this.label});
+  const _Callout({required this.label, this.marker});
 
   final String label;
+  final DarbMapMarker? marker;
 
   @override
   Widget build(BuildContext context) {
@@ -849,12 +1188,17 @@ class _Callout extends StatelessWidget {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF2EA),
+                    color: (marker?.color ?? SemanticColors.action).withValues(
+                      alpha: 0.12,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.local_police_rounded,
-                    color: Color(0xFFFA5F12),
+                  child: Icon(
+                    marker == null ||
+                            marker!.type == DarbMapMarkerType.checkpoint
+                        ? Icons.local_police_rounded
+                        : marker!.icon,
+                    color: marker?.color ?? SemanticColors.action,
                     size: 22,
                   ),
                 ),
@@ -904,13 +1248,12 @@ class _CalloutDetail extends StatelessWidget {
     final status = text.split(':').length > 1
         ? text.substring(text.indexOf(':') + 1).trim()
         : text;
-    final color = status == 'سالك'
-        ? const Color(0xFF16A34A)
-        : status == 'أزمة'
-        ? const Color(0xFFDC2626)
-        : status == 'أزمة متوسطة'
-        ? const Color(0xFFF59E0B)
-        : const Color(0xFF64748B);
+    final color = switch (parseCheckpointStatus(status)) {
+      CheckpointStatus.open => const Color(0xFF16A34A),
+      CheckpointStatus.congested => const Color(0xFFF59E0B),
+      CheckpointStatus.closed => const Color(0xFFDC2626),
+      CheckpointStatus.unknown => const Color(0xFF64748B),
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
