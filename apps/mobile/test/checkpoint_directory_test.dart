@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/checkpoint_directory/presentation/checkpoint_directory_screen.dart';
-import 'package:masari_mobile/features/checkpoint_directory/application/checkpoint_directory_controller.dart';
-import 'package:masari_mobile/features/checkpoint_directory/domain/checkpoint_directory.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
-import 'package:masari_mobile/core/widgets/status_chip.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/checkpoint_directory/presentation/checkpoint_directory_screen.dart';
+import 'package:darb_mobile/features/checkpoint_directory/application/checkpoint_directory_controller.dart';
+import 'package:darb_mobile/features/checkpoint_directory/domain/checkpoint_directory.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/core/widgets/status_chip.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import 'support/checkpoint_test_harness.dart';
 
 Map<String, dynamic> directory() => {
@@ -148,7 +148,7 @@ void main() {
           expect(find.text('مدينة تجريبية ب'), findsWidgets);
           expect(find.byKey(const ValueKey('synthetic-0')), findsOneWidget);
           expect(find.byKey(const ValueKey('synthetic-2')), findsOneWidget);
-          expect(find.byType(MasariMap), findsNothing);
+          expect(find.byType(DarbMap), findsNothing);
           expect(find.byType(StatusChip), findsNothing);
           expect(find.text('Open'), findsNothing);
           expect(find.text('سالك'), findsNothing);

@@ -57,7 +57,7 @@ describe("matching comparison simulation", () => {
       JSON.stringify(a.scenarios.filter((s) => s.origin === "generated"))
     );
     // Hand-written scenarios do not depend on the seed for the deterministic methods.
-    expect(c.scenarios[0]!.methods.masari).toEqual(a.scenarios[0]!.methods.masari);
+    expect(c.scenarios[0]!.methods.darb).toEqual(a.scenarios[0]!.methods.darb);
   });
 
   it("keeps the default-seed headline metrics stable", () => {
@@ -67,16 +67,31 @@ describe("matching comparison simulation", () => {
       "morning_commute_rush", "merchant_parcel_wave", "sparse_evening", "wrong_direction_trap",
       "generated_small", "generated_medium", "generated_busy"
     ]);
-    expect(result.aggregate.masari.requests).toBe(result.aggregate.nearest.requests);
-    expect(result.aggregate.masari.requests).toBe(result.aggregate.manual.requests);
+    expect(result.aggregate.darb.requests).toBe(result.aggregate.nearest.requests);
+    expect(result.aggregate.darb.requests).toBe(result.aggregate.manual.requests);
     const snapshot = Object.fromEntries(
-      (["manual", "nearest", "masari"] as const).map((key) => {
+      (["manual", "nearest", "darb"] as const).map((key) => {
         const m = result.aggregate[key];
         return [key, { matched: m.matched, wait: m.waitingMin, match: m.matchingMin, km: m.routeDeviationKm, unmatchedPct: m.unmatchedPct }];
       })
     );
     expect(snapshot).toMatchInlineSnapshot(`
       {
+        "darb": {
+          "km": 271.24,
+          "match": {
+            "avg": 2,
+            "median": 1.5,
+            "p90": 4.07,
+          },
+          "matched": 128,
+          "unmatchedPct": 15.2,
+          "wait": {
+            "avg": 42.77,
+            "median": 37.28,
+            "p90": 83.44,
+          },
+        },
         "manual": {
           "km": 130.79,
           "match": {
@@ -90,21 +105,6 @@ describe("matching comparison simulation", () => {
             "avg": 56.03,
             "median": 47.47,
             "p90": 100.32,
-          },
-        },
-        "masari": {
-          "km": 271.24,
-          "match": {
-            "avg": 2,
-            "median": 1.5,
-            "p90": 4.07,
-          },
-          "matched": 128,
-          "unmatchedPct": 15.2,
-          "wait": {
-            "avg": 42.77,
-            "median": 37.28,
-            "p90": 83.44,
           },
         },
         "nearest": {
@@ -129,7 +129,7 @@ describe("matching comparison simulation", () => {
   it("never exceeds driver capacity or reports negative times, for every method", () => {
     for (const set of buildScenarioSet(params.seed)) {
       const raw = runScenario(set, params);
-      for (const key of ["manual", "nearest", "masari"] as const) {
+      for (const key of ["manual", "nearest", "darb"] as const) {
         expect(raw[key].matched).toBeLessThanOrEqual(set.requests.length);
         expect(raw[key].seatsUsed).toBeLessThanOrEqual(raw[key].seatCapacityOfUsed);
         expect(raw[key].parcelsUsed).toBeLessThanOrEqual(raw[key].parcelCapacityOfUsed);
@@ -157,8 +157,8 @@ describe("matching comparison simulation", () => {
     expect(scoreOf(onRoute)).toBeGreaterThan(scoreOf(near));
     const raw = runScenario(scenario([near, onRoute], [req]), params);
     // Nearest takes the closer wrong-direction driver (large detour); Darb takes the route-aligned one.
-    expect(raw.nearest.extraKm).toBeGreaterThan(raw.masari.extraKm);
-    expect(raw.masari.vehiclesUsed).toBe(1);
+    expect(raw.nearest.extraKm).toBeGreaterThan(raw.darb.extraKm);
+    expect(raw.darb.vehiclesUsed).toBe(1);
   });
 
   it("Darb follows real filters: no split of an oversized batch, no departed drivers", () => {
@@ -166,12 +166,12 @@ describe("matching comparison simulation", () => {
     const orders = [parcelRequest("o1", 0, 2), parcelRequest("o2", 1, 2)];
     const raw = runScenario(scenario([small], orders), params);
     // One batch of 4 parcels does not fit a 3-parcel driver; the real matcher would not split it.
-    expect(raw.masari.matched).toBe(0);
+    expect(raw.darb.matched).toBe(0);
     // The baselines match order by order.
     expect(raw.nearest.matched).toBe(1);
 
     const gone = driver("gone", { departAt: 0.2 });
-    expect(runScenario(scenario([gone], [passengerRequest("r1")]), params).masari.matched).toBe(0);
+    expect(runScenario(scenario([gone], [passengerRequest("r1")]), params).darb.matched).toBe(0);
   });
 
   it("batches parcel orders with the real batching limits", () => {
@@ -190,7 +190,7 @@ describe("matching comparison simulation", () => {
     const fast = runComparisonSimulation({ manualResponseDelayMin: 1 }, set);
     const slow = runComparisonSimulation({ manualResponseDelayMin: 8 }, set);
     expect(slow.aggregate.manual.matchingMin.avg).toBeGreaterThan(fast.aggregate.manual.matchingMin.avg);
-    expect(slow.aggregate.masari).toEqual(fast.aggregate.masari);
+    expect(slow.aggregate.darb).toEqual(fast.aggregate.darb);
     expect(fast.aggregate.manual.matchingMin.avg).toBeGreaterThan(fast.aggregate.nearest.matchingMin.avg);
   });
 
@@ -236,7 +236,7 @@ describe("GET /api/v1/compare/simulation", () => {
     const response = await request(createApp()).get("/api/v1/compare/simulation?seed=5").set(auth("admin_1")).expect(200);
     expect(response.body.simulation.simulated).toBe(true);
     expect(response.body.simulation.params.seed).toBe(5);
-    expect(response.body.simulation.aggregate.masari.requests).toBeGreaterThan(0);
+    expect(response.body.simulation.aggregate.darb.requests).toBeGreaterThan(0);
     await request(createApp()).get("/api/v1/compare/simulation?seed=-1").set(auth("admin_1")).expect(400);
     await request(createApp()).get("/api/v1/compare/simulation?bogus=1").set(auth("admin_1")).expect(400);
   });

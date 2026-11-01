@@ -1,21 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/features/trips/presentation/passenger_trip_screen.dart';
-import 'package:masari_mobile/features/driver/presentation/driver_trip_screen.dart';
-import 'package:masari_mobile/features/checkpoints/application/checkpoint_controller.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
-import 'package:masari_mobile/features/checkpoint_directory/application/checkpoint_directory_controller.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/trips/presentation/passenger_trip_screen.dart';
+import 'package:darb_mobile/features/driver/presentation/driver_trip_screen.dart';
+import 'package:darb_mobile/features/checkpoints/application/checkpoint_controller.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/features/checkpoint_directory/application/checkpoint_directory_controller.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/auth/application/auth_actor_binding.dart';
-import 'package:masari_mobile/features/driver/application/driver_controller.dart';
-import 'package:masari_mobile/features/driver/data/driver_models.dart';
-import 'package:masari_mobile/features/driver/data/driver_repository.dart';
-import 'package:masari_mobile/features/trips/application/passenger_trip_controller.dart';
-import 'package:masari_mobile/features/trips/data/trip_models.dart';
-import 'package:masari_mobile/features/trips/data/trip_repository.dart';
+import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
+import 'package:darb_mobile/features/driver/application/driver_controller.dart';
+import 'package:darb_mobile/features/driver/data/driver_models.dart';
+import 'package:darb_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/trips/application/passenger_trip_controller.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
+import 'package:darb_mobile/features/trips/data/trip_repository.dart';
 import 'support/auth_test_support.dart';
 
 void main() {

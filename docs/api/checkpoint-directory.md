@@ -12,7 +12,7 @@ in CI. Its SHA-256 and city totals are pinned in
 
 ## Local verification
 
-After `npm run build --workspace @masari/api`, run
+After `npm run build --workspace @darb/api`, run
 `node scripts/verify-checkpoint-directory.mjs <ignored-local-file.json>`.
 This validates all173 records,11 city totals, unique research keys, the separate
 cross-city duplicate, absent IDs/coordinates, unknown traffic and blocked publication.

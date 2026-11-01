@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/maps/checkpoint_map_markers.dart';
-import 'package:masari_mobile/core/maps/osrm_route_service.dart';
-import 'package:masari_mobile/core/theme/semantic_colors.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/core/maps/checkpoint_map_markers.dart';
+import 'package:darb_mobile/core/maps/osrm_route_service.dart';
+import 'package:darb_mobile/core/theme/semantic_colors.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
 
 Checkpoint _cp(String status, {double lat = 31.7, double lng = 35.2}) =>
     Checkpoint(

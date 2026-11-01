@@ -59,7 +59,7 @@ for (const phase of phases) {
       child.kill("SIGKILL");
       control.kill("SIGKILL");
       // Verify the resolved exact generated target before recursive deletion.
-      if (runtime && dirname(resolve(runtime)) === resolve(tmpdir()) && /^masari-functional-[a-zA-Z0-9]+$/.test(basename(runtime))) {
+      if (runtime && dirname(resolve(runtime)) === resolve(tmpdir()) && /^darb-functional-[a-zA-Z0-9]+$/.test(basename(runtime))) {
         const stat = await lstat(runtime).catch(error => { if (error.code !== "ENOENT") throw error; });
         if (stat) {
           assert(stat.isDirectory() && !stat.isSymbolicLink());

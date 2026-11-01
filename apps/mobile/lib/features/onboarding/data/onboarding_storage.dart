@@ -14,7 +14,7 @@ class OnboardingStorage {
   const OnboardingStorage(this._storage, {DateTime Function()? now})
     : _now = now ?? DateTime.now;
 
-  static const bundleKey = 'masari_onboarding_bundle_v1';
+  static const bundleKey = 'darb_onboarding_bundle_v1';
 
   final FlutterSecureStorage _storage;
   final DateTime Function() _now;

@@ -9,7 +9,7 @@ import { AuditAction } from "../generated/prisma/enums.js";
 import { runComparisonSimulation } from "../services/matchingComparison.js";
 
 const compareRunSchema = z.object({
-  scenarioKey: z.string().default("masari_batch_wins"),
+  scenarioKey: z.string().default("darb_batch_wins"),
   passengerRequestId: z.string().optional(),
   merchantOrderId: z.string().optional()
 });
@@ -49,28 +49,28 @@ comparisonRouter.post("/compare/run", requireAuth, requireRole("admin"), async (
     const parcelCount = order?.parcels.length ?? 0;
     const hasPassenger = passengerRequest ? 1 : 0;
     const corridorKm = lockedCorridorDistanceKm();
-    const masariTrips = Math.max(1, parcelCount > 0 || hasPassenger ? 1 : 0);
+    const darbTrips = Math.max(1, parcelCount > 0 || hasPassenger ? 1 : 0);
     const nearestDriverTrips = Math.max(1, parcelCount + hasPassenger);
-    const masariEstimatedDistance = round(corridorKm * masariTrips, 2);
+    const darbEstimatedDistance = round(corridorKm * darbTrips, 2);
     const nearestEstimatedDistance = round(corridorKm * nearestDriverTrips, 2);
     const costPerKm = 2;
-    const masariEstimatedCost = round(masariEstimatedDistance * costPerKm, 2);
+    const darbEstimatedCost = round(darbEstimatedDistance * costPerKm, 2);
     const nearestEstimatedCost = round(nearestEstimatedDistance * costPerKm, 2);
     const driverUtilization = round((parcelCount + hasPassenger) / Math.max(1, parcelCount + 1), 2);
     const parcelBatchingBenefit =
       parcelCount > 0
         ? `${parcelCount} parcels can use 1 Darb corridor trip instead of ${parcelCount} nearest-driver parcel trips.`
         : "No merchant parcels in this comparison run.";
-    const winner = masariEstimatedCost <= nearestEstimatedCost && masariTrips <= nearestDriverTrips ? "masari" : "nearest_driver";
+    const winner = darbEstimatedCost <= nearestEstimatedCost && darbTrips <= nearestDriverTrips ? "darb" : "nearest_driver";
 
     const run = await prisma.comparisonRun.create({
       data: {
         scenario_key: input.scenarioKey,
-        masari_trips: masariTrips,
+        darb_trips: darbTrips,
         nearest_driver_trips: nearestDriverTrips,
-        masari_estimated_distance: masariEstimatedDistance.toFixed(2),
+        darb_estimated_distance: darbEstimatedDistance.toFixed(2),
         nearest_estimated_distance: nearestEstimatedDistance.toFixed(2),
-        masari_estimated_cost: masariEstimatedCost.toFixed(2),
+        darb_estimated_cost: darbEstimatedCost.toFixed(2),
         nearest_estimated_cost: nearestEstimatedCost.toFixed(2),
         parcel_batching_benefit: parcelBatchingBenefit,
         driver_utilization: driverUtilization.toFixed(2),

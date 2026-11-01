@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/maps/checkpoint_map_markers.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/core/maps/checkpoint_map_markers.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
 
 void main() {
   for (final entry in [
@@ -34,7 +34,7 @@ void main() {
       expect(marker.icon, Icons.car_crash_rounded);
       expect(marker.size, 40);
       expect(marker.foreground, Colors.white);
-      expect(marker.type, MasariMapMarkerType.checkpoint);
+      expect(marker.type, DarbMapMarkerType.checkpoint);
       expect(marker.label.split('\n').skip(1), [
         'مغلق',
         'دخول: غير معروف',

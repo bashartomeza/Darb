@@ -12,7 +12,7 @@ Use an isolated MySQL 8.0.46 database. Enable canonical entry, matching, Trip cr
 - Clean dependency installation, Prisma validation/generation, workspace typecheck/build, standard validation, security validation, and production artifact scans passed. API tests passed `204`; Admin tests passed `27`; tooling tests passed `9`. The raw production audit reports only the four approved moderate Prisma CLI transitives and no High/Critical finding.
 - Flutter dependency/localization generation, zero-change formatting, analysis, and `199` tests passed. Debug and production-like release APKs built; the production-like APK and production admin bundle passed isolation scans. The Android manifest retains Internet access only and has no location permission.
 - The real-MySQL M7C3C1 `141`-assertion, M7C3A `98`-assertion, M7C1 `79`-assertion, public-onboarding `76`-check, trusted-session, onboarding-foundation, route-lifecycle, deterministic integration, and backup/restore paths passed. The isolated restore database was removed.
-- Demo preflight passed `22/22`. Deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Demo preflight passed `22/22`. Deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 
 ## API 36 device matrix
 

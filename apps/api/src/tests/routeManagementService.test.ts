@@ -7,16 +7,16 @@ const actor = { id: "admin_1", requestId: "request_1", idempotencyKey: "route-li
 
 describe("route management QA database guard", () => {
   it("accepts only the exact disposable database on the two explicitly local hosts", () => {
-    expect(() => assertRouteQaDatabase("mysql://localhost:3306/masari_routes_qa")).not.toThrow();
-    expect(() => assertRouteQaDatabase("mysql://127.0.0.1:3306/masari_routes_qa")).not.toThrow();
+    expect(() => assertRouteQaDatabase("mysql://localhost:3306/darb_routes_qa")).not.toThrow();
+    expect(() => assertRouteQaDatabase("mysql://127.0.0.1:3306/darb_routes_qa")).not.toThrow();
 
     for (const unsafeUrl of [
-      "mysql://localhost:3306/masari",
-      "mysql://database.internal:3306/masari_routes_qa",
+      "mysql://localhost:3306/darb",
+      "mysql://database.internal:3306/darb_routes_qa",
       "mysql://localhost:3306",
-      "mysql://localhost:3306/masari_routes_qa?database=masari",
-      "mysql://localhost:3306/masari?database=masari_routes_qa",
-      "mysql://localhost:3306/masari_routes_qa#masari"
+      "mysql://localhost:3306/darb_routes_qa?database=darb",
+      "mysql://localhost:3306/darb?database=darb_routes_qa",
+      "mysql://localhost:3306/darb_routes_qa#darb"
     ]) {
       expect(() => assertRouteQaDatabase(unsafeUrl)).toThrow("route_qa_database_guard_rejected");
     }

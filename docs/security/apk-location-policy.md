@@ -36,7 +36,7 @@ that arbitrary code cannot track location: source/behavior review is also requir
 - The result remains an in-memory `GeoPoint`, consumed as the map's rider marker
   and camera bounds. The inspected call chain does not serialize that coordinate
   into API requests, persist it, or log it.
-- `MasariMap` fetches OpenStreetMap tiles for the viewport. Those tile requests
+- `DarbMap` fetches OpenStreetMap tiles for the viewport. Those tile requests
   reveal the viewed geographic area and network metadata to the tile provider;
   this is not a zero-network-disclosure map. No raw GPS latitude/longitude upload
   was found in the application path.

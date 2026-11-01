@@ -6,7 +6,7 @@ try { target = new URL(process.env.DATABASE_URL ?? ""); }
 catch { throw new Error("qa_loopback_disposable_target_required"); }
 assert(process.env.APP_ENV === "demo" && target.protocol === "mysql:" && target.hostname === "127.0.0.1"
   && Number(target.port) > 0 && target.port !== "3306"
-  && /^masari_functional_[a-z_]+_[0-9a-f]{10}_ci$/.test(target.pathname.slice(1))
+  && /^darb_functional_[a-z_]+_[0-9a-f]{10}_ci$/.test(target.pathname.slice(1))
   && process.env.DEMO_RESET_ALLOWED_DATABASES === target.pathname.slice(1), "qa_loopback_disposable_target_required");
 const { createApp } = await import("../apps/api/dist/app.js");
 const { config } = await import("../apps/api/dist/config.js");

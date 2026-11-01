@@ -15,8 +15,8 @@ abstract final class MapTileConfig {
 
   /// Identifies the app to the tile server (OSM tile usage policy requires an
   /// identifying User-Agent). flutter_map sends it as
-  /// `flutter_map (ps.masari.mobile)`.
-  static const String userAgentPackageName = 'ps.masari.mobile';
+  /// `flutter_map (ps.darb.mobile)`.
+  static const String userAgentPackageName = 'ps.darb.mobile';
 
   /// Upper bound of the on-device tile cache. The oldest-used tiles are
   /// evicted first (LRU) once it is exceeded.

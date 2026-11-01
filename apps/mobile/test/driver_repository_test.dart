@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/auth/data/authenticated_api_client.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
-import 'package:masari_mobile/features/driver/data/driver_models.dart';
-import 'package:masari_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/driver/data/driver_models.dart';
+import 'package:darb_mobile/features/driver/data/driver_repository.dart';
 
 import 'support/auth_test_support.dart';
 
@@ -207,7 +207,7 @@ String _routeJsonWithStatus(String status) =>
     _routeJson.replaceFirst('"status":"active"', '"status":"$status"');
 
 const _matchJson =
-    '{"id":"match_1","status":"proposed","score":"0.9317","method":"masari_route_score","explanation":"Safe explanation","scoring_breakdown":{"corridorOverlap":0.95,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317},"created_at":"2026-07-13T08:10:00.000Z","driver_route":{"id":"route_1","origin_label":"Hebron / PPU / Bab Al-Zawiya","destination_label":"Bethlehem","corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":2,"parcel_capacity_available":5,"status":"active","driver":{"vehicle_type":"sedan","verified":true,"trust_score":86}},"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","preferred_time":"2026-07-13T09:00:00.000Z","passenger_count":1,"status":"pending","created_at":"2026-07-13T08:00:00.000Z"},"merchant_order":{"id":"order_1","pickup_label":"Hebron Merchant","status":"submitted","parcel_count":5,"created_at":"2026-07-13T08:00:00.000Z"},"parcel_batch":{"id":"batch_1","status":"created","estimated_distance_saved":"86.12","explanation":"Shared route","created_at":"2026-07-13T08:05:00.000Z"}}';
+    '{"id":"match_1","status":"proposed","score":"0.9317","method":"darb_route_score","explanation":"Safe explanation","scoring_breakdown":{"corridorOverlap":0.95,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317},"created_at":"2026-07-13T08:10:00.000Z","driver_route":{"id":"route_1","origin_label":"Hebron / PPU / Bab Al-Zawiya","destination_label":"Bethlehem","corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":2,"parcel_capacity_available":5,"status":"active","driver":{"vehicle_type":"sedan","verified":true,"trust_score":86}},"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","preferred_time":"2026-07-13T09:00:00.000Z","passenger_count":1,"status":"pending","created_at":"2026-07-13T08:00:00.000Z"},"merchant_order":{"id":"order_1","pickup_label":"Hebron Merchant","status":"submitted","parcel_count":5,"created_at":"2026-07-13T08:00:00.000Z"},"parcel_batch":{"id":"batch_1","status":"created","estimated_distance_saved":"86.12","explanation":"Shared route","created_at":"2026-07-13T08:05:00.000Z"}}';
 
 const _tripJson =
     '{"id":"trip_1","status":"accepted","created_at":"2026-07-13T08:20:00.000Z","started_at":"2026-07-13T08:20:00.000Z","completed_at":null,"driver_route":$_routeJsonAssigned,"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","passenger_count":1,"status":"accepted"},"merchant_order":{"id":"order_1","pickup_label":"Hebron Merchant","status":"assigned","parcels":[{},{}]},"parcel_batch":{"id":"batch_1","status":"assigned","estimated_distance_saved":"86.12","explanation":"Shared route"}}';
@@ -219,4 +219,4 @@ const _locationJson =
     '{"lat":"31.532600","lng":"35.099800","source":"simulated","sequence":0,"recorded_at":"2026-07-13T08:21:00.000Z"}';
 
 const _refreshResponse =
-    '{"token":"new-access","access_token":"new-access","access_token_expires_in":120,"refresh_token":"new-refresh","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-08-06T10:00:00.000Z","last_used_at":"2026-08-06T10:00:00.000Z","expires_at":"2026-08-06T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"driver_1","name":"Driver","phone":"+970590000002","role":"driver","demo_account":false}}';
+    '{"token":"new-access","access_token":"new-access","access_token_expires_in":120,"refresh_token":"new-refresh","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-08-06T10:00:00.000Z","last_used_at":"2026-08-06T10:00:00.000Z","expires_at":"2026-08-06T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"driver_1","name":"Driver","phone":"+970590000002","role":"driver","demo_account":false}}';

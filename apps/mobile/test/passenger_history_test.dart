@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/passenger/application/passenger_history_controller.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_models.dart';
-import 'package:masari_mobile/features/trips/data/trip_models.dart';
+import 'package:darb_mobile/features/passenger/application/passenger_history_controller.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_models.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 /// The "My trips" tab renders one section per bucket, so the bucketing has to
 /// be a partition: anything counted twice is a trip the passenger sees twice.

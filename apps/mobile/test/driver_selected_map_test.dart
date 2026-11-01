@@ -6,17 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/core/maps/osrm_route_service.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/core/maps/osrm_route_service.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:masari_mobile/features/checkpoints/application/checkpoint_controller.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
-import 'package:masari_mobile/features/driver/application/driver_controller.dart';
-import 'package:masari_mobile/features/driver/data/driver_models.dart';
-import 'package:masari_mobile/features/driver/presentation/driver_trip_screen.dart';
-import 'package:masari_mobile/features/driver/presentation/driver_ui.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/checkpoints/application/checkpoint_controller.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/features/driver/application/driver_controller.dart';
+import 'package:darb_mobile/features/driver/data/driver_models.dart';
+import 'package:darb_mobile/features/driver/presentation/driver_trip_screen.dart';
+import 'package:darb_mobile/features/driver/presentation/driver_ui.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/checkpoint_test_harness.dart';
 
@@ -137,7 +137,7 @@ void main() {
       (container.read(driverTripControllerProvider('one').notifier) as _Trip)
           .replace(json);
       await tester.pumpAndSettle();
-      final map = tester.widget<MasariMap>(find.byType(MasariMap));
+      final map = tester.widget<DarbMap>(find.byType(DarbMap));
       expect(
         map.markers.where((marker) => marker.icon == Icons.trip_origin_rounded),
         isEmpty,
@@ -180,7 +180,7 @@ void main() {
       (container.read(driverTripControllerProvider('one').notifier) as _Trip)
           .replace(json);
       await tester.pump();
-      expect(tester.widget<MasariMap>(find.byType(MasariMap)).paths, isEmpty);
+      expect(tester.widget<DarbMap>(find.byType(DarbMap)).paths, isEmpty);
       pending.complete(_road(31.8, 35.3));
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox.shrink());
@@ -203,7 +203,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<MasariMap>(find.byType(MasariMap))
+            .widget<DarbMap>(find.byType(DarbMap))
             .paths
             .single
             .points
@@ -225,7 +225,7 @@ void main() {
       return _road(31.8, 35.3);
     });
     await _pump(tester, container, 'one');
-    final map = tester.widget<MasariMap>(find.byType(MasariMap));
+    final map = tester.widget<DarbMap>(find.byType(DarbMap));
     final origin = map.markers.singleWhere(
       (marker) => marker.icon == Icons.trip_origin_rounded,
     );
@@ -252,7 +252,7 @@ void main() {
   ) async {
     final container = _container((_) async => http.Response('{}', 503));
     await _pump(tester, container, 'one');
-    expect(tester.widget<MasariMap>(find.byType(MasariMap)).paths, isEmpty);
+    expect(tester.widget<DarbMap>(find.byType(DarbMap)).paths, isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     container.dispose();
@@ -269,12 +269,12 @@ void main() {
     await _pump(tester, container, 'one');
     second = true;
     await _pump(tester, container, 'two', settle: false);
-    expect(tester.widget<MasariMap>(find.byType(MasariMap)).paths, isEmpty);
+    expect(tester.widget<DarbMap>(find.byType(DarbMap)).paths, isEmpty);
     pending.complete(_road(32.2, 35.4));
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<MasariMap>(find.byType(MasariMap))
+          .widget<DarbMap>(find.byType(DarbMap))
           .paths
           .single
           .points

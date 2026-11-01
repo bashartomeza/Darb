@@ -48,11 +48,11 @@ export class AuthActionError extends Error {
 }
 
 function actionTokenDigest(rawToken: string, key: VersionedKey) {
-  return keyedDigest("masari:auth-action-token", rawToken, key);
+  return keyedDigest("darb:auth-action-token", rawToken, key);
 }
 
 function actionSubjectDigest(subject: string, key: VersionedKey) {
-  return keyedDigest("masari:auth-action-subject", subject, key);
+  return keyedDigest("darb:auth-action-subject", subject, key);
 }
 
 function normalizedFieldName(name: string) {
@@ -96,7 +96,7 @@ export function generateAuthActionToken() {
 export const AUTH_ACTION_CODE_MAX_ATTEMPTS = 5;
 
 function actionCodeDigest(code: string, key: VersionedKey) {
-  return keyedDigest("masari:auth-action-code", code, key);
+  return keyedDigest("darb:auth-action-code", code, key);
 }
 
 export function generateAuthActionCode() {

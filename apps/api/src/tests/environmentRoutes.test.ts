@@ -7,10 +7,10 @@ vi.mock("../lib/prisma.js", () => ({ prisma: {} }));
 const { createApp } = await import("../app.js");
 
 const base = {
-  DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+  DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
   JWT_SECRET: "route-isolation-test-secret-with-thirty-two-characters",
   REFRESH_TOKEN_PEPPER: "route-isolation-refresh-pepper-with-thirty-two-characters",
-  CORS_ORIGINS: "https://admin.masari.example",
+  CORS_ORIGINS: "https://admin.darb.example",
   APP_RELEASE: "route-test",
   TRUST_PROXY: "none",
   LOG_LEVEL: "silent"

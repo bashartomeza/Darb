@@ -11,7 +11,7 @@ final assistantConversationStorageProvider = Provider(
 class AssistantConversationStorage {
   const AssistantConversationStorage(this.storage);
   final FlutterSecureStorage storage;
-  String _key(String userId) => 'masari_assistant_conversation_v1_$userId';
+  String _key(String userId) => 'darb_assistant_conversation_v1_$userId';
 
   Future<PassengerAssistantState> read(String userId) async {
     final encoded = await storage.read(key: _key(userId));

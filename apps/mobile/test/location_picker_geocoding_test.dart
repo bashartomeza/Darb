@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:masari_mobile/core/geo/reverse_geocoder.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_models.dart';
-import 'package:masari_mobile/features/passenger/presentation/location_picker_screen.dart';
+import 'package:darb_mobile/core/geo/reverse_geocoder.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_models.dart';
+import 'package:darb_mobile/features/passenger/presentation/location_picker_screen.dart';
 
 class _FakeGeocoder implements ReverseGeocoder {
   _FakeGeocoder(this.answer);
@@ -60,7 +60,7 @@ Future<List<PassengerLocation>> _open(
 }
 
 void _tap(WidgetTester tester, LatLng point) =>
-    tester.widget<MasariMap>(find.byType(MasariMap)).onTap!(point);
+    tester.widget<DarbMap>(find.byType(DarbMap)).onTap!(point);
 
 String _label(WidgetTester tester) =>
     tester.widget<TextField>(find.byType(TextField)).controller!.text;

@@ -6,20 +6,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/maps/checkpoint_map_markers.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:masari_mobile/core/widgets/masari_section.dart';
-import 'package:masari_mobile/core/widgets/state_views.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/core/widgets/darb_section.dart';
+import 'package:darb_mobile/core/widgets/state_views.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
 import '../../../core/widgets/status_chip.dart';
-import 'package:masari_mobile/features/driver/presentation/driver_ui.dart';
-import 'package:masari_mobile/features/trips/data/trip_models.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/driver/presentation/driver_ui.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/maps/osrm_route_service.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_map.dart';
+import '../../../core/widgets/darb_map.dart';
 import '../../checkpoints/application/checkpoint_controller.dart';
 import '../../checkpoints/domain/checkpoint_models.dart';
 import '../../checkpoints/presentation/checkpoint_sheet.dart';
@@ -29,7 +29,7 @@ import '../application/driver_controller.dart';
 import '../data/driver_models.dart';
 
 // ============================================================
-// MASARI DRIVER MAP COLORS
+// DARB DRIVER MAP COLORS
 // ============================================================
 
 const Color navy = Color(0xFF1C1A1A);
@@ -1547,9 +1547,9 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
   // Checkpoint markers only depend on the snapshot, so rebuild them only
   // when it changes (not on every GPS tick / setState).
   CheckpointSnapshot? _markerSnapshot;
-  List<MasariMapMarker> _checkpointMarkers = const [];
+  List<DarbMapMarker> _checkpointMarkers = const [];
 
-  List<MasariMapMarker> _markersFor(CheckpointSnapshot snapshot) {
+  List<DarbMapMarker> _markersFor(CheckpointSnapshot snapshot) {
     if (!identical(_markerSnapshot, snapshot)) {
       _markerSnapshot = snapshot;
       _checkpointMarkers = checkpointTrafficMarkers(snapshot.checkpoints);
@@ -1602,7 +1602,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
   Widget build(BuildContext context) {
     final origin = widget.trip.mapOrigin;
     final destination = widget.trip.mapDestination;
-    final markers = <MasariMapMarker>[
+    final markers = <DarbMapMarker>[
       // --------------------------------------------------------
       // CHECKPOINTS
       // --------------------------------------------------------
@@ -1612,7 +1612,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
       // ORIGIN
       // ----------------------------------------------------------
       if (origin != null)
-        MasariMapMarker(
+        DarbMapMarker(
           position: origin,
           icon: Icons.trip_origin_rounded,
           color: SemanticColors.upcomingRoute,
@@ -1626,7 +1626,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
       // DESTINATION
       // ----------------------------------------------------------
       if (destination != null)
-        MasariMapMarker(
+        DarbMapMarker(
           position: destination,
           icon: Icons.flag_rounded,
           color: SemanticColors.completedRoute,
@@ -1640,7 +1640,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
       // DRIVER / VEHICLE
       // ----------------------------------------------------------
       if (widget.location != null)
-        MasariMapMarker(
+        DarbMapMarker(
           position: GeoPoint(widget.location!.lat, widget.location!.lng),
           icon: Icons.local_shipping_rounded,
           color: orange,
@@ -1673,7 +1673,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
                   // MAP
                   // ------------------------------------------------
                   Positioned.fill(
-                    child: MasariMap(
+                    child: DarbMap(
                       height: constraints.maxHeight,
                       emptyLabel: widget.l10n.mapRouteMissingCoordinates,
                       attributionLabel: widget.l10n.mapAttribution,
@@ -1681,7 +1681,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
                       controlsTop: 100,
                       paths: [
                         if (pathPoints.length >= 2)
-                          MasariMapPath(
+                          DarbMapPath(
                             points: pathPoints,
                             color: orange,
                             width: 7,

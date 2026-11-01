@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/foreground_refresh.dart';
-import '../../../core/widgets/masari_back_button.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_back_button.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/timeline_tracker.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
@@ -29,7 +29,7 @@ class PassengerParcelsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.myParcelsTitle),
-          leading: const MasariBackButton(fallback: '/passenger'),
+          leading: const DarbBackButton(fallback: '/passenger'),
         ),
         floatingActionButton: FloatingActionButton.extended(
           key: const ValueKey('sendNewParcel'),
@@ -176,7 +176,7 @@ class _ParcelCardState extends ConsumerState<ParcelCard> {
     final l10n = AppLocalizations.of(context);
     final parcel = widget.parcel;
     final theme = Theme.of(context);
-    return MasariCard(
+    return DarbCard(
       key: ValueKey('parcel-${parcel.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

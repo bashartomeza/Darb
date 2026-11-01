@@ -6,9 +6,9 @@
 
 ## Context
 
-M7D1B proved that no evaluated generic provider met Masari's public-place search gate of at least 95% in Arabic, English, and overall. Nominatim reached 85.0% overall, Google Places Text Search 80.0% top-1, Photon 75.0%, Pelias 41.7%, and Google Geocoding v4 35.0% for named-public-place search. Provider output therefore cannot be the authority for transport stops or approved public places.
+M7D1B proved that no evaluated generic provider met Darb's public-place search gate of at least 95% in Arabic, English, and overall. Nominatim reached 85.0% overall, Google Places Text Search 80.0% top-1, Photon 75.0%, Pelias 41.7%, and Google Geocoding v4 35.0% for named-public-place search. Provider output therefore cannot be the authority for transport stops or approved public places.
 
-Masari also needs bilingual aliases, deterministic search, reviewable coordinates, duplicate handling, and stable route history. Provider content may have retention and attribution restrictions. Private homes and user location history are a separate privacy domain and cannot enter a public place catalog.
+Darb also needs bilingual aliases, deterministic search, reviewable coordinates, duplicate handling, and stable route history. Provider content may have retention and attribution restrictions. Private homes and user location history are a separate privacy domain and cannot enter a public place catalog.
 
 ## Considered alternatives
 
@@ -20,7 +20,7 @@ Masari also needs bilingual aliases, deterministic search, reviewable coordinate
 
 ## Decision
 
-Masari will own an authoritative catalog of approved public places. A place becomes canonical only after an authorized reviewer who did not propose the searchable content approves an immutable revision whose bilingual identity, type, locality context, coordinate precision, and field-level provenance satisfy policy. Only an active approved revision participates in normal canonical search.
+Darb will own an authoritative catalog of approved public places. A place becomes canonical only after an authorized reviewer who did not propose the searchable content approves an immutable revision whose bilingual identity, type, locality context, coordinate precision, and field-level provenance satisfy policy. Only an active approved revision participates in normal canonical search.
 
 The conceptual model uses a stable `CanonicalPlace`, immutable `CanonicalPlaceRevision` records, independently lifecycle-managed `PlaceAlias` records, field-level `PlaceProvenance`, and isolated `PlaceExternalReference` tokens. Approval state belongs to a revision; operational active/deprecated/merged state belongs to the stable place. A merged place redirects to one surviving canonical place and is never destructively deleted.
 
@@ -39,7 +39,7 @@ Existing immutable route history remains authoritative. A future implementation 
 - Search behavior is reproducible, testable, bilingual, and reviewable.
 - Catalog curation and dual-control approval add operational work.
 - Aliases, coordinates, merges, and deprecations require audit events and non-destructive history.
-- Only Masari-owned or explicitly retainable canonical data may be distributed for offline search.
+- Only Darb-owned or explicitly retainable canonical data may be distributed for offline search.
 - MySQL remains the beta storage/retrieval foundation; a search engine requires later evidence and approval.
 - M7D1C changes no application code, Prisma schema, migration, API, Flutter, Admin behavior, or production provider configuration.
 

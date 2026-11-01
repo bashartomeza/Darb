@@ -27,7 +27,7 @@ try {
   if (args.has("--apk")) {
     const apk = resolve(args.get("--apk"));
     for (const rule of inspectManifest(readApkManifest(apk))) findings.push({ rule, file: "AndroidManifest.xml" });
-    temporary = mkdtempSync(join(tmpdir(), "masari-apk-scan-"));
+    temporary = mkdtempSync(join(tmpdir(), "darb-apk-scan-"));
     try {
       run("jar", ["-xf", apk], { cwd: temporary });
     } catch (error) {

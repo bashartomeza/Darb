@@ -10,7 +10,7 @@ Reset therefore requires every gate below:
 2. the request has the configured reset key or a current Admin session;
 3. `DATABASE_URL` contains a bounded MySQL database name;
 4. that exact name appears in `DEMO_RESET_ALLOWED_DATABASES`;
-5. the database is not the permanently protected real/pilot database `masari`;
+5. the database is not the permanently protected real/pilot database `darb`;
 6. the Serializable reset transaction finds no user with `demo_account=false`.
 
 Missing or malformed configuration disables only reset; it does not prevent the
@@ -23,16 +23,16 @@ transaction or write. Real-user detection returns
 Safe disposable example:
 
 ```text
-DATABASE_URL=mysql://<user>:<password>@localhost:3306/masari_demo
-DEMO_RESET_ALLOWED_DATABASES=masari_demo
+DATABASE_URL=mysql://<user>:<password>@localhost:3306/darb_demo
+DEMO_RESET_ALLOWED_DATABASES=darb_demo
 ```
 
 CI uses explicit exact names, for example:
 
 ```text
-DEMO_RESET_ALLOWED_DATABASES=masari_ci,masari_canonical_matching_ci,masari_canonical_shared_ci
+DEMO_RESET_ALLOWED_DATABASES=darb_ci,darb_canonical_matching_ci,darb_canonical_shared_ci
 ```
 
-`masari` is never resettable, even if accidentally added to the allow-list.
+`darb` is never resettable, even if accidentally added to the allow-list.
 Do not use substring checks, wildcard entries, `migrate reset`, or `db push` as
 a substitute for disposable database provisioning.

@@ -9,7 +9,7 @@ A synthetic dry run of the mechanism, using a random throwaway value and no prov
 | Check | Result |
 | --- | --- |
 | Credential Manager stores a value and reads it back identical, then removal works | Pass |
-| The launcher refuses a database whose name does not end in `_ci`, `_qa` or `_sim` (it refused the real `masari` database) | Pass |
+| The launcher refuses a database whose name does not end in `_ci`, `_qa` or `_sim` (it refused the real `darb` database) | Pass |
 | The API starts with only the limited partner-directory gate enabled and the key injected | Pass (live check 200) |
 | The key does not appear in the process arguments of the launcher or the API | Pass |
 | The key does not appear in the launcher's or the API's output | Pass |
@@ -24,11 +24,11 @@ Limits, stated plainly: this ran on one Windows machine, the key is briefly read
 pwsh -NoProfile -File scripts/provider-key/set-partner-key.ps1
 ```
 
-Paste the key at the hidden prompt. It is stored in Windows Credential Manager for your Windows user under `Masari/AweenRayehPartnerKey`. To remove it: add `-Remove`.
+Paste the key at the hidden prompt. It is stored in Windows Credential Manager for your Windows user under `Darb/AweenRayehPartnerKey`. To remove it: add `-Remove`.
 
 ## Step 2: start an isolated API with the key (you, or an operator you authorize)
 
-Use a disposable database (name ending in `_ci`, `_qa` or `_sim`). Set `DATABASE_URL` and `JWT_SECRET` in that shell, build the API once (`npm run build -w @masari/api`), then:
+Use a disposable database (name ending in `_ci`, `_qa` or `_sim`). Set `DATABASE_URL` and `JWT_SECRET` in that shell, build the API once (`npm run build -w @darb/api`), then:
 
 ```powershell
 pwsh -NoProfile -File scripts/provider-key/run-api-with-partner-key.ps1

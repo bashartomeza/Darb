@@ -16,8 +16,8 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) {
 class TokenStorage {
   const TokenStorage(this._storage);
 
-  static const tokenKey = 'masari_jwt';
-  static const bundleKey = 'masari_auth_bundle_v1';
+  static const tokenKey = 'darb_jwt';
+  static const bundleKey = 'darb_auth_bundle_v1';
   static const _bundleVersion = 1;
 
   final FlutterSecureStorage _storage;

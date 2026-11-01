@@ -39,7 +39,7 @@
 
 - [ ] Add failing real-repository/provider/widget tests for disabled entry, Arabic search/grouping, duplicate identities, unavailable traffic, no markers and session races.
 - [ ] Add separate directory models/repository and actor+revision-bound provider using existing authenticated transport.
-- [ ] Add a gated directory action/screen using existing MasariCard/MasariSection and neutral copy; keep the stable router and live checkpoint flow unchanged.
+- [ ] Add a gated directory action/screen using existing DarbCard/DarbSection and neutral copy; keep the stable router and live checkpoint flow unchanged.
 - [ ] Run focused Flutter tests, formatter and analyzer; preserve red diagnostics separately.
 
 ## Task3: Whole-branch verification and publication

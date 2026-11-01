@@ -19,7 +19,7 @@ const enabledSecrets = {
 function localConfig(overrides: Record<string, string | undefined> = {}) {
   return createConfig({
     APP_ENV: "local",
-    DATABASE_URL: "mysql://local:local@localhost:3306/masari",
+    DATABASE_URL: "mysql://local:local@localhost:3306/darb",
     JWT_SECRET: "local-test-jwt-secret-longer-than-thirty-two-characters",
     REFRESH_TOKEN_PEPPER: "local-test-refresh-pepper-longer-than-thirty-two-characters",
     CORS_ORIGINS: "http://localhost:5173",
@@ -216,10 +216,10 @@ describe("onboarding configuration isolation", () => {
   it("rejects the fake provider in production even when no routes are enabled", () => {
     expect(() => createConfig({
       APP_ENV: "production",
-      DATABASE_URL: "mysql://production:secret@db.internal:3306/masari",
+      DATABASE_URL: "mysql://production:secret@db.internal:3306/darb",
       JWT_SECRET: "production-jwt-secret-longer-than-thirty-two-characters",
       REFRESH_TOKEN_PEPPER: "production-refresh-pepper-longer-than-thirty-two-characters",
-      CORS_ORIGINS: "https://admin.masari.example",
+      CORS_ORIGINS: "https://admin.darb.example",
       APP_RELEASE: "test",
       TRUST_PROXY: "none",
       OTP_PROVIDER: "fake"

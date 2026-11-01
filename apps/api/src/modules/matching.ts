@@ -446,7 +446,7 @@ async function createBestMatch(req: AuthenticatedRequest, input: MatchInput) {
           merchant_order_id: merchantOrder?.id,
           parcel_batch_id: merchantBatchId,
           score: best.breakdown.finalScore.toFixed(4),
-          method: "masari_route_score",
+          method: "darb_route_score",
           explanation,
           scoring_breakdown: best.breakdown,
           status: MatchStatus.proposed,

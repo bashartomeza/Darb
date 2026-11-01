@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_back_button.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_back_button.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
@@ -57,7 +57,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
           l10n.merchantTrip,
           key: const ValueKey('merchantTripTitle'),
         ),
-        leading: const MasariBackButton(fallback: '/merchant/shipments'),
+        leading: const DarbBackButton(fallback: '/merchant/shipments'),
         actions: const [LanguageSwitch()],
       ),
       body: SafeArea(
@@ -97,7 +97,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
         : ((location.sequence + 1) / 7).clamp(0.0, 1.0);
     return Column(
       children: [
-        MasariCard(
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -138,7 +138,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
           HandoverCodeCard(orderId: state.order.id),
           const SizedBox(height: AppTokens.spaceMedium),
         ],
-        MasariCard(
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -153,7 +153,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
           ),
         ),
         const SizedBox(height: AppTokens.spaceMedium),
-        MasariCard(
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

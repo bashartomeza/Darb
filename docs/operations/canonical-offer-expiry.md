@@ -4,7 +4,7 @@ Expiry is an explicit bounded internal command, not a public route or scheduler:
 
 ```powershell
 npm run build:api
-npm run canonical:match -w @masari/api -- --expire --limit=25
+npm run canonical:match -w @darb/api -- --expire --limit=25
 ```
 
 The command is available only in local, test, or demo with all canonical gates enabled. It scans at most 100 due offers, processes each in a separate transaction, and uses the canonical lock order. Two workers safely serialize on the dispatch/offer rows.

@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 /// Display-only route fares.
 ///
-/// Masari does not process payments: a fare is an estimate that the passenger
+/// Darb does not process payments: a fare is an estimate that the passenger
 /// or merchant pays the driver directly. Amounts travel as integer minor units
 /// (agorot) so no floating point is involved until the final, locale-aware
 /// formatting step.

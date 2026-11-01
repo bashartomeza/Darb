@@ -13,7 +13,7 @@ const dist = (path) => pathToFileURL(resolve(root, "apps/api/dist", path)).href;
 const { config } = await import(dist("config.js"));
 const databaseName = new URL(process.env.DATABASE_URL ?? "mysql://invalid/").pathname.slice(1);
 const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
-if (config.isProduction || config.isStaging || databaseName.toLowerCase() === "masari" || !allowed.includes(databaseName)) {
+if (config.isProduction || config.isStaging || databaseName.toLowerCase() === "darb" || !allowed.includes(databaseName)) {
   throw new Error("The test API only runs outside staging/production on an allow-listed disposable database.");
 }
 

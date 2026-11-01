@@ -42,7 +42,7 @@ describe("admin access-token expiry", () => {
       headers: { "Content-Type": "application/json" }
     }));
     vi.stubGlobal("fetch", fetchMock);
-    const api = createApiClient("https://api.masari.invalid", { onSessionEnded: handler.handle });
+    const api = createApiClient("https://api.darb.invalid", { onSessionEnded: handler.handle });
 
     const results = await Promise.allSettled([
       api.me("access-value"),
@@ -69,12 +69,12 @@ describe("admin access-token expiry", () => {
       counts: { users: 0, drivers: 0, routes: 0, passenger_requests: 0, merchant_orders: 0, parcels: 0, active_drivers: 0, pending_driver_approvals: 0, open_incidents: 0 }
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
-    const api = createApiClient("https://api.masari.invalid");
+    const api = createApiClient("https://api.darb.invalid");
 
     await api.dashboard("admin-access-token");
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toBe("https://api.masari.invalid/api/v1/admin/dashboard");
+    expect(String(url)).toBe("https://api.darb.invalid/api/v1/admin/dashboard");
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer admin-access-token");
   });
 
@@ -84,12 +84,12 @@ describe("admin access-token expiry", () => {
       headers: { "Content-Type": "application/json" }
     }));
     vi.stubGlobal("fetch", fetchMock);
-    const api = createApiClient("https://api.masari.invalid");
+    const api = createApiClient("https://api.darb.invalid");
 
     await api.drivers("admin-access-token");
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toBe("https://api.masari.invalid/api/v1/admin/drivers");
+    expect(String(url)).toBe("https://api.darb.invalid/api/v1/admin/drivers");
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer admin-access-token");
   });
 

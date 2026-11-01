@@ -106,7 +106,7 @@ reportsRouter.get("/admin/reports/export", async (req: AuthenticatedRequest, res
       );
     }
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="masari-${input.dataset}.csv"`);
+    res.setHeader("Content-Disposition", `attachment; filename="darb-${input.dataset}.csv"`);
     res.send(csv);
   } catch (error) {
     next(error);

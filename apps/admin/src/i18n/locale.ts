@@ -1,6 +1,6 @@
 import { translations, type Locale, type TranslationKey } from "./translations";
 
-export const LOCALE_STORAGE_KEY = "masari_locale";
+export const LOCALE_STORAGE_KEY = "darb_locale";
 export const DEFAULT_LOCALE: Locale = "ar";
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem">;

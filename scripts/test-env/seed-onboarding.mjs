@@ -16,7 +16,7 @@ const base = `${process.env.TEST_API_BASE_URL ?? "http://localhost:3000"}/api/v1
 
 const databaseName = new URL(process.env.DATABASE_URL ?? "mysql://invalid/").pathname.slice(1);
 const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
-if (databaseName.toLowerCase() === "masari" || !allowed.includes(databaseName)) {
+if (databaseName.toLowerCase() === "darb" || !allowed.includes(databaseName)) {
   throw new Error("Refusing: set DATABASE_URL and DEMO_RESET_ALLOWED_DATABASES to the disposable demo database.");
 }
 
@@ -31,7 +31,7 @@ async function call(path, { method = "GET", token, body, expected = 200 } = {}) 
   return text ? JSON.parse(text) : null;
 }
 
-const admin = (await call("/auth/login", { method: "POST", body: { email: "demo.admin@masari.app", password: env.DEMO_ADMIN_PASSWORD } })).token;
+const admin = (await call("/auth/login", { method: "POST", body: { email: "demo.admin@darb.app", password: env.DEMO_ADMIN_PASSWORD } })).token;
 
 const current = await call("/admin/consent-releases/current", { token: admin });
 if (!current.ready) {

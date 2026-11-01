@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_back_button.dart';
+import '../../../core/widgets/darb_back_button.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../canonical_routes/data/canonical_operation_storage.dart';
@@ -136,7 +136,7 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.sendParcelTitle),
-          leading: const MasariBackButton(fallback: '/passenger'),
+          leading: const DarbBackButton(fallback: '/passenger'),
         ),
         body: SafeArea(
           child: ref
@@ -162,7 +162,7 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.sendParcelTitle),
-        leading: const MasariBackButton(fallback: '/passenger'),
+        leading: const DarbBackButton(fallback: '/passenger'),
       ),
       body: SafeArea(
         child: ListView(

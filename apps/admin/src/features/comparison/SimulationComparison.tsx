@@ -7,7 +7,7 @@ import { Button, Card, CardHeader, DataTable, EmptyState, MeterBar, Notice, Stat
 const methods: Array<{ key: SimulationMethodKey; label: TranslationKey; tone: "success" | "info" | "neutral" }> = [
   { key: "manual", label: "simMethodManual", tone: "neutral" },
   { key: "nearest", label: "simMethodNearest", tone: "info" },
-  { key: "masari", label: "simMethodMasari", tone: "success" }
+  { key: "darb", label: "simMethodDarb", tone: "success" }
 ];
 
 const metricRows: Array<{ key: string; label: TranslationKey; read: (m: SimulationMetrics) => number }> = [
@@ -26,7 +26,7 @@ const metricRows: Array<{ key: string; label: TranslationKey; read: (m: Simulati
 // Metrics where a shorter bar is better; shown as bar charts.
 const chartRows = metricRows.filter((row) => ["waitAvg", "waitP90", "matchAvg", "deviation", "unmatched"].includes(row.key));
 
-/** Admin view of the simulated manual / nearest-driver / Masari comparison. */
+/** Admin view of the simulated manual / nearest-driver / Darb comparison. */
 export function SimulationComparison({ api, token }: { api: ApiClient; token: string }) {
   const { t, number } = useLocale();
   const [simulation, setSimulation] = useState<ComparisonSimulation | null>(null);

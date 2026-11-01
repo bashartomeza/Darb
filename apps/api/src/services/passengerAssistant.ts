@@ -97,7 +97,7 @@ const providerReplySchema = z.object({
 
 const responseFormat = {
   type: "json_schema",
-  name: "masari_passenger_assistant_reply",
+  name: "darb_passenger_assistant_reply",
   strict: true,
   schema: {
     type: "object",

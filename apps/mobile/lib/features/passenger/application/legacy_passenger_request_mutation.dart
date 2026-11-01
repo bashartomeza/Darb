@@ -14,7 +14,7 @@ final legacyPassengerRequestMutationProvider =
       return LegacyPassengerRequestMutation(
         storage: CanonicalOperationStorage(
           ref.watch(secureStorageProvider),
-          storageKey: 'masari_legacy_passenger_create_v1',
+          storageKey: 'darb_legacy_passenger_create_v1',
         ),
         currentActor: () => binding.actorId,
         selectionStorage: PassengerRequestSelectionStorage(

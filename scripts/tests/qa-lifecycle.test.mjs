@@ -19,7 +19,7 @@ async function until(check, timeout = 20_000) {
 async function pids(record) { try { return (await readFile(record, "utf8")).trim().split("\n").map(Number); } catch { return []; } }
 async function removeGenerated(directory) {
   assert.equal(dirname(resolve(directory)), resolve(tmpdir()));
-  assert(/^(?:qa-lifecycle-(?:test-|orphan-test-|parent-test-)|masari-functional-)[a-zA-Z0-9]+$/.test(basename(directory)));
+  assert(/^(?:qa-lifecycle-(?:test-|orphan-test-|parent-test-)|darb-functional-)[a-zA-Z0-9]+$/.test(basename(directory)));
   assert(!(await lstat(directory)).isSymbolicLink());
   assert.equal(await realpath(directory), resolve(directory));
   await rm(resolve(directory), { recursive: true, force: true });

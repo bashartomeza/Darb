@@ -14,7 +14,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const range = { from: "2026-09-01T00:00:00.000Z", until: "2026-09-08T00:00:00.000Z" };
 const combined: MatchRow = {
   id: "match_1", status: "accepted", created_at: "2026-09-07T10:00:00.000Z", score: "87.125",
-  method: "masari_route_score", demand_kind: "combined", driver_route: { id: "route_1", status: "assigned" },
+  method: "darb_route_score", demand_kind: "combined", driver_route: { id: "route_1", status: "assigned" },
   passenger_request: { id: "request_1", status: "accepted", passenger_count: 2 },
   merchant_order: { id: "order_1", status: "assigned", parcel_count: 3 },
   parcel_batch: { id: "batch_1", status: "assigned" }

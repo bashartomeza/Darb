@@ -658,11 +658,11 @@ describe("matching, batching, comparison", () => {
     const response = await request(createApp())
       .post("/api/v1/compare/run")
       .set(auth("admin_1"))
-      .send({ scenarioKey: "masari_batch_wins" })
+      .send({ scenarioKey: "darb_batch_wins" })
       .expect(201);
 
-    expect(response.body.comparison.winner).toBe("masari");
-    expect(response.body.comparison.masari_trips).toBe(1);
+    expect(response.body.comparison.winner).toBe("darb");
+    expect(response.body.comparison.darb_trips).toBe(1);
     expect(response.body.comparison.nearest_driver_trips).toBeGreaterThan(1);
     expect(prismaMock.merchantOrder.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { canonical_entry_version: null } })
@@ -693,10 +693,10 @@ describe("matching, batching, comparison", () => {
   });
 
   it("GET comparison run returns saved result", async () => {
-    prismaMock.comparisonRun.findUnique.mockResolvedValue({ id: "comparison_1", winner: "masari" });
+    prismaMock.comparisonRun.findUnique.mockResolvedValue({ id: "comparison_1", winner: "darb" });
 
     const response = await request(createApp()).get("/api/v1/compare/runs/comparison_1").set(auth("admin_1")).expect(200);
-    expect(response.body.comparison.winner).toBe("masari");
+    expect(response.body.comparison.winner).toBe("darb");
   });
   it("rejects departed merchant candidates before reserving capacity", async () => {
     prismaMock.merchantOrder.findUnique.mockResolvedValue(merchantOrder);

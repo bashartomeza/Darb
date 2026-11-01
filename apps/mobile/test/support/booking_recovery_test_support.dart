@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:masari_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
-import 'package:masari_mobile/features/passenger/application/legacy_passenger_request_mutation.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_request_selection_storage.dart';
+import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
+import 'package:darb_mobile/features/passenger/application/legacy_passenger_request_mutation.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_request_selection_storage.dart';
 
 class MemoryRequestSelectionStorage extends PassengerRequestSelectionStorage {
   MemoryRequestSelectionStorage() : super(const FlutterSecureStorage());

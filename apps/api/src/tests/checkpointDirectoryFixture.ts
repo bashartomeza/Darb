@@ -15,7 +15,7 @@ export function directoryFixture(approved = false) {
       public_source_url: "https://example.invalid/research", provider_checkpoint_id: null,
       latitude: null, longitude: null, coordinate_verified: false, provider_id_verified: false,
       traffic_status: "unknown", ready_for_map: false, approved_for_publication: approved })) };
-  const folder = mkdtempSync(join(tmpdir(), "masari-directory-fixture-")), file = join(folder, "directory.json");
+  const folder = mkdtempSync(join(tmpdir(), "darb-directory-fixture-")), file = join(folder, "directory.json");
   function write() {
     const bytes = JSON.stringify(data); writeFileSync(file, bytes);
     return { schema_version: 1, version: "synthetic-v1", sha256: createHash("sha256").update(bytes).digest("hex"),

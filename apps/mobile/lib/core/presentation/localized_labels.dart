@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 String localizedLocationSource(AppLocalizations l10n, String source) =>
     switch (source) {

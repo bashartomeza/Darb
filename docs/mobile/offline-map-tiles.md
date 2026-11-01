@@ -7,7 +7,7 @@ keep rendering with no connection.
 ## How it works
 
 - Code: `apps/mobile/lib/core/maps/map_tile_cache.dart` (`MapTileConfig`,
-  `MapTileCache`), used by `MasariMap`.
+  `MapTileCache`), used by `DarbMap`.
 - It builds on the caching provider that ships with `flutter_map` 8.x
   (`BuiltInMapCachingProvider`): no extra dependency, files on disk in the
   app cache directory.
@@ -34,7 +34,7 @@ The default source is the public `tile.openstreetmap.org` server, which is
 governed by <https://operations.osmfoundation.org/policies/tiles/>. What this
 app does about it:
 
-- Sends an identifying User-Agent (`flutter_map (ps.masari.mobile)`, from
+- Sends an identifying User-Agent (`flutter_map (ps.darb.mobile)`, from
   `MapTileConfig.userAgentPackageName`).
 - Caches tiles and honours cache headers (the policy asks for at least 7 days of
   caching), which also reduces load on OSM.
@@ -60,5 +60,5 @@ starts a fresh cache.
 
 ## Testing
 
-`MasariMap` accepts `tileProvider` (a fake that never touches the network) and
+`DarbMap` accepts `tileProvider` (a fake that never touches the network) and
 `tileCache`. See `apps/mobile/test/map_tile_cache_test.dart`.

@@ -8,7 +8,7 @@ import { run } from "../lib/process.mjs";
 import { scanTracked } from "../security-scan.mjs";
 
 test("tracked scanner reports a rule and path without the detected value", () => {
-  const directory = mkdtempSync(join(tmpdir(), "masari-security-test-"));
+  const directory = mkdtempSync(join(tmpdir(), "darb-security-test-"));
   const prior = process.cwd();
   try {
     process.chdir(directory);

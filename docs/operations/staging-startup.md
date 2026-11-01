@@ -5,11 +5,11 @@ This is a provider-neutral local staging simulation, not a deployed environment.
 ## Build and controlled migration
 
 ```powershell
-docker build --target runtime -f apps/api/Dockerfile -t masari-api:local .
-docker build --target migration -f apps/api/Dockerfile -t masari-migrate:local .
+docker build --target runtime -f apps/api/Dockerfile -t darb-api:local .
+docker build --target migration -f apps/api/Dockerfile -t darb-migrate:local .
 ```
 
-Set the values referenced by `compose.staging.yml` in the operator shell or an ignored Compose environment file. Use a dedicated, disposable `masari_staging_sim` database. `STAGING_DATABASE_URL` must point to the private Compose MySQL hostname and must not contain production credentials. Then run:
+Set the values referenced by `compose.staging.yml` in the operator shell or an ignored Compose environment file. Use a dedicated, disposable `darb_staging_sim` database. `STAGING_DATABASE_URL` must point to the private Compose MySQL hostname and must not contain production credentials. Then run:
 
 ```powershell
 docker compose -f compose.staging.yml run --rm migrate

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/foreground_refresh.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
 import '../application/canonical_assignment_controller.dart';
@@ -109,7 +109,7 @@ class _DriverCanonicalOfferListScreenState
                     ),
                     const SizedBox(height: AppTokens.spaceMedium),
                     if (state.offers.isEmpty)
-                      MasariCard(child: Text(l10n.noCanonicalOffers))
+                      DarbCard(child: Text(l10n.noCanonicalOffers))
                     else
                       for (final offer in state.offers) ...[
                         _OfferCard(offer: offer, serverNow: state.serverNow),
@@ -158,7 +158,7 @@ class _OfferCard extends StatelessWidget {
       button: true,
       label:
           '$routeName, ${canonicalOfferStatusLabel(l10n, offer.status)}, ${_demandLabel(l10n, offer.demandType)}',
-      child: MasariCard(
+      child: DarbCard(
         onTap: () => context.go('/driver/canonical-offers/${offer.id}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -305,7 +305,7 @@ class _DriverCanonicalOfferDetailScreenState
                       const SizedBox(height: AppTokens.spaceMedium),
                       Semantics(
                         liveRegion: true,
-                        child: MasariCard(
+                        child: DarbCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -461,7 +461,7 @@ class _OfferSummary extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        MasariCard(
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -582,7 +582,7 @@ class _CanonicalAssignmentListScreenState
                 Text(l10n.manualRefreshNotice),
                 const SizedBox(height: AppTokens.spaceMedium),
                 if (items.isEmpty)
-                  MasariCard(child: Text(l10n.noCanonicalAssignments))
+                  DarbCard(child: Text(l10n.noCanonicalAssignments))
                 else
                   for (final item in items) ...[
                     _AssignmentCard(
@@ -630,7 +630,7 @@ class _AssignmentCard extends StatelessWidget {
       return Semantics(
         button: true,
         label: l10n.sharedAssignmentUnavailable,
-        child: MasariCard(
+        child: DarbCard(
           onTap: onTap,
           child: Text(l10n.sharedAssignmentUnavailable),
         ),
@@ -640,7 +640,7 @@ class _AssignmentCard extends StatelessWidget {
     return Semantics(
       button: true,
       label: '${_routeName(context, assignment.route)}, $status',
-      child: MasariCard(
+      child: DarbCard(
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -793,7 +793,7 @@ class _AssignmentSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          MasariCard(
+          DarbCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -828,7 +828,7 @@ class _AssignmentSummary extends StatelessWidget {
             _TripSummaryCard(trip: trip),
             if (trip.version == CanonicalTripVersion.shared) ...[
               const SizedBox(height: AppTokens.spaceMedium),
-              MasariCard(
+              DarbCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -843,7 +843,7 @@ class _AssignmentSummary extends StatelessWidget {
             ],
           ],
           const SizedBox(height: AppTokens.spaceMedium),
-          MasariCard(child: Text(l10n.trackingNotAvailable)),
+          DarbCard(child: Text(l10n.trackingNotAvailable)),
         ],
       ),
     );
@@ -857,7 +857,7 @@ class _TripSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -886,7 +886,7 @@ class _UnavailablePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(AppTokens.spaceLarge),
-    children: [MasariCard(child: Text(message))],
+    children: [DarbCard(child: Text(message))],
   );
 }
 
@@ -899,7 +899,7 @@ class _ErrorPanel extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(AppTokens.spaceLarge),
     children: [
-      MasariCard(
+      DarbCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_back_button.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_back_button.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../canonical_routes/data/canonical_operation_storage.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_bulk_models.dart';
@@ -113,7 +113,7 @@ class _MerchantBulkOrdersScreenState
       key: const ValueKey('merchantBulkOrders'),
       appBar: AppBar(
         title: Text(_t('title')),
-        leading: const MasariBackButton(fallback: '/merchant/order/new'),
+        leading: const DarbBackButton(fallback: '/merchant/order/new'),
         actions: const [LanguageSwitch()],
       ),
       body: SafeArea(
@@ -180,7 +180,7 @@ class _MerchantBulkOrdersScreenState
         wholeFile.isEmpty &&
         (!preview.hasErrors || _skipInvalid);
     return [
-      MasariCard(
+      DarbCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -239,7 +239,7 @@ class _MerchantBulkOrdersScreenState
   List<Widget> _resultStep() {
     final result = _result!;
     return [
-      MasariCard(
+      DarbCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

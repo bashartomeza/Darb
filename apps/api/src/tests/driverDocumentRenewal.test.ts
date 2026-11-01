@@ -42,16 +42,16 @@ describe("driver document renewal", () => {
   let app: ReturnType<typeof createApp>;
 
   beforeAll(async () => {
-    dir = await mkdtemp(join(tmpdir(), "masari-renew-"));
+    dir = await mkdtemp(join(tmpdir(), "darb-renew-"));
     app = createApp(
       createConfig({
         APP_ENV: "test",
-        DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+        DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
         JWT_SECRET: "test-only-jwt-secret-with-at-least-thirty-two-characters",
         CORS_ORIGINS: "http://localhost:5173",
         LOG_LEVEL: "silent",
         DEMO_RESET_KEY: "test-reset-key",
-        DEMO_RESET_ALLOWED_DATABASES: "masari_test",
+        DEMO_RESET_ALLOWED_DATABASES: "darb_test",
         DEMO_PASSENGER_PASSWORD: "test-passenger-password",
         DEMO_DRIVER_PASSWORD: "test-driver-password",
         DEMO_MERCHANT_PASSWORD: "test-merchant-password",

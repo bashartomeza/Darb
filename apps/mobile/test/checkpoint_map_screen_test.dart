@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/location/location_service.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/passenger/application/passenger_map_controller.dart';
-import 'package:masari_mobile/features/passenger/presentation/passenger_map_alerts_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/location/location_service.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/passenger/application/passenger_map_controller.dart';
+import 'package:darb_mobile/features/passenger/presentation/passenger_map_alerts_screen.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/checkpoint_test_harness.dart';
 
@@ -104,7 +104,7 @@ void main() {
       );
       await tester.pump();
       try {
-        expect(find.byType(MasariMap), findsOneWidget);
+        expect(find.byType(DarbMap), findsOneWidget);
       } finally {
         pending.complete(
           const PassengerMapView(

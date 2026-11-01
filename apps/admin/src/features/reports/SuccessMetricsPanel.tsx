@@ -64,7 +64,7 @@ export function SuccessMetricsPanel({ api, token }: { api: SuccessMetricsApi; to
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "masari-success-metrics.csv";
+      link.download = "darb-success-metrics.csv";
       document.body.appendChild(link);
       link.click();
       link.remove();

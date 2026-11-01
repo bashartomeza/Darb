@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_bottom_nav.dart';
+import '../../../core/widgets/darb_bottom_nav.dart';
 import '../data/incident_repository.dart';
 
 /// A "Report a problem" control for a trip screen.
@@ -23,7 +23,7 @@ class ReportIncidentButton extends StatelessWidget {
       alignment: AlignmentDirectional.centerStart,
       child: TextButton.icon(
         key: const ValueKey('reportIncidentButton'),
-        onPressed: () => showMasariBottomSheet<void>(
+        onPressed: () => showDarbBottomSheet<void>(
           context: context,
           child: ReportIncidentForm(tripId: tripId),
         ),

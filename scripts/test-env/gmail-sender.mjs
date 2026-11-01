@@ -88,13 +88,13 @@ async function smtpSend({ host, port, mode, user, password, from, to, data, time
 
   try {
     await expect(220, "greeting");
-    say("EHLO masari.local"); await expect(250, "ehlo");
+    say("EHLO darb.local"); await expect(250, "ehlo");
     if (mode === "starttls") {
       say("STARTTLS"); await expect(220, "starttls");
       reader.detach();
       socket = tls.connect({ socket, servername: host });
       reader = replyReader(socket, timeoutMs);
-      say("EHLO masari.local"); await expect(250, "ehlo_tls");
+      say("EHLO darb.local"); await expect(250, "ehlo_tls");
     }
     say("AUTH LOGIN"); await expect(334, "auth");
     say(b64(user)); await expect(334, "user");

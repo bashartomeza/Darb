@@ -115,7 +115,7 @@ export function runPreflight(env, options = {}) {
   });
   add("CORS_ORIGINS", originOk, "CORS_ORIGINS must list explicit https:// non-local origins (no wildcard)");
   if (target === "production") {
-    add("CORS_ORIGINS_DOMAIN", origins.includes("https://masari.aynur.ps"), "production CORS_ORIGINS is expected to include https://masari.aynur.ps", "WARN");
+    add("CORS_ORIGINS_DOMAIN", origins.includes("https://darb.aynur.ps"), "production CORS_ORIGINS is expected to include https://darb.aynur.ps", "WARN");
   }
 
   add("TRUST_PROXY", /^([0-5]|none)$/.test(val("TRUST_PROXY")), "TRUST_PROXY must be none, 0, or a hop count 1-5 (explicit)");

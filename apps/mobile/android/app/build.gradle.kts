@@ -8,8 +8,8 @@ plugins {
 
 // Release signing. Credentials come from android/key.properties (git-ignored:
 // storeFile, storePassword, keyAlias, keyPassword) or, for CI, from the
-// environment variables MASARI_KEYSTORE_FILE, MASARI_KEYSTORE_PASSWORD,
-// MASARI_KEY_ALIAS and MASARI_KEY_PASSWORD. The file wins over the environment.
+// environment variables DARB_KEYSTORE_FILE, DARB_KEYSTORE_PASSWORD,
+// DARB_KEY_ALIAS and DARB_KEY_PASSWORD. The file wins over the environment.
 // See docs/mobile/ANDROID_RELEASE.md.
 val keyProperties = Properties().apply {
     val file = rootProject.file("key.properties")
@@ -19,10 +19,10 @@ val keyProperties = Properties().apply {
 fun signingValue(propertyName: String, envName: String): String? =
     (keyProperties.getProperty(propertyName) ?: System.getenv(envName))?.takeIf { it.isNotBlank() }
 
-val releaseStoreFile = signingValue("storeFile", "MASARI_KEYSTORE_FILE")
-val releaseStorePassword = signingValue("storePassword", "MASARI_KEYSTORE_PASSWORD")
-val releaseKeyAlias = signingValue("keyAlias", "MASARI_KEY_ALIAS")
-val releaseKeyPassword = signingValue("keyPassword", "MASARI_KEY_PASSWORD")
+val releaseStoreFile = signingValue("storeFile", "DARB_KEYSTORE_FILE")
+val releaseStorePassword = signingValue("storePassword", "DARB_KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "DARB_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "DARB_KEY_PASSWORD")
 val hasReleaseSigning = listOf(
     releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword,
 ).all { it != null }
@@ -31,10 +31,10 @@ val hasReleaseSigning = listOf(
 // the debug key so CI can build and scan an APK without secrets. Never
 // distribute such an APK.
 val allowDebugSigning =
-    (project.findProperty("allowDebugSigning") ?: System.getenv("MASARI_ALLOW_DEBUG_SIGNING"))?.toString() == "true"
+    (project.findProperty("allowDebugSigning") ?: System.getenv("DARB_ALLOW_DEBUG_SIGNING"))?.toString() == "true"
 
 android {
-    namespace = "ps.masari.mobile"
+    namespace = "ps.darb.mobile"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -44,7 +44,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "ps.masari.mobile"
+        applicationId = "ps.darb.mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -88,8 +88,8 @@ gradle.taskGraph.whenReady {
         throw GradleException(
             "Release signing is not configured. Provide android/key.properties " +
                 "(storeFile, storePassword, keyAlias, keyPassword) or the environment variables " +
-                "MASARI_KEYSTORE_FILE, MASARI_KEYSTORE_PASSWORD, MASARI_KEY_ALIAS, " +
-                "MASARI_KEY_PASSWORD. For a non-distributable CI build only, pass " +
+                "DARB_KEYSTORE_FILE, DARB_KEYSTORE_PASSWORD, DARB_KEY_ALIAS, " +
+                "DARB_KEY_PASSWORD. For a non-distributable CI build only, pass " +
                 "-PallowDebugSigning=true. See docs/mobile/ANDROID_RELEASE.md.",
         )
     }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/widgets/status_chip.dart';
 import '../data/passenger_parcel_models.dart';

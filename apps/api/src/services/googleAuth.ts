@@ -63,8 +63,8 @@ function utcDate(value: string) {
 }
 export type GooglePendingStatus = { token: string; expiresAt: Date };
 const grantSchema = z.strictObject({ action: z.string().regex(/^[A-Za-z0-9_-]{43}$/), sub: z.string().min(1).max(191), email: canonicalEmail, expires: z.number() });
-const AAD = Buffer.from("masari:google-registration:v1");
-function envelopeKey(key: VersionedKey) { return createHmac("sha256", key.secret).update(`masari:google-registration-envelope:v${key.version}`).digest(); }
+const AAD = Buffer.from("darb:google-registration:v1");
+function envelopeKey(key: VersionedKey) { return createHmac("sha256", key.secret).update(`darb:google-registration-envelope:v${key.version}`).digest(); }
 function seal(payload: z.infer<typeof grantSchema>, key: VersionedKey) {
   const iv = randomBytes(12); const cipher = createCipheriv("aes-256-gcm", envelopeKey(key), iv); cipher.setAAD(AAD);
   const bytes = Buffer.concat([cipher.update(JSON.stringify(payload), "utf8"), cipher.final()]);
@@ -79,7 +79,7 @@ function open(raw: string, key: VersionedKey) {
     if (grant.expires <= Date.now()) throw new Error(); return grant;
   } catch { throw new HttpError(400, "auth_action_invalid"); }
 }
-export function googleAllowlistDigest(email: string, key: VersionedKey) { return keyedDigest("masari:google-passenger-allowlist", email.trim().toLowerCase(), key); }
+export function googleAllowlistDigest(email: string, key: VersionedKey) { return keyedDigest("darb:google-passenger-allowlist", email.trim().toLowerCase(), key); }
 function subject(identity: { sub: string; email: string }) { return JSON.stringify(["google", identity.sub, identity.email]); }
 
 export class GoogleAuthService {
@@ -143,7 +143,7 @@ export class GoogleAuthService {
         let proof;
         try { proof = await consumeAuthAction(tx, grant.action, "google_registration", { key: this.key() }); }
         catch (e) { if (e instanceof AuthActionError) throw new HttpError(400, "auth_action_invalid"); throw e; }
-        if (proof.user_id || !proof.subject_digest || !hexDigestMatches(proof.subject_digest, keyedDigest("masari:auth-action-subject", subject(grant), this.key()))) throw new HttpError(400, "auth_action_invalid");
+        if (proof.user_id || !proof.subject_digest || !hexDigestMatches(proof.subject_digest, keyedDigest("darb:auth-action-subject", subject(grant), this.key()))) throw new HttpError(400, "auth_action_invalid");
         if (await tx.externalIdentity.findUnique({ where: { provider_provider_subject: { provider: "google", provider_subject: grant.sub } } })) throw new HttpError(409, "google_identity_already_registered");
         if (await tx.user.findUnique({ where: { email: grant.email } })) throw new HttpError(409, "explicit_link_required");
         if (phone && await tx.user.findUnique({ where: { phone } })) throw new HttpError(409, "phone_already_in_use");

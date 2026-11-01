@@ -11,7 +11,7 @@ const completionSafePaths = new Set([
 ]);
 
 function pathname(req: AuthenticatedRequest) {
-  const path = new URL(req.originalUrl, "http://masari.local").pathname.toLowerCase();
+  const path = new URL(req.originalUrl, "http://darb.local").pathname.toLowerCase();
   return path === "/" ? path : path.replace(/\/+$/, "");
 }
 

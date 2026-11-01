@@ -16,7 +16,7 @@ const { createApp } = await import("../app.js");
 
 const baseEnvironment = {
   APP_ENV: "local",
-  DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+  DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
   JWT_SECRET: "test-only-jwt-secret-with-at-least-thirty-two-characters",
   CORS_ORIGINS: "http://localhost:5173",
   LOG_LEVEL: "silent",

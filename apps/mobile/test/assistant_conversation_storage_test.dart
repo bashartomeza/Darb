@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:masari_mobile/features/assistant/data/assistant_conversation_storage.dart';
-import 'package:masari_mobile/features/assistant/domain/passenger_assistant_models.dart';
+import 'package:darb_mobile/features/assistant/data/assistant_conversation_storage.dart';
+import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +40,7 @@ void main() {
     () async {
       const secure = FlutterSecureStorage();
       await secure.write(
-        key: 'masari_assistant_conversation_v1_passenger_1',
+        key: 'darb_assistant_conversation_v1_passenger_1',
         value: 'invalid',
       );
       expect(

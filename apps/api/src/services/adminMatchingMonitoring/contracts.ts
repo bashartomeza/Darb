@@ -82,7 +82,7 @@ export type MatchRow = {
   status: MatchStatusValue;
   created_at: string;
   score: string;
-  method: "masari_route_score" | "unrecognized";
+  method: "darb_route_score" | "unrecognized";
   demand_kind: DemandKind;
   driver_route: { id: string; status: DriverRouteStatusValue };
   passenger_request: null | { id: string; status: RequestStatusValue; passenger_count: number };

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../../core/fares/fare.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/semantic_colors.dart';
 import '../../../../core/widgets/entity_cards.dart';
-import '../../../../core/widgets/masari_card.dart';
+import '../../../../core/widgets/darb_card.dart';
 import '../../../../core/widgets/match_widgets.dart';
 import '../../../../core/widgets/route_chip.dart';
 import '../../domain/trip_offer.dart';
@@ -48,7 +48,7 @@ class TripOfferCard extends StatelessWidget {
         offer.departureAt != null &&
         !offer.departureAt!.isAfter(DateTime.now());
 
-    return MasariCard(
+    return DarbCard(
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

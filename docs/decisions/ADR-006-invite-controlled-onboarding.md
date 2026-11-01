@@ -8,7 +8,7 @@
 
 ## Context
 
-Masari needs controlled-beta onboarding without weakening the M6C1 account/session boundary. Public registration, passwords, account creation, operational sessions, and real SMS are deliberately deferred.
+Darb needs controlled-beta onboarding without weakening the M6C1 account/session boundary. Public registration, passwords, account creation, operational sessions, and real SMS are deliberately deferred.
 
 ## Decision
 

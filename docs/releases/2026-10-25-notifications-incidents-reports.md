@@ -19,7 +19,7 @@ Booking persistence and recovery after a lost response, replay-safe merchant ord
 
 - **Run `npm run db:migrate`.** Three additive migrations create `notifications`, `incidents` and `driver_verification_decisions`. No historical migration changed; `.gitignore` excludes `*.sql`, so new migrations must be force-added.
 - **No new required configuration.** Checkpoint features stay off unless `CHECKPOINTS_ENABLED` / `CHECKPOINT_DIRECTORY_ENABLED` and their URL, file and key settings are provided; the configuration validator rejects an incomplete or placeholder setup.
-- **Demo accounts sign in by email** (`demo.passenger@masari.app` and similar). New demo scripts: `npm run demo:features`, `demo:seed-approvals`, `demo:approvals`; walkthrough in `docs/demo/FEATURE_WALKTHROUGH.md`. Use only a disposable database (`masari_demo`), never `masari`.
+- **Demo accounts sign in by email** (`demo.passenger@darb.app` and similar). New demo scripts: `npm run demo:features`, `demo:seed-approvals`, `demo:approvals`; walkthrough in `docs/demo/FEATURE_WALKTHROUGH.md`. Use only a disposable database (`darb_demo`), never `darb`.
 - The legacy dispatch worker expires overdue pending requests every 30 s; the monitoring integration test's fixtures were adjusted so it no longer races that worker.
 
 ## Behavior to be aware of

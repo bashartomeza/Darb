@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_models.dart';
-import 'package:masari_mobile/features/passenger/presentation/location_picker_screen.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_models.dart';
+import 'package:darb_mobile/features/passenger/presentation/location_picker_screen.dart';
 
 void main() {
   testWidgets(
@@ -42,7 +42,7 @@ void main() {
       ]) {
         await tester.tap(find.text('Choose'));
         await tester.pumpAndSettle();
-        tester.widget<MasariMap>(find.byType(MasariMap)).onTap!(entry.$2);
+        tester.widget<DarbMap>(find.byType(DarbMap)).onTap!(entry.$2);
         await tester.pump();
         await tester.enterText(find.byType(TextField), entry.$1);
         await tester.tap(find.text('تأكيد الموقع'));

@@ -25,7 +25,7 @@ Files are written to `DRIVER_DOCUMENTS_DIR` under a random 48-character name wit
 
 Deployment notes for the server host: put the directory on persistent storage (not the container's ephemeral layer), outside any web root, owned and readable only by the API user, and include it in backups together with the database. Serve the API over HTTPS only. The files are personal documents; do not put the directory on a shared or public volume.
 
-Retention: documents of a decided application (approved or rejected) are deleted after `DRIVER_DOCUMENT_RETENTION_DAYS` (default 90) by `npm run documents:purge -w @masari/api` (after `npm run build`). It is safe to run repeatedly; schedule it daily on the host. Documents of pending applications are never purged, and an applicant can delete their own while pending. The 90-day default is an engineering default; the product owner should confirm it.
+Retention: documents of a decided application (approved or rejected) are deleted after `DRIVER_DOCUMENT_RETENTION_DAYS` (default 90) by `npm run documents:purge -w @darb/api` (after `npm run build`). It is safe to run repeatedly; schedule it daily on the host. Documents of pending applications are never purged, and an applicant can delete their own while pending. The 90-day default is an engineering default; the product owner should confirm it.
 
 Not covered: malware scanning of uploads, encryption of files at rest beyond the host's disk encryption, and applicant-side upload after a rejection (a rejected applicant still cannot sign in, so a re-review stays Admin-initiated).
 
@@ -52,7 +52,7 @@ When approving (first approval or a re-review), the Admin can record the **last 
 
 ### The scheduled check
 
-`npm run documents:expiry -w @masari/api` (after `npm run build`; schedule daily, see the deployment guide) runs `runDriverDocumentExpiryCheck`, the same cron-style mechanism as the retention purge. It is idempotent and takes an injectable clock in tests.
+`npm run documents:expiry -w @darb/api` (after `npm run build`; schedule daily, see the deployment guide) runs `runDriverDocumentExpiryCheck`, the same cron-style mechanism as the retention purge. It is idempotent and takes an injectable clock in tests.
 
 - **Reminders.** An approved, active driver gets an in-app notification (English and Arabic) when a document has 30 days left and again at 7 days. One per document, date and tier: reruns, and a job that was down, never duplicate it (a job first running at 5 days left sends only the 7 day notice). Changing a date creates fresh reminders for the new date.
 - **Restriction.** The day after any recorded date, the verification moves `approved -> documents_expired` in one transaction: the revision is incremented, `DriverProfile.verified` becomes false, a `documents_expired` entry is added to the decision history, an audit event `driver_documents_expired` is written (no actor, system job) and the driver is notified.

@@ -88,10 +88,10 @@ describe("demo reset", () => {
   });
 
   it.each([
-    ["the permanently protected human database", "mysql://test:test@localhost:3306/masari", "masari"],
-    ["an unlisted database", "mysql://test:test@localhost:3306/unknown_database", "masari_demo_ci"],
-    ["a malformed database URL", "not-a-database-url", "masari_demo_ci"],
-    ["a missing allow-list", "mysql://test:test@localhost:3306/masari_demo_ci", undefined]
+    ["the permanently protected human database", "mysql://test:test@localhost:3306/darb", "darb"],
+    ["an unlisted database", "mysql://test:test@localhost:3306/unknown_database", "darb_demo_ci"],
+    ["a malformed database URL", "not-a-database-url", "darb_demo_ci"],
+    ["a missing allow-list", "mysql://test:test@localhost:3306/darb_demo_ci", undefined]
   ])("blocks %s before starting a transaction", async (_label, databaseUrl, allowedDatabases) => {
     const response = await request(createApp(resetConfig(databaseUrl, allowedDatabases)))
       .post("/api/v1/demo/reset")
@@ -115,7 +115,7 @@ describe("demo reset", () => {
     prismaMock.authSession.update.mockResolvedValue({});
     const token = signAuthToken({ id: "admin_1", role: "admin", sessionId: "session_admin", securityVersion: 1 });
 
-    const response = await request(createApp(resetConfig("mysql://test:test@localhost:3306/masari", "masari")))
+    const response = await request(createApp(resetConfig("mysql://test:test@localhost:3306/darb", "darb")))
       .post("/api/v1/demo/reset")
       .set("authorization", `Bearer ${token}`)
       .expect(403);

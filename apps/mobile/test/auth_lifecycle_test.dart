@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/auth/data/auth_repository.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/auth/data/auth_repository.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 import 'support/auth_test_support.dart';
 
 void main() {
@@ -91,7 +91,7 @@ void main() {
           path = request.url.path;
           return http.Response(
             jsonEncode({
-              'token': 'masari',
+              'token': 'darb',
               'user': {
                 'id': 'passenger',
                 'name': 'Passenger',

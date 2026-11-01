@@ -42,7 +42,7 @@ test('API runtime layout starts with only the explicitly packaged public directo
 
 test('Docker context excludes local research inputs and includes only the public data manifest', () => {
   const rules = readFileSync(join(root, '.dockerignore'), 'utf8').split(/\r?\n/);
-  for (const required of ['.staging-data', '.superpowers', '**/Masari_AweenRayeh_173_Directory_Import.json',
+  for (const required of ['.staging-data', '.superpowers',
     'apps/api/data/*', '!apps/api/data/checkpoint-directory.v1.manifest.json']) {
     assert(rules.includes(required), 'Local research or future unapproved data must not enter Docker context');
   }

@@ -9,7 +9,7 @@ const { createApp } = await import("../app.js");
 function config(timeout = 100) {
   return createConfig({
     APP_ENV: "local",
-    DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+    DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
     JWT_SECRET: "health-readiness-test-secret-with-thirty-two-characters",
     CORS_ORIGINS: "http://localhost:5173",
     LOG_LEVEL: "silent",
@@ -22,7 +22,7 @@ describe("liveness and readiness", () => {
     const readinessCheck = vi.fn().mockRejectedValue(new Error("database-host-secret"));
     const response = await request(createApp(config(), { readinessCheck })).get("/api/v1/health/live").expect(200);
     expect(response.body).toEqual(
-      expect.objectContaining({ ok: true, status: "live", service: "masari-api", request_id: response.headers["x-request-id"] })
+      expect.objectContaining({ ok: true, status: "live", service: "darb-api", request_id: response.headers["x-request-id"] })
     );
     expect(readinessCheck).not.toHaveBeenCalled();
   });
@@ -38,7 +38,7 @@ describe("liveness and readiness", () => {
 
   it("returns a redacted 503 on database failure", async () => {
     const readinessCheck = vi.fn().mockRejectedValue(
-      new Error("mysql://database-user:database-password@database.internal:3306/masari")
+      new Error("mysql://database-user:database-password@database.internal:3306/darb")
     );
     const response = await request(createApp(config(), { readinessCheck })).get("/api/v1/health/ready").expect(503);
     const serialized = JSON.stringify(response.body);

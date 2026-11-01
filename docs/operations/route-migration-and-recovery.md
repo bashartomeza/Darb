@@ -9,7 +9,7 @@ M7B uses the forward-only MySQL migration `20260721110000_canonical_route_catalo
 1. Confirm the target is the intended MySQL database and has current migration history.
 2. Inspect only aggregate DriverRoute/trip/corridor counts and validate nonnegative legacy capacities.
 3. Create an ignored `mysqldump` backup and SHA-256 sidecar with `npm run mysql:backup`.
-4. Verify the backup into an isolated `masari_restore_*` database.
+4. Verify the backup into an isolated `darb_restore_*` database.
 
 ## Deploy
 
@@ -36,7 +36,7 @@ This is an isolated local-provenance outcome, not a tracked-history mutation. Do
 - Upgrade a populated eight-migration database through the integrity correction.
 - Restore the pre-correction backup into an isolated database, apply the correction, and confirm current status.
 - Create a post-migration backup, restore it without data loss, and remove the isolated target.
-- Run the real route concurrency suite in an `_ci` or `masari_route_*` disposable database.
+- Run the real route concurrency suite in an `_ci` or `darb_route_*` disposable database.
 - Run deterministic demo reset/smoke and verify the locked metrics.
 
 The test/demo reset deletes the new catalog in FK-safe order and recreates one exact deterministic route/version plus three canonical fixture stops. It is unavailable outside demo/test-enabled environments and does not seed production beta routes.

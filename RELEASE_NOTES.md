@@ -1,6 +1,6 @@
-# Masari Hackathon MySQL Demo — Release Notes
+# Darb Hackathon MySQL Demo — Release Notes
 
-- Release name: **Masari Hackathon MySQL Demo**
+- Release name: **Darb Hackathon MySQL Demo**
 - Release date: **2026-07-13**
 - Final Git reference: annotated tag **`v0.2.0-hackathon-mysql`**
 - Final Git commit: resolved during packaging.
@@ -13,7 +13,7 @@ Application behavior remains frozen. This release changes only the database prov
 
 ## Database provider transition
 
-- Runtime provider: MySQL Community Server 8.0.46, database `masari`, port 3306.
+- Runtime provider: MySQL Community Server 8.0.46, database `darb`, port 3306.
 - Unicode: database `utf8mb4` / `utf8mb4_0900_ai_ci`; Prisma tables use `utf8mb4_unicode_ci`.
 - Prisma ORM and Client remain 7.8.0.
 - Runtime adapter: `@prisma/adapter-mariadb` 7.8.0 with `mariadb` 3.4.5.
@@ -27,7 +27,7 @@ Application behavior remains frozen. This release changes only the database prov
 - Protected deterministic demo reset and seeded demo identities.
 - JWT login, `/me`, role authorization, and ownership isolation.
 - Passenger requests, driver locked routes, merchant orders/parcels/batching, explainable combined matching, acceptance, trip lifecycle, and deterministic tracking.
-- Masari versus nearest-driver deterministic comparison.
+- Darb versus nearest-driver deterministic comparison.
 - Arabic-first React/Vite admin judge console.
 - Android Flutter app for passenger, driver, and merchant roles.
 - Preflight, full API smoke, runbook, eight-minute judge script, and screenshot backup.
@@ -44,7 +44,7 @@ Application behavior remains frozen. This release changes only the database prov
 
 - Tracking is simulated and polled through REST. It is not live GPS, maps, Socket.IO, or background tracking.
 - Matching and comparison values are deterministic hackathon demo metrics, not production routing, prices, or city-wide measured outcomes.
-- Expected proof: score `0.9317`; sequence `2`; trips `1` versus `6`; distance `21.53` versus `129.19`; cost `43.06` versus `258.38`; winner `masari`.
+- Expected proof: score `0.9317`; sequence `2`; trips `1` versus `6`; distance `21.53` versus `129.19`; cost `43.06` versus `258.38`; winner `darb`.
 
 ## Validation summary
 

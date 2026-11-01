@@ -64,7 +64,7 @@ function fromHeader(name: string | undefined, address: string) {
 export function buildMimeMessage(input: { fromAddress: string; fromName?: string; to: string; subject: string; text: string; html: string; now?: Date }) {
   const from = assertSafeAddress(input.fromAddress, "smtp_from_invalid");
   const to = assertSafeAddress(input.to, "smtp_recipient_invalid");
-  const boundary = `masari_${randomBytes(12).toString("hex")}`;
+  const boundary = `darb_${randomBytes(12).toString("hex")}`;
   const domain = from.split("@")[1];
   const part = (type: string, body: string) => [`Content-Type: ${type}; charset=UTF-8`, "Content-Transfer-Encoding: base64", "", wrap76(b64(body))].join("\r\n");
   const headers = [
@@ -134,7 +134,7 @@ function replyReader(socket: net.Socket, onFail: (error: Error) => void) {
 
 async function converse(options: SmtpDeliveryOptions, to: string, data: string) {
   const timeoutMs = options.timeoutMs ?? 15_000;
-  const clientName = options.clientName ?? "masari.local";
+  const clientName = options.clientName ?? "darb.local";
   const bareHost = options.host.replace(/^\[|\]$/g, "");
   const tlsBase: ConnectionOptions = { servername: net.isIP(bareHost) ? undefined : bareHost, minVersion: "TLSv1.2", ...options.tlsOptions };
   let abort: (error: Error) => void = () => {};

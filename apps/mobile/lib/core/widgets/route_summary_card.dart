@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
-import 'masari_card.dart';
+import 'darb_card.dart';
 
 /// Grey summary card with the origin (green dot) above the destination (red
 /// dot), plus optional pill chips (date, time, passengers) underneath.
@@ -48,7 +48,7 @@ class RouteSummaryCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        MasariCard(
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

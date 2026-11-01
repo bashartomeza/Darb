@@ -6,14 +6,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/app.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/core/i18n/domain_labels.dart';
-import 'package:masari_mobile/core/routing/app_router.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/data/google_sign_in_service.dart';
-import 'package:masari_mobile/features/auth/presentation/login_screen.dart';
+import 'package:darb_mobile/app.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/core/i18n/domain_labels.dart';
+import 'package:darb_mobile/core/routing/app_router.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/data/google_sign_in_service.dart';
+import 'package:darb_mobile/features/auth/presentation/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_app_config.dart';
@@ -158,11 +158,11 @@ Future<ProviderContainer> _pump(
         httpClientProvider.overrideWithValue(MockClient(handler)),
         googleSignInServiceProvider.overrideWithValue(_GoogleFixture()),
       ],
-      child: const MasariApp(),
+      child: const DarbApp(),
     ),
   );
   await tester.pumpAndSettle();
-  return ProviderScope.containerOf(tester.element(find.byType(MasariApp)));
+  return ProviderScope.containerOf(tester.element(find.byType(DarbApp)));
 }
 
 http.Response _read(http.Request request) {

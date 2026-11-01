@@ -26,4 +26,4 @@ There is no automated expired-session cleanup job yet. Expired rows are rejected
 
 ## Recovery rehearsal
 
-Run a normal post-migration backup and isolated restore using `docs/operations/mysql-backup-restore.md`. To prove a release upgrades an older backup, use the restore tool's explicit `--migrate` option only with a safe `masari_restore_*` destination. Never run restore verification against the configured source database.
+Run a normal post-migration backup and isolated restore using `docs/operations/mysql-backup-restore.md`. To prove a release upgrades an older backup, use the restore tool's explicit `--migrate` option only with a safe `darb_restore_*` destination. Never run restore verification against the configured source database.

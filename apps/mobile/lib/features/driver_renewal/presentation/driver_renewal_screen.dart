@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../onboarding/domain/onboarding_models.dart';
 import '../../onboarding/presentation/driver_documents_card.dart';
@@ -136,7 +136,7 @@ class _DriverRenewalScreenState extends ConsumerState<DriverRenewalScreen> {
   ) {
     if (state.submitted) {
       return [
-        MasariCard(
+        DarbCard(
           key: const ValueKey('renewalSubmitted'),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,7 +170,7 @@ class _DriverRenewalScreenState extends ConsumerState<DriverRenewalScreen> {
     return [
       Text(l10n.renewalIntro),
       const SizedBox(height: AppTokens.spaceMedium),
-      MasariCard(
+      DarbCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

@@ -16,4 +16,4 @@ if ($Remove) {
 $key = Read-Host -AsSecureString "Paste the dedicated replacement partner key (input is hidden)"
 Save-PartnerKey -Key $key
 $key.Dispose()
-Write-Output "The partner key is stored for this Windows user (target Masari/AweenRayehPartnerKey). It was not displayed."
+Write-Output "The partner key is stored for this Windows user (target Darb/AweenRayehPartnerKey). It was not displayed."

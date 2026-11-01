@@ -1,4 +1,4 @@
-// API-level checks for the newer features, run against the live test API on the disposable masari_demo
+// API-level checks for the newer features, run against the live test API on the disposable darb_demo
 // database: six-digit email codes, open driver/shop sign-up with "Send for review", route fares,
 // passenger parcels, the delivery handover code, trust score and ratings, the AI assistant fallback,
 // the approaching alert, driver document expiry, bulk merchant orders and the admin metrics.
@@ -10,7 +10,7 @@ import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { root, env, results, http, check, must, latestOtp, latestEmailCode, powershellReset } from "./check-kit.mjs";
 
-const adminLogin = () => loginAs("demo.admin@masari.app", env.DEMO_ADMIN_PASSWORD, "/auth/admin/login");
+const adminLogin = () => loginAs("demo.admin@darb.app", env.DEMO_ADMIN_PASSWORD, "/auth/admin/login");
 const resetData = () => powershellReset();
 
 const tag = Date.now().toString(36);
@@ -234,7 +234,7 @@ async function routeFareChecks(admin) {
   let passenger;
   await check("E14", "route setup: the admin builds and publishes a route with three stops", async () => {
     sharedRoute = await createPublishedRoute(admin);
-    passenger = await loginAs("demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD);
+    passenger = await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD);
     const list = await http("/routes", { token: passenger, expect: 200 });
     must(list.json.routes.some((r) => JSON.stringify(r).includes(sharedRoute.versionId)), "the published route is not in the public catalogue");
   });
@@ -327,11 +327,11 @@ async function passengerParcelChecks(admin) {
     const id = created[0];
     const mine = await http(`/passenger/parcels/${id}`, { token: sender, expect: 200 });
     must(mine.json.parcel.receiver_name === "QA Receiver", "the sender cannot see the receiver name");
-    const stranger = await loginAs("demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD);
+    const stranger = await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD);
     must((await http(`/passenger/parcels/${id}`, { token: stranger })).status === 404, "another passenger can read the parcel");
     must((await http(`/passenger/parcels/${id}/cancel`, { method: "PATCH", token: stranger })).status === 404, "another passenger can cancel it");
-    must((await http("/passenger/parcels", { token: await loginAs("demo.driver@masari.app", env.DEMO_DRIVER_PASSWORD) })).status === 403, "a driver reached passenger parcels");
-    must((await http("/passenger/parcels", { token: await loginAs("demo.merchant@masari.app", env.DEMO_MERCHANT_PASSWORD) })).status === 403, "a merchant reached passenger parcels");
+    must((await http("/passenger/parcels", { token: await loginAs("demo.driver@darb.app", env.DEMO_DRIVER_PASSWORD) })).status === 403, "a driver reached passenger parcels");
+    must((await http("/passenger/parcels", { token: await loginAs("demo.merchant@darb.app", env.DEMO_MERCHANT_PASSWORD) })).status === 403, "a merchant reached passenger parcels");
     must((await http("/passenger/parcels", {})).status === 401, "anonymous reached passenger parcels");
     const adminList = await http("/admin/passenger-parcels", { token: admin, expect: 200 });
     const text = JSON.stringify(adminList.json);
@@ -366,7 +366,7 @@ async function passengerParcelChecks(admin) {
     must(/^\d{6}$/.test(regenerated.json.handover.code), "no six-digit code returned");
     const reread = await http(`/parcel-orders/${id}/handover`, { token: sender, expect: 200 });
     must(!JSON.stringify(reread.json).includes(regenerated.json.handover.code), "the code is readable after issuing");
-    const stranger = await loginAs("demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD);
+    const stranger = await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD);
     must((await http(`/parcel-orders/${id}/handover`, { token: stranger })).status === 404, "a stranger read the handover state");
     must((await http(`/parcel-orders/${id}/handover/regenerate`, { method: "POST", token: stranger, body: {} })).status === 404, "a stranger regenerated the code");
     const asAdmin = await http(`/parcel-orders/${id}/handover/regenerate`, { method: "POST", token: admin, body: {} });
@@ -402,7 +402,7 @@ async function bulkOrderChecks(admin) {
   const bulk = (csv, k, extra = {}) => http("/merchant/orders/bulk", { method: "POST", token: merchant, headers: k ? { "idempotency-key": k } : {}, body: { csv, ...extra } });
 
   await check("E23", "bulk orders: only a shop owner may use them; a preview validates rows and writes nothing", async () => {
-    must((await http("/merchant/orders/bulk/preview", { method: "POST", token: await loginAs("demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD), body: { csv: valid } })).status === 403, "a passenger previewed a bulk upload");
+    must((await http("/merchant/orders/bulk/preview", { method: "POST", token: await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD), body: { csv: valid } })).status === 403, "a passenger previewed a bulk upload");
     must((await http("/merchant/orders/bulk/preview", { method: "POST", body: { csv: valid } })).status === 401, "anonymous preview");
     const before = await orderCount();
     const preview = await http("/merchant/orders/bulk/preview", { method: "POST", token: merchant, body: { csv: `${valid}\n,QA Shop,31.5,35.1,Bad row,31.7,35.2,Q,normal` }, expect: 200 });
@@ -443,7 +443,7 @@ async function bulkOrderChecks(admin) {
 
 // --- Section 7: AI assistant without a key -------------------------------------------------------------------
 async function assistantChecks(admin) {
-  const passenger = await loginAs("demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD);
+  const passenger = await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD);
   const ask = (message, locale = "en") => http("/passenger/assistant/messages", { method: "POST", token: passenger, body: { message, locale } });
   const openCount = async () => (await http("/admin/ai-uncertain-requests?status=open", { token: admin, expect: 200 })).json.open_total;
   await check("E27", "AI assistant (no AI key): the rule-based fallback understands a clear request in English and Arabic", async () => {
@@ -487,7 +487,7 @@ async function assistantChecks(admin) {
 
 // --- Section 11: success metrics and the simulated comparison ------------------------------------------------
 async function metricsChecks(admin) {
-  const passenger = await loginAs("demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD);
+  const passenger = await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD);
   await check("A20", "success metrics: admin only; sane shape; bad ranges refused; CSV export is a download", async () => {
     must((await http("/admin/success-metrics", { token: passenger })).status === 403, "passenger read success metrics");
     must((await http("/admin/success-metrics")).status === 401, "anonymous read success metrics");
@@ -511,7 +511,7 @@ async function metricsChecks(admin) {
     must(JSON.stringify(a.json) === JSON.stringify(b.json), "the same seed gave different results");
     must(JSON.stringify(a.json) !== JSON.stringify(c.json), "a different seed gave identical results");
     const text = JSON.stringify(a.json.simulation);
-    for (const method of ["manual", "nearest", "masari"]) must(new RegExp(method, "i").test(text), `method ${method} missing`);
+    for (const method of ["manual", "nearest", "darb"]) must(new RegExp(method, "i").test(text), `method ${method} missing`);
     must((await http("/compare/simulation?seed=abc", { token: admin })).status === 400, "a bad seed was accepted");
   });
 }
@@ -519,9 +519,9 @@ async function metricsChecks(admin) {
 // --- Sections 5, 6 and 8: one real trip (delivery handover, rating, trust score, approaching alert) -----------
 // Starts from a clean reset so the seeded passenger request and merchant order are free for a match.
 async function startSeededTrip(admin) {
-  const driver = await loginAs("demo.driver@masari.app", env.DEMO_DRIVER_PASSWORD);
-  const passenger = await loginAs("demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD);
-  const merchant = await loginAs("demo.merchant@masari.app", env.DEMO_MERCHANT_PASSWORD);
+  const driver = await loginAs("demo.driver@darb.app", env.DEMO_DRIVER_PASSWORD);
+  const passenger = await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD);
+  const merchant = await loginAs("demo.merchant@darb.app", env.DEMO_MERCHANT_PASSWORD);
   const requests = await http("/admin/requests", { token: admin, expect: 200 });
   const orders = await http("/admin/orders", { token: admin, expect: 200 });
   const passengerRequest = requests.json.requests[0];
@@ -634,7 +634,7 @@ async function tripChecks() {
 
   await check("E36", "trust score: recomputed after the trip, between 0 and 100, with a breakdown; admin sees it; the job is repeatable", async () => {
     const prisma = await prismaClient();
-    const user = await prisma.user.findUnique({ where: { email: "demo.driver@masari.app" }, include: { driver_profile: true } });
+    const user = await prisma.user.findUnique({ where: { email: "demo.driver@darb.app" }, include: { driver_profile: true } });
     const profile = user.driver_profile;
     must(Number.isInteger(profile.trust_score) && profile.trust_score >= 0 && profile.trust_score <= 100, `score ${profile.trust_score}`);
     must(profile.trust_computed_at, "the score was not recomputed after the completed trip");
@@ -642,7 +642,7 @@ async function tripChecks() {
     must(/rating/i.test(components) && /experience/i.test(components), `components ${components.slice(0, 160)}`);
     const seen = await http(`/admin/users/${user.id}`, { token: admin, expect: 200 });
     must(seen.json.user.driver_profile.trust_score === profile.trust_score, "the admin sees a different score");
-    const run = () => spawnSync("npm", ["run", "trust:recompute", "-w", "@masari/api"], { cwd: root, env: process.env, shell: true, encoding: "utf8", timeout: 120_000 });
+    const run = () => spawnSync("npm", ["run", "trust:recompute", "-w", "@darb/api"], { cwd: root, env: process.env, shell: true, encoding: "utf8", timeout: 120_000 });
     const first = run();
     const out = (first.stdout ?? "") + (first.stderr ?? "");
     must(first.status === 0 && /Recomputed trust score for \d+ driver\(s\); 0 failed/.test(out), `recompute job: ${out.slice(-200)}`);
@@ -679,7 +679,7 @@ async function tripChecks() {
 // --- Section 9: driver document expiry, restriction and renewal ---------------------------------------------
 const isoDay = (offsetDays) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
 function runExpiryJob() {
-  const r = spawnSync("npm", ["run", "documents:expiry", "-w", "@masari/api"], { cwd: root, env: process.env, shell: true, encoding: "utf8", timeout: 120_000 });
+  const r = spawnSync("npm", ["run", "documents:expiry", "-w", "@darb/api"], { cwd: root, env: process.env, shell: true, encoding: "utf8", timeout: 120_000 });
   const out = (r.stdout ?? "") + (r.stderr ?? "");
   const m = out.match(/Checked (\d+) driver\(s\): sent (\d+) reminder\(s\), restricted (\d+) driver/);
   if (r.status !== 0 || !m) throw new Error(`expiry job failed: ${out.slice(-300)}`);
@@ -755,7 +755,7 @@ async function documentExpiryChecks() {
     const entry = queue.json.verifications.find((x) => x.candidate.phone === phone);
     must(entry && entry.evidence.documents.length >= 1, "the renewed document is not in the re-review queue");
     must((await goOnline()).status === 403, "the driver went online while the renewal was still waiting");
-    must((await http("/driver/document-renewal", { token: await loginAs("demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD) })).status === 403, "a passenger reached the renewal area");
+    must((await http("/driver/document-renewal", { token: await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD) })).status === 403, "a passenger reached the renewal area");
   });
   await check("E42", "document expiry: approving the renewal needs the new licence date and restores access at once", async () => {
     const v = await verification();

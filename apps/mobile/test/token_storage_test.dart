@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 
 void main() {
   const secureStorage = FlutterSecureStorage();
@@ -87,7 +87,7 @@ void main() {
       TokenStorage.bundleKey:
           '{"version":1,"access_token":"access","refresh_token":null,"access_token_expires_at":null,"refresh_token_expires_at":null,"session_id":null,"legacy_access_only":false}',
       TokenStorage.tokenKey: 'legacy',
-      'masari_locale': 'en',
+      'darb_locale': 'en',
     });
     final storage = TokenStorage(secureStorage);
 
@@ -95,6 +95,6 @@ void main() {
 
     expect(await secureStorage.read(key: TokenStorage.bundleKey), isNull);
     expect(await secureStorage.read(key: TokenStorage.tokenKey), isNull);
-    expect(await secureStorage.read(key: 'masari_locale'), 'en');
+    expect(await secureStorage.read(key: 'darb_locale'), 'en');
   });
 }

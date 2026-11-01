@@ -27,7 +27,7 @@ let dir = "";
 
 beforeAll(() => {
   try {
-    dir = mkdtempSync(join(tmpdir(), "masari-smtp-"));
+    dir = mkdtempSync(join(tmpdir(), "darb-smtp-"));
     execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", join(dir, "k.pem"), "-out", join(dir, "c.pem"),
       "-days", "2", "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1"], { stdio: "ignore" });
     key = readFileSync(join(dir, "k.pem"), "utf8"); cert = readFileSync(join(dir, "c.pem"), "utf8");
@@ -95,7 +95,7 @@ const message = (extra: Record<string, unknown> = {}) => ({
   to: "rider@example.com", locale: "en" as const, purpose: "email_verification" as const,
   actionToken: "482913", expiresAt: new Date(Date.now() + 15 * 60_000), ...extra
 });
-const base = { fromAddress: "no-reply@masari.example", fromName: "Darb", user: "mailer", password: "s3cret-pass", timeoutMs: 3000 };
+const base = { fromAddress: "no-reply@darb.example", fromName: "Darb", user: "mailer", password: "s3cret-pass", timeoutMs: 3000 };
 const plain = (port: number, extra = {}) => createSmtpEmailDelivery({ ...base, host: "127.0.0.1", port, secure: "starttls", plaintextForTests: true, ...extra });
 const decodeParts = (data: string) => {
   const parts = [...data.matchAll(/Content-Type: (text\/\w+); charset=UTF-8\nContent-Transfer-Encoding: base64\n\n([\s\S]*?)\n--/g)];
@@ -111,12 +111,12 @@ describe("SMTP email delivery", () => {
       await delivery.send(message({ locale: "ar", purpose: "password_reset" }));
       const auth = smtp.lines.find((l) => l.startsWith("AUTH PLAIN "))!;
       expect(Buffer.from(auth.slice(11), "base64").toString()).toBe("\u0000mailer\u0000s3cret-pass");
-      expect(smtp.lines).toContain("MAIL FROM:<no-reply@masari.example>");
+      expect(smtp.lines).toContain("MAIL FROM:<no-reply@darb.example>");
       expect(smtp.lines).toContain("RCPT TO:<rider@example.com>");
-      expect(smtp.data).toMatch(/^From: "?Darb"? <no-reply@masari\.example>$/m);
+      expect(smtp.data).toMatch(/^From: "?Darb"? <no-reply@darb\.example>$/m);
       expect(smtp.data).toMatch(/^To: <rider@example\.com>$/m);
       expect(smtp.data).toMatch(/^Subject: =\?UTF-8\?B\?/m);
-      expect(smtp.data).toMatch(/Content-Type: multipart\/alternative; boundary="masari_[0-9a-f]+"/);
+      expect(smtp.data).toMatch(/Content-Type: multipart\/alternative; boundary="darb_[0-9a-f]+"/);
       const parts = decodeParts(smtp.data);
       expect(parts["text/plain"]).toMatch(/\r\n\r\n482913\r\n\r\n/);
       expect(parts["text/plain"]).toContain("درب");
@@ -205,7 +205,7 @@ describe("SMTP email delivery", () => {
       await expect(plain(smtp.port, { fromName: "Darb\r\nBcc: x@y.example" }).send(message())).rejects.toMatchObject({ code: "smtp_header_invalid" });
       expect(smtp.connections).toBe(0);
       await plain(smtp.port, { fromName: "درب" }).send(message());
-      expect(smtp.data).toMatch(/^From: =\?UTF-8\?B\?[A-Za-z0-9+/=]+\?= <no-reply@masari\.example>$/m);
+      expect(smtp.data).toMatch(/^From: =\?UTF-8\?B\?[A-Za-z0-9+/=]+\?= <no-reply@darb\.example>$/m);
       expect(smtp.data).not.toMatch(/^Bcc:/m);
     } finally { await smtp.close(); }
   });

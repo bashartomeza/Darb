@@ -100,7 +100,7 @@ export function createOperationalLogger(appConfig: AppConfig, destination?: Dest
   const options = {
     level: appConfig.logLevel,
     base: {
-      service: "masari-api",
+      service: "darb-api",
       app_env: appConfig.appEnv,
       release: appConfig.appRelease
     },

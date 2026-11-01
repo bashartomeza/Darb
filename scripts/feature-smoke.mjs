@@ -15,17 +15,17 @@ function assertResetSafeDatabase() {
   const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
   let name = "";
   try { name = new URL(process.env.DATABASE_URL).pathname.replace(/^\//, ""); } catch {}
-  if (name.toLowerCase() === "masari" || !/^[A-Za-z0-9_]+$/.test(name) || !allowed.includes(name)) {
+  if (name.toLowerCase() === "darb" || !/^[A-Za-z0-9_]+$/.test(name) || !allowed.includes(name)) {
     throw new Error("Feature smoke refuses a database that is not explicitly reset-safe");
   }
 }
 
 const accounts = {
-  passenger: ["demo.passenger@masari.app", process.env.DEMO_PASSENGER_PASSWORD],
-  driver1: ["demo.driver@masari.app", process.env.DEMO_DRIVER_PASSWORD],
-  driver2: ["demo.driver2@masari.app", process.env.DEMO_DRIVER_PASSWORD],
-  merchant: ["demo.merchant@masari.app", process.env.DEMO_MERCHANT_PASSWORD],
-  admin: ["demo.admin@masari.app", process.env.DEMO_ADMIN_PASSWORD]
+  passenger: ["demo.passenger@darb.app", process.env.DEMO_PASSENGER_PASSWORD],
+  driver1: ["demo.driver@darb.app", process.env.DEMO_DRIVER_PASSWORD],
+  driver2: ["demo.driver2@darb.app", process.env.DEMO_DRIVER_PASSWORD],
+  merchant: ["demo.merchant@darb.app", process.env.DEMO_MERCHANT_PASSWORD],
+  admin: ["demo.admin@darb.app", process.env.DEMO_ADMIN_PASSWORD]
 };
 
 function assert(condition, message) {

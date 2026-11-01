@@ -7,13 +7,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/app.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/core/i18n/domain_labels.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
-import 'package:masari_mobile/features/onboarding/data/onboarding_storage.dart';
+import 'package:darb_mobile/app.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/core/i18n/domain_labels.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/features/onboarding/data/onboarding_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_app_config.dart';
@@ -48,7 +48,7 @@ void main() {
             completions.add(jsonDecode(request.body) as Map<String, dynamic>);
             return http.Response(
               jsonEncode({
-                'token': 'new-masari-session',
+                'token': 'new-darb-session',
                 'user': {
                   'id': 'new',
                   'name': 'Rana H',
@@ -127,14 +127,14 @@ void main() {
             },
         ],
         'adult_self_attestation': true,
-        'device_name': 'Masari App',
+        'device_name': 'Darb App',
         'name': 'Rana H',
         'role': 'passenger',
         'profile': {'phone': '+970599111222', 'city': 'Ramallah'},
       });
       expect(
         (await container.read(tokenStorageProvider).readBundle())?.accessToken,
-        'new-masari-session',
+        'new-darb-session',
       );
       expect(
         GoRouter.of(
@@ -365,9 +365,9 @@ Future<ProviderContainer> _pumpApp(
         appConfigProvider.overrideWithValue(config),
         httpClientProvider.overrideWithValue(MockClient(handler)),
       ],
-      child: const MasariApp(),
+      child: const DarbApp(),
     ),
   );
   await tester.pumpAndSettle();
-  return ProviderScope.containerOf(tester.element(find.byType(MasariApp)));
+  return ProviderScope.containerOf(tester.element(find.byType(DarbApp)));
 }

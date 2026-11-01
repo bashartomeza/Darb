@@ -22,7 +22,7 @@ export function handoverKey(): VersionedKey {
 }
 
 export function handoverCodeDigest(orderId: string, code: string, key: VersionedKey) {
-  return keyedDigest(`masari:delivery-handover:${orderId}`, code, key);
+  return keyedDigest(`darb:delivery-handover:${orderId}`, code, key);
 }
 
 export function generateHandoverCode() {

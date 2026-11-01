@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/merchant_report_provider.dart';
 import '../data/merchant_report_models.dart';
@@ -64,7 +64,7 @@ class _ReportBody extends StatelessWidget {
         AppTokens.spaceExtraLarge,
       ),
       children: [
-        MasariInfoCard(
+        DarbInfoCard(
           title: l10n.merchantDashboard,
           icon: Icons.summarize_outlined,
           body: StatStrip(
@@ -88,7 +88,7 @@ class _ReportBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppTokens.spaceLarge),
-        MasariSection(
+        DarbSection(
           title: l10n.reportsOrdersByStatus,
           child: _Breakdown(
             keyPrefix: 'reportsOrders',
@@ -96,7 +96,7 @@ class _ReportBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppTokens.spaceLarge),
-        MasariSection(
+        DarbSection(
           title: l10n.reportsDeliveriesByStatus,
           child: _Breakdown(
             keyPrefix: 'reportsTrips',

@@ -10,8 +10,8 @@ const root = resolve(new URL("../../", import.meta.url).pathname.replace(/^\/(\w
 const node = process.execPath;
 
 test("isolated restore database naming is fail-closed", () => {
-  assert.equal(safeRestoreDatabaseName("masari_restore_rehearsal_20260713"), true);
-  for (const unsafe of ["masari", "production", "masari_restore_", "masari_restore_x;DROP DATABASE masari"])
+  assert.equal(safeRestoreDatabaseName("darb_restore_rehearsal_20260713"), true);
+  for (const unsafe of ["darb", "production", "darb_restore_", "darb_restore_x;DROP DATABASE darb"])
     assert.equal(safeRestoreDatabaseName(unsafe), false);
 });
 
@@ -32,10 +32,10 @@ test("single-statement trigger dumps retain data and normalize only the invalid 
 });
 
 test("backup fails safely when ignored configuration is missing", () => {
-  const missing = join(tmpdir(), `missing-masari-${Date.now()}.env`);
+  const missing = join(tmpdir(), `missing-darb-${Date.now()}.env`);
   const result = spawnSync(node, ["scripts/mysql-backup.mjs"], {
     cwd: root,
-    env: { ...process.env, DATABASE_URL: "", MASARI_ENV_FILE: missing },
+    env: { ...process.env, DATABASE_URL: "", DARB_ENV_FILE: missing },
     encoding: "utf8"
   });
   assert.notEqual(result.status, 0);
@@ -44,10 +44,10 @@ test("backup fails safely when ignored configuration is missing", () => {
 });
 
 test("restore rejects an unsafe destination before database access", () => {
-  const directory = mkdtempSync(join(tmpdir(), "masari-restore-test-"));
+  const directory = mkdtempSync(join(tmpdir(), "darb-restore-test-"));
   const dump = join(directory, "test.sql");
   writeFileSync(dump, "SELECT 1;\n");
-  const result = spawnSync(node, ["scripts/mysql-restore-verify.mjs", "--dump", dump, "--database", "masari", "--confirm-isolated"], {
+  const result = spawnSync(node, ["scripts/mysql-restore-verify.mjs", "--dump", dump, "--database", "darb", "--confirm-isolated"], {
     cwd: root, encoding: "utf8"
   });
   assert.notEqual(result.status, 0);
@@ -56,7 +56,7 @@ test("restore rejects an unsafe destination before database access", () => {
 });
 
 test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secret fields", () => {
-  const directory = mkdtempSync(join(tmpdir(), "masari-metadata-test-"));
+  const directory = mkdtempSync(join(tmpdir(), "darb-metadata-test-"));
   const first = join(directory, "one.json");
   const second = join(directory, "two.json");
   const env = { ...process.env, SOURCE_DATE_EPOCH: "1783900800", APP_RELEASE: "m6b2-test", APP_ENV: "staging" };
@@ -116,7 +116,8 @@ test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secre
       "20261029190000_driver_document_expiry",
       "20261029200000_email_otp_contact",
       "20261101120000_google_role_onboarding",
-      "20261102100000_community_reports"
+      "20261102100000_community_reports",
+      "20261102120000_rename_masari_to_darb"
     ]
   );
   rmSync(directory, { recursive: true, force: true });

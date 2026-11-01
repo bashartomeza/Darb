@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/i18n/locale_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../application/onboarding_controller.dart';
 import '../domain/onboarding_models.dart';
 import 'driver_documents_card.dart';
@@ -215,7 +215,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   Widget _startStep(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -285,7 +285,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     final remaining =
         state.resendAvailableAt?.difference(_now) ?? Duration.zero;
     final canResend = remaining <= Duration.zero && !state.busy;
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -363,7 +363,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     final l10n = AppLocalizations.of(context);
     final docs = state.documents;
     if (docs.isEmpty && !state.busy) {
-      return MasariCard(
+      return DarbCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -379,7 +379,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         ),
       );
     }
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -491,7 +491,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   Widget _passengerResult(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     _clearSecrets();
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -514,7 +514,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   Widget _approvedResult(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     _clearSecrets();
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -547,7 +547,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     final missing = required
         .where((kind) => !_uploadedKinds.contains(kind))
         .toList(growable: false);
-    final card = MasariCard(
+    final card = DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -640,7 +640,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   Widget _retryStep(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -661,7 +661,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   Widget _terminalStep(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -722,7 +722,7 @@ class _Unavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -748,7 +748,7 @@ class _ErrorBox extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTokens.spaceMedium),
-      child: MasariCard(
+      child: DarbCard(
         child: Text(
           _safeError(l10n, code),
           style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -789,9 +789,9 @@ class _RoleOptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MasariCard(
+    return DarbCard(
       onTap: onTap,
-      level: selected ? MasariCardLevel.floating : MasariCardLevel.card,
+      level: selected ? DarbCardLevel.floating : DarbCardLevel.card,
       background: selected
           ? AppTheme.surfaceContainerLow
           : AppTheme.surfaceContainerLowest,

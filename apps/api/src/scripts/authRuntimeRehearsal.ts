@@ -8,7 +8,7 @@ import { IdentityProfileService } from "../services/identityProfile.js";
 
 const url = new URL(config.databaseUrl);
 const port = Number(url.port);
-assert(url.hostname === "127.0.0.1" && url.port !== "" && Number.isInteger(port) && port > 0 && port <= 65535 && port !== 3306 && /^masari_auth_rehearsal_[a-z0-9_]+$/.test(url.pathname.slice(1)), "disposable_local_database_required");
+assert(url.hostname === "127.0.0.1" && url.port !== "" && Number.isInteger(port) && port > 0 && port <= 65535 && port !== 3306 && /^darb_auth_rehearsal_[a-z0-9_]+$/.test(url.pathname.slice(1)), "disposable_local_database_required");
 assert(config.isLocal, "local_environment_required");
 async function main() {
   const admin = await prisma.user.create({ data: { name: "TEST ONLY Legal Publisher", email: "legal@example.invalid", role: "admin", phone: null } });

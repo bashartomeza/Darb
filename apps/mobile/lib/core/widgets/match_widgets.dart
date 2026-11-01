@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/semantic_colors.dart';
-import 'masari_section.dart';
+import 'darb_section.dart';
 import 'route_chip.dart';
 import 'status_chip.dart';
 
@@ -125,7 +125,7 @@ class MatchResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MasariInfoCard(
+    return DarbInfoCard(
       title: title,
       statusLabel: statusLabel,
       statusTone: statusTone,

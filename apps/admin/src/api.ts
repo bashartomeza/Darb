@@ -311,7 +311,7 @@ return {
 }
 
 export function createDemoApiClient(apiBaseUrl: string, clientOptions: ApiClientOptions = {}) {
-  if (!__MASARI_DEMO_BUILD__) return null;
+  if (!__DARB_DEMO_BUILD__) return null;
   const apiRequest = async <T>(path: string, options: { method?: string; token?: string; body?: unknown; resetKey?: string } = {}) => {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (options.token) headers.Authorization = `Bearer ${options.token}`;
@@ -339,7 +339,7 @@ export function createDemoApiClient(apiBaseUrl: string, clientOptions: ApiClient
     getMatch: (token: string, id: string) => apiRequest<{ match: Match; scoringBreakdown: Record<string, number> }>(`/matches/${id}`, { token }),
     batchOrder: (token: string, orderId: string) => apiRequest<BatchResponse>(`/merchant/orders/${orderId}/batch`, { method: "POST", token, body: {} }),
     runComparison: (token: string, passengerRequestId?: string, merchantOrderId?: string) =>
-      apiRequest<{ comparison: Comparison }>("/compare/run", { method: "POST", token, body: { scenarioKey: "masari_batch_wins", passengerRequestId, merchantOrderId } }),
+      apiRequest<{ comparison: Comparison }>("/compare/run", { method: "POST", token, body: { scenarioKey: "darb_batch_wins", passengerRequestId, merchantOrderId } }),
     getComparison: (token: string, id: string) => apiRequest<{ comparison: Comparison }>(`/compare/runs/${id}`, { token }),
     acceptMatch: (token: string, id: string) => apiRequest<{ trip: Trip; matchId: string }>(`/matches/${id}/accept`, { method: "POST", token, body: {} }),
     rejectMatch: (token: string, id: string) => apiRequest<{ match: Match }>(`/matches/${id}/reject`, { method: "POST", token, body: {} }),
@@ -626,7 +626,7 @@ export type Match = {
 
 export type MatchRunResponse = { match: Match; scoringBreakdown: Record<string, number>; candidatesConsidered: number };
 export type BatchResponse = { batch: { id: string; status: string; estimated_distance_saved: string; explanation: string; merchant_order?: MerchantOrder } };
-export type SimulationMethodKey = "manual" | "nearest" | "masari";
+export type SimulationMethodKey = "manual" | "nearest" | "darb";
 export type SimulationDistribution = { avg: number; median: number; p90: number };
 export type SimulationMetrics = {
   requests: number;
@@ -646,7 +646,7 @@ export type SimulationMetrics = {
 export type ComparisonSimulation = {
   simulated: true;
   version: string;
-  params: { seed: number; manualResponseDelayMin: number; nearestMatchDelayMin: number; masariOfferDelayMin: number; masariBatchWindowMin: number };
+  params: { seed: number; manualResponseDelayMin: number; nearestMatchDelayMin: number; darbOfferDelayMin: number; darbBatchWindowMin: number };
   aggregate: Record<SimulationMethodKey, SimulationMetrics>;
   scenarios: Array<{
     key: string;
@@ -662,11 +662,11 @@ export type ComparisonSimulation = {
 export type Comparison = {
   id: string;
   winner: string;
-  masari_trips: number;
+  darb_trips: number;
   nearest_driver_trips: number;
-  masari_estimated_distance: string;
+  darb_estimated_distance: string;
   nearest_estimated_distance: string;
-  masari_estimated_cost: string;
+  darb_estimated_cost: string;
   nearest_estimated_cost: string;
   parcel_batching_benefit: string;
   driver_utilization: string;

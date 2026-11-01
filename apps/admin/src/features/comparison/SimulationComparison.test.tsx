@@ -23,11 +23,11 @@ function metrics(wait: number, km: number): SimulationMetrics {
 const simulation: ComparisonSimulation = {
   simulated: true,
   version: "matching_comparison_sim_v1",
-  params: { seed: 1, manualResponseDelayMin: 4, nearestMatchDelayMin: 0.5, masariOfferDelayMin: 1.5, masariBatchWindowMin: 6 },
-  aggregate: { manual: metrics(30, 5), nearest: metrics(20, 9), masari: metrics(18, 3) },
+  params: { seed: 1, manualResponseDelayMin: 4, nearestMatchDelayMin: 0.5, darbOfferDelayMin: 1.5, darbBatchWindowMin: 6 },
+  aggregate: { manual: metrics(30, 5), nearest: metrics(20, 9), darb: metrics(18, 3) },
   scenarios: [{
     key: "s1", label: "Scenario one", origin: "hand_written", requests: 10, passengerRequests: 10, parcelOrders: 0, drivers: 4,
-    methods: { manual: metrics(31, 6), nearest: metrics(21, 8), masari: metrics(17, 2) }
+    methods: { manual: metrics(31, 6), nearest: metrics(21, 8), darb: metrics(17, 2) }
   }]
 };
 
@@ -57,7 +57,7 @@ describe("SimulationComparison", () => {
   it("labels the figures as simulated and shows each method", async () => {
     const view = await render({ comparisonSimulation: vi.fn().mockResolvedValue({ simulation }) });
     expect(view.textContent).toContain("Simulated");
-    expect(view.querySelector('[data-testid="sim-masari-waitAvg"]')?.textContent).toBe("18");
+    expect(view.querySelector('[data-testid="sim-darb-waitAvg"]')?.textContent).toBe("18");
     expect(view.querySelector('[data-testid="sim-manual-waitAvg"]')?.textContent).toBe("30");
     expect(view.querySelectorAll('[role="progressbar"]').length).toBe(15);
   });
@@ -69,7 +69,7 @@ describe("SimulationComparison", () => {
       select.value = "s1";
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    expect(view.querySelector('[data-testid="sim-masari-waitAvg"]')?.textContent).toBe("17");
+    expect(view.querySelector('[data-testid="sim-darb-waitAvg"]')?.textContent).toBe("17");
   });
 
   it("renders Arabic copy and an error state with retry", async () => {
