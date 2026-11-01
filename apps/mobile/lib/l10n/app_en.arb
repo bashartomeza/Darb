@@ -591,6 +591,8 @@
   "assistantErrorTitle": "Couldn’t complete the request",
   "assistantErrorBody": "The assistant couldn’t complete your request. Try again.",
   "assistantUnavailable": "The assistant service is not available in this build. No result was created.",
+  "assistantHistoryErrorTitle": "Couldn’t load your chat",
+  "assistantHistoryErrorBody": "Your chat with the assistant is saved to your account. Check your connection and try again.",
   "assistantClarificationLabel": "Darb assistant needs clarification",
   "assistantResultLabel": "Darb assistant reply",
   "assistantPassengerMessage": "Your message",

@@ -199,6 +199,8 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
     await tx.parcelBatch.deleteMany();
     await tx.parcel.deleteMany();
     await tx.merchantOrder.deleteMany();
+    await tx.passengerAssistantMessage.deleteMany();
+    await tx.passengerAssistantConversation.deleteMany();
     await tx.passengerRequest.deleteMany();
     await tx.driverRoute.deleteMany();
     await tx.driverProfile.deleteMany();

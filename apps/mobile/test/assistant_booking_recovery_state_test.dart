@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -11,7 +10,6 @@ import 'package:darb_mobile/features/auth/application/auth_controller.dart';
 import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 import 'package:darb_mobile/features/assistant/application/passenger_assistant_controller.dart';
 import 'package:darb_mobile/features/assistant/data/passenger_assistant_repository.dart';
-import 'package:darb_mobile/features/assistant/data/assistant_conversation_storage.dart';
 import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
 import 'package:darb_mobile/features/assistant/presentation/passenger_assistant_screen.dart';
 import 'package:darb_mobile/features/passenger/application/legacy_passenger_request_mutation.dart';
@@ -42,7 +40,8 @@ void main() {
       'late actor A $operation completion cannot publish or persist into actor B',
       () async {
         final delayed = Completer<dynamic>();
-        final storage = _Conversations(
+        final repo = _Delayed(
+          delayed,
           PassengerAssistantState(
             phase: operation == 'selection'
                 ? PassengerAssistantPhase.result
@@ -50,15 +49,14 @@ void main() {
             messages: const [
               PassengerAssistantMessage.passenger('Actor A private message'),
             ],
+            conversationId: 'conversation-A',
             draft: _draft,
             tripOptions: const [_option],
           ),
         );
-        final repo = _Delayed(delayed);
         final container = ProviderContainer(
           overrides: [
             authControllerProvider.overrideWith(_Auth.new),
-            assistantConversationStorageProvider.overrideWithValue(storage),
             passengerAssistantRepositoryProvider.overrideWithValue(repo),
             legacyPassengerRequestMutationProvider.overrideWithValue(
               testBookingMutation(),
@@ -77,6 +75,8 @@ void main() {
             ? controller.selectTrip(_option)
             : controller.submit('A followup', locale: 'en');
         await Future<void>.delayed(Duration.zero);
+        // Actor B's account has no saved chat.
+        repo.conversation = const PassengerAssistantState();
         container.read(authControllerProvider.notifier).state = const AsyncData(
           AuthState.authenticated(
             AuthUser(
@@ -102,7 +102,8 @@ void main() {
             .value!;
         expect(state.messages, isEmpty);
         expect(state.draft, isNull);
-        expect(storage.saved['B']?.messages ?? [], isEmpty);
+        expect(state.conversationId, isNull);
+        expect(repo.links, isEmpty);
       },
     );
   }
@@ -111,11 +112,9 @@ void main() {
     'assistant restart exposes the unresolved selection without supplying its previous draft',
     (tester) async {
       final pending = MemoryBookingStorage();
-      final conversations = _Conversations(
-        PassengerAssistantState(
-          phase: PassengerAssistantPhase.requestReview,
-          draft: _draft,
-        ),
+      var conversation = PassengerAssistantState(
+        phase: PassengerAssistantPhase.requestReview,
+        draft: _draft,
       );
       final keys = <String>[];
       var messageCalls = 0;
@@ -158,14 +157,14 @@ void main() {
       ProviderContainer create() => ProviderContainer(
         overrides: [
           authControllerProvider.overrideWith(_Auth.new),
-          assistantConversationStorageProvider.overrideWithValue(conversations),
           legacyPassengerRequestMutationProvider.overrideWithValue(
             testBookingMutation(storage: pending, actor: () => 'A'),
           ),
           passengerAssistantRepositoryProvider.overrideWith(
-            (ref) => ApiPassengerAssistantRepository(
+            (ref) => _Seeded(
               apiClient: auth.client,
               mutation: ref.watch(legacyPassengerRequestMutationProvider),
+              conversation: () => conversation,
             ),
           ),
         ],
@@ -185,9 +184,9 @@ void main() {
             .single,
       );
       first.dispose();
-      // Only persisted messages survive the ordinary conversation storage. The
-      // original draft and selected option must come from the durable mutation.
-      conversations.initial = const PassengerAssistantState();
+      // Only messages survive in the saved chat. The original draft and
+      // selected option must come from the durable mutation.
+      conversation = const PassengerAssistantState();
       final reopened = create();
       addTearDown(reopened.dispose);
       await reopened.read(authControllerProvider.future);
@@ -297,22 +296,30 @@ class _Auth extends AuthController {
   );
 }
 
-class _Conversations extends AssistantConversationStorage {
-  _Conversations(this.initial) : super(const FlutterSecureStorage());
-  PassengerAssistantState initial;
-  final saved = <String, PassengerAssistantState>{};
+/// Real API repository whose saved chat is supplied by the test.
+class _Seeded extends ApiPassengerAssistantRepository {
+  _Seeded({
+    required super.apiClient,
+    super.mutation,
+    required this.conversation,
+  });
+  final PassengerAssistantState Function() conversation;
   @override
-  Future<PassengerAssistantState> read(String userId) async =>
-      userId == 'A' ? initial : const PassengerAssistantState();
-  @override
-  Future<void> save(String userId, PassengerAssistantState state) async {
-    saved[userId] = state;
-  }
+  Future<PassengerAssistantState> loadConversation() async => conversation();
 }
 
 class _Delayed implements PassengerAssistantRepository {
-  _Delayed(this.response);
+  _Delayed(this.response, this.conversation);
   final Completer<dynamic> response;
+  PassengerAssistantState conversation;
+  final links = <String>[];
+  @override
+  Future<PassengerAssistantState> loadConversation() async => conversation;
+  @override
+  Future<void> linkSavedRequest({
+    required String conversationId,
+    required String requestId,
+  }) async => links.add('$conversationId:$requestId');
   @override
   Future<List<PassengerAssistantTripOption>> searchTrips(
     PassengerAssistantTripDraft draft,

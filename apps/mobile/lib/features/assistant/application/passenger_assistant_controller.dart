@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_error.dart';
 import '../data/passenger_assistant_repository.dart';
 import '../domain/passenger_assistant_models.dart';
-import '../data/assistant_conversation_storage.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../passenger/application/legacy_passenger_request_mutation.dart';
 
@@ -15,7 +14,6 @@ final passengerAssistantControllerProvider =
 
 class PassengerAssistantController
     extends AsyncNotifier<PassengerAssistantState> {
-  Future<void> _saving = Future.value();
   int _generation = 0;
   String? _actor;
   bool _mutationPending = false;
@@ -33,40 +31,15 @@ class PassengerAssistantController
     );
     _actor = userId;
     _mutationPending = false;
-    final storage = ref.read(assistantConversationStorageProvider);
-    final stopSaving = listenSelf((previous, next) {
-      // AsyncLoading can retain a previous account's value. Only a current
-      // actor's newly published data may enter that account's history.
-      if (next is! AsyncData<PassengerAssistantState> ||
-          !_isCurrent(generation, userId)) {
-        return;
-      }
-      final current = next.value;
-      if (userId == null ||
-          (current.messages.isEmpty && current.savedRequestId == null)) {
-        return;
-      }
-      _saving = _saving
-          .then((_) async {
-            if (_isCurrent(generation, userId)) {
-              await storage.save(userId, current);
-            }
-          })
-          .catchError((Object _) {});
-    });
     ref.onDispose(() {
-      stopSaving();
       if (_generation == generation) _generation++;
     });
     if (userId == null) return const PassengerAssistantState();
-    await _saving;
-    if (!_isCurrent(generation, userId)) return const PassengerAssistantState();
-    PassengerAssistantState history;
-    try {
-      history = await storage.read(userId);
-    } catch (_) {
-      history = const PassengerAssistantState();
-    }
+    // The server keeps the chat with each message, so there is nothing to save
+    // here. A failed load surfaces as the screen's retryable error.
+    final history = await ref
+        .read(passengerAssistantRepositoryProvider)
+        .loadConversation();
     if (!_isCurrent(generation, userId)) return const PassengerAssistantState();
     try {
       final pending = await ref
@@ -239,7 +212,21 @@ class PassengerAssistantController
               : null,
         ),
       );
-      await _saving;
+      final conversationId = current.conversationId;
+      if (error is AssistantSavedRequestException &&
+          conversationId != null &&
+          error.requestId != current.savedRequestId) {
+        try {
+          await ref
+              .read(passengerAssistantRepositoryProvider)
+              .linkSavedRequest(
+                conversationId: conversationId,
+                requestId: error.requestId,
+              );
+        } catch (_) {
+          // The request itself is saved; only the chat's pointer to it is lost.
+        }
+      }
       return null;
     }
   }

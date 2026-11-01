@@ -454,6 +454,7 @@ model User {
   community_report_votes           CommunityReportVote[]
   community_report_flags           CommunityReportFlag[]
   trip_ratings                     TripRating[]
+  assistant_conversations          PassengerAssistantConversation[]
 
   @@map("users")
 }
@@ -1089,6 +1090,7 @@ model PassengerRequest {
   trips        Trip[]
   canonical_dispatch CanonicalDemandDispatch?
   canonical_manifest_members CanonicalTripManifestMember[]
+  assistant_conversations PassengerAssistantConversation[]
 
   @@index([route_version_id, requested_departure_from])
   @@unique([id, route_version_id], map: "passenger_requests_route_ownership_key")
@@ -1881,4 +1883,47 @@ model TripRating {
   @@unique([trip_id, passenger_id], map: "trip_ratings_trip_passenger_key")
   @@index([driver_id, passenger_id])
   @@map("trip_ratings")
+}
+
+/// The passenger's chat with the trip assistant, kept so it follows the account
+/// to another device. Holds only what the app shows: the newest messages up to
+/// a fixed cap. The passenger can clear it and it is erased with the account.
+model PassengerAssistantConversation {
+  id               String   @id @default(cuid())
+  passenger_id     String
+  /// The request the passenger saved from this chat, if any.
+  saved_request_id String?
+  /// Sequence the next message gets; orders messages written in the same millisecond.
+  next_sequence    Int      @default(1)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  passenger     User                        @relation(fields: [passenger_id], references: [id], onDelete: Cascade)
+  saved_request PassengerRequest?           @relation(fields: [saved_request_id], references: [id], onDelete: SetNull)
+  messages      PassengerAssistantMessage[]
+
+  @@index([passenger_id, updated_at])
+  @@index([saved_request_id])
+  @@map("passenger_assistant_conversations")
+}
+
+model PassengerAssistantMessage {
+  id              String                        @id @default(cuid())
+  conversation_id String
+  sequence        Int
+  role            PassengerAssistantMessageRole
+  text            String                        @db.VarChar(2000)
+  /// Structured reply the app renders with the text (status, choices, trip draft).
+  payload         Json?
+  created_at      DateTime                      @default(now())
+
+  conversation PassengerAssistantConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@unique([conversation_id, sequence])
+  @@map("passenger_assistant_messages")
+}
+
+enum PassengerAssistantMessageRole {
+  user
+  assistant
 }

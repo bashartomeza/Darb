@@ -659,6 +659,16 @@ class _ControlledAssistantRepository implements PassengerAssistantRepository {
   PassengerAssistantTripOption? selectedOption;
 
   @override
+  Future<PassengerAssistantState> loadConversation() async =>
+      const PassengerAssistantState();
+
+  @override
+  Future<void> linkSavedRequest({
+    required String conversationId,
+    required String requestId,
+  }) async {}
+
+  @override
   Future<List<PassengerAssistantTripOption>> searchTrips(
     PassengerAssistantTripDraft draft,
   ) async {

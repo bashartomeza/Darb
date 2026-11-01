@@ -678,6 +678,8 @@
   "assistantErrorTitle": "تعذّر إكمال الطلب",
   "assistantErrorBody": "لم يتمكن المساعد من إكمال طلبك. حاول مرة أخرى.",
   "assistantUnavailable": "خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.",
+  "assistantHistoryErrorTitle": "تعذّر تحميل المحادثة",
+  "assistantHistoryErrorBody": "محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.",
   "assistantClarificationLabel": "يحتاج مساعد درب إلى توضيح",
   "assistantResultLabel": "رد مساعد درب",
   "assistantPassengerMessage": "رسالتك",

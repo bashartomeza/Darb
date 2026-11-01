@@ -61,6 +61,7 @@ import { createRoutePreviewService, type RoutePreviewService } from "./maps/prev
 import { createRoutePreviewRouter } from "./modules/routePreview.js";
 import { createPassengerAssistantRouter } from "./modules/passengerAssistant.js";
 import type { PassengerAssistantService } from "./services/passengerAssistant.js";
+import type { PassengerAssistantHistoryStore } from "./services/passengerAssistantHistory.js";
 import { createAdminConsentRouter } from "./modules/adminConsents.js";
 import type { ConsentReleaseService } from "./services/consentReleases.js";
 import { adminTripsRouter } from "./modules/adminTrips.js";
@@ -99,6 +100,7 @@ type AppDependencies = {
   legacyDriverOnlineStateService?: LegacyDriverOnlineStateService;
   routePreviewService?: RoutePreviewService;
   passengerAssistantService?: PassengerAssistantService;
+  passengerAssistantHistory?: PassengerAssistantHistoryStore;
   consentReleaseService?: ConsentReleaseService;
   adminMatchingMonitoringService?: MonitoringService;
 };
@@ -196,7 +198,12 @@ export function createApp(
   app.use("/api/v1", passengerRouter);
   app.use(
     "/api/v1",
-    createPassengerAssistantRouter(appConfig, dependencies.passengerAssistantService),
+    createPassengerAssistantRouter(
+      appConfig,
+      dependencies.passengerAssistantService,
+      undefined,
+      dependencies.passengerAssistantHistory,
+    ),
   );
   app.use(
     "/api/v1",

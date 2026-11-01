@@ -22,6 +22,16 @@ final passengerAssistantRepositoryProvider =
     });
 
 abstract interface class PassengerAssistantRepository {
+  /// The account's saved chat, ready for a new question. It is stored on the
+  /// server, so it is the same after a reinstall or on another device.
+  Future<PassengerAssistantState> loadConversation();
+
+  /// Records on the chat the request the passenger saved from it.
+  Future<void> linkSavedRequest({
+    required String conversationId,
+    required String requestId,
+  });
+
   Future<PassengerAssistantReply> ask({
     required String message,
     required String locale,
@@ -58,6 +68,47 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
   final LegacyPassengerRequestMutation? mutation;
   final Map<String, Future<CanonicalMutationReceipt<String>>> _createdRequests =
       {};
+
+  @override
+  Future<PassengerAssistantState> loadConversation() async {
+    final json = await apiClient.getJson('/passenger/assistant/conversation');
+    final conversation = json['conversation'];
+    if (conversation == null) return const PassengerAssistantState();
+    if (conversation is! Map || conversation['messages'] is! List) {
+      throw const FormatException('Invalid assistant conversation');
+    }
+    final messages = (conversation['messages'] as List)
+        .map((item) {
+          if (item is! Map || item['text'] is! String) {
+            throw const FormatException('Invalid assistant message');
+          }
+          return PassengerAssistantMessage(
+            role: switch (item['role']) {
+              'user' => PassengerAssistantMessageRole.passenger,
+              'assistant' => PassengerAssistantMessageRole.assistant,
+              _ => throw const FormatException('Invalid assistant role'),
+            },
+            text: item['text'] as String,
+          );
+        })
+        .toList(growable: false);
+    final id = conversation['id'];
+    final savedRequestId = conversation['saved_request_id'];
+    return PassengerAssistantState(
+      messages: messages,
+      conversationId: id is String ? id : null,
+      savedRequestId: savedRequestId is String ? savedRequestId : null,
+    );
+  }
+
+  @override
+  Future<void> linkSavedRequest({
+    required String conversationId,
+    required String requestId,
+  }) => apiClient.patchJson(
+    '/passenger/assistant/conversation',
+    body: {'conversation_id': conversationId, 'saved_request_id': requestId},
+  );
 
   @override
   Future<PassengerAssistantReply> ask({

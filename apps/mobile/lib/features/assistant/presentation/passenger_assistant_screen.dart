@@ -253,8 +253,8 @@ class _PassengerAssistantScreenState
             child: assistant.when(
               loading: () => const _AssistantLoadingView(),
               error: (_, _) => ErrorStateView(
-                title: l10n.assistantErrorTitle,
-                message: l10n.assistantErrorBody,
+                title: l10n.assistantHistoryErrorTitle,
+                message: l10n.assistantHistoryErrorBody,
                 retryLabel: l10n.retry,
                 onRetry: () =>
                     ref.invalidate(passengerAssistantControllerProvider),
