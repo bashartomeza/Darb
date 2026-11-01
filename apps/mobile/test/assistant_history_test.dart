@@ -64,7 +64,6 @@ void main() {
       ).loadConversation();
 
       expect(paths, ['GET /api/v1/passenger/assistant/conversation']);
-      expect(restored.phase, PassengerAssistantPhase.ready);
       expect(restored.conversationId, 'conversation-1');
       expect(restored.savedRequestId, 'request-1');
       expect(restored.messages.map((message) => message.role), [
@@ -75,6 +74,19 @@ void main() {
         'رحلة إلى بيت لحم',
         'ما موعد الرحلة؟',
       ]);
+    });
+
+    test('reopens a waiting question with its suggestions', () async {
+      final auth = TestAuthenticatedClient(
+        handler: (_) async => _json(_savedChat()),
+      );
+
+      final restored = await ApiPassengerAssistantRepository(
+        apiClient: auth.client,
+      ).loadConversation();
+
+      expect(restored.phase, PassengerAssistantPhase.clarification);
+      expect(restored.suggestions, ['اليوم']);
     });
 
     test('an account without a chat starts empty', () async {

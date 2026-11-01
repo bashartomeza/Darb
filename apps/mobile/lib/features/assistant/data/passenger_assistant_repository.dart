@@ -96,11 +96,43 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
         .toList(growable: false);
     final id = conversation['id'];
     final savedRequestId = conversation['saved_request_id'];
+    final last = _openReply(conversation['messages'] as List);
     return PassengerAssistantState(
+      phase: switch (last?.type) {
+        PassengerAssistantReplyType.clarification =>
+          PassengerAssistantPhase.clarification,
+        PassengerAssistantReplyType.requestReview =>
+          PassengerAssistantPhase.requestReview,
+        _ => PassengerAssistantPhase.ready,
+      },
       messages: messages,
+      suggestions: last?.suggestions ?? const [],
+      draft: last?.draft,
       conversationId: id is String ? id : null,
       savedRequestId: savedRequestId is String ? savedRequestId : null,
     );
+  }
+
+  /// The chat's last reply when it still waits on the passenger (a question
+  /// with suggestions, or a trip to review), rebuilt from its saved payload so
+  /// reopening the chat shows the same choices. Anything else, or a payload
+  /// this build cannot read, reopens as plain text.
+  PassengerAssistantReply? _openReply(List<dynamic> raw) {
+    if (raw.isEmpty) return null;
+    final item = raw.last;
+    if (item is! Map || item['role'] != 'assistant') return null;
+    final payload = item['payload'];
+    if (payload is! Map) return null;
+    try {
+      final reply = PassengerAssistantReply.fromJson({
+        ...payload.map((key, value) => MapEntry(key.toString(), value)),
+        'message': item['text'],
+        'question': item['text'],
+      });
+      return reply.type == PassengerAssistantReplyType.result ? null : reply;
+    } on FormatException {
+      return null;
+    }
   }
 
   @override
