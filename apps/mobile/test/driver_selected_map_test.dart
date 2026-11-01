@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:darb_mobile/core/api/api_client.dart';
 import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
 import 'package:darb_mobile/core/maps/osrm_route_service.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:darb_mobile/features/checkpoints/application/checkpoint_controller.dart';
@@ -167,22 +168,31 @@ void main() {
   });
 
   testWidgets(
-    'a different trip with identical endpoints discards old road state',
+    'a different trip with identical endpoints reuses the road for those ends',
     (tester) async {
-      final pending = Completer<http.Response>();
-      var changed = false;
-      final container = _container(
-        (_) => changed ? pending.future : Future.value(_road(31.8, 35.3)),
-      );
+      var calls = 0;
+      final container = _container((_) async {
+        calls++;
+        return _road(31.8, 35.3);
+      });
       await _pump(tester, container, 'one');
-      changed = true;
       final json = _tripJson('one')..['id'] = 'different';
       (container.read(driverTripControllerProvider('one').notifier) as _Trip)
           .replace(json);
-      await tester.pump();
-      expect(tester.widget<DarbMap>(find.byType(DarbMap)).paths, isEmpty);
-      pending.complete(_road(31.8, 35.3));
       await tester.pumpAndSettle();
+      // The road belongs to the selected ends, not to the trip id: the same
+      // ends show the same road without asking the routing service again.
+      expect(
+        tester
+            .widget<DarbMap>(find.byType(DarbMap))
+            .paths
+            .single
+            .points
+            .first
+            .latitude,
+        31.8,
+      );
+      expect(calls, 1);
       await tester.pumpWidget(const SizedBox.shrink());
       container.dispose();
     },
@@ -247,12 +257,19 @@ void main() {
     container.dispose();
   });
 
-  testWidgets('provider failure never fabricates a straight road', (
-    tester,
-  ) async {
+  testWidgets('provider failure draws the selected ends as a labelled dashed '
+      'line', (tester) async {
     final container = _container((_) async => http.Response('{}', 503));
     await _pump(tester, container, 'one');
-    expect(tester.widget<DarbMap>(find.byType(DarbMap)).paths, isEmpty);
+    final map = tester.widget<DarbMap>(find.byType(DarbMap));
+    final path = map.paths.single;
+    // Only the trip's own two selected points, never invented road geometry.
+    expect(path.dashed, isTrue);
+    expect(path.points, const [GeoPoint(31.8, 35.3), GeoPoint(32.1, 35.5)]);
+    expect(
+      map.notes,
+      contains('Road route unavailable: showing a straight line'),
+    );
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     container.dispose();

@@ -1,6 +1,8 @@
 import '../../canonical_assignments/application/canonical_assignment_controller.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/maps/darb_route_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
@@ -175,6 +177,15 @@ class _PassengerRouteRequestScreenState
                                 }),
                         ),
                       if (route != null) ...[
+                        CanonicalRouteMap(
+                          key: const ValueKey('canonicalRouteMap'),
+                          route: route,
+                          highlightIds: {
+                            _pickupId,
+                            _dropoffId,
+                          }.whereType<String>().toSet(),
+                        ),
+                        const SizedBox(height: AppTokens.spaceMedium),
                         OrderedStopTimeline(
                           stops: route.stops,
                           selectedIds: {

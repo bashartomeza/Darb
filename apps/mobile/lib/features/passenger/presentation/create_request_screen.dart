@@ -11,6 +11,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
+import '../../../core/maps/darb_route_map.dart';
 import '../../../core/widgets/darb_map.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../matching/data/matching_repository.dart';
@@ -217,22 +218,29 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
                 padding: EdgeInsets.zero,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
-                  child: DarbMap(
+                  // Pickup -> destination preview along real roads (dashed and
+                  // labelled when no road route is available).
+                  child: DarbRouteMap(
+                    key: const ValueKey('createRequestMap'),
                     height: 240,
-                    emptyLabel: '',
-                    attributionLabel: '© OpenStreetMap contributors',
-                    markers: [
+                    // A form preview of the two chosen places only; the full
+                    // checkpoint and report layers are on the trip maps.
+                    showOverlay: false,
+                    emptyLabel: l10n.mapSelectRoute,
+                    waypoints: [
                       if (_pickup != null)
-                        DarbMapMarker(
-                          position: GeoPoint(
-                            _pickup!.latitude,
-                            _pickup!.longitude,
-                          ),
-                          icon: Icons.trip_origin_rounded,
-                          color: AppTheme.routeOrigin,
-                          label: _pickup!.label,
-                        ),
+                        GeoPoint(_pickup!.latitude, _pickup!.longitude),
                       if (_destination != null)
+                        GeoPoint(
+                          _destination!.latitude,
+                          _destination!.longitude,
+                        ),
+                    ],
+                    originLabel: _pickup?.label,
+                    destinationLabel: _destination?.label,
+                    // Only the destination chosen so far: show it as the end.
+                    extraMarkers: [
+                      if (_pickup == null && _destination != null)
                         DarbMapMarker(
                           position: GeoPoint(
                             _destination!.latitude,

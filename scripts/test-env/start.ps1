@@ -46,7 +46,7 @@ $adminProcess = Start-Process -FilePath (Get-Command npm.cmd).Source `
   -WorkingDirectory $root -WindowStyle Hidden -PassThru `
   -RedirectStandardOutput (Join-Path $state "admin.log") -RedirectStandardError (Join-Path $state "admin.err.log")
 
-# API: settings from apps/api/.env, pointed at the disposable demo database.
+# API: settings from apps/api/.env, pointed at the chosen database.
 foreach ($key in $values.Keys) { Set-Item -Path "Env:$key" -Value $values[$key] }
 $env:DATABASE_URL = $databaseUrl
 $env:APP_ENV = "demo"
@@ -80,10 +80,52 @@ $env:DRIVER_DOCUMENTS_DIR = Join-Path $state "driver-docs"
 $env:ROUTE_MANAGEMENT_ENABLED = "true"
 $env:MULTI_ROUTE_ENTRY_ENABLED = "true"
 $env:CORS_ORIGINS = "http://localhost:$AdminPort,http://127.0.0.1:$AdminPort"
-$apiProcess = Start-Process -FilePath (Get-Command node).Source `
-  -ArgumentList @((Join-Path $root "scripts/test-env/test-api-server.mjs")) `
-  -WorkingDirectory (Join-Path $root "apps/api") -WindowStyle Hidden -PassThru `
-  -RedirectStandardOutput (Join-Path $state "api.log") -RedirectStandardError (Join-Path $state "api.err.log")
+
+# Checkpoint sources (docs/checkpoints/map-sources.md). Each one is switched on only
+# when its data or key is actually present, and the active ones are printed below.
+$checkpointSources = @()
+# 1. Coordinate feed: only when apps/api/.env provides both its address and key.
+if ($values["CHECKPOINTS_URL"] -and $values["CHECKPOINTS_API_KEY"]) {
+  $env:MAPS_ENABLED = "true"
+  $env:CHECKPOINTS_ENABLED = "true"
+  $checkpointSources += "coordinate feed (CHECKPOINTS_URL)"
+} else {
+  Remove-Item Env:CHECKPOINTS_ENABLED -ErrorAction SilentlyContinue
+}
+# 2. AweenRayeh partner API: names and last-changed times, placed on the map where the
+#    name matches an OpenStreetMap checkpoint. The key stays in Windows Credential Manager
+#    (scripts/provider-key/set-partner-key.ps1) and only reaches the API process.
+Import-Module (Join-Path $root "scripts\provider-key\PartnerKey.psm1") -Force
+$partnerKey = $null
+if (Test-PartnerKey) {
+  $partnerKey = Get-PartnerKey
+  $env:AWEENRAYEH_LIMITED_DIRECTORY_ENABLED = "true"
+  $env:PARTNER_CHECKPOINT_MAP_ENABLED = "true"
+  $checkpointSources += "AweenRayeh partner API (pins from OpenStreetMap name matches)"
+} else {
+  Remove-Item Env:AWEENRAYEH_LIMITED_DIRECTORY_ENABLED, Env:PARTNER_CHECKPOINT_MAP_ENABLED -ErrorAction SilentlyContinue
+}
+# 3. Research directory (names only, never pins): when its local file exists.
+$directoryFile = Join-Path $state "checkpoint-directory.json"
+if (Test-Path -LiteralPath $directoryFile) {
+  $env:CHECKPOINT_DIRECTORY_ENABLED = "true"
+  $env:CHECKPOINT_DIRECTORY_FILE = $directoryFile
+  $checkpointSources += "research directory file (names only, no map pins)"
+} else {
+  Remove-Item Env:CHECKPOINT_DIRECTORY_ENABLED, Env:CHECKPOINT_DIRECTORY_FILE -ErrorAction SilentlyContinue
+}
+
+if ($partnerKey) { $env:AWEENRAYEH_PARTNER_API_KEY = $partnerKey }
+try {
+  $apiProcess = Start-Process -FilePath (Get-Command node).Source `
+    -ArgumentList @((Join-Path $root "scripts/test-env/test-api-server.mjs")) `
+    -WorkingDirectory (Join-Path $root "apps/api") -WindowStyle Hidden -PassThru `
+    -RedirectStandardOutput (Join-Path $state "api.log") -RedirectStandardError (Join-Path $state "api.err.log")
+} finally {
+  # The key was only for the API child; never keep it in this shell.
+  Remove-Item Env:AWEENRAYEH_PARTNER_API_KEY -ErrorAction SilentlyContinue
+  $partnerKey = $null
+}
 
 @{ api = $apiProcess.Id; admin = $adminProcess.Id; apiPort = $ApiPort; adminPort = $AdminPort } | ConvertTo-Json | Set-Content (Join-Path $state "pids.json")
 
@@ -101,4 +143,9 @@ Write-Output "API   http://localhost:$ApiPort   ready: $apiUp"
 Write-Output "Admin http://localhost:$AdminPort   ready: $adminUp"
 Write-Output "One-time sign-up codes appear in: $(Join-Path $state 'otp.txt')"
 Write-Output "Email sign-up codes (normal users) appear in: $(Join-Path $state 'email-codes.txt') - $mailMode"
+if ($checkpointSources.Count -gt 0) {
+  Write-Output "Checkpoint data: $($checkpointSources -join '; ')"
+} else {
+  Write-Output "Checkpoint data: none configured - the maps show 'checkpoint data unavailable' (see docs/checkpoints/map-sources.md)"
+}
 if (-not ($apiUp -and $adminUp)) { Write-Output "Something did not start; run stop.ps1 and check the build and .env."; exit 1 }
