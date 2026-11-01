@@ -57,10 +57,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'تدفقات المسافر والسائق والتاجر ستضاف في مراحل لاحقة.';
 
   @override
-  String get lockedCorridor =>
-      'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم';
-
-  @override
   String get diagnostics => 'تشخيصات تقنية';
 
   @override
@@ -1003,14 +999,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get routeCatalogUnavailable =>
       'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.';
-
-  @override
-  String get corridorPlacesLoadFailed =>
-      'تعذّر تحميل أماكن المسار. تحقّق من الاتصال وأعد المحاولة.';
-
-  @override
-  String get corridorPlacesUnavailable =>
-      'لا توجد أماكن متاحة على هذا المسار حالياً.';
 
   @override
   String get orderRouteLabel => 'المسار';

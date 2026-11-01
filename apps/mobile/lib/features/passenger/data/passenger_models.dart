@@ -112,20 +112,6 @@ Map<String, dynamic> passengerRouteRequestBody({
   'selected_driver_route_id': ?selectedDriverRouteId,
 };
 
-/// A location selected by the passenger on the map picker. Order flows no
-/// longer use it: a request names a predefined route and free-text details.
-class PassengerLocation {
-  const PassengerLocation({
-    required this.label,
-    required this.latitude,
-    required this.longitude,
-  });
-
-  final String label;
-  final double latitude;
-  final double longitude;
-}
-
 /// An active driver availability a passenger could still book.
 ///
 /// Mirrors `GET /passenger/available-departures`.

@@ -57,9 +57,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Passenger, driver, and merchant flows will be added in later milestones.';
 
   @override
-  String get lockedCorridor => 'Hebron / PPU / Bab Al-Zawiya -> Bethlehem';
-
-  @override
   String get diagnostics => 'Technical diagnostics';
 
   @override
@@ -1004,14 +1001,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get routeCatalogUnavailable =>
       'Routes are temporarily unavailable. Refresh before submitting.';
-
-  @override
-  String get corridorPlacesLoadFailed =>
-      'Couldn\'t load the route\'s places. Check your connection and retry.';
-
-  @override
-  String get corridorPlacesUnavailable =>
-      'No places are open on this route right now.';
 
   @override
   String get orderRouteLabel => 'Route';

@@ -188,12 +188,6 @@ abstract class AppLocalizations {
   /// **'تدفقات المسافر والسائق والتاجر ستضاف في مراحل لاحقة.'**
   String get businessFlowsPending;
 
-  /// No description provided for @lockedCorridor.
-  ///
-  /// In ar, this message translates to:
-  /// **'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم'**
-  String get lockedCorridor;
-
   /// No description provided for @diagnostics.
   ///
   /// In ar, this message translates to:
@@ -2005,18 +1999,6 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.'**
   String get routeCatalogUnavailable;
-
-  /// No description provided for @corridorPlacesLoadFailed.
-  ///
-  /// In ar, this message translates to:
-  /// **'تعذّر تحميل أماكن المسار. تحقّق من الاتصال وأعد المحاولة.'**
-  String get corridorPlacesLoadFailed;
-
-  /// No description provided for @corridorPlacesUnavailable.
-  ///
-  /// In ar, this message translates to:
-  /// **'لا توجد أماكن متاحة على هذا المسار حالياً.'**
-  String get corridorPlacesUnavailable;
 
   /// No description provided for @orderRouteLabel.
   ///
