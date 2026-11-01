@@ -14,10 +14,16 @@ class PassengerParcelsNotifier extends AsyncNotifier<List<PassengerParcel>> {
     return ref.read(passengerParcelRepositoryProvider).list();
   }
 
-  Future<void> refresh() async {
-    state = await AsyncValue.guard(
+  /// [background] reads (the periodic foreground sync) never replace the last
+  /// good list with an error; explicit refreshes still surface failures.
+  Future<void> refresh({bool background = false}) async {
+    final previous = state.value;
+    final next = await AsyncValue.guard(
       () => ref.read(passengerParcelRepositoryProvider).list(),
     );
+    state = background && next.hasError && previous != null
+        ? AsyncData(previous)
+        : next;
   }
 
   /// Cancels, then reloads so the list always reflects what the server holds
