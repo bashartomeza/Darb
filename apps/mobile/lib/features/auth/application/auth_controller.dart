@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/storage/retired_local_data.dart';
 import '../../canonical_assignments/application/canonical_assignment_controller.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../driver/application/driver_controller.dart';
@@ -18,6 +20,7 @@ import '../../shared_trips/application/shared_trip_controller.dart';
 import '../../trips/application/passenger_trip_controller.dart';
 import '../data/auth_repository.dart';
 import '../data/session_coordinator.dart';
+import '../data/token_storage.dart';
 import '../domain/auth_models.dart';
 import 'auth_actor_binding.dart';
 
@@ -99,6 +102,7 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   @override
   Future<AuthState> build() async {
+    unawaited(purgeRetiredLocalData(ref.read(secureStorageProvider)));
     ref.read(authenticatedActorBindingProvider).clear();
     _coordinator = ref.read(authSessionCoordinatorProvider);
     _coordinator.setListener(_handleSessionTransition);
