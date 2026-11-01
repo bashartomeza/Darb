@@ -321,6 +321,7 @@ void main() {
     final harness = await _pumpUnsubmittedDriver(tester, [
       'driver_licence',
       'vehicle_registration',
+      'vehicle_photo',
       'national_id',
     ]);
 
@@ -339,6 +340,7 @@ void main() {
     final harness = await _pumpUnsubmittedDriver(tester, [
       'driver_licence',
       'vehicle_registration',
+      'vehicle_photo',
       'national_id',
     ], refuseSubmit: true);
 
