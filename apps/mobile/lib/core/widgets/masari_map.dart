@@ -854,7 +854,7 @@ class _Callout extends StatelessWidget {
                   ),
                   child: const Icon(
                     Icons.local_police_rounded,
-                    color: Color(0xFFFF6B1A),
+                    color: Color(0xFFFA5F12),
                     size: 22,
                   ),
                 ),

@@ -17,7 +17,7 @@ enum MasariCardLevel {
   overlay,
 }
 
-/// The standard Masari surface.
+/// The standard Darb surface: a light-grey rounded card with a thin border.
 ///
 /// [child] and [onTap] keep their original signature: this widget is used in
 /// 80 places, and those call sites continue to work untouched.
@@ -63,7 +63,7 @@ class MasariCard extends StatelessWidget {
 
     return Card(
       elevation: _elevation,
-      color: background ?? AppTheme.surfaceContainerLowest,
+      color: background ?? AppTheme.surfaceContainerLow,
       shadowColor: AppTheme.primary.withValues(alpha: 0.2),
       surfaceTintColor: Colors.transparent,
       margin: EdgeInsets.zero,

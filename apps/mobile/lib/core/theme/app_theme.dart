@@ -3,16 +3,14 @@ import 'package:flutter/material.dart';
 import 'app_tokens.dart';
 import 'semantic_colors.dart';
 
-/// Masari's Material 3 theme.
+/// Darb's Material 3 theme.
 ///
-/// Masari's Material 3 theme.
-///
-/// The supplied task UI reference was used as the visual source for the
-/// passenger request/matching/trip flows, driver request/trip flows, and
-/// merchant shipment/batching/tracking flows. Its five anchor colours are
-/// retained exactly while the existing bundled Arabic font is preserved for
-/// offline rendering. Shared Material components stay in one theme so the
-/// task screens do not need a second parallel styling system.
+/// The visual source is the Darb brand kit in `brand/darb/` (README plus the
+/// login, new-trip, available-rides and confirm-booking references): a white
+/// page, near-black ink, light-grey rounded cards with a thin border, and one
+/// orange accent for every primary action. The bundled IBM Plex Sans Arabic
+/// font is kept so Arabic renders offline. Shared Material components stay in
+/// one theme so feature screens do not need a second parallel styling system.
 class AppTheme {
   const AppTheme._();
 
@@ -20,52 +18,77 @@ class AppTheme {
   static const fontFamily = 'IBMPlexSansArabic';
 
   // ---------------------------------------------------------------------------
-  // Masari reference palette — aligned with the supplied task UI reference.
-  // The five anchor colours are the exact swatches from the reference:
-  // #2F4A3A, #7A8F5A, #E6D2B3, #C66A3D, #8A3F2A.
+  // Darb palette (brand/darb/README.md).
+  //
+  // Contrast: white on the brand orange #FA5F12 is about 3.1:1, which passes
+  // WCAG AA only for large text. Filled buttons therefore use a 19px bold
+  // label. Orange *text* on white (links, selected labels) would fail, so it
+  // uses [primaryText], a darker orange at about 5.2:1.
   // ---------------------------------------------------------------------------
 
-  /// Deep green — primary navigation and main actions.
-  static const primary = Color(0xFF293D30);
+  /// Brand orange: filled actions, selected navigation, focus ring.
+  static const primary = Color(0xFFFA5F12);
   static const onPrimary = Color(0xFFFFFFFF);
-  static const primaryContainer = Color(0xFFF0DDBB);
-  static const onPrimaryContainer = Color(0xFF2F4A3A);
+  static const primaryContainer = Color(0xFFFFE8DC);
+  static const onPrimaryContainer = Color(0xFF7A2A05);
 
-  /// Olive — secondary controls and active/supporting states.
-  static const secondary = Color(0xFF7A8F5A);
+  /// Orange safe for small text on white or on the grey card (AA, ~5.2:1).
+  static const primaryText = Color(0xFFC2410C);
+
+  /// Secondary controls (outlined/text buttons, progress) use the accessible
+  /// orange so they read as part of the same family.
+  static const secondary = primaryText;
   static const onSecondary = Color(0xFFFFFFFF);
-  static const secondaryContainer = Color(0xFFEAF0DD);
-  static const onSecondaryContainer = Color(0xFF40512D);
+  static const secondaryContainer = Color(0xFFFFEFE6);
+  static const onSecondaryContainer = Color(0xFF7A2A05);
 
-  /// Terracotta — highlights, progress and delivery emphasis.
-  static const tertiary = Color(0xFFC45D30);
+  /// Highlights share the brand orange.
+  static const tertiary = primary;
   static const onTertiary = Color(0xFFFFFFFF);
-  static const tertiaryContainer = Color(0xFFF2DED1);
-  static const onTertiaryContainer = Color(0xFF6D3420);
+  static const tertiaryContainer = Color(0xFFFFE8DC);
+  static const onTertiaryContainer = Color(0xFF7A2A05);
 
-  static const background = Color(0xFFF7F4EA);
-  static const surface = Color(0xFFFFFEFA);
-  static const surfaceDim = Color(0xFFD9D0C2);
+  static const background = Color(0xFFFFFFFF);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceDim = Color(0xFFE0E0E0);
   static const surfaceContainerLowest = Color(0xFFFFFFFF);
-  static const surfaceContainerLow = Color(0xFFF5EFE6);
-  static const surfaceContainer = Color(0xFFEFE6DA);
-  static const surfaceContainerHigh = Color(0xFFE6D2B3);
-  static const surfaceContainerHighest = Color(0xFFD8C2A1);
 
-  static const onSurface = Color(0xFF243129);
-  static const onSurfaceVariant = Color(0xFF5B625D);
-  static const inverseSurface = Color(0xFF243129);
-  static const inverseOnSurface = Color(0xFFFFFCF8);
-  static const inversePrimary = Color(0xFFB8C7A9);
+  /// Light-grey card fill (#F6F6F6), used with a thin [outlineVariant] border.
+  static const surfaceContainerLow = Color(0xFFF6F6F6);
+  static const surfaceContainer = Color(0xFFF3F3F3);
+  static const surfaceContainerHigh = Color(0xFFEDEDED);
+  static const surfaceContainerHighest = Color(0xFFE0E0E0);
 
-  static const outline = Color(0xFF9C968C);
-  static const outlineVariant = Color(0xFFE3E1D7);
+  /// Near-black ink (#1C1A1A).
+  static const onSurface = Color(0xFF1C1A1A);
 
-  /// Dark terracotta used for destructive/failure emphasis.
-  static const darkTerracotta = Color(0xFF8A3F2A);
+  /// Grey body text (#707070, about 5:1 on white).
+  static const onSurfaceVariant = Color(0xFF707070);
+  static const inverseSurface = Color(0xFF1C1A1A);
+  static const inverseOnSurface = Color(0xFFFFFFFF);
+  static const inversePrimary = Color(0xFFFFB590);
 
-  /// Legacy alias retained for existing call sites.
-  static const deepGreen = primary;
+  /// Hint grey (#AEAEAE): placeholder icons and decoration. Not for text that
+  /// must be read; use [onSurfaceVariant] for that.
+  static const hint = Color(0xFFAEAEAE);
+  static const outline = hint;
+  static const outlineVariant = Color(0xFFE0E0E0);
+
+  /// Price green (#3A7C07).
+  static const price = Color(0xFF3A7C07);
+
+  /// Route origin dot.
+  static const routeOrigin = Color(0xFF5A6B3A);
+
+  /// Route destination dot (#EB3223).
+  static const routeDestination = Color(0xFFEB3223);
+
+  /// Dark red used for destructive/failure emphasis.
+  static const darkTerracotta = Color(0xFF9B2A1B);
+
+  /// Legacy alias for headings that were set in the old brand colour. Uses the
+  /// accessible orange because it is always applied to text.
+  static const deepGreen = primaryText;
 
   static const colorScheme = ColorScheme(
     brightness: Brightness.light,
@@ -103,9 +126,8 @@ class AppTheme {
   );
 
   // ---------------------------------------------------------------------------
-  // Type scale — adapted from the supplied reference's mobile hierarchy.
-  // Arabic text keeps the existing bundled IBM Plex Sans Arabic family so the
-  // app still renders without downloading fonts at runtime.
+  // Type scale. Arabic text keeps the bundled IBM Plex Sans Arabic family so
+  // the app still renders without downloading fonts at runtime.
   // ---------------------------------------------------------------------------
 
   static const textTheme = TextTheme(
@@ -191,6 +213,12 @@ class AppTheme {
       borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
     );
 
+    OutlineInputBorder fieldBorder(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
+          borderSide: BorderSide(color: color, width: width),
+        );
+
     return ThemeData(
       useMaterial3: true,
       fontFamily: fontFamily,
@@ -198,10 +226,10 @@ class AppTheme {
       scaffoldBackgroundColor: background,
       textTheme: textTheme.apply(bodyColor: onSurface, displayColor: onSurface),
 
-      // Level 1: a 1px stroke rather than a heavy shadow, so cards stay flat
-      // and legible in bright outdoor light. §G.2 card — `md` radius.
+      // Light-grey card with a thin border and no shadow, as in the Darb
+      // references.
       cardTheme: CardThemeData(
-        color: surfaceContainerLowest,
+        color: surfaceContainerLow,
         elevation: AppTokens.elevationBase,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -210,57 +238,60 @@ class AppTheme {
         ),
       ),
 
-      // App chrome stays quiet in the reference: a warm surface with a thin
-      // divider so the page action remains the visual focus.
+      // White app bar, ink title, no divider: the page content is the focus.
       appBarTheme: const AppBarTheme(
         backgroundColor: background,
+        surfaceTintColor: Colors.transparent,
         foregroundColor: onSurface,
         elevation: AppTokens.elevationBase,
-        scrolledUnderElevation: AppTokens.elevationCard,
+        scrolledUnderElevation: AppTokens.elevationBase,
         centerTitle: true,
         titleTextStyle: TextStyle(
           fontFamily: fontFamily,
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w700,
           color: onSurface,
         ),
       ),
 
-      // Shared buttons use the compact 8px radius visible in the reference.
+      // Large orange filled buttons. White on #FA5F12 is ~3.1:1, so the label
+      // is 19px bold (WCAG "large text", AA 3:1).
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: tertiary,
+          backgroundColor: primary,
           foregroundColor: onPrimary,
+          disabledBackgroundColor: surfaceContainerHighest,
+          disabledForegroundColor: onSurfaceVariant,
           minimumSize: const Size.fromHeight(AppTokens.buttonHeight),
           shape: buttonShape,
           textStyle: const TextStyle(
             fontFamily: fontFamily,
-            fontSize: 15,
+            fontSize: 19,
             fontWeight: FontWeight.w700,
           ),
         ),
       ),
 
-      // Outlined controls use the olive secondary colour to stay distinct from
-      // the green primary CTA.
+      // Outlined buttons: white with a thin grey border and ink label (the
+      // Google button in the reference).
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: secondary,
+          foregroundColor: onSurface,
           minimumSize: const Size(0, AppTokens.minTouchTarget),
-          side: const BorderSide(color: secondary, width: 1.5),
+          side: const BorderSide(color: outlineVariant),
           shape: buttonShape,
           textStyle: const TextStyle(
             fontFamily: fontFamily,
             fontSize: 15,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
 
-      // Low-emphasis text actions use the olive secondary colour.
+      // Low-emphasis text actions use the accessible orange.
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: secondary,
+          foregroundColor: primaryText,
           minimumSize: const Size(0, AppTokens.minTouchTarget),
           shape: buttonShape,
           textStyle: const TextStyle(
@@ -271,14 +302,12 @@ class AppTheme {
         ),
       ),
 
-      // A floating action button uses the same primary action treatment.
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: SemanticColors.action,
         foregroundColor: SemanticColors.onAction,
       ),
 
-      // Reference fields use a light surface, thin outline and a terracotta
-      // focus accent. Arabic alignment remains controlled by ambient RTL.
+      // Rounded white fields with a thin outline; orange focus ring.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceContainerLowest,
@@ -286,39 +315,26 @@ class AppTheme {
           horizontal: AppTokens.spaceMedium,
           vertical: AppTokens.spaceMedium,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: outlineVariant),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: SemanticColors.action, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: SemanticColors.error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: SemanticColors.error, width: 2),
-        ),
+        border: fieldBorder(outlineVariant),
+        enabledBorder: fieldBorder(outlineVariant),
+        focusedBorder: fieldBorder(primary, 2),
+        errorBorder: fieldBorder(SemanticColors.error),
+        focusedErrorBorder: fieldBorder(SemanticColors.error, 2),
         hintStyle: const TextStyle(color: onSurfaceVariant),
+        prefixIconColor: hint,
+        suffixIconColor: hint,
       ),
 
-      // Pill shape keeps status chips visually distinct from buttons.
+      // Pill shape keeps chips visually distinct from buttons.
       chipTheme: ChipThemeData(
-        backgroundColor: surfaceContainerHigh,
+        backgroundColor: surfaceContainerLow,
         labelStyle: const TextStyle(
           fontFamily: fontFamily,
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: onSurfaceVariant,
+          color: onSurface,
         ),
-        side: BorderSide.none,
+        side: const BorderSide(color: outlineVariant),
         shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(
           horizontal: AppTokens.spaceSmall + AppTokens.spaceExtraSmall,
@@ -326,10 +342,9 @@ class AppTheme {
         ),
       ),
 
-      // Level 3 — pulls focus from the map behind it. Reference sheets use a
-      // compact 12px top radius rather than a pill-like corner.
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
         elevation: AppTokens.elevationOverlay,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
@@ -339,9 +354,9 @@ class AppTheme {
         showDragHandle: true,
       ),
 
-      // §G.19 dialog — `md` radius, `surface-container-highest` background.
       dialogTheme: const DialogThemeData(
-        backgroundColor: surfaceContainerHighest,
+        backgroundColor: surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
         elevation: AppTokens.elevationOverlay,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(
@@ -351,18 +366,21 @@ class AppTheme {
       ),
 
       // Labels are mandatory: icon-only navigation is ambiguous in Arabic.
-      // The active item uses the light beige/olive treatment from the
-      // reference.
+      // The selected item is orange with no pill indicator, as in the
+      // references. The selected label uses the accessible orange.
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surfaceContainerLowest,
-        indicatorColor: primaryContainer,
-        elevation: AppTokens.elevationCard,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: Colors.transparent,
+        elevation: AppTokens.elevationBase,
         height: 72,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             size: AppTokens.navIconSize,
-            color: states.contains(WidgetState.selected) ? primary : outline,
+            color: states.contains(WidgetState.selected)
+                ? primary
+                : onSurfaceVariant,
           ),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
@@ -372,7 +390,9 @@ class AppTheme {
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w600
                 : FontWeight.w500,
-            color: states.contains(WidgetState.selected) ? primary : outline,
+            color: states.contains(WidgetState.selected)
+                ? primaryText
+                : onSurfaceVariant,
           ),
         ),
       ),
@@ -383,7 +403,6 @@ class AppTheme {
         space: AppTokens.spaceMedium,
       ),
 
-      // Toasts remain compact and quiet.
       snackBarTheme: SnackBarThemeData(
         backgroundColor: inverseSurface,
         contentTextStyle: const TextStyle(
@@ -396,10 +415,8 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
       ),
 
-      // Waiting is deliberately subdued; action colour is reserved for the
-      // next thing the user can actually do.
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: secondary,
+        color: primary,
         linearTrackColor: surfaceContainerHigh,
         circularTrackColor: surfaceContainerHigh,
       ),

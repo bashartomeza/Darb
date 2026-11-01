@@ -130,7 +130,7 @@ class _TripRatingPromptState extends ConsumerState<TripRatingPrompt> {
                     star <= _stars
                         ? Icons.star_rounded
                         : Icons.star_border_rounded,
-                    color: const Color(0xFFC66A3D),
+                    color: const Color(0xFFFA5F12),
                   ),
                 ),
             ],

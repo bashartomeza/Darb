@@ -1,6 +1,6 @@
-/// Masari design tokens.
+/// Darb design tokens.
 ///
-/// Shared mobile layout tokens used by the supplied Masari reference flows:
+/// Shared mobile layout tokens used by the Darb reference flows:
 /// spacing, radii, elevation, and touch targets.
 ///
 /// [spaceSmall], [spaceMedium] and [spaceLarge] predate the design system but
@@ -49,11 +49,11 @@ class AppTokens {
   /// chat component's CSS.
   static const radiusSmall = 4.0;
 
-  /// 8px — `sm`. Fields, banners, skeletons, OTP boxes.
-  static const radiusDefault = 12.0;
+  /// 16px. Buttons, fields, banners, skeletons, OTP boxes.
+  static const radiusDefault = 16.0;
 
-  /// 12px — `md`. Cards and dialogs.
-  static const radiusMedium = 18.0;
+  /// 20px. Cards and dialogs.
+  static const radiusMedium = 20.0;
 
   /// 16px — chat bubble corners (`.ms-bubble`), given directly by the chat
   /// component's CSS rather than the named sm/md/lg/full scale.
@@ -77,7 +77,7 @@ class AppTokens {
   static const minTouchTarget = 48.0;
 
   /// Standard full-width button height.
-  static const buttonHeight = 52.0;
+  static const buttonHeight = 54.0;
 
   /// Edge of a bottom navigation bar icon.
   static const navIconSize = 24.0;
