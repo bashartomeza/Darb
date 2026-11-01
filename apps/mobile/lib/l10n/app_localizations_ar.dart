@@ -2801,4 +2801,81 @@ class AppLocalizationsAr extends AppLocalizations {
   String communityVoteCounts(int up, int down) {
     return '$up تأييد، $down اعتراض';
   }
+
+  @override
+  String get mapStraightLineNote => 'تعذر حساب الطريق: يظهر خط مستقيم';
+
+  @override
+  String get mapCheckpointsUnavailable => 'بيانات الحواجز غير متوفرة';
+
+  @override
+  String get mapCheckpointsLoadFailed => 'تعذر تحميل الحواجز';
+
+  @override
+  String get checkpointOfficialUnknown => 'الحالة الرسمية: غير منشورة';
+
+  @override
+  String checkpointEnteringChanged(String time) {
+    return 'دخول: آخر تغيير $time';
+  }
+
+  @override
+  String checkpointLeavingChanged(String time) {
+    return 'خروج: آخر تغيير $time';
+  }
+
+  @override
+  String checkpointCommunitySays(String status) {
+    return 'المجتمع يقول: $status (غير مؤكد)';
+  }
+
+  @override
+  String get communityStatusOpen => 'مفتوح';
+
+  @override
+  String get communityStatusClosed => 'مغلق';
+
+  @override
+  String get communityStatusOutdated => 'قد تكون الحالة قديمة';
+
+  @override
+  String get checkpointPositionOsm => 'الموقع: © مساهمو OpenStreetMap (ODbL)';
+
+  @override
+  String get checkpointsUnplacedTitle => 'حواجز بلا موقع على الخريطة';
+
+  @override
+  String get checkpointsUnplacedBody =>
+      'يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.';
+
+  @override
+  String get communityPickLocation => 'اضغط على الخريطة لتحديد المكان';
+
+  @override
+  String get communityUseMyLocation => 'استخدام موقعي الحالي';
+
+  @override
+  String get communityLocationRequired =>
+      'حدد المكان على الخريطة لهذا النوع من البلاغات.';
+
+  @override
+  String get communityLocationOptional => 'الموقع (اختياري)';
+
+  @override
+  String get communityLocationOutside => 'هذا المكان خارج منطقة خدمة درب.';
+
+  @override
+  String get communityLocationUnavailable => 'موقعك الحالي غير متاح.';
+
+  @override
+  String get communityLocationSet => 'تم تحديد المكان على الخريطة';
+
+  @override
+  String get communityClearLocation => 'إزالة المكان';
+
+  @override
+  String get mapRouteLabel => 'المسار';
+
+  @override
+  String get merchantOrderMapTitle => 'مسار الطلب';
 }

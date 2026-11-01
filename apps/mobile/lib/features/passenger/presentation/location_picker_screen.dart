@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:darb_mobile/features/passenger/data/passenger_models.dart';
 
+import 'package:darb_mobile/l10n/app_localizations.dart';
+
 import '../../../core/geo/reverse_geocoder.dart';
+import '../../../core/maps/service_area.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/darb_map.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
@@ -77,7 +80,12 @@ class _PassengerLocationPickerScreenState
               child: DarbMap(
                 height: 430,
                 emptyLabel: 'اختاري موقعًا من الخريطة',
-                attributionLabel: '© OpenStreetMap contributors',
+                attributionLabel:
+                    Localizations.of<AppLocalizations>(
+                      context,
+                      AppLocalizations,
+                    )?.mapAttribution ??
+                    '© OpenStreetMap contributors',
                 markers: [
                   if (point != null)
                     DarbMapMarker(
@@ -269,6 +277,18 @@ class _PassengerLocationPickerScreenState
   static const fallbackLabel = PassengerLocationPickerFallback.label;
 
   void _onMapTap(LatLng point) {
+    // A place outside the service area can never be a Darb pickup/drop-off.
+    if (!DarbServiceArea.containsLatLng(point)) {
+      setState(() {
+        _error =
+            Localizations.of<AppLocalizations>(
+              context,
+              AppLocalizations,
+            )?.communityLocationOutside ??
+            'هذا المكان خارج منطقة خدمة درب.';
+      });
+      return;
+    }
     final token = ++_lookupToken;
     setState(() {
       _selectedPoint = point;

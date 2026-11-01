@@ -76,11 +76,17 @@ class MapTileCache implements MapCachingProvider {
     if (_servedFromCache) _showingSavedMap.value = true;
   }
 
+  /// flutter_map's disk cache does not exist on the web (the browser's own
+  /// HTTP cache serves tiles there), so the web build never opens it.
+  @visibleForTesting
+  static bool runningOnWeb = kIsWeb;
+
   @override
-  bool get isSupported => _cache.isSupported;
+  bool get isSupported => !runningOnWeb && _cache.isSupported;
 
   @override
   Future<CachedMapTile?> getTile(String url) async {
+    if (!isSupported) return null;
     final tile = await _cache.getTile(url);
     if (tile == null) return null;
     _servedFromCache = true;
@@ -105,6 +111,7 @@ class MapTileCache implements MapCachingProvider {
     // A tile reached us from the server: the connection is back.
     _lastFailure = null;
     _showingSavedMap.value = false;
+    if (!isSupported) return Future.value();
     return _cache.putTile(url: url, metadata: metadata, bytes: bytes);
   }
 
@@ -115,6 +122,7 @@ class MapTileCache implements MapCachingProvider {
     _servedFromCache = false;
     _lastFailure = null;
     _showingSavedMap.value = false;
+    if (runningOnWeb) return;
     if (inner != null) {
       await inner.destroy(deleteCache: true);
     } else {

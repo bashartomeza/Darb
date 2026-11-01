@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../delivery_handover/delivery_handover_strings.dart';
 import '../../delivery_handover/presentation/receiver_confirmation_dialog.dart';
 import '../../../core/widgets/foreground_refresh.dart';
@@ -15,12 +17,17 @@ import 'package:darb_mobile/features/trips/data/trip_models.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/maps/darb_route_map.dart';
 import '../../../core/maps/osrm_route_service.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_map.dart';
+import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../checkpoints/application/checkpoint_controller.dart';
+import '../../community_reports/application/community_reports_controller.dart';
+import '../../community_reports/data/community_report_models.dart';
+import '../../community_reports/presentation/community_reports_section.dart';
 import '../../checkpoints/domain/checkpoint_models.dart';
 import '../../checkpoints/presentation/checkpoint_sheet.dart';
 import '../../checkpoint_directory/presentation/checkpoint_directory_screen.dart';
@@ -89,9 +96,15 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
     final tripState = ref.watch(driverTripControllerProvider(widget.tripId));
 
     return ForegroundRefresh(
-      refresh: () => ref
-          .read(driverTripControllerProvider(widget.tripId).notifier)
-          .refresh(),
+      refresh: () {
+        // Other users' new reports reach the driver's map while it is open;
+        // a slow reports call never holds back the trip itself.
+        final trip = ref
+            .read(driverTripControllerProvider(widget.tripId).notifier)
+            .refresh();
+        pollCommunityReports(ref);
+        return trip;
+      },
       child: Scaffold(
         key: const ValueKey('driverTrip'),
         backgroundColor: background,
@@ -1502,96 +1515,30 @@ class _DriverMapSection extends ConsumerStatefulWidget {
 }
 
 class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
-  late Future<OsrmRouteResult> _routeFuture;
-
-  Future<OsrmRouteResult>? _remainingRouteFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _routeFuture = _loadRoute();
-    _remainingRouteFuture = _loadRemainingRoute();
-  }
-
-  @override
-  void didUpdateWidget(covariant _DriverMapSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    final routeChanged =
-        oldWidget.trip.id != widget.trip.id ||
-        oldWidget.trip.mapOrigin != widget.trip.mapOrigin ||
-        oldWidget.trip.mapDestination != widget.trip.mapDestination;
-
-    final oldLocation = oldWidget.location;
-    final newLocation = widget.location;
-
-    // Only re-request the remaining route once the driver moved ~100 m;
-    // every GPS tick would otherwise hit the routing service.
-    final locationChanged =
-        (oldLocation == null) != (newLocation == null) ||
-        (oldLocation != null &&
-            newLocation != null &&
-            (routeCoordKey(oldLocation.lat) != routeCoordKey(newLocation.lat) ||
-                routeCoordKey(oldLocation.lng) !=
-                    routeCoordKey(newLocation.lng)));
-
-    if (routeChanged) {
-      _routeFuture = _loadRoute();
-    }
-
-    if (routeChanged || locationChanged) {
-      _remainingRouteFuture = _loadRemainingRoute();
-    }
-  }
-
-  // Checkpoint markers only depend on the snapshot, so rebuild them only
-  // when it changes (not on every GPS tick / setState).
+  // Checkpoint markers only depend on the snapshot and the reports, so rebuild
+  // them only when those change (not on every GPS tick / refresh).
   CheckpointSnapshot? _markerSnapshot;
+  List<CommunityReport>? _markerReports;
   List<DarbMapMarker> _checkpointMarkers = const [];
 
-  List<DarbMapMarker> _markersFor(CheckpointSnapshot snapshot) {
-    if (!identical(_markerSnapshot, snapshot)) {
+  List<DarbMapMarker> _markersFor(
+    CheckpointSnapshot snapshot,
+    List<CommunityReport> reports,
+  ) {
+    if (!identical(_markerSnapshot, snapshot) ||
+        !identical(_markerReports, reports)) {
       _markerSnapshot = snapshot;
-      _checkpointMarkers = checkpointTrafficMarkers(snapshot.checkpoints);
+      _markerReports = reports;
+      _checkpointMarkers = [
+        ...checkpointTrafficMarkers(
+          snapshot.checkpoints,
+          l10n: widget.l10n,
+          community: communityCheckpointNotes(snapshot.checkpoints, reports),
+        ),
+        ...communityReportMarkers(widget.l10n, reports),
+      ];
     }
     return _checkpointMarkers;
-  }
-
-  // ----------------------------------------------------------
-  // FULL ROUTE
-  // ----------------------------------------------------------
-
-  Future<OsrmRouteResult> _loadRoute() async {
-    final start = widget.trip.mapOrigin;
-    final end = widget.trip.mapDestination;
-    if (start == null || end == null) return _emptyRoute;
-    return _requestRoute(
-      start: LatLng(start.latitude, start.longitude),
-      end: LatLng(end.latitude, end.longitude),
-    );
-  }
-
-  Future<OsrmRouteResult>? _loadRemainingRoute() {
-    final location = widget.location;
-    final destination = widget.trip.mapDestination;
-    if (location == null || destination == null) return null;
-    return _requestRoute(
-      start: LatLng(location.lat, location.lng),
-      end: LatLng(destination.latitude, destination.longitude),
-    );
-  }
-
-  Future<OsrmRouteResult> _requestRoute({
-    required LatLng start,
-    required LatLng end,
-  }) async {
-    try {
-      return await ref
-          .read(osrmRouteServiceProvider)
-          .getRoute(start: start, end: end);
-    } catch (_) {
-      return _emptyRoute;
-    }
   }
 
   // ----------------------------------------------------------
@@ -1602,11 +1549,33 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
   Widget build(BuildContext context) {
     final origin = widget.trip.mapOrigin;
     final destination = widget.trip.mapDestination;
+    final location = widget.location;
+
+    // The road between this trip's own selected ends: the passenger's pickup
+    // and destination, or the merchant parcel's pickup and drop-off.
+    final road = origin == null || destination == null
+        ? null
+        : watchRoadRoute(ref, [origin, destination]);
+    // What is left from the vehicle to the destination (rounded to ~110 m, so
+    // GPS jitter does not re-route).
+    final remaining = location == null || destination == null
+        ? null
+        : watchRoadRoute(ref, [
+            GeoPoint(location.lat, location.lng),
+            destination,
+          ]);
+
+    final reports = watchCommunityReportsForMap(ref);
+    final checkpointsAvailable = ref
+        .watch(mobileCapabilitiesProvider)
+        .value
+        ?.checkpointsAvailable;
+
     final markers = <DarbMapMarker>[
       // --------------------------------------------------------
-      // CHECKPOINTS
+      // CHECKPOINTS AND COMMUNITY REPORTS
       // --------------------------------------------------------
-      ..._markersFor(widget.snapshot),
+      ..._markersFor(widget.snapshot, reports),
 
       // --------------------------------------------------------
       // ORIGIN
@@ -1639,105 +1608,88 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
       // --------------------------------------------------------
       // DRIVER / VEHICLE
       // ----------------------------------------------------------
-      if (widget.location != null)
+      if (location != null)
         DarbMapMarker(
-          position: GeoPoint(widget.location!.lat, widget.location!.lng),
+          position: GeoPoint(location.lat, location.lng),
           icon: Icons.local_shipping_rounded,
           color: orange,
+          type: DarbMapMarkerType.driver,
           label: widget.l10n.mapYourLocation,
           size: 50,
         ),
     ];
 
-    return FutureBuilder<OsrmRouteResult>(
-      key: ObjectKey(_routeFuture),
-      future: _routeFuture,
-      builder: (context, snapshot) {
-        final routedPoints = snapshot.data?.points
-            .map((point) => GeoPoint(point.latitude, point.longitude))
-            .toList(growable: false);
+    final remainingResult =
+        remaining != null &&
+            remaining.routed &&
+            (remaining.durationSeconds ?? 0) > 0 &&
+            (remaining.distanceMeters ?? 0) > 0
+        ? OsrmRouteResult(
+            points: const [],
+            durationSeconds: remaining.durationSeconds!,
+            distanceMeters: remaining.distanceMeters!,
+          )
+        : null;
 
-        final pathPoints = routedPoints != null && routedPoints.length >= 2
-            ? routedPoints
-            : const <GeoPoint>[];
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return SizedBox(
-              width: constraints.maxWidth,
-              height: constraints.maxHeight,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // ------------------------------------------------
-                  // MAP
-                  // ------------------------------------------------
-                  Positioned.fill(
-                    child: DarbMap(
-                      height: constraints.maxHeight,
-                      emptyLabel: widget.l10n.mapRouteMissingCoordinates,
-                      attributionLabel: widget.l10n.mapAttribution,
-                      // Keep the zoom buttons clear of this screen's top buttons.
-                      controlsTop: 100,
-                      paths: [
-                        if (pathPoints.length >= 2)
-                          DarbMapPath(
-                            points: pathPoints,
-                            color: orange,
-                            width: 7,
-                          ),
-                      ],
-                      markers: markers,
-                      // Checkpoints appear on the map and in the bottom panel.
-                      banner: origin == null || destination == null
-                          ? Text(widget.l10n.mapRouteMissingCoordinates)
-                          : snapshot.connectionState == ConnectionState.done &&
-                                pathPoints.isEmpty
-                          ? Text(widget.l10n.requestFailed)
-                          : null,
-                    ),
-                  ),
-
-                  // ------------------------------------------------
-                  // MAP LEGEND
-                  // ------------------------------------------------
-                  Positioned(
-                    left: 14,
-                    bottom: 255,
-                    child: _MapLegend(
-                      l10n: widget.l10n,
-                      hasDriverLocation: widget.location != null,
-                    ),
-                  ),
-
-                  // ------------------------------------------------
-                  // REMAINING ROUTE
-                  // ------------------------------------------------
-                  if (_remainingRouteFuture != null)
-                    Positioned(
-                      left: 14,
-                      right: 14,
-                      bottom: 192,
-                      child: FutureBuilder<OsrmRouteResult>(
-                        key: ObjectKey(_remainingRouteFuture),
-                        future: _remainingRouteFuture,
-                        builder: (context, routeSnapshot) {
-                          final result = routeSnapshot.data;
-
-                          if (result == null ||
-                              result.durationSeconds <= 0 ||
-                              result.distanceMeters <= 0) {
-                            return const SizedBox.shrink();
-                          }
-
-                          return _RemainingRouteCard(result: result);
-                        },
-                      ),
-                    ),
-                ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // ------------------------------------------------
+              // MAP
+              // ------------------------------------------------
+              Positioned.fill(
+                child: DarbMap(
+                  height: constraints.maxHeight,
+                  emptyLabel: widget.l10n.mapRouteMissingCoordinates,
+                  attributionLabel: widget.l10n.mapAttribution,
+                  // Keep the zoom buttons clear of this screen's top buttons.
+                  controlsTop: 100,
+                  paths: roadRoutePaths(road, color: orange, width: 7),
+                  markers: markers,
+                  notes: [
+                    ...roadRouteNotes(widget.l10n, road),
+                    if (checkpointsAvailable == false)
+                      widget.l10n.mapCheckpointsUnavailable
+                    else if (widget.checkpointsError &&
+                        widget.snapshot.checkpoints.isEmpty)
+                      widget.l10n.mapCheckpointsLoadFailed,
+                  ],
+                  // Checkpoints appear on the map and in the bottom panel.
+                  banner: origin == null || destination == null
+                      ? Text(widget.l10n.mapRouteMissingCoordinates)
+                      : null,
+                ),
               ),
-            );
-          },
+
+              // ------------------------------------------------
+              // MAP LEGEND
+              // ------------------------------------------------
+              Positioned(
+                left: 14,
+                bottom: 255,
+                child: _MapLegend(
+                  l10n: widget.l10n,
+                  hasDriverLocation: location != null,
+                ),
+              ),
+
+              // ------------------------------------------------
+              // REMAINING ROUTE
+              // ------------------------------------------------
+              if (remainingResult != null)
+                Positioned(
+                  left: 14,
+                  right: 14,
+                  bottom: 192,
+                  child: _RemainingRouteCard(result: remainingResult),
+                ),
+            ],
+          ),
         );
       },
     );
@@ -2518,9 +2470,3 @@ class _BottomSheetHandle extends StatelessWidget {
     );
   }
 }
-
-const _emptyRoute = OsrmRouteResult(
-  points: [],
-  durationSeconds: 0,
-  distanceMeters: 0,
-);

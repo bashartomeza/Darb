@@ -14,6 +14,7 @@ import '../../../core/widgets/status_chip.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
+import 'merchant_order_route_map.dart';
 import 'merchant_ui.dart';
 
 class MerchantOrderDetailScreen extends ConsumerStatefulWidget {
@@ -121,6 +122,20 @@ class _MerchantOrderDetailScreenState
           ),
         ),
         const SizedBox(height: AppTokens.spaceLarge),
+
+        // ------------------------------------------------------------------
+        // Route: the order's own pickup and parcel drop-offs on the map.
+        // ------------------------------------------------------------------
+        if (order.routeWaypoints.length >= 2) ...[
+          DarbSection(
+            title: l10n.merchantOrderMapTitle,
+            child: MerchantOrderRouteMap(
+              key: const ValueKey('merchantOrderMap'),
+              order: order,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceLarge),
+        ],
 
         // ------------------------------------------------------------------
         // Receiver hand-over code: what the receiver tells the driver at delivery.

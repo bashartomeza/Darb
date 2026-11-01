@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import 'merchant_order_route_map.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
@@ -342,13 +344,20 @@ class _Tracking extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // No live fix reaches this screen yet, so the map shows its explicit
-        // empty state rather than a decorative one.
-        DarbMap(
-          emptyLabel: l10n.mapNoLocation,
-          attributionLabel: l10n.mapAttribution,
-          height: 180,
-        ),
+        // The active trip's own order route; with no active trip the map
+        // shows its empty state on the service area.
+        if (trip != null && trip.order.routeWaypoints.length >= 2)
+          MerchantOrderRouteMap(
+            key: const ValueKey('merchantHomeMap'),
+            order: trip.order,
+            height: 200,
+          )
+        else
+          DarbMap(
+            emptyLabel: l10n.mapNoLocation,
+            attributionLabel: l10n.mapAttribution,
+            height: 180,
+          ),
         if (trip != null) ...[
           const SizedBox(height: AppTokens.spaceMedium),
           DarbInfoCard(

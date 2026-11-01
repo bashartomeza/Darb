@@ -7,7 +7,8 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/location/location_service.dart';
 import '../../../core/maps/osrm_route_service.dart';
-import '../../../core/maps/checkpoint_map_markers.dart';
+import '../../../core/maps/darb_route_map.dart';
+import '../../../core/maps/map_overlays.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -22,9 +23,11 @@ import '../../community_reports/presentation/community_reports_section.dart';
 import '../../checkpoints/application/checkpoint_controller.dart';
 import '../../checkpoints/domain/checkpoint_models.dart';
 import '../../checkpoints/presentation/checkpoint_sheet.dart';
+import '../../checkpoints/presentation/unplaced_checkpoints_list.dart';
 import '../../checkpoint_directory/presentation/checkpoint_directory_screen.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../trips/application/passenger_trip_controller.dart';
+import '../../trips/data/trip_models.dart';
 import '../application/passenger_map_controller.dart';
 
 /// Passenger's main Map + Alerts screen.
@@ -44,6 +47,9 @@ class PassengerMapAlertsScreen extends ConsumerWidget {
       appBar: _buildAppBar(context, l10n),
       body: SafeArea(
         child: view.when(
+          // A dependency refresh (e.g. the 5-second trip poll) keeps the map
+          // on screen instead of rebuilding it empty.
+          skipLoadingOnReload: true,
           loading: () => const _MapBody(
             view: PassengerMapView(
               mapsAvailable: true,
@@ -109,219 +115,6 @@ class _MapBodyState extends ConsumerState<_MapBody> {
   static const Color _mutedText = Color(0xFF707070);
   static const Color _border = Color(0xFFE0E0E0);
 
-  Future<OsrmRouteResult>? _routeFuture;
-  String? _routeKey;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRoute();
-  }
-
-  @override
-  void didUpdateWidget(covariant _MapBody oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    final oldRoute = oldWidget.view.route;
-    final newRoute = widget.view.route;
-
-    final oldStart = _routeStart(oldRoute);
-    final oldEnd = _routeEnd(oldRoute);
-
-    final newStart = _routeStart(newRoute);
-    final newEnd = _routeEnd(newRoute);
-
-    final routeChanged =
-        oldStart?.latitude != newStart?.latitude ||
-        oldStart?.longitude != newStart?.longitude ||
-        oldEnd?.latitude != newEnd?.latitude ||
-        oldEnd?.longitude != newEnd?.longitude;
-
-    if (routeChanged) {
-      _loadRoute();
-    }
-  }
-
-  LatLng? _routeStart(CanonicalRoute? route) {
-    if (route == null || route.path.length < 2) {
-      return null;
-    }
-
-    final point = route.path.first;
-
-    return LatLng(point.latitude, point.longitude);
-  }
-
-  LatLng? _routeEnd(CanonicalRoute? route) {
-    if (route == null || route.path.length < 2) {
-      return null;
-    }
-
-    final point = route.path.last;
-
-    return LatLng(point.latitude, point.longitude);
-  }
-
-  /// Loads the original application route through OSRM.
-  Future<void> _loadRoute() async {
-    final route = widget.view.route;
-
-    if (route == null || route.path.length < 2) {
-      _routeFuture = Future.value(
-        const OsrmRouteResult(
-          points: [],
-          durationSeconds: 0,
-          distanceMeters: 0,
-        ),
-      );
-      return;
-    }
-
-    final start = _routeStart(route);
-    final end = _routeEnd(route);
-
-    if (start == null || end == null) {
-      _routeFuture = Future.value(
-        const OsrmRouteResult(
-          points: [],
-          durationSeconds: 0,
-          distanceMeters: 0,
-        ),
-      );
-      return;
-    }
-
-    _routeKey =
-        '${start.latitude},${start.longitude}|'
-        '${end.latitude},${end.longitude}';
-
-    _routeFuture = _loadOsrmRoute(start: start, end: end);
-  }
-
-  Future<OsrmRouteResult> _loadOsrmRoute({
-    required LatLng start,
-    required LatLng end,
-  }) async {
-    try {
-      final result = await const OsrmRouteService().getRoute(
-        start: start,
-        end: end,
-      );
-
-      if (result.points.length >= 2) {
-        return result;
-      }
-    } catch (_) {
-      // Fall back to the original application route.
-    }
-
-    return const OsrmRouteResult(
-      points: [],
-      durationSeconds: 0,
-      distanceMeters: 0,
-    );
-  }
-
-  /// Creates a fallback route from the application's route definition.
-  List<GeoPoint> _fallbackRoutePoints(CanonicalRoute? route) {
-    if (route == null || route.path.length < 2) {
-      return const [];
-    }
-
-    return route.path
-        .map((point) => GeoPoint(point.latitude, point.longitude))
-        .toList(growable: false);
-  }
-
-  /// Same driver -> destination route logic used by PassengerTripScreen.
-  Future<OsrmRouteResult> _loadDriverRoute(
-    double driverLat,
-    double driverLng,
-    double destinationLat,
-    double destinationLng,
-  ) async {
-    try {
-      final result = await const OsrmRouteService().getRoute(
-        start: LatLng(driverLat, driverLng),
-        end: LatLng(destinationLat, destinationLng),
-      );
-
-      if (result.points.length >= 2) {
-        return result;
-      }
-    } catch (_) {
-      // Fall back to a direct driver -> destination line.
-    }
-
-    return const OsrmRouteResult(
-      points: [],
-      durationSeconds: 0,
-      distanceMeters: 0,
-    );
-  }
-
-  /// Builds the route:
-  ///
-  /// Driver location -> destination when driver location exists.
-  /// Otherwise original trip route.
-  Future<OsrmRouteResult> _buildRouteFuture({
-    required CanonicalRoute? route,
-    required dynamic driverLocation,
-  }) async {
-    if (route == null || route.path.length < 2) {
-      return _routeFuture ??
-          const OsrmRouteResult(
-            points: [],
-            durationSeconds: 0,
-            distanceMeters: 0,
-          );
-    }
-
-    final destination = _routeEnd(route);
-
-    if (destination == null) {
-      return const OsrmRouteResult(
-        points: [],
-        durationSeconds: 0,
-        distanceMeters: 0,
-      );
-    }
-
-    // Driver -> destination.
-    if (driverLocation != null) {
-      final key =
-          '${routeCoordKey(driverLocation.lat)},'
-          '${routeCoordKey(driverLocation.lng)}|'
-          '${destination.latitude},'
-          '${destination.longitude}';
-
-      if (_routeFuture == null || _routeKey != key) {
-        _routeKey = key;
-
-        _routeFuture = _loadDriverRoute(
-          driverLocation.lat,
-          driverLocation.lng,
-          destination.latitude,
-          destination.longitude,
-        );
-      }
-
-      return _routeFuture!;
-    }
-
-    // Original route.
-    if (_routeFuture == null) {
-      await _loadRoute();
-    }
-
-    return _routeFuture ??
-        const OsrmRouteResult(
-          points: [],
-          durationSeconds: 0,
-          distanceMeters: 0,
-        );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -338,7 +131,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
 
     final checkpoints = ref.watch(checkpointsProvider);
 
-    final checkpointSnapshot = checkpoints.value ?? CheckpointSnapshot.empty;
+    final overlay = watchMapOverlay(ref, l10n);
 
     // ----------------------------------------------------------------------
     // Passenger route.
@@ -396,13 +189,14 @@ class _MapBodyState extends ConsumerState<_MapBody> {
       return arabic ? stop.nameAr : stop.nameEn;
     }
 
-    final fallbackRoutePoints = _fallbackRoutePoints(route);
-
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(passengerMapViewProvider);
 
-        await ref.read(checkpointsProvider.notifier).refresh();
+        await Future.wait([
+          ref.read(checkpointsProvider.notifier).refresh(),
+          ref.read(communityReportsProvider.notifier).refresh(),
+        ]);
 
         if (tripId != null) {
           await ref
@@ -435,8 +229,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
             route: route,
             driverLocation: driverLocation,
             position: position,
-            checkpointSnapshot: checkpointSnapshot,
-            fallbackRoutePoints: fallbackRoutePoints,
+            overlay: overlay,
             arabic: arabic,
             stopName: stopName,
           ),
@@ -524,7 +317,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
           DarbSection(
             title: l10n.checkpoints,
             child: _CheckpointsPanel(
-              available: true,
+              available: overlay.checkpointsAvailable != false,
               state: checkpoints,
               arabic: arabic,
             ),
@@ -635,13 +428,25 @@ class _MapBodyState extends ConsumerState<_MapBody> {
     required BuildContext context,
     required AppLocalizations l10n,
     required CanonicalRoute? route,
-    required dynamic driverLocation,
-    required AsyncValue<dynamic> position,
-    required CheckpointSnapshot checkpointSnapshot,
-    required List<GeoPoint> fallbackRoutePoints,
+    required TripLocation? driverLocation,
+    required AsyncValue<GeoPoint?> position,
+    required MapOverlay overlay,
     required bool arabic,
     required String Function(CanonicalStop) stopName,
   }) {
+    final destination = route?.destinationStop?.position;
+    // With a vehicle position: the road from it to the destination. Otherwise
+    // the selected route itself, through its own stops.
+    final road = driverLocation != null && destination != null
+        ? watchRoadRoute(ref, [
+            GeoPoint(driverLocation.lat, driverLocation.lng),
+            destination,
+          ])
+        : route == null
+        ? null
+        : watchCanonicalRoute(ref, route);
+    final here = position.value;
+
     return _ModernCard(
       padding: const EdgeInsets.all(10),
       child: Column(
@@ -691,148 +496,71 @@ class _MapBodyState extends ConsumerState<_MapBody> {
 
           ClipRRect(
             borderRadius: BorderRadius.circular(18),
-            child: FutureBuilder<OsrmRouteResult>(
-              future: _buildRouteFuture(
-                route: route,
-                driverLocation: driverLocation,
-              ),
-              builder: (context, routeSnapshot) {
-                final routeResult = routeSnapshot.data;
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DarbMap(
+                  emptyLabel: route == null
+                      ? l10n.mapSelectRoute
+                      : l10n.noLocationYet,
+                  attributionLabel: l10n.mapAttribution,
+                  height: 390,
+                  paths: roadRoutePaths(road, color: _navyLight, width: 6),
+                  notes: [...roadRouteNotes(l10n, road), ...overlay.notes],
+                  markers: [
+                    // Background layers first so the trip's own pins stay
+                    // on top where they overlap.
+                    ...overlay.markers,
 
-                final routedPoints = routeResult?.points
-                    .map((point) => GeoPoint(point.latitude, point.longitude))
-                    .toList(growable: false);
+                    // Route stops, named from the selected route's own data.
+                    if (route != null)
+                      for (final stop in route.stops)
+                        if (stop.position != null)
+                          _stopMarker(l10n, stop, stopName(stop), route),
 
-                final pathPoints =
-                    routedPoints != null && routedPoints.length >= 2
-                    ? routedPoints
-                    : fallbackRoutePoints;
+                    if (here != null)
+                      DarbMapMarker(
+                        position: here,
+                        icon: Icons.my_location_rounded,
+                        color: SemanticColors.passenger,
+                        type: DarbMapMarkerType.location,
+                        label: l10n.mapYourLocation,
+                        size: 40,
+                      ),
 
-                final origin = route != null && route.path.isNotEmpty
-                    ? GeoPoint(
-                        route.path.first.latitude,
-                        route.path.first.longitude,
-                      )
-                    : null;
-
-                final destination = route != null && route.path.isNotEmpty
-                    ? GeoPoint(
-                        route.path.last.latitude,
-                        route.path.last.longitude,
-                      )
-                    : null;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    DarbMap(
-                      emptyLabel: route == null
-                          ? l10n.mapSelectRoute
-                          : l10n.noLocationYet,
-                      attributionLabel: l10n.mapAttribution,
-                      height: 390,
-
-                      banner: checkpointSnapshot.stale
-                          ? Text(l10n.checkpointsStale)
-                          : null,
-
-                      paths: [
-                        if (pathPoints.length >= 2)
-                          DarbMapPath(
-                            points: pathPoints,
-                            color: _navyLight,
-                            width: 6,
-                          ),
-                      ],
-
-                      markers: [
-                        // --------------------------------------------------
-                        // ORIGINAL START
-                        // --------------------------------------------------
-                        if (origin != null)
-                          DarbMapMarker(
-                            position: origin,
-                            icon: Icons.trip_origin_rounded,
-                            color: SemanticColors.upcomingRoute,
-                            label: l10n.mapOriginLabel('Hebron'),
-                            size: 42,
-                          ),
-
-                        // --------------------------------------------------
-                        // DESTINATION
-                        // --------------------------------------------------
-                        if (destination != null)
-                          DarbMapMarker(
-                            position: destination,
-                            icon: Icons.flag_rounded,
-                            color: SemanticColors.completedRoute,
-                            label: l10n.mapDestinationLabel('Bethlehem'),
-                            size: 42,
-                          ),
-
-                        // --------------------------------------------------
-                        // PASSENGER CURRENT LOCATION
-                        // --------------------------------------------------
-                        if (position.value != null)
-                          DarbMapMarker(
-                            position: GeoPoint(
-                              position.value!.latitude,
-                              position.value!.longitude,
-                            ),
-                            icon: Icons.my_location_rounded,
-                            color: SemanticColors.passenger,
-                            label: l10n.mapYourLocation,
-                            size: 40,
-                          ),
-
-                        // --------------------------------------------------
-                        // CURRENT DRIVER LOCATION
-                        // --------------------------------------------------
-                        if (driverLocation != null)
-                          DarbMapMarker(
-                            position: GeoPoint(
-                              driverLocation.lat,
-                              driverLocation.lng,
-                            ),
-                            icon: Icons.local_shipping_rounded,
-                            color: _orange,
-                            label:
-                                '${l10n.latestLocation} — '
-                                '${l10n.recordedTime}: '
-                                '${driverLocation.recordedAt}',
-                            size: 50,
-                          ),
-
-                        // --------------------------------------------------
-                        // ROUTE STOPS
-                        // --------------------------------------------------
-                        if (route != null)
-                          for (final stop in route.stops)
-                            if (stop.position != null)
-                              _stopMarker(l10n, stop, stopName(stop), route),
-
-                        // --------------------------------------------------
-                        ...checkpointTrafficMarkers(
-                          checkpointSnapshot.checkpoints,
+                    if (driverLocation != null)
+                      DarbMapMarker(
+                        position: GeoPoint(
+                          driverLocation.lat,
+                          driverLocation.lng,
                         ),
-                        ...communityReportMarkers(
-                          l10n,
-                          ref.watch(communityReportsProvider).value ?? const [],
-                        ),
-                        // CHECKPOINTS
-                        //
-                        // Invalid or absent coordinates are omitted at parsing.
-                        // --------------------------------------------------
-                      ],
-                    ),
+                        icon: Icons.local_shipping_rounded,
+                        color: _orange,
+                        type: DarbMapMarkerType.driver,
+                        label:
+                            '${l10n.latestLocation} — '
+                            '${l10n.recordedTime}: '
+                            '${driverLocation.recordedAt}',
+                        size: 50,
+                      ),
+                  ],
+                ),
 
-                    // --------------------------------------------------------
-                    // REMAINING ROUTE INFORMATION
-                    // --------------------------------------------------------
-                    if (routeResult != null &&
-                        routeResult.durationSeconds > 0) ...[
-                      const SizedBox(height: 8),
-                      Container(
+                // ------------------------------------------------------------
+                // REMAINING ROUTE INFORMATION
+                // ------------------------------------------------------------
+                if (road != null &&
+                    road.routed &&
+                    (road.durationSeconds ?? 0) > 0) ...[
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) {
+                      final result = OsrmRouteResult(
+                        points: const [],
+                        durationSeconds: road.durationSeconds!,
+                        distanceMeters: road.distanceMeters ?? 0,
+                      );
+                      return Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: _navy,
@@ -848,7 +576,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                             Expanded(
                               child: Text(
                                 'الوقت المتبقي: '
-                                '${routeResult.formattedDuration}',
+                                '${result.formattedDuration}',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
@@ -856,7 +584,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                               ),
                             ),
                             Text(
-                              '${routeResult.distanceKilometers.toStringAsFixed(1)} km',
+                              '${result.distanceKilometers.toStringAsFixed(1)} km',
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontWeight: FontWeight.w700,
@@ -864,48 +592,46 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                             ),
                           ],
                         ),
+                      );
+                    },
+                  ),
+                ],
+
+                const SizedBox(height: 8),
+
+                // ------------------------------------------------------------
+                // MAP HELP
+                // ------------------------------------------------------------
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 3,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.touch_app_outlined,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          driverLocation != null
+                              ? 'المسار يتحدث حسب موقع السائق الحالي'
+                              : 'المسار المعروض هو المسار المحدد للرحلة',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
                       ),
                     ],
-
-                    const SizedBox(height: 8),
-
-                    // --------------------------------------------------------
-                    // MAP HELP
-                    // --------------------------------------------------------
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 3,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.touch_app_outlined,
-                            size: 18,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              driverLocation != null
-                                  ? 'المسار يتحدث حسب موقع السائق الحالي'
-                                  : 'المسار المعروض هو المسار المحدد للرحلة',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1351,636 +1077,7 @@ class _PassengerRoutePoint extends StatelessWidget {
 }
 
 // ============================================================================
-// ROAD REPORTS
-// ============================================================================
-
-class _RoadReport {
-  const _RoadReport({
-    required this.category,
-    required this.issue,
-    required this.location,
-    required this.details,
-    required this.createdAt,
-  });
-
-  final String category;
-  final String issue;
-  final String location;
-  final String details;
-  final DateTime createdAt;
-}
-
-/// Reports UI. The current project screen has no report submission provider/API,
-/// so newly created reports are kept in this widget's state only. Connect this
-/// panel to the reports repository/provider when the backend endpoint exists.
-class _ReportsPanel extends StatefulWidget {
-  const _ReportsPanel();
-
-  @override
-  State<_ReportsPanel> createState() => _ReportsPanelState();
-}
-
-class _ReportsPanelState extends State<_ReportsPanel> {
-  static const _orange = Color(0xFFFA5F12);
-  static const _ink = Color(0xFF1C1A1A);
-  static const _muted = Color(0xFF707070);
-  static const _border = Color(0xFFE0E0E0);
-  final List<_RoadReport> _reports = [];
-
-  Future<void> _createReport() async {
-    final report = await showModalBottomSheet<_RoadReport>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _CreateRoadReportSheet(),
-    );
-
-    if (!mounted || report == null) return;
-    setState(() => _reports.insert(0, report));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تمت إضافة البلاغ للعرض في هذه الجلسة.'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: _border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 16,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFE8DC),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.campaign_rounded,
-                  color: _orange,
-                  size: 25,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ساهم في تحديث حالة الطريق',
-                      style: TextStyle(
-                        color: _ink,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'أبلغ الركاب عن مشكلة قد تؤثر على رحلتهم',
-                      style: TextStyle(
-                        color: _muted,
-                        fontSize: 11.5,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 48,
-            child: FilledButton.icon(
-              onPressed: _createReport,
-              style: FilledButton.styleFrom(
-                backgroundColor: _orange,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
-              icon: const Icon(Icons.add_rounded, size: 21),
-              label: const Text('إضافة بلاغ جديد'),
-            ),
-          ),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'البلاغات الأخيرة',
-                  style: TextStyle(
-                    color: _ink,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFE8DC),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${_reports.length} بلاغ',
-                  style: const TextStyle(
-                    color: _orange,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (_reports.isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6F6F6),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _border),
-              ),
-              child: const Column(
-                children: [
-                  Icon(
-                    Icons.mark_chat_unread_outlined,
-                    color: Color(0xFFAEAEAE),
-                    size: 28,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'ما في بلاغات مضافة لحد الآن',
-                    style: TextStyle(
-                      color: _ink,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'إذا لاحظت مشكلة بالطريق، أضف بلاغًا ليساعد الركاب الآخرين.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: _muted, fontSize: 11, height: 1.5),
-                  ),
-                ],
-              ),
-            )
-          else
-            ..._reports
-                .take(5)
-                .map(
-                  (report) => Padding(
-                    padding: const EdgeInsets.only(bottom: 9),
-                    child: _RoadReportTile(report: report),
-                  ),
-                ),
-          const SizedBox(height: 4),
-          const Text(
-            'ملاحظة: البلاغات المضافة هنا تجريبية ومحفوظة مؤقتًا على الشاشة فقط.',
-            style: TextStyle(color: _muted, fontSize: 10, height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoadReportTile extends StatelessWidget {
-  const _RoadReportTile({required this.report});
-
-  final _RoadReport report;
-
-  @override
-  Widget build(BuildContext context) {
-    const orange = Color(0xFFFA5F12);
-    const ink = Color(0xFF1C1A1A);
-    const muted = Color(0xFF707070);
-    final icon = switch (report.category) {
-      'الحواجز' => Icons.shield_outlined,
-      'الرحلة والمواصلات' => Icons.directions_bus_rounded,
-      'السلامة' => Icons.warning_amber_rounded,
-      _ => Icons.traffic_rounded,
-    };
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE8DC),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: orange, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  report.issue,
-                  style: const TextStyle(
-                    color: ink,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                if (report.location.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        size: 13,
-                        color: muted,
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          report.location,
-                          style: const TextStyle(color: muted, fontSize: 11),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                if (report.details.isNotEmpty) ...[
-                  const SizedBox(height: 5),
-                  Text(
-                    report.details,
-                    style: const TextStyle(
-                      color: muted,
-                      fontSize: 11.5,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 7),
-                Row(
-                  children: [
-                    Text(
-                      report.category,
-                      style: const TextStyle(
-                        color: orange,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      '• بانتظار التحقق',
-                      style: TextStyle(color: muted, fontSize: 10.5),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CreateRoadReportSheet extends StatefulWidget {
-  const _CreateRoadReportSheet();
-
-  @override
-  State<_CreateRoadReportSheet> createState() => _CreateRoadReportSheetState();
-}
-
-class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
-  static const _orange = Color(0xFFFA5F12);
-  static const _ink = Color(0xFF1C1A1A);
-  static const _muted = Color(0xFF707070);
-  static const _categories = <String>[
-    'الطريق',
-    'الحواجز',
-    'الرحلة والمواصلات',
-    'السلامة',
-  ];
-  static const Map<String, List<String>> _issues = {
-    'الطريق': [
-      'ازدحام شديد',
-      'حادث على الطريق',
-      'إغلاق طريق',
-      'أعمال صيانة',
-      'عائق على الطريق',
-    ],
-    'الحواجز': [
-      'تغيّر حالة الحاجز',
-      'انتظار طويل',
-      'الحاجز مغلق',
-      'معلومات الحاجز غير دقيقة',
-    ],
-    'الرحلة والمواصلات': [
-      'تأخر المركبة',
-      'السائق لم يصل',
-      'مشكلة في نقطة الالتقاء',
-      'اختلاف مسار الرحلة',
-    ],
-    'السلامة': [
-      'خطر على الطريق',
-      'عائق يهدد السلامة',
-      'حالة طارئة أثناء الرحلة',
-    ],
-  };
-
-  final _locationController = TextEditingController();
-  final _detailsController = TextEditingController();
-  String _category = _categories.first;
-  String _issue = _issues[_categories.first]!.first;
-
-  @override
-  void dispose() {
-    _locationController.dispose();
-    _detailsController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    Navigator.of(context).pop(
-      _RoadReport(
-        category: _category,
-        issue: _issue,
-        location: _locationController.text.trim(),
-        details: _detailsController.text.trim(),
-        createdAt: DateTime.now(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 22),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'إضافة بلاغ جديد',
-                style: TextStyle(
-                  color: _ink,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 5),
-              const Text(
-                'اختاري نوع المشكلة وأضيفي التفاصيل المتوفرة.',
-                style: TextStyle(color: _muted, fontSize: 12, height: 1.5),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'تصنيف البلاغ',
-                style: TextStyle(
-                  color: _ink,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _categories.map((category) {
-                  final selected = _category == category;
-                  return ChoiceChip(
-                    label: Text(category),
-                    selected: selected,
-                    showCheckmark: false,
-                    selectedColor: const Color(0xFFFFE8DC),
-                    backgroundColor: const Color(0xFFF6F6F6),
-                    side: BorderSide(
-                      color: selected ? _orange : const Color(0xFFE0E0E0),
-                    ),
-                    labelStyle: TextStyle(
-                      color: selected ? _orange : _ink,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    onSelected: (_) => setState(() {
-                      _category = category;
-                      _issue = _issues[category]!.first;
-                    }),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 17),
-              const Text(
-                'ما المشكلة؟',
-                style: TextStyle(
-                  color: _ink,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _issue,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFFF6F6F6),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 13,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: _orange, width: 1.5),
-                  ),
-                ),
-                items: _issues[_category]!
-                    .map(
-                      (issue) => DropdownMenuItem(
-                        value: issue,
-                        child: Text(
-                          issue,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) setState(() => _issue = value);
-                },
-              ),
-              const SizedBox(height: 17),
-              const Text(
-                'الموقع أو اسم المنطقة (اختياري)',
-                style: TextStyle(
-                  color: _ink,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _locationController,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  hintText: 'مثال: مدخل الخليل أو شارع الجامعة',
-                  hintStyle: const TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFFAEAEAE),
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.location_on_outlined,
-                    color: _orange,
-                    size: 20,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF6F6F6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 17),
-              const Text(
-                'تفاصيل إضافية (اختياري)',
-                style: TextStyle(
-                  color: _ink,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _detailsController,
-                minLines: 2,
-                maxLines: 4,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText:
-                      'اكتبي وصفًا مختصرًا يساعد الآخرين على فهم الحالة...',
-                  hintStyle: const TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFFAEAEAE),
-                  ),
-                  alignLabelWithHint: true,
-                  filled: true,
-                  fillColor: const Color(0xFFF6F6F6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: _orange, width: 1.5),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 21),
-              SizedBox(
-                height: 49,
-                child: FilledButton.icon(
-                  onPressed: _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _orange,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  icon: const Icon(Icons.send_rounded, size: 18),
-                  label: const Text(
-                    'إضافة البلاغ',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'لا تضيفي معلومات شخصية أو تفاصيل حساسة.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _muted, fontSize: 10.5),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// CHECKPOINTS — GROUPED BY CITY
+// CHECKPOINTS PANEL
 // ============================================================================
 
 class _CheckpointsPanel extends ConsumerWidget {
@@ -2021,6 +1118,9 @@ class _CheckpointsPanel extends ConsumerWidget {
       ),
       data: (snapshot) {
         if (snapshot.checkpoints.isEmpty) {
+          if (snapshot.unplaced.isNotEmpty) {
+            return UnplacedCheckpointsList(unplaced: snapshot.unplaced);
+          }
           return DarbInfoCard(
             title: l10n.checkpointsEmpty,
             subtitle: l10n.checkpointCount(0),
@@ -2215,6 +1315,10 @@ class _CheckpointsPanel extends ConsumerWidget {
                 ),
               ),
             ),
+            if (snapshot.unplaced.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              UnplacedCheckpointsList(unplaced: snapshot.unplaced),
+            ],
           ],
         );
       },
