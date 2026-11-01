@@ -1,6 +1,6 @@
 # Route fares (display only)
 
-Masari does not process payments. A route fare is an **estimate** that a
+Darb does not process payments. A route fare is an **estimate** that a
 passenger or merchant pays **directly to the driver**. Nothing in the app
 charges, holds, splits or refunds money, and every surface that shows a fare
 says so (English and Arabic).

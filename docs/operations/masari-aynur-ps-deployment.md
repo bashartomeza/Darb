@@ -23,7 +23,7 @@ API (`apps/api/.env.production.example` is the template; never commit real value
 - `CORS_ORIGINS=https://masari.aynur.ps`
 - `TRUST_PROXY=1` when exactly one proxy sits in front (use the real hop count; the API refuses to start without an explicit value)
 - `DATABASE_URL` to a private MySQL 8 host, plus `JWT_SECRET`, `REFRESH_TOKEN_PEPPER` and the other secrets as separate random values of at least 32 characters
-- Registration stays off (`PUBLIC_ONBOARDING_ENABLED=false`, `OTP_PROVIDER=disabled`) until the legal text exists and the owner opens it; there is no SMS provider to wait for (Masari emails its codes: `OTP_PROVIDER=email` with the SMTP delivery)
+- Registration stays off (`PUBLIC_ONBOARDING_ENABLED=false`, `OTP_PROVIDER=disabled`) until the legal text exists and the owner opens it; there is no SMS provider to wait for (Darb emails its codes: `OTP_PROVIDER=email` with the SMTP delivery)
 
 Admin build:
 

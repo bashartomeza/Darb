@@ -1,4 +1,4 @@
-# Masari iOS target
+# Darb iOS target
 
 Status: the iOS project exists and is configured statically. It has **not** been
 built or run on any Apple toolchain by the author (developed on Windows). The
@@ -12,7 +12,7 @@ first real evidence is the new `ios-build` job in `.github/workflows/ci-mobile.y
   creates one on demand only if a plugin still needs CocoaPods.
 - Bundle identifier `ps.masari.mobile` (same as the Android `applicationId`);
   tests target `ps.masari.mobile.RunnerTests`.
-- Display name `Masari` (English) and `مساري` (Arabic) via `InfoPlist.strings`.
+- Display name `Darb` (English) and `درب` (Arabic) via `InfoPlist.strings`.
 - `CFBundleLocalizations` = `en`, `ar`; both are in the project's `knownRegions`,
   and `Runner/{en,ar}.lproj/InfoPlist.strings` are registered as a variant group
   in `project.pbxproj` so they are bundled. (Hand-edited; Xcode should open it

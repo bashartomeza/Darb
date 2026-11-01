@@ -1,6 +1,6 @@
-# Masari application environment matrix
+# Darb application environment matrix
 
-`APP_ENV` is the backend and Flutter product-capability boundary. `VITE_APP_ENV` is its admin-build equivalent. `NODE_ENV` and Vite modes may control framework behavior, but they do not enable Masari demo capabilities.
+`APP_ENV` is the backend and Flutter product-capability boundary. `VITE_APP_ENV` is its admin-build equivalent. `NODE_ENV` and Vite modes may control framework behavior, but they do not enable Darb demo capabilities.
 
 Demo features do not authorize destructive reset. Reset additionally requires
 an exact database name in `DEMO_RESET_ALLOWED_DATABASES`; `masari` is permanently

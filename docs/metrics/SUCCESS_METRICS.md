@@ -1,4 +1,4 @@
-# Masari success metrics
+# Darb success metrics
 
 Source: Team 6 project proposal, section 9.6 "Success Targets" (page 22), plus the AI success metric in section 9.3 (page 21).
 The PDF table is laid out in two columns that extract out of order; the pairing below follows the row order of both columns.

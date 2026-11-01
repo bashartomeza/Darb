@@ -1,6 +1,6 @@
 # Dependency security remediation
 
-Masari keeps Prisma, `@prisma/client`, and `@prisma/adapter-mariadb` aligned at
+Darb keeps Prisma, `@prisma/client`, and `@prisma/adapter-mariadb` aligned at
 7.9.1. Those packages currently pin vulnerable transitive releases: the
 adapter pins `mariadb` 3.4.5, Prisma pins `mysql2` 3.15.3, and Prisma's local
 tooling reaches `fast-uri` through AJV. Express and its body-parser dependency
