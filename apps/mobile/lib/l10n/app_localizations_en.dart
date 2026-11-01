@@ -1193,6 +1193,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get returnToDashboard => 'Return to dashboard';
 
   @override
+  String get viewRouteRequests => 'View my route requests';
+
+  @override
   String get canonicalDriverOffers => 'Route offers';
 
   @override
@@ -2178,6 +2181,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get incidentCategoryOther => 'Other';
+
+  @override
+  String get myIncidentReports => 'My reports';
+
+  @override
+  String get myIncidentReportsEmpty => 'You have not sent any reports yet.';
+
+  @override
+  String get myIncidentReportsFailed => 'Could not load your reports.';
+
+  @override
+  String get incidentStatusOpen => 'Open';
+
+  @override
+  String get incidentStatusReviewing => 'Under review';
+
+  @override
+  String get incidentStatusResolved => 'Resolved';
 
   @override
   String get notifIncidentUpdatedTitle => 'Update on your report';

@@ -17,6 +17,7 @@ import '../../matching/data/matching_repository.dart';
 import '../data/passenger_models.dart';
 import '../data/passenger_repository.dart';
 import '../application/legacy_passenger_request_mutation.dart';
+import '../application/passenger_controller.dart';
 import 'location_picker_screen.dart';
 
 class CreateRequestScreen extends ConsumerStatefulWidget {
@@ -416,6 +417,9 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
       _loading = true;
       _error = null;
     });
+    // The lists must learn about a saved request even if this screen is
+    // closed while the create or the match is still in flight.
+    final container = ProviderScope.containerOf(context, listen: false);
 
     try {
       final mutation = ref.read(legacyPassengerRequestMutationProvider);
@@ -436,6 +440,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
         send: ref.read(passengerRepositoryProvider).createPayload,
       );
       final createdId = receipt.value;
+      invalidatePassengerLists(container.invalidate);
       final recovery = receipt.bundle.payload['client_recovery'];
       String? selectedRoute;
       if (recovery != null) {
@@ -489,6 +494,9 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
           );
           context.go('/passenger/request/$createdId');
         }
+      } finally {
+        // Matching moves the request out of "pending" on the server.
+        invalidatePassengerLists(container.invalidate);
       }
     } catch (error) {
       try {

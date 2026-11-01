@@ -17,6 +17,7 @@ import '../application/passenger_assistant_controller.dart';
 import '../data/speech_service.dart';
 import '../domain/passenger_assistant_models.dart';
 import '../../passenger/data/passenger_models.dart';
+import '../../passenger/application/passenger_controller.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../passenger/domain/trip_offer.dart';
 import '../../passenger/presentation/widgets/trip_offer_card.dart';
@@ -193,6 +194,8 @@ class _PassengerAssistantScreenState
     if (!mounted || actor != ref.read(authControllerProvider).value?.user?.id) {
       return;
     }
+    // A booking may have saved a request (and a match) whatever the outcome.
+    invalidatePassengerLists(ref.invalidate);
     if (mounted && matchId != null) {
       context.go('/passenger/match/$matchId');
     } else if (mounted) {

@@ -67,6 +67,8 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
         mutationError = error;
       }
       if (!currentActor()) return;
+      // Re-read even after a lost response: the cancellation may have committed.
+      invalidatePassengerLists(ref.invalidate);
 
       // Reconcile both records even when the committed PATCH response was lost.
       // Never repeat the mutation or invent a cancelled trip from local state.
@@ -222,7 +224,11 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                             try {
                               final match = await ref
                                   .read(matchingRepositoryProvider)
-                                  .latestForPassengerRequest(request.id);
+                                  .latestForPassengerRequest(
+                                    request.id,
+                                    driverRouteId:
+                                        request.selectedDriverRouteId,
+                                  );
                               if (!context.mounted) return;
                               if (match != null) {
                                 context.go('/passenger/match/${match.id}');
@@ -253,8 +259,13 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                             try {
                               final match = await ref
                                   .read(matchingRepositoryProvider)
-                                  .runForPassengerRequest(request.id);
+                                  .runForPassengerRequest(
+                                    request.id,
+                                    driverRouteId:
+                                        request.selectedDriverRouteId,
+                                  );
                               if (context.mounted) {
+                                invalidatePassengerLists(ref.invalidate);
                                 context.go('/passenger/match/${match.id}');
                               }
                             } catch (error) {
