@@ -6,12 +6,13 @@ import type { LimitedCheckpointDirectory, PartnerTimestamp } from "./limitedChec
 /**
  * Places AweenRayeh partner checkpoints on the map.
  *
- * The partner feed has names, cities and "last changed" times only: no
- * coordinates and no open/closed state. Positions come from a committed
- * OpenStreetMap extract (`apps/api/data/osm-checkpoints.json`, ODbL), matched by
- * normalised Arabic name. A row that does not match exactly one place is
- * returned in `unplaced`, never given a guessed position. Official traffic
- * state stays `unknown` because the partner does not publish one.
+ * The partner feed has names, cities, the entering/leaving state ("سالك",
+ * "مغلق", "أزمة متوسطة", "أزمة خانقة") and when each last changed, but no
+ * coordinates. Positions come from a committed OpenStreetMap extract
+ * (`apps/api/data/osm-checkpoints.json`, ODbL), matched by normalised Arabic
+ * name. A row that does not match exactly one place is returned in `unplaced`,
+ * never given a guessed position. A state the feed leaves out or words
+ * differently stays `unknown`; it is never inferred from a time.
  */
 
 const osmEntrySchema = z.object({
@@ -204,30 +205,51 @@ export class OsmCheckpointIndex {
   }
 }
 
-export type PartnerMapCheckpoint = {
+export type PartnerTrafficStatus = "open" | "congested" | "closed" | "unknown";
+
+/** One direction's provider text as a state. Unrecognised wording is `unknown`. */
+export function partnerDirectionStatus(value: string | null): PartnerTrafficStatus {
+  const text = value ? unifyLetters(value).trim() : "";
+  if (text === "سالك" || text === "سالكه" || text === "مفتوح" || text === "مفتوحه") return "open";
+  if (text === "مغلق" || text === "مغلقه") return "closed";
+  if (text.startsWith("ازمه") || text.startsWith("ازدحام") || text === "مزدحم") return "congested";
+  return "unknown";
+}
+
+/** Worst direction wins; "open" only when both directions are open. */
+export function partnerOverallStatus(entering: string | null, leaving: string | null): PartnerTrafficStatus {
+  const both = [partnerDirectionStatus(entering), partnerDirectionStatus(leaving)];
+  if (both.includes("closed")) return "closed";
+  if (both.includes("congested")) return "congested";
+  return both.every((s) => s === "open") ? "open" : "unknown";
+}
+
+type PartnerStatusFields = {
+  status: PartnerTrafficStatus;
+  entering_status: string | null;
+  leaving_status: string | null;
+  entering_status_last_updated: string;
+  leaving_status_last_updated: string;
+  timezone_specified: boolean;
+};
+
+export type PartnerMapCheckpoint = PartnerStatusFields & {
   id: string;
   name_ar: string;
   name_en: null;
   city: string;
   latitude: number;
   longitude: number;
-  status: "unknown";
   updated_at: null;
-  entering_status_last_updated: string;
-  leaving_status_last_updated: string;
-  timezone_specified: boolean;
   position_source: "openstreetmap";
   position_osm_id: string;
   /** How the name matched: exactly, without "ال", or as a spelling variant. */
   position_match: MatchQuality;
 };
-export type PartnerUnplacedCheckpoint = {
+export type PartnerUnplacedCheckpoint = PartnerStatusFields & {
   id: string;
   name_ar: string;
   city: string;
-  entering_status_last_updated: string;
-  leaving_status_last_updated: string;
-  timezone_specified: boolean;
   reason: "no_name_match" | "ambiguous" | "outside_city";
 };
 
@@ -242,6 +264,9 @@ export function placePartnerCheckpoints(directory: LimitedCheckpointDirectory, i
       id: `aweenrayeh:${row.provider_checkpoint_id}`,
       name_ar: row.checkpoint_name_ar,
       city: row.city_ar,
+      status: partnerOverallStatus(row.entering_status, row.leaving_status),
+      entering_status: row.entering_status,
+      leaving_status: row.leaving_status,
       entering_status_last_updated: row.entering_status_last_updated.raw,
       leaving_status_last_updated: row.leaving_status_last_updated.raw,
       timezone_specified: tzSpecified(row.entering_status_last_updated, row.leaving_status_last_updated)
@@ -252,8 +277,6 @@ export function placePartnerCheckpoints(directory: LimitedCheckpointDirectory, i
         name_en: null,
         latitude: match.entry.lat,
         longitude: match.entry.lng,
-        // The partner publishes no traffic state; it is never inferred from a time.
-        status: "unknown",
         updated_at: null,
         position_source: "openstreetmap",
         position_osm_id: match.entry.id,

@@ -2433,8 +2433,15 @@ _CheckpointStatusStyle _checkpointStatusStyle(
   }
 }
 
-String _checkpointStatusLabel(String? status) =>
-    checkpointStatusLabel(parseCheckpointStatus(status));
+/// The provider's own Arabic wording when it is a known state ("أزمة خانقة"),
+/// otherwise the shared label.
+String _checkpointStatusLabel(String? status) {
+  final parsed = parseCheckpointStatus(status);
+  final text = status?.trim() ?? '';
+  return parsed != CheckpointStatus.unknown && RegExp('[؀-ۿ]').hasMatch(text)
+      ? text
+      : checkpointStatusLabel(parsed);
+}
 
 // ============================================================================
 // CHECKPOINT TIME

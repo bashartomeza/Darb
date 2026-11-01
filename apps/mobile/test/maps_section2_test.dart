@@ -501,6 +501,43 @@ void main() {
       expect(markers.single.label, contains(l10n.checkpointPositionOsm));
     });
 
+    test('partner status shows on pins and on the no-position list', () {
+      final live = CheckpointSnapshot.fromJson({
+        'source': 'aweenrayeh_partner',
+        'checkpoints': [
+          {
+            'id': 'aweenrayeh:p1',
+            'name_ar': 'حاجز اختبار',
+            'latitude': 32.178,
+            'longitude': 35.2734,
+            'status': 'congested',
+            'entering_status': 'أزمة خانقة',
+            'leaving_status': 'سالك',
+          },
+        ],
+        'unplaced': [
+          {
+            'id': 'aweenrayeh:p2',
+            'name_ar': 'حاجز بلا موقع',
+            'status': 'closed',
+            'entering_status': 'مغلق',
+            'leaving_status': 'مغلق',
+          },
+        ],
+      });
+      final marker = checkpointTrafficMarkers(
+        live.checkpoints,
+        l10n: l10n,
+      ).single;
+      expect(marker.color, checkpointStatusColor(CheckpointStatus.congested));
+      expect(marker.label, isNot(contains(l10n.checkpointOfficialUnknown)));
+      expect(marker.label, contains('دخول: أزمة خانقة'));
+      expect(parseCheckpointStatus('أزمة خانقة'), CheckpointStatus.congested);
+      final unplaced = live.unplaced.single;
+      expect(unplaced.status, CheckpointStatus.closed);
+      expect(unplaced.enteringStatus, 'مغلق');
+    });
+
     test('status colours are the shared palette', () {
       expect(
         checkpointStatusColor(CheckpointStatus.open),

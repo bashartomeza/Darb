@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import '../../../core/maps/checkpoint_map_markers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
@@ -48,10 +49,18 @@ class UnplacedCheckpointsList extends StatelessWidget {
               key: ValueKey('unplaced-${checkpoint.id}'),
               contentPadding: EdgeInsets.zero,
               dense: true,
+              leading: Icon(
+                checkpointStatusIcon(checkpoint.status),
+                color: checkpointStatusColor(checkpoint.status),
+              ),
               title: Text(checkpoint.nameAr),
               subtitle: Text(
                 [
                   if (checkpoint.city.isNotEmpty) checkpoint.city,
+                  if (checkpoint.enteringStatus != null)
+                    'دخول: ${checkpoint.enteringStatus}',
+                  if (checkpoint.leavingStatus != null)
+                    'خروج: ${checkpoint.leavingStatus}',
                   if (checkpoint.enteringLastChangedText != null)
                     l10n.checkpointEnteringChanged(
                       formatProviderTime(checkpoint.enteringLastChangedText!),
