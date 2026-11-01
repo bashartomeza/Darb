@@ -7,10 +7,12 @@ import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/domain/auth_models.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/auth_completion_screen.dart';
+import '../../features/auth/presentation/google_onboarding_screen.dart';
 import '../../features/auth/presentation/register_role_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/unsupported_role_screen.dart';
+import '../theme/passenger_theme.dart';
 import '../../features/assistant/presentation/passenger_assistant_screen.dart';
 import '../../features/canonical_routes/presentation/driver_availability_screens.dart';
 import '../../features/canonical_routes/presentation/merchant_route_order_screen.dart';
@@ -126,7 +128,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/auth/complete-registration',
-        builder: (context, state) => const AuthCompletionScreen(phone: false),
+        // A Google sign-up chooses its role and profile; an email sign-up
+        // only confirms its emailed code and the terms.
+        builder: (context, state) => Consumer(
+          builder: (context, ref, _) =>
+              ref.watch(
+                    authControllerProvider.select(
+                      (auth) => auth.value?.registrationGrant?['next_action'],
+                    ),
+                  ) ==
+                  'consent_required'
+              ? const GoogleOnboardingScreen()
+              : const AuthCompletionScreen(phone: false),
+        ),
       ),
       GoRoute(
         path: '/profile/phone',
@@ -162,24 +176,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ---------------------------------------------------------------------
       GoRoute(
         path: '/passenger/request/new',
-        builder: (context, state) => const CreateRequestScreen(),
+        builder: (context, state) =>
+            const PassengerTheme(child: CreateRequestScreen()),
       ),
       GoRoute(
         path: '/passenger/routes/request/new',
-        builder: (context, state) => const PassengerRouteRequestScreen(),
+        builder: (context, state) =>
+            const PassengerTheme(child: PassengerRouteRequestScreen()),
       ),
       GoRoute(
         path: '/passenger/parcels',
-        builder: (context, state) => const PassengerParcelsScreen(),
+        builder: (context, state) =>
+            const PassengerTheme(child: PassengerParcelsScreen()),
       ),
       GoRoute(
         path: '/passenger/parcels/new',
-        builder: (context, state) => const SendParcelScreen(),
+        builder: (context, state) =>
+            const PassengerTheme(child: SendParcelScreen()),
       ),
       GoRoute(
         path: '/passenger/trip/:id',
-        builder: (context, state) =>
-            PassengerTripScreen(tripId: state.pathParameters['id']!),
+        builder: (context, state) => PassengerTheme(
+          child: PassengerTripScreen(tripId: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/driver/availability/new',
@@ -219,6 +238,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state, navigationShell) => RoleShellScaffold(
           navigationShell: navigationShell,
           destinations: RoleNavDestinations.passenger(
+            AppLocalizations.of(context),
+          ),
+          passengerItems: RoleNavDestinations.passengerBar(
             AppLocalizations.of(context),
           ),
         ),

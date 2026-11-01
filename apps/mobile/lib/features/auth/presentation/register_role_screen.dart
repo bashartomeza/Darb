@@ -9,13 +9,14 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_card.dart';
 import '../../onboarding/application/onboarding_controller.dart';
 import '../../onboarding/domain/onboarding_models.dart';
+import 'widgets/auth_style.dart';
 
 /// The first step of registration: who is signing up.
 ///
 /// A normal user continues to the email / Google sign-up and is active at once.
-/// A driver or shop owner continues to phone verification (the invitation code is
-/// optional when open registration is on, required otherwise), document upload and
-/// admin approval, with that role already chosen.
+/// A driver or shop owner registers on their own, with no invitation: they verify
+/// an emailed code, fill in the registration form, upload their documents and wait
+/// for admin approval, with that role already chosen.
 class RegisterRoleScreen extends ConsumerStatefulWidget {
   const RegisterRoleScreen({super.key});
 
@@ -30,57 +31,65 @@ class _RegisterRoleScreenState extends ConsumerState<RegisterRoleScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(l10n.createAccount),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         actions: const [LanguageSwitch()],
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppTokens.spaceLarge),
-          children: [
-            Text(
-              l10n.registerChooseTitle,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: AppTokens.spaceExtraSmall),
-            Text(
-              l10n.registerChooseSubtitle,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceVariant,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: AppTokens.spaceMedium,
               ),
+              children: [
+                const Center(child: AuthLogo()),
+                const SizedBox(height: 26),
+                AuthHeader(
+                  title: l10n.registerChooseTitle,
+                  subtitle: l10n.registerChooseSubtitle,
+                ),
+                const SizedBox(height: 32),
+                _RoleCard(
+                  key: const ValueKey('register-role-passenger'),
+                  icon: Icons.person_outline,
+                  title: l10n.registerPassengerTitle,
+                  help: l10n.registerPassengerHelp,
+                  onTap: _opening ? null : _openPassenger,
+                ),
+                _RoleCard(
+                  key: const ValueKey('register-role-driver'),
+                  icon: Icons.directions_car_outlined,
+                  title: l10n.registerDriverTitle,
+                  help: l10n.registerDriverHelp,
+                  onTap: _opening
+                      ? null
+                      : () => _openApplication(OnboardingRole.driver),
+                ),
+                _RoleCard(
+                  key: const ValueKey('register-role-merchant'),
+                  icon: Icons.storefront_outlined,
+                  title: l10n.registerMerchantTitle,
+                  help: l10n.registerMerchantHelp,
+                  onTap: _opening
+                      ? null
+                      : () => _openApplication(OnboardingRole.merchant),
+                ),
+                const SizedBox(height: 8),
+                AuthSwitchPrompt(
+                  actionKey: const ValueKey('registerBackToSignIn'),
+                  prompt: l10n.haveAccountPrompt,
+                  action: l10n.login,
+                  onPressed: () => context.pop(),
+                ),
+              ],
             ),
-            const SizedBox(height: AppTokens.spaceLarge),
-            _RoleCard(
-              key: const ValueKey('register-role-passenger'),
-              icon: Icons.person_outline,
-              title: l10n.registerPassengerTitle,
-              help: l10n.registerPassengerHelp,
-              onTap: _opening ? null : _openPassenger,
-            ),
-            _RoleCard(
-              key: const ValueKey('register-role-driver'),
-              icon: Icons.directions_car_outlined,
-              title: l10n.registerDriverTitle,
-              help: l10n.registerDriverHelp,
-              onTap: _opening
-                  ? null
-                  : () => _openInvited(OnboardingRole.driver),
-            ),
-            _RoleCard(
-              key: const ValueKey('register-role-merchant'),
-              icon: Icons.storefront_outlined,
-              title: l10n.registerMerchantTitle,
-              help: l10n.registerMerchantHelp,
-              onTap: _opening
-                  ? null
-                  : () => _openInvited(OnboardingRole.merchant),
-            ),
-            TextButton(
-              key: const ValueKey('registerBackToSignIn'),
-              onPressed: () => context.pop(),
-              child: Text(l10n.alreadyHaveAccount),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -90,7 +99,7 @@ class _RegisterRoleScreenState extends ConsumerState<RegisterRoleScreen> {
     context.pushReplacement('/signup');
   }
 
-  Future<void> _openInvited(OnboardingRole role) async {
+  Future<void> _openApplication(OnboardingRole role) async {
     setState(() => _opening = true);
     final controller = ref.read(onboardingControllerProvider.notifier);
     await controller.refreshAvailability();
@@ -132,18 +141,18 @@ class _RoleCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppTokens.gutterMobile),
       child: MasariCard(
         onTap: onTap,
-        background: AppTheme.surfaceContainerLowest,
-        border: const BorderSide(color: AppTheme.outlineVariant),
+        background: Colors.white,
+        border: const BorderSide(color: AuthStyle.border),
         child: Row(
           children: [
             Container(
               width: AppTokens.minTouchTarget,
               height: AppTokens.minTouchTarget,
               decoration: BoxDecoration(
-                color: AppTheme.primaryContainer,
+                color: AuthStyle.orange.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(AppTokens.radiusFull),
               ),
-              child: Icon(icon, color: AppTheme.primary, size: 22),
+              child: Icon(icon, color: AuthStyle.orange, size: 22),
             ),
             const SizedBox(width: AppTokens.spaceMedium),
             Expanded(
@@ -160,7 +169,7 @@ class _RoleCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppTheme.outlineVariant),
+            const Icon(Icons.chevron_right, color: AuthStyle.hint),
           ],
         ),
       ),

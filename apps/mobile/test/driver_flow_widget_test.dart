@@ -194,7 +194,7 @@ void main() {
       authenticated: false,
       handler: _roleHandler('driver'),
     );
-    GoRouter.of(tester.element(find.text('مساري'))).go('/driver/route');
+    GoRouter.of(tester.element(find.text('أهلاً بعودتك'))).go('/driver/route');
     await tester.pumpAndSettle();
     expect(find.text('تسجيل الدخول'), findsWidgets);
     expect(find.text('تفاصيل المسار'), findsNothing);

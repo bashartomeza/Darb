@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/theme/app_tokens.dart';
+import 'auth_style.dart';
 
-/// A labelled rule ("— or —") separating the primary credential form from the
+/// A labelled rule ("— OR —") separating the primary credential form from the
 /// alternative sign-in options.
 class AuthDivider extends StatelessWidget {
   const AuthDivider({super.key, required this.label});
@@ -12,19 +11,21 @@ class AuthDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final line = Expanded(
-      child: Divider(color: AppTheme.outlineVariant, height: 1),
+    const line = Expanded(
+      child: Divider(color: AuthStyle.border, thickness: 2, height: 2),
     );
     return Row(
       children: [
         line,
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceSmall),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppTheme.onSurfaceVariant),
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: AuthStyle.muted,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         line,

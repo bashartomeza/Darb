@@ -9,7 +9,6 @@ const prismaMock = vi.hoisted(() => {
     onboardingAttempt: { findFirst: vi.fn(), findMany: vi.fn(), updateMany: vi.fn(), create: vi.fn(), findUniqueOrThrow: vi.fn() },
     onboardingSession: { updateMany: vi.fn(), create: vi.fn() },
     auditEvent: { create: vi.fn() },
-    invitation: { findUnique: vi.fn() },
     $queryRaw: vi.fn(),
     $transaction: vi.fn()
   };
@@ -34,7 +33,6 @@ vi.mock("../lib/otp.js", async () => ({
 const { createApp } = await import("../app.js");
 
 const secrets = {
-  INVITATION_CODE_PEPPER: "invitation-test-secret-longer-than-thirty-two-characters",
   PHONE_DIGEST_PEPPER: "phone-test-secret-longer-than-thirty-two-characters",
   OTP_CODE_PEPPER: "otp-test-secret-longer-than-thirty-two-characters",
   ONBOARDING_SESSION_PEPPER: "session-test-secret-longer-than-thirty-two-characters",
@@ -51,7 +49,6 @@ function config(overrides: Record<string, string | undefined> = {}) {
     REFRESH_TOKEN_PEPPER: "open-signup-test-refresh-secret-longer-than-thirty-two",
     CORS_ORIGINS: "http://localhost:5173",
     TRUST_PROXY: "none",
-    INVITATIONS_ENABLED: "true",
     PUBLIC_ONBOARDING_ENABLED: "true",
     OTP_PROVIDER: "fake",
     DRIVER_DOCUMENTS_ENABLED: "true",
@@ -80,21 +77,25 @@ const consentRows = ["terms", "privacy", "adult_self_attestation"].map((type) =>
   effective_at: new Date()
 }));
 
-describe("open driver / shop-owner signup switch", () => {
-  it("is off by default and never needs to be listed", () => {
-    expect(config().openSignupEnabled).toBe(false);
-    expect(createConfig({ ...base }).openSignupEnabled).toBe(false);
+describe("self-service driver / shop-owner registration config", () => {
+  it("needs neither the invitations feature nor an invitation pepper", () => {
+    const parsed = config();
+    expect(parsed.invitationsEnabled).toBe(false);
+    expect(parsed.onboarding).toBeDefined();
+    expect(parsed.onboarding?.keys.invitationCode).toBeUndefined();
   });
 
-  it("can only be turned on with public onboarding and document storage", () => {
-    expect(() => createConfig({ ...base, OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" })).toThrow(/requires PUBLIC_ONBOARDING_ENABLED/);
-    expect(() => config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true", DRIVER_DOCUMENTS_ENABLED: "false" })).toThrow(
-      /requires DRIVER_DOCUMENTS_ENABLED/
-    );
-    expect(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" }).openSignupEnabled).toBe(true);
+  it("only needs public onboarding and document storage", () => {
+    expect(() => config({ DRIVER_DOCUMENTS_ENABLED: "false" })).toThrow(/requires DRIVER_DOCUMENTS_ENABLED/);
+    expect(config({ PUBLIC_ONBOARDING_ENABLED: "false", DRIVER_DOCUMENTS_ENABLED: "false" }).publicOnboardingEnabled).toBe(false);
+    expect(createConfig({ ...base }).publicOnboardingEnabled).toBe(false);
   });
 
-  it("cannot be enabled in staging or production", () => {
+  it("still requires the invitation pepper when the optional invitations feature is switched on", () => {
+    expect(() => config({ INVITATIONS_ENABLED: "true" })).toThrow(/invitationCode pepper is required/);
+  });
+
+  it("cannot be enabled in staging or production without the email provider", () => {
     const production = {
       ...base,
       APP_ENV: "production",
@@ -104,12 +105,12 @@ describe("open driver / shop-owner signup switch", () => {
       CORS_ORIGINS: "https://admin.masari.example",
       APP_RELEASE: "test"
     };
-    expect(() => createConfig({ ...production, OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true", PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow();
-    expect(createConfig(production).openSignupEnabled).toBe(false);
+    expect(() => createConfig({ ...production, PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow();
+    expect(createConfig(production).publicOnboardingEnabled).toBe(false);
   });
 });
 
-describe("open signup start endpoint", () => {
+describe("self-service registration start endpoint", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     consume.mockResolvedValue({ allowed: true });
@@ -138,22 +139,24 @@ describe("open signup start endpoint", () => {
       .set("idempotency-key", "open-signup-key-1")
       .send({ role: "driver", phone: "+970590000001", email: "Applicant@Example.com", locale: "en", ...body });
 
-  it("answers 404 and writes nothing while the switch is off", async () => {
-    const response = await start(createApp(config())).expect(404);
-    expect(response.body.error).toBe("onboarding_unavailable");
+  it("answers 404 and writes nothing while public onboarding is off", async () => {
+    const response = await start(createApp(config({ PUBLIC_ONBOARDING_ENABLED: "false" }))).expect(404);
+    expect(response.body.error).toBe("not_found");
     expect(prismaMock.onboardingAttempt.create).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it("reports the open roles only when the switch is on", async () => {
-    const off = await request(createApp(config())).get("/api/v1/onboarding/config").expect(200);
+  it("offers driver and merchant registration without any invitation, and never passenger", async () => {
+    const off = await request(createApp(config({ PUBLIC_ONBOARDING_ENABLED: "false", DRIVER_DOCUMENTS_ENABLED: "false" }))).get("/api/v1/onboarding/config").expect(200);
+    expect(off.body.registration_roles).toEqual([]);
     expect(off.body.open_registration_roles).toEqual([]);
-    const on = await request(createApp(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" }))).get("/api/v1/onboarding/config").expect(200);
+    const on = await request(createApp(config())).get("/api/v1/onboarding/config").expect(200);
+    expect(on.body.registration_roles).toEqual(["driver", "merchant"]);
     expect(on.body.open_registration_roles).toEqual(["driver", "merchant"]);
   });
 
-  it("starts an invitation-less attempt for a driver and sends the one-time code", async () => {
-    const response = await start(createApp(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" }))).expect(201);
+  it("starts an attempt for a driver and sends the one-time code", async () => {
+    const response = await start(createApp(config())).expect(201);
     expect(response.body.onboarding_token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(response.body.next_action).toBe("verify_otp");
     expect(JSON.stringify(response.body)).not.toContain("+970590000001");
@@ -163,8 +166,8 @@ describe("open signup start endpoint", () => {
     expect(dispatch).toHaveBeenCalledTimes(1);
   });
 
-  it("requires the email the one-time code is sent to, and never takes one with an invitation", async () => {
-    const app = createApp(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" }));
+  it("requires the email the one-time code is sent to, and rejects any invitation code", async () => {
+    const app = createApp(config());
     await start(app, { email: undefined }).expect(400);
     await start(app, { email: "not-an-email" }).expect(400);
     await start(app, { invitation_code: "ABCDEFGHJKLMNPQRSTUV2345" }).expect(400);
@@ -173,7 +176,7 @@ describe("open signup start endpoint", () => {
 
   it("supersedes the older open attempt for the same phone", async () => {
     prismaMock.onboardingAttempt.findMany.mockResolvedValue([{ id: "old_attempt" }]);
-    await start(createApp(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" })), { role: "merchant" }).expect(201);
+    await start(createApp(config()), { role: "merchant" }).expect(201);
     expect(prismaMock.onboardingAttempt.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: { in: ["old_attempt"] } }, data: expect.objectContaining({ status: "cancelled" }) })
     );
@@ -182,13 +185,13 @@ describe("open signup start endpoint", () => {
     );
   });
 
-  it("never opens passenger registration without an invitation", async () => {
-    await start(createApp(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" })), { role: "passenger" }).expect(404);
+  it("never opens passenger registration through this flow", async () => {
+    await start(createApp(config()), { role: "passenger" }).expect(404);
     expect(prismaMock.onboardingAttempt.create).not.toHaveBeenCalled();
   });
 
   it("applies per-IP, per-phone and global caps before creating anything", async () => {
-    await start(createApp(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true", OPEN_SIGNUP_MAX_STARTS_PER_HOUR: "7" }))).expect(201);
+    await start(createApp(config({ OPEN_SIGNUP_MAX_STARTS_PER_HOUR: "7" }))).expect(201);
     const buckets = consume.mock.calls.map((call) => call[1]);
     expect(buckets).toEqual(
       expect.arrayContaining([
@@ -203,7 +206,7 @@ describe("open signup start endpoint", () => {
 
   it("answers 429 and sends no code when a cap is exceeded", async () => {
     consume.mockResolvedValue({ allowed: false });
-    await start(createApp(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" }))).expect(429);
+    await start(createApp(config())).expect(429);
     expect(prismaMock.onboardingAttempt.create).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();
   });
@@ -211,7 +214,7 @@ describe("open signup start endpoint", () => {
   it("gives the same answer whether or not the number already has an account", async () => {
     // The start path never looks the phone up in users, so it cannot differ.
     prismaMock.user = { findUnique: vi.fn() };
-    await start(createApp(config({ OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true" }))).expect(201);
+    await start(createApp(config())).expect(201);
     expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
     delete prismaMock.user;
   });

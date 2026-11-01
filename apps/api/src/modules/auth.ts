@@ -61,6 +61,7 @@ function publicUser(user: {
   profile_state?: string;
   email_verified_at?: Date | null;
   phone_verified_at?: Date | null;
+  city?: string | null;
 }) {
   return {
     id: user.id,
@@ -71,7 +72,8 @@ function publicUser(user: {
     account_status: user.account_status,
     demo_account: user.demo_account,
     profile_state: user.profile_state,
-    email_verified: hasVerifiedContact(user)
+    email_verified: hasVerifiedContact(user),
+    city: user.city ?? null
   };
 }
 
@@ -255,7 +257,13 @@ authRouter.post("/auth/identities/google/link", requireAuth, passwordSetRateLimi
   try { res.json(await identityProfile.link(req.user!.id, req.user!.securityVersion, googleLinkSchema.parse(req.body))); } catch (error) { next(error); }
 });
 authRouter.post("/profile/phone/start-verification", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
-  try { res.status(202).json(await identityProfile.phoneStart(req.user!.id, req.user!.securityVersion, phoneStartSchema.parse(req.body))); } catch (error) { next(error); }
+  try {
+    const input = phoneStartSchema.parse(req.body);
+    const { id, securityVersion } = req.user!;
+    res.status(202).json(appConfig.phoneVerificationDisabled
+      ? await identityProfile.phoneSaveUnverified(id, securityVersion, input)
+      : await identityProfile.phoneStart(id, securityVersion, input));
+  } catch (error) { next(error); }
 });
 authRouter.post("/profile/phone/confirm-verification", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
   try { res.json(await identityProfile.phoneConfirm(req.user!.id, req.user!.securityVersion, phoneConfirmSchema.parse(req.body))); } catch (error) { next(error); }
@@ -266,7 +274,13 @@ authRouter.get("/auth/capabilities", (_req, res) => {
     google_mobile_login_available: appConfig.googleAuth.mobileClientIds.length > 0,
     google_admin_login_available: appConfig.googleAuth.adminClientIds.length === 1,
     google_admin_client_id: appConfig.googleAuth.adminClientIds.length === 1 ? appConfig.googleAuth.adminClientIds[0] : null,
-    google_passenger_signup_mode: appConfig.googleAuth.passengerSignupMode
+    google_passenger_signup_mode: appConfig.googleAuth.passengerSignupMode,
+    // Local development: the phone is saved without a code, so the app hides the code step.
+    phone_verification_disabled: appConfig.phoneVerificationDisabled,
+    // Google driver applications reuse the self-service document upload and Admin review.
+    google_driver_signup_available: Boolean(
+      appConfig.publicOnboardingEnabled && appConfig.onboarding && appConfig.publicRegistration && appConfig.driverDocuments
+    )
   });
 });
 
@@ -299,7 +313,7 @@ authRouter.post(["/auth/login", "/auth/mobile/login", "/auth/admin/login"], asyn
 
     const validPassword = await bcrypt.compare(input.password, user.password_hash);
     if (!validPassword) throw new HttpError(401, "invalid_credentials");
-    if (!user.email_verified_at && !(input.phone && hasVerifiedContact(user))) throw new HttpError(403, "email_verification_required");
+    if (!appConfig.emailVerificationDisabled && !user.email_verified_at && !(input.phone && hasVerifiedContact(user))) throw new HttpError(403, "email_verification_required");
     if (loginPath === "/auth/mobile/login" && user.role === "admin") throw new HttpError(401, "invalid_credentials");
     if (user.account_status !== "active") {
       await auditEvent(prisma, {
@@ -368,6 +382,11 @@ authRouter.post(["/auth/google", "/auth/mobile/google"], async (req, res, next) 
       res.status(202).json(grant);
       return;
     }
+    if (result.kind === "pending") {
+      // No app session: the applicant gets the pending-status token that shows their review and documents.
+      res.status(202).json({ ...(await googleAuth.pendingStatus(result.user.id)), request_id: req.requestId });
+      return;
+    }
     const established = await establishMobileSession(result.user, {
       deviceName: input.device_name, loginAction: AuditAction.auth_google_login,
       loginMetadata: { method: "google", role: result.user.role }
@@ -390,9 +409,19 @@ authRouter.post("/auth/mobile/google/complete-registration", async (req, res, ne
     const input = googleCompleteSchema.parse(req.body);
     const result = await googleAuth.complete(input, (tx, user) => establishMobileSession(user, {
       deviceName: input.device_name, loginAction: AuditAction.auth_register,
-      loginMetadata: { method: "google", role: "passenger" }
+      loginMetadata: { method: "google", role: user.role }
     }, tx), req.requestId);
-    res.status(201).json(sessionResponseBody(result.session, result.user));
+    if (result.pending) {
+      // Drivers wait for Admin approval: they upload documents with the pending-status token, not a session.
+      res.status(201).json({
+        result: "account_created", role: result.user.role, account_status: result.user.account_status,
+        onboarding_status: "documents_required", next_action: "upload_documents",
+        onboarding_status_token: result.pending.token, onboarding_status_expires_at: result.pending.expiresAt,
+        request_id: req.requestId
+      });
+      return;
+    }
+    res.status(201).json(sessionResponseBody(result.session!, result.user));
   } catch (error) { next(error); }
 });
 
@@ -540,7 +569,18 @@ authRouter.get("/me", requireAuth, async (req: AuthenticatedRequest, res, next) 
             select: { vehicle_type: true, seats_total: true, parcel_capacity: true, verified: true, trust_score: true }
           })
         : null;
-    res.json({ user: publicUser(user), ...(driverProfile ? { driver_profile: driverProfile } : {}) });
+    const merchantProfile =
+      user.role === "merchant"
+        ? await prisma.merchantProfile.findUnique({
+            where: { user_id: user.id },
+            select: { store_name: true, store_type: true, sales_channel: true, city: true, address: true }
+          })
+        : null;
+    res.json({
+      user: publicUser(user),
+      ...(driverProfile ? { driver_profile: driverProfile } : {}),
+      ...(merchantProfile ? { merchant_profile: merchantProfile } : {})
+    });
   } catch (error) {
     next(error);
   }

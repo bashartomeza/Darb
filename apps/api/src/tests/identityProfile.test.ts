@@ -7,7 +7,7 @@ vi.mock("../lib/prisma.js", () => ({ prisma: db }));
 const abuse = vi.hoisted(() => ({ count: 0 }));
 vi.mock("../lib/abuseCounters.js", () => ({ consumeAbuseCounter: vi.fn(async (_db: unknown, input: { limit: number }) => ({ allowed: ++abuse.count <= input.limit })) }));
 const { createApp } = await import("../app.js");
-const { config } = await import("../config.js");
+const { config, createConfig } = await import("../config.js");
 const { signAuthToken } = await import("../middleware/auth.js");
 let users: any[], actions: any[], identities: any[], messages: any[], audits: any[];
 const cfg = { ...config, authActions: { key: { secret: "test-identity-secret-at-least-32-characters", version: 1 } }, googleAuth: { ...config.googleAuth, mobileClientIds: ["mobile-client"] } };
@@ -97,6 +97,39 @@ describe("explicit identity linking and verified phone profile", () => {
     const body = { action_token: r.body.action_token, phone, code: messages[0].code };
     for (let i = 0; i < 3; i++) await request(server).post(confirmPath).set("authorization", bearer()).send(body).expect(409);
     await request(server).post(confirmPath).set("authorization", bearer()).send(body).expect(429);
+  });
+  describe("PHONE_VERIFICATION_DISABLED (local development)", () => {
+    const dev = { ...cfg, phoneVerificationDisabled: true };
+    it("saves the phone without a code, leaves it unverified and completes the profile", async () => {
+      const r = await request(app({}, dev)).post(startPath).set("authorization", bearer()).send({ phone: "+1 (415) 555-2671", locale: "en" }).expect(202);
+      expect(r.body).toMatchObject({ next_action: "phone_saved", profile_state: "complete" });
+      expect(r.body.action_token).toBeUndefined();
+      expect(messages).toHaveLength(0); expect(actions).toHaveLength(0);
+      expect(users[0]).toMatchObject({ phone, profile_state: "complete", phone_verified_at: null });
+    });
+    it("works without an email delivery or a verified email", async () => {
+      users[0].email_verified_at = null;
+      await request(app({ emailDelivery: undefined, phoneVerificationProvider: undefined }, dev)).post(startPath).set("authorization", bearer()).send({ phone, locale: "en" }).expect(202);
+      expect(users[0].phone).toBe(phone);
+    });
+    it("still refuses a number another account owns, and a second different number", async () => {
+      users.push({ id: "other", phone });
+      await request(app({}, dev)).post(startPath).set("authorization", bearer()).send({ phone, locale: "en" }).expect(409);
+      expect(users[0]).toMatchObject({ phone: null, profile_state: "phone_required" });
+      users.pop(); users[0].phone = "+14155550000";
+      await request(app({}, dev)).post(startPath).set("authorization", bearer()).send({ phone, locale: "en" }).expect(409);
+      expect(users[0].phone).toBe("+14155550000");
+    });
+    it("still rejects an invalid number and keeps the code flow when the flag is off", async () => {
+      await request(app({}, dev)).post(startPath).set("authorization", bearer()).send({ phone: "00000", locale: "en" }).expect(400);
+      const r = await request(app()).post(startPath).set("authorization", bearer()).send({ phone, locale: "en" }).expect(202);
+      expect(r.body.next_action).toBe("verify_phone"); expect(users[0].phone).toBeNull();
+    });
+  });
+  it("refuses to enable PHONE_VERIFICATION_DISABLED in staging or production", () => {
+    for (const appEnv of ["staging", "production"]) {
+      expect(() => createConfig({ ...process.env, APP_ENV: appEnv, PHONE_VERIFICATION_DISABLED: "true" } as any)).toThrow(/PHONE_VERIFICATION_DISABLED is only allowed/);
+    }
   });
   it("rejects invalid phone and fails closed for missing or test production providers", async () => {
     await request(app()).post(startPath).set("authorization", bearer()).send({ phone: "00000", locale: "en" }).expect(400);

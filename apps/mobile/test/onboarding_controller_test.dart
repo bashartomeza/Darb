@@ -37,7 +37,7 @@ void main() {
     controller.chooseRole(OnboardingRole.passenger);
 
     final pending = controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000001',
       locale: 'ar',
     );
@@ -70,17 +70,17 @@ void main() {
     controller.chooseRole(OnboardingRole.passenger);
 
     await controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000001',
       locale: 'ar',
     );
     await controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000001',
       locale: 'ar',
     );
     await controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000002',
       locale: 'ar',
     );
@@ -99,13 +99,13 @@ void main() {
     controller.chooseRole(OnboardingRole.passenger);
 
     await controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000001',
       locale: 'ar',
     );
 
     final state = container.read(onboardingControllerProvider).value!;
-    expect(state.stage, OnboardingStage.enteringInvitation);
+    expect(state.stage, OnboardingStage.enteringContact);
     expect(state.busy, isFalse);
     expect(state.errorCode, 'secure_storage_unavailable');
     expect(storage.bundle, isNull);
@@ -377,10 +377,9 @@ class _FakeOnboardingRepository extends OnboardingRepository {
 
   @override
   Future<StartAttemptResult> start({
-    required String invitationCode,
     required OnboardingRole role,
     required String phone,
-    String email = '',
+    required String email,
     required String locale,
     required String idempotencyKey,
   }) async {

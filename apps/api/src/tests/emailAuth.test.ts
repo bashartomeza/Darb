@@ -11,7 +11,7 @@ const db = vi.hoisted(() => ({
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: db }));
 const { createApp } = await import("../app.js");
-const { config } = await import("../config.js");
+const { config, createConfig } = await import("../config.js");
 const { signAuthToken } = await import("../middleware/auth.js");
 const { createOperationalLogger } = await import("../lib/logger.js");
 const documents = ["terms", "privacy", "adult_self_attestation"].map((type, index) => ({
@@ -202,6 +202,56 @@ describe("email authentication lifecycle", () => {
       await request(app()).post(`/api/v1${path}`).send({ email: registration.email, password: registration.password }).expect(403);
     }
     expect(db.authSession.create).not.toHaveBeenCalled();
+  });
+  describe("EMAIL_VERIFICATION_DISABLED (local development)", () => {
+    const dev = { emailVerificationDisabled: true };
+    it("registers without sending or requiring an emailed code", async () => {
+      const server = app(dev);
+      const r = await request(server).post("/api/v1/auth/mobile/register/start").send(registration).expect(202);
+      expect(r.body.next_action).toBe("accept_consents"); expect(messages).toHaveLength(0); expect(actions).toHaveLength(0);
+      const body = { registration_token: r.body.registration_token, locale: "en", consents, adult_self_attestation: true };
+      const done = await request(server).post("/api/v1/auth/mobile/register/complete").send(body).expect(201);
+      expect(done.body.user).toMatchObject({ role: "passenger", email: "owner+tag@example.com" });
+      expect(users[0]).toMatchObject({ email_verified_at: null, role: "passenger", account_status: "active", profile_state: "complete" });
+      expect(db.userConsent.createMany).toHaveBeenCalledTimes(1);
+    });
+    it("still requires current consent", async () => {
+      const server = app(dev);
+      const r = await request(server).post("/api/v1/auth/mobile/register/start").send(registration).expect(202);
+      const body = { registration_token: r.body.registration_token, locale: "en", consents: consents.slice(1).concat({ ...consents[0], content_hash: "f".repeat(64) }), adult_self_attestation: true };
+      await request(server).post("/api/v1/auth/mobile/register/complete").send(body).expect(409);
+      expect(users).toHaveLength(0);
+    });
+    it("lets an unverified email account sign in", async () => {
+      users.push(actor({ password_hash: await bcrypt.hash(registration.password, 4), email_verified_at: null }));
+      await request(app(dev)).post("/api/v1/auth/mobile/login").send({ email: registration.email, password: registration.password }).expect(200);
+    });
+    it("does not let a registration started with verification off complete once it is back on", async () => {
+      const r = await request(app(dev)).post("/api/v1/auth/mobile/register/start").send(registration).expect(202);
+      const body = { registration_token: r.body.registration_token, locale: "en", consents, adult_self_attestation: true };
+      await request(app()).post("/api/v1/auth/mobile/register/complete").send(body).expect(400);
+      expect(users).toHaveLength(0);
+    });
+    it("never lets a verified-flow token complete without a proof", async () => {
+      const r = await start();
+      const body = { registration_token: r.body.registration_token, locale: "en", consents, adult_self_attestation: true };
+      await request(app(dev)).post("/api/v1/auth/mobile/register/complete").send(body).expect(400);
+      expect(users).toHaveLength(0);
+    });
+    it("allows product routes for an unverified email account", async () => {
+      (config as any).emailVerificationDisabled = true;
+      try {
+        db.trip.findMany.mockResolvedValue([]);
+        const u = actor({ profile_state: "complete", email_verified_at: null }); users.push(u);
+        const response = await request(app(dev)).get("/api/v1/trips").set("Authorization", bearer(u));
+        expect(response.body.error).not.toBe("email_verification_required");
+      } finally { (config as any).emailVerificationDisabled = false; }
+    });
+  });
+  it("refuses to enable EMAIL_VERIFICATION_DISABLED in staging or production", () => {
+    for (const appEnv of ["staging", "production"]) {
+      expect(() => createConfig({ ...process.env, APP_ENV: appEnv, EMAIL_VERIFICATION_DISABLED: "true" } as any)).toThrow(/EMAIL_VERIFICATION_DISABLED is only allowed/);
+    }
   });
   it.each(["/auth/mobile/login", "/auth/mobile/login/", "/AUTH/MOBILE/LOGIN"])("rejects Admin credentials on the mobile login variant %s", async (path) => {
     users.push(actor({ role: "admin", password_hash: await bcrypt.hash(registration.password, 4) }));

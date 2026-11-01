@@ -42,7 +42,6 @@ try {
     ["test:integration:public-onboarding", "public onboarding race and privacy smoke", {
       PUBLIC_ONBOARDING_ENABLED: "true",
       ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: "true",
-      OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: "true",
       DRIVER_DOCUMENTS_ENABLED: "true",
       DRIVER_DOCUMENTS_DIR: resolve(tmpdir(), "masari-ci-public-onboarding-documents"),
       IDEMPOTENCY_PAYLOAD_PEPPER: "ci-only-payload-pepper-at-least-thirty-two-characters"

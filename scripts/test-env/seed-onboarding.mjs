@@ -1,7 +1,6 @@
 // Prepares sign-up testing on the disposable demo database: installs clearly
-// labelled placeholder legal text (so onboarding is available) and creates one
-// invitation per role for fixed test phone numbers. Codes are written to
-// .staging-data/test-env/invitations.txt. Safe to repeat.
+// labelled placeholder legal text, which is what makes driver and shop-owner
+// registration available. Registration needs no invitation. Safe to repeat.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -53,20 +52,4 @@ if (!current.ready) {
   });
 }
 
-const people = [
-  { role: "passenger", phone: "+970590002001" },
-  { role: "driver", phone: "+970590002002" },
-  { role: "merchant", phone: "+970590002003" }
-];
-const lines = [];
-// Masari sends no SMS: each invitation records the email its one-time code is sent to.
-// DEMO_CODE_INBOX (the tester's own mailbox) when set, otherwise a placeholder address (codes are still in the log file).
-for (const person of people) {
-  const contact_email = process.env.DEMO_CODE_INBOX || `${person.role}.demo@example.com`;
-  const result = await call("/admin/invitations", { method: "POST", token: admin, expected: 201, body: { ...person, contact_email } });
-  lines.push(`${person.role.padEnd(10)} phone ${person.phone}   code email ${contact_email}   invitation code ${result.code}`);
-}
-const dir = resolve(root, ".staging-data/test-env");
-mkdirSync(dir, { recursive: true });
-writeFileSync(resolve(dir, "invitations.txt"), lines.join("\n") + "\n");
-console.log(lines.join("\n"));
+console.log("Placeholder legal text is installed; driver and shop-owner registration is open (no invitation needed).");

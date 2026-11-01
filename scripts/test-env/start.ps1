@@ -59,8 +59,6 @@ if (Test-MailPassword) {
 }
 $env:DRIVER_DOCUMENTS_ENABLED = "true"
 $env:DRIVER_DOCUMENTS_DIR = Join-Path $state "driver-docs"
-# Local test environment only: drivers and shop owners may sign up without an invitation code.
-$env:OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED = "true"
 # Local test environment only: route catalogue, route fares and passenger parcels need the canonical route entry
 # switches (matching and trip creation stay off, so the main story keeps using the classic flow).
 $env:ROUTE_MANAGEMENT_ENABLED = "true"

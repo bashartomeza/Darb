@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
@@ -8,6 +10,7 @@ import '../../driver/data/driver_repository.dart';
 import '../../merchant/application/merchant_controller.dart';
 import '../../onboarding/application/onboarding_controller.dart';
 import '../../onboarding/data/onboarding_storage.dart';
+import '../../onboarding/domain/onboarding_models.dart';
 import '../../passenger/application/passenger_controller.dart';
 import '../../passenger/application/passenger_history_controller.dart';
 import '../../security/data/session_repository.dart';
@@ -146,37 +149,70 @@ class AuthController extends AsyncNotifier<AuthState> {
     );
   }
 
-  Future<void> loginWithGoogle({required String idToken}) {
+  /// Completes when the attempt settles. Returns true when the Google account
+  /// belongs to a driver awaiting review: the caller then opens `/onboarding`,
+  /// where the stored pending-status session shows the application.
+  Future<bool> loginWithGoogle({
+    required String idToken,
+    String locale = 'ar',
+  }) {
     _loginFailure = null;
     _displayLoginFailure = true;
     return _startRegistration(
       () => _repository.loginWithGoogle(idToken: idToken),
+      locale: locale,
+      suggestedName: _googleDisplayName(idToken),
     );
   }
 
-  Future<void> _startRegistration(
-    Future<Map<String, dynamic>> Function() request,
-  ) async {
+  /// The `name` claim of the Google ID token, only to pre-fill the onboarding
+  /// form. The server never trusts or stores it; the user confirms the name.
+  static String? _googleDisplayName(String idToken) {
+    try {
+      final parts = idToken.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      final name = payload is Map ? payload['name'] : null;
+      return name is String && name.trim().isNotEmpty ? name.trim() : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> _startRegistration(
+    Future<Map<String, dynamic>> Function() request, {
+    String locale = 'ar',
+    String? suggestedName,
+  }) async {
     final attempt = ++_authAttempt;
     _registrationGrant = null;
     state = const AsyncData(AuthState.authenticating());
     try {
       final response = await request();
-      if (!_isCurrent(attempt)) return;
+      if (!_isCurrent(attempt)) return false;
+      if (response['onboarding_status_token'] is String) {
+        await _adoptPendingApplication(response, locale);
+        if (!_isCurrent(attempt)) return false;
+        state = const AsyncData(AuthState.unauthenticated());
+        return true;
+      }
       if (response['registration_token'] is String &&
           [
             'verify_email',
+            'accept_consents',
             'consent_required',
           ].contains(response['next_action']) &&
           DateTime.tryParse(
                 response['expires_at'] as String? ?? '',
               )?.isAfter(DateTime.now()) ==
               true) {
-        _registrationGrant = response;
+        _registrationGrant = {...response, 'suggested_name': ?suggestedName};
         state = AsyncData(
           AuthState(
             status: AuthStatus.registrationRequired,
-            registrationGrant: response,
+            registrationGrant: _registrationGrant,
           ),
         );
       } else {
@@ -186,7 +222,7 @@ class AuthController extends AsyncNotifier<AuthState> {
         );
       }
     } catch (error, stack) {
-      if (!_isCurrent(attempt)) return;
+      if (!_isCurrent(attempt)) return false;
       final failure = error is ApiException
           ? error
           : const ApiException(ApiErrorType.validation, 'invalid_response');
@@ -194,6 +230,77 @@ class AuthController extends AsyncNotifier<AuthState> {
       state = const AsyncData(AuthState.unauthenticated());
       state = AsyncError(failure, stack);
     }
+    return false;
+  }
+
+  /// Finishes a Google sign-up with the chosen role and its profile. Returns
+  /// true for a driver, whose account waits for Admin approval: no session is
+  /// issued, and the caller opens `/onboarding` to upload documents. Failures
+  /// are thrown to the caller and leave the registration open for a retry.
+  Future<bool> completeGoogleOnboarding({
+    required String locale,
+    required List<Map<String, dynamic>> documents,
+    required String name,
+    required String role,
+    required Map<String, dynamic> profile,
+  }) async {
+    final grant = _registrationGrant;
+    if (grant == null) {
+      throw const ApiException(ApiErrorType.validation, 'auth_action_invalid');
+    }
+    final attempt = _authAttempt;
+    final response = await _repository.completeGoogleOnboarding(
+      grant: grant,
+      locale: locale,
+      documents: documents,
+      name: name,
+      role: role,
+      profile: profile,
+    );
+    if (!_isCurrent(attempt)) return false;
+    if (response['onboarding_status_token'] is String) {
+      await _adoptPendingApplication(response, locale);
+      if (!_isCurrent(attempt)) return false;
+      _authAttempt++;
+      _registrationGrant = null;
+      state = const AsyncData(AuthState.unauthenticated());
+      return true;
+    }
+    final result = _repository.loginResultFrom(response);
+    await _completeAuthentication(() async => result, attempt: attempt);
+    return false;
+  }
+
+  /// Stores the pending-status session the onboarding screens resume from.
+  Future<void> _adoptPendingApplication(
+    Map<String, dynamic> response,
+    String locale,
+  ) async {
+    final PendingStatusResult result;
+    try {
+      result = PendingStatusResult.fromJson(response);
+    } on FormatException {
+      throw const ApiException(ApiErrorType.validation, 'invalid_response');
+    }
+    if (result.pendingStatusToken == null ||
+        result.pendingStatusExpiresAt == null ||
+        (result.role != OnboardingRole.driver &&
+            result.role != OnboardingRole.merchant)) {
+      throw const ApiException(ApiErrorType.validation, 'invalid_response');
+    }
+    await ref
+        .read(onboardingStorageProvider)
+        .saveBundle(
+          OnboardingBundle(
+            type: OnboardingBundleType.pendingStatus,
+            safeStage: OnboardingStage.pendingReview,
+            locale: locale,
+            selectedRole: result.role,
+            pendingStatusToken: result.pendingStatusToken,
+            pendingStatusExpiresAt: result.pendingStatusExpiresAt,
+          ),
+        );
+    ref.invalidate(onboardingControllerProvider);
   }
 
   Future<void> completeRegistration({

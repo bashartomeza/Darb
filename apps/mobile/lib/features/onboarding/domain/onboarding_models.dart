@@ -4,7 +4,7 @@ enum OnboardingStage {
   checkingAvailability,
   unavailable,
   choosingRole,
-  enteringInvitation,
+  enteringContact,
   enteringPhone,
   starting,
   otpSent,
@@ -34,15 +34,12 @@ class OnboardingConfig {
     required this.maximumPasswordUtf8Bytes,
     required this.otpDigits,
     required this.resendCooldownSeconds,
-    this.openRegistrationRoles = const [],
     this.requestId,
   });
 
   final bool enabled;
   final List<OnboardingRole> registrationRoles;
 
-  /// Roles that may register without an invitation code (the server switch is on).
-  final List<OnboardingRole> openRegistrationRoles;
   final List<String> supportedLocales;
   final int minimumPasswordCharacters;
   final int maximumPasswordCharacters;
@@ -98,24 +95,9 @@ class OnboardingConfig {
         cooldown < 1) {
       throw const FormatException('Invalid onboarding policy');
     }
-    final rawOpen = json['open_registration_roles'];
-    final openRoles = rawOpen is List
-        ? rawOpen
-              .whereType<String>()
-              .map(_roleFromApi)
-              .whereType<OnboardingRole>()
-              .where(
-                (role) =>
-                    role == OnboardingRole.driver ||
-                    role == OnboardingRole.merchant,
-              )
-              .toSet()
-              .toList(growable: false)
-        : const <OnboardingRole>[];
     return OnboardingConfig(
       enabled: true,
       registrationRoles: roles.cast<OnboardingRole>(),
-      openRegistrationRoles: openRoles,
       supportedLocales: rawLocales,
       minimumPasswordCharacters: minimum,
       maximumPasswordCharacters: maximum,

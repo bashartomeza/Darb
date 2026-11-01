@@ -59,7 +59,7 @@ async function main() {
     intendedPhone: phone,
     phoneRegion: "PS",
     expiresAt: new Date(Date.now() + 86_400_000),
-    keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   for (const mismatch of [
     { intendedRole: "driver" as const, phone },
@@ -94,7 +94,7 @@ async function main() {
     intendedPhone: phone,
     phoneRegion: "PS",
     expiresAt: new Date(Date.now() + 86_400_000),
-    keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const mismatchedConsumption = await consumeInvitation(prisma, {
     invitationId: unrelatedInvite.invitation.id,
@@ -126,7 +126,7 @@ async function main() {
     intendedPhone: phone,
     phoneRegion: "PS",
     expiresAt: new Date(Date.now() + 86_400_000),
-    keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const concurrentAttemptResults = await Promise.allSettled(Array.from({ length: 8 }, () =>
     createOnboardingAttempt(prisma, {
@@ -147,7 +147,7 @@ async function main() {
 
   const raceInvite = await createInvitation(prisma, {
     createdById: admin.id, intendedRole: "driver", intendedPhone: "+970590000002", phoneRegion: "PS",
-    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const raceAttempt = await createOnboardingAttempt(prisma, {
     invitationId: raceInvite.invitation.id, intendedRole: "driver", phone: "+970590000002",
@@ -192,7 +192,7 @@ async function main() {
 
   const resendInvite = await createInvitation(prisma, {
     createdById: admin.id, intendedRole: "passenger", intendedPhone: phone, phoneRegion: "PS",
-    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const resendAttempt = await createOnboardingAttempt(prisma, {
     invitationId: resendInvite.invitation.id, intendedRole: "passenger", phone,
@@ -236,7 +236,7 @@ async function main() {
 
   const concurrentInvite = await createInvitation(prisma, {
     createdById: admin.id, intendedRole: "passenger", intendedPhone: phone, phoneRegion: "PS",
-    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const concurrentAttempt = await createOnboardingAttempt(prisma, {
     invitationId: concurrentInvite.invitation.id, intendedRole: "passenger", phone,
@@ -316,7 +316,7 @@ async function main() {
 
   const lockInvite = await createInvitation(prisma, {
     createdById: admin.id, intendedRole: "passenger", intendedPhone: phone, phoneRegion: "PS",
-    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const lockAttempt = await createOnboardingAttempt(prisma, {
     invitationId: lockInvite.invitation.id, intendedRole: "passenger", phone,

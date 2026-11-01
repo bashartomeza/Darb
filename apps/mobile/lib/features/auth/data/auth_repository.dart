@@ -29,7 +29,7 @@ class AuthRepository {
     String deviceName = _deviceName,
   }) async {
     // The first argument is an email address, or an international phone number
-    // for accounts created through an invitation.
+    // for driver and shop-owner accounts registered with a phone.
     final byEmail = email.contains('@');
     return _authRequest(
       '/auth/mobile/login',
@@ -106,7 +106,7 @@ class AuthRepository {
     required String emailToken,
     required String name,
   }) => _authRequest(
-    grant['next_action'] == 'verify_email'
+    _isEmailGrant(grant)
         ? '/auth/mobile/register/complete'
         : '/auth/mobile/google/complete-registration',
     body: {
@@ -123,10 +123,48 @@ class AuthRepository {
           .toList(),
       'adult_self_attestation': true,
       'device_name': _deviceName,
+      // `accept_consents` is the local-development grant issued while the API
+      // has EMAIL_VERIFICATION_DISABLED: no emailed code exists to send.
       if (grant['next_action'] == 'verify_email')
         'email_verification_code': emailToken
-      else
+      else if (!_isEmailGrant(grant))
         'name': name,
+    },
+  );
+
+  static bool _isEmailGrant(Map<String, dynamic> grant) =>
+      grant['next_action'] == 'verify_email' ||
+      grant['next_action'] == 'accept_consents';
+
+  /// Creates the account for a Google sign-up with its chosen role. Returns a
+  /// session for passengers and shop owners, or the pending-status token for a
+  /// driver, whose account waits for Admin approval.
+  Future<Map<String, dynamic>> completeGoogleOnboarding({
+    required Map<String, dynamic> grant,
+    required String locale,
+    required List<Map<String, dynamic>> documents,
+    required String name,
+    required String role,
+    required Map<String, dynamic> profile,
+  }) => apiClient.postJson(
+    '/auth/mobile/google/complete-registration',
+    body: {
+      'registration_token': grant['registration_token'],
+      'locale': locale,
+      'consents': documents
+          .map(
+            (d) => {
+              'id': d['id'],
+              'type': d['type'],
+              'content_hash': d['content_hash'],
+            },
+          )
+          .toList(),
+      'adult_self_attestation': true,
+      'device_name': _deviceName,
+      'name': name,
+      'role': role,
+      'profile': profile,
     },
   );
 
@@ -208,6 +246,14 @@ class AuthRepository {
         if (proof.isNotEmpty) 'reauthentication_token': proof,
       },
     );
+  }
+
+  LoginResult loginResultFrom(Map<String, dynamic> json) {
+    try {
+      return LoginResult.fromJson(json);
+    } on FormatException {
+      throw const ApiException(ApiErrorType.validation, 'invalid_response');
+    }
   }
 
   Future<LoginResult> _authRequest(

@@ -24,7 +24,6 @@ class OnboardingFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
-  final _invitation = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _otp = TextEditingController();
@@ -48,7 +47,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       // Arriving from the register screen with a role already chosen: keep it.
       final current = ref.read(onboardingControllerProvider).value;
       if (current?.enabled == true &&
-          current?.stage == OnboardingStage.enteringInvitation &&
+          current?.stage == OnboardingStage.enteringContact &&
           current?.selectedRole != null) {
         return;
       }
@@ -59,7 +58,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _invitation.dispose();
     _phone.dispose();
     _email.dispose();
     _otp.dispose();
@@ -162,7 +160,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       ),
       OnboardingStage.unavailable => _Unavailable(l10n: l10n),
       OnboardingStage.choosingRole => _roleStep(context, state),
-      OnboardingStage.enteringInvitation ||
+      OnboardingStage.enteringContact ||
       OnboardingStage.enteringPhone ||
       OnboardingStage.starting => _startStep(context, state),
       OnboardingStage.otpSent ||
@@ -229,25 +227,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           Directionality(
             textDirection: TextDirection.ltr,
             child: TextField(
-              key: const ValueKey('invitationCodeField'),
-              controller: _invitation,
-              textInputAction: TextInputAction.next,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText:
-                    state.config?.openRegistrationRoles.contains(
-                          state.selectedRole,
-                        ) ==
-                        true
-                    ? l10n.invitationCodeOptional
-                    : l10n.invitationCode,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppTokens.spaceMedium),
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: TextField(
               key: const ValueKey('onboardingPhoneField'),
               controller: _phone,
               keyboardType: TextInputType.phone,
@@ -262,22 +241,20 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
               ),
             ),
           ),
-          if (_invitation.text.trim().isEmpty) ...[
-            const SizedBox(height: AppTokens.spaceMedium),
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: TextField(
-                key: const ValueKey('onboardingEmailField'),
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.done,
-                autocorrect: false,
-                enableSuggestions: false,
-                inputFormatters: [LengthLimitingTextInputFormatter(191)],
-                decoration: InputDecoration(labelText: l10n.emailForCode),
-              ),
+          const SizedBox(height: AppTokens.spaceMedium),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: TextField(
+              key: const ValueKey('onboardingEmailField'),
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              autocorrect: false,
+              enableSuggestions: false,
+              inputFormatters: [LengthLimitingTextInputFormatter(191)],
+              decoration: InputDecoration(labelText: l10n.emailForCode),
             ),
-          ],
+          ),
           const SizedBox(height: AppTokens.spaceLarge),
           FilledButton(
             key: const ValueKey('sendVerificationCodeButton'),
@@ -694,14 +671,12 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     await ref
         .read(onboardingControllerProvider.notifier)
         .start(
-          invitationCode: _invitation.text,
           phone: _phone.text,
           email: _email.text,
           locale: locale == 'en' ? 'en' : 'ar',
         );
     final result = ref.read(onboardingControllerProvider).value;
     if (result?.stage == OnboardingStage.otpSent) {
-      _invitation.clear();
       _phone.clear();
       _email.clear();
     }
@@ -717,7 +692,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     _otp.clear();
     _password.clear();
     _confirmPassword.clear();
-    _invitation.clear();
     _phone.clear();
     _email.clear();
     _displayName.clear();

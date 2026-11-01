@@ -5,7 +5,9 @@ import 'package:masari_mobile/l10n/app_localizations.dart';
 import 'masari_bottom_nav.dart';
 import 'language_switch.dart';
 import 'masari_back_button.dart';
+import 'passenger_bottom_nav.dart';
 import '../theme/app_theme.dart';
+import '../theme/passenger_theme.dart';
 
 /// A bottom-nav destination. The branch it selects is its index in the list, so
 /// the order here must match the order of the shell's branches.
@@ -28,11 +30,18 @@ class RoleShellScaffold extends StatelessWidget {
   const RoleShellScaffold({
     required this.navigationShell,
     required this.destinations,
+    this.passengerItems,
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
   final List<RoleNavDestination> destinations;
+
+  /// When set, the shell renders the passenger design: a white page with the
+  /// passenger bottom bar instead of the app bar and side menu used by the
+  /// other roles. Branches missing from this list (the notifications inbox)
+  /// stay reachable from within the screens — Home's bell opens it.
+  final List<PassengerNavItem>? passengerItems;
 
   void _onSelected(int index) {
     // `initialLocation: true` only when re-tapping the active tab: that pops
@@ -47,6 +56,8 @@ class RoleShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final passenger = passengerItems;
+    if (passenger != null) return _passengerShell(context, passenger);
     final arabic = Localizations.localeOf(context).languageCode == 'ar';
     final wide = MediaQuery.sizeOf(context).width >= 1024;
     final path = GoRouterState.of(context).uri.path;
@@ -123,6 +134,43 @@ class RoleShellScaffold extends StatelessWidget {
                   ],
                 )
               : panel,
+        ),
+      ),
+    );
+  }
+
+  Widget _passengerShell(BuildContext context, List<PassengerNavItem> items) {
+    final path = GoRouterState.of(context).uri.path;
+    final l10n = AppLocalizations.of(context);
+    // Request details is the only passenger screen in the shell that has no
+    // header of its own; every other screen draws its own top area.
+    final needsAppBar = path.startsWith('/passenger/request/');
+    return PassengerTheme(
+      child: Scaffold(
+        backgroundColor: PassengerStyle.surface,
+        appBar: needsAppBar
+            ? AppBar(
+                automaticallyImplyLeading: false,
+                leading: const MasariBackButton(fallback: '/passenger'),
+                title: Text(l10n.requestDetails),
+              )
+            : null,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 840),
+            child: navigationShell,
+          ),
+        ),
+        bottomNavigationBar: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 840),
+            child: PassengerBottomNav(
+              items: items,
+              currentBranch: navigationShell.currentIndex,
+              onSelected: _onSelected,
+            ),
+          ),
         ),
       ),
     );
@@ -324,6 +372,36 @@ class RoleNavDestinations {
         selectedIcon: Icons.person,
         label: l10n.navAccount,
       ),
+    ),
+  ];
+
+  /// The four tabs of the passenger bottom bar, in the design's order. Each
+  /// points at its branch; notifications (branch 3) is opened from Home's bell.
+  static List<PassengerNavItem> passengerBar(AppLocalizations l10n) => [
+    PassengerNavItem(
+      branch: 0,
+      asset: 'assets/images/passenger/nav_home.svg',
+      iconSize: const Size(24, 24),
+      label: l10n.passengerNavHome,
+    ),
+    PassengerNavItem(
+      branch: 1,
+      asset: 'assets/images/passenger/nav_bus.svg',
+      iconSize: const Size(29, 27),
+      label: l10n.passengerNavTrips,
+    ),
+    PassengerNavItem(
+      branch: 2,
+      asset: 'assets/images/passenger/nav_maps.svg',
+      iconSize: const Size(24, 24),
+      label: l10n.passengerNavMaps,
+      flexible: false,
+    ),
+    PassengerNavItem(
+      branch: 4,
+      asset: 'assets/images/passenger/nav_settings.svg',
+      iconSize: const Size(24, 24),
+      label: l10n.passengerNavSettings,
     ),
   ];
 

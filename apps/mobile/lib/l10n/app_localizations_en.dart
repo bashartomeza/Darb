@@ -115,6 +115,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueWithGoogle => 'Continue with Google';
 
   @override
+  String get welcomeBack => 'Welcome Back';
+
+  @override
+  String get welcomeBackSubtitle => 'We are so happy you are back';
+
+  @override
+  String get login => 'Login';
+
+  @override
+  String get noAccountPrompt => 'Don\'t have an account?';
+
+  @override
+  String get registerAction => 'Register';
+
+  @override
+  String get haveAccountPrompt => 'Already have an account?';
+
+  @override
   String get orSeparator => 'or';
 
   @override
@@ -776,9 +794,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'The session action could not be completed. Please retry.';
 
   @override
-  String get createInvitedAccount => 'Create an invited account';
-
-  @override
   String get selectAccountType => 'Select account type';
 
   @override
@@ -814,9 +829,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get registerMerchantHelp =>
       'Send orders from your shop. You upload your documents and an admin approves your account.';
-
-  @override
-  String get invitationCode => 'Invitation code';
 
   @override
   String get phoneNumber => 'Phone number';
@@ -897,7 +909,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unableToStartRegistration =>
-      'Unable to start registration. Check your invitation details and try again.';
+      'Unable to start registration. Check your phone number and email and try again.';
 
   @override
   String get incorrectVerificationCode => 'Incorrect verification code.';
@@ -2363,9 +2375,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Upload all the required documents before sending your application.';
 
   @override
-  String get invitationCodeOptional => 'Invitation code (optional)';
-
-  @override
   String get fareEstimatedTitle => 'Estimated fare';
 
   @override
@@ -2479,4 +2488,48 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get renewalNothingToRenew =>
       'Your documents are up to date. Nothing to renew.';
+
+  @override
+  String get passengerNavHome => 'Home';
+
+  @override
+  String get passengerNavTrips => 'My Trips';
+
+  @override
+  String get passengerNavMaps => 'Maps';
+
+  @override
+  String get passengerNavSettings => 'Settings';
+
+  @override
+  String get passengerGreetingMorning => 'Good Morning';
+
+  @override
+  String get passengerGreetingAfternoon => 'Good Afternoon';
+
+  @override
+  String get passengerGreetingEvening => 'Good Evening';
+
+  @override
+  String get passengerPlanTripTitle => 'Plan Your Next Trip';
+
+  @override
+  String get passengerPlanTripBody =>
+      'Find a ride, share the journey, reach your destination';
+
+  @override
+  String get passengerSearchRide => 'Search a Ride';
+
+  @override
+  String get passengerUpcomingTrips => 'Upcoming Trips';
+
+  @override
+  String get passengerNoUpcomingTitle => 'No upcoming trips';
+
+  @override
+  String get passengerNoUpcomingBody =>
+      'Search for a new ride and book your seat.';
+
+  @override
+  String get passengerWeekStrip => 'This week';
 }

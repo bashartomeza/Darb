@@ -116,6 +116,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get continueWithGoogle => 'المتابعة عبر Google';
 
   @override
+  String get welcomeBack => 'أهلاً بعودتك';
+
+  @override
+  String get welcomeBackSubtitle => 'يسعدنا عودتك';
+
+  @override
+  String get login => 'تسجيل الدخول';
+
+  @override
+  String get noAccountPrompt => 'ليس لديك حساب؟';
+
+  @override
+  String get registerAction => 'سجّل الآن';
+
+  @override
+  String get haveAccountPrompt => 'لديك حساب بالفعل؟';
+
+  @override
   String get orSeparator => 'أو';
 
   @override
@@ -777,9 +795,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذر إكمال إجراء الجلسة. يرجى إعادة المحاولة.';
 
   @override
-  String get createInvitedAccount => 'إنشاء حساب بدعوة';
-
-  @override
   String get selectAccountType => 'اختر نوع الحساب';
 
   @override
@@ -817,9 +832,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get registerMerchantHelp =>
       'أرسل طلبات من متجرك. ترفع مستنداتك ويوافق المشرف على حسابك.';
-
-  @override
-  String get invitationCode => 'رمز الدعوة';
 
   @override
   String get phoneNumber => 'رقم الهاتف';
@@ -898,7 +910,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get unableToStartRegistration =>
-      'تعذر بدء التسجيل. تحقق من بيانات الدعوة وحاول مرة أخرى.';
+      'تعذر بدء التسجيل. تحقق من رقم الهاتف والبريد الإلكتروني وحاول مرة أخرى.';
 
   @override
   String get incorrectVerificationCode => 'رمز التحقق غير صحيح.';
@@ -2345,9 +2357,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'ارفع كل المستندات المطلوبة قبل إرسال طلبك.';
 
   @override
-  String get invitationCodeOptional => 'رمز الدعوة (اختياري)';
-
-  @override
   String get fareEstimatedTitle => 'الأجرة التقديرية';
 
   @override
@@ -2461,4 +2470,47 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get renewalNothingToRenew =>
       'مستنداتك محدّثة. لا يوجد ما يتطلب التجديد.';
+
+  @override
+  String get passengerNavHome => 'الرئيسية';
+
+  @override
+  String get passengerNavTrips => 'رحلاتي';
+
+  @override
+  String get passengerNavMaps => 'الخرائط';
+
+  @override
+  String get passengerNavSettings => 'الإعدادات';
+
+  @override
+  String get passengerGreetingMorning => 'صباح الخير';
+
+  @override
+  String get passengerGreetingAfternoon => 'نهارك سعيد';
+
+  @override
+  String get passengerGreetingEvening => 'مساء الخير';
+
+  @override
+  String get passengerPlanTripTitle => 'خطّط لرحلتك القادمة';
+
+  @override
+  String get passengerPlanTripBody =>
+      'ابحث عن رحلة، شارك الطريق، وصل إلى وجهتك';
+
+  @override
+  String get passengerSearchRide => 'ابحث عن رحلة';
+
+  @override
+  String get passengerUpcomingTrips => 'الرحلات القادمة';
+
+  @override
+  String get passengerNoUpcomingTitle => 'لا توجد رحلات قادمة';
+
+  @override
+  String get passengerNoUpcomingBody => 'ابحث عن رحلة جديدة واحجز مقعدك.';
+
+  @override
+  String get passengerWeekStrip => 'هذا الأسبوع';
 }

@@ -150,7 +150,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
     }
     state = AsyncData(
       current.copyWith(
-        stage: OnboardingStage.enteringInvitation,
+        stage: OnboardingStage.enteringContact,
         selectedRole: role,
         clearError: true,
       ),
@@ -160,7 +160,7 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
   void backToRoles() {
     final current = state.value;
     if (current == null ||
-        current.stage != OnboardingStage.enteringInvitation ||
+        current.stage != OnboardingStage.enteringContact ||
         current.attemptId != null ||
         current.busy) {
       return;
@@ -169,37 +169,28 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
   }
 
   Future<void> start({
-    required String invitationCode,
     required String phone,
-    String email = '',
+    required String email,
     required String locale,
   }) async {
     final current = state.value;
     final role = current?.selectedRole;
     if (current == null ||
-        current.stage != OnboardingStage.enteringInvitation ||
+        current.stage != OnboardingStage.enteringContact ||
         role == null ||
         current.config?.registrationRoles.contains(role) != true ||
         _inFlight ||
         !current.enabled) {
       return;
     }
-    // Without a code only the open driver / shop-owner signup can start.
-    if (invitationCode.trim().isEmpty &&
-        current.config?.openRegistrationRoles.contains(role) != true) {
-      state = AsyncData(current.copyWith(errorCode: 'validation_error'));
-      return;
-    }
-    // Open sign-up emails the code, so it needs a plausible address; invited applicants use the Admin's.
-    if (invitationCode.trim().isEmpty &&
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.trim())) {
+    // The one-time code is emailed, so it needs a plausible address.
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email.trim())) {
       state = AsyncData(current.copyWith(errorCode: 'validation_error'));
       return;
     }
     final payload = <String, String>{
-      'invitation': invitationCode.trim(),
       'phone': phone.trim(),
-      'email': invitationCode.trim().isEmpty ? email.trim().toLowerCase() : '',
+      'email': email.trim().toLowerCase(),
       'role': role.apiValue,
       'locale': locale,
     };
@@ -208,11 +199,10 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
     await _guarded(
       operation: 'start',
       generation: generation,
-      failureStage: OnboardingStage.enteringInvitation,
+      failureStage: OnboardingStage.enteringContact,
       action: () async {
         state = AsyncData(current.copyWith(stage: OnboardingStage.starting));
         final result = await _repository.start(
-          invitationCode: invitationCode,
           role: role,
           phone: phone,
           email: email,

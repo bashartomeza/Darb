@@ -47,7 +47,8 @@ void main() {
         expect(request.headers['Idempotency-Key'], 'idem-start');
         expect(request.headers[HttpHeaders.authorizationHeader], isNull);
         final body = jsonDecode(request.body) as Map<String, dynamic>;
-        expect(body['invitation_code'], isNotNull);
+        expect(body, isNot(contains('invitation_code')));
+        expect(body['email'], 'applicant@example.com');
         expect(body['phone'], '+972569523636');
         expect(body, isNot(contains('region')));
         return http.Response(
@@ -57,9 +58,9 @@ void main() {
       });
 
       final result = await repository.start(
-        invitationCode: 'INVITE-CODE-1234567890',
-        role: OnboardingRole.passenger,
+        role: OnboardingRole.driver,
         phone: '+972569523636',
+        email: 'applicant@example.com',
         locale: 'ar',
         idempotencyKey: 'idem-start',
       );
@@ -69,38 +70,26 @@ void main() {
     },
   );
 
-  test(
-    'open sign-up sends the email the code goes to, invited sign-up never does',
-    () async {
-      var seen = <String, dynamic>{};
-      final repository = _repository((request) async {
-        seen = jsonDecode(request.body) as Map<String, dynamic>;
-        return http.Response(
-          '{"attempt":{"id":"attempt_1","status":"otp_sent","phone":"+970*****01","expires_at":"2026-07-20T10:00:00.000Z","resend_available_at":"2026-07-20T09:01:00.000Z"},"onboarding_token":"continuation","onboarding_token_expires_at":"2026-07-20T09:30:00.000Z","next_action":"verify_otp","request_id":"req"}',
-          201,
-        );
-      });
-      await repository.start(
-        invitationCode: '',
-        role: OnboardingRole.driver,
-        phone: '+970590000001',
-        email: ' Driver@Example.com ',
-        locale: 'en',
-        idempotencyKey: 'idem-open',
+  test('start sends the email the code goes to and never an invitation', () async {
+    var seen = <String, dynamic>{};
+    final repository = _repository((request) async {
+      seen = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response(
+        '{"attempt":{"id":"attempt_1","status":"otp_sent","phone":"+970*****01","expires_at":"2026-07-20T10:00:00.000Z","resend_available_at":"2026-07-20T09:01:00.000Z"},"onboarding_token":"continuation","onboarding_token_expires_at":"2026-07-20T09:30:00.000Z","next_action":"verify_otp","request_id":"req"}',
+        201,
       );
-      expect(seen['email'], 'Driver@Example.com');
-      expect(seen, isNot(contains('invitation_code')));
-      await repository.start(
-        invitationCode: 'INVITE-CODE-1234567890',
-        role: OnboardingRole.driver,
-        phone: '+970590000001',
-        email: 'ignored@example.com',
-        locale: 'en',
-        idempotencyKey: 'idem-invited',
-      );
-      expect(seen, isNot(contains('email')));
-    },
-  );
+    });
+    await repository.start(
+      role: OnboardingRole.driver,
+      phone: '+970590000001',
+      email: ' Driver@Example.com ',
+      locale: 'en',
+      idempotencyKey: 'idem-start-email',
+    );
+    expect(seen['email'], 'Driver@Example.com');
+    expect(seen['role'], 'driver');
+    expect(seen, isNot(contains('invitation_code')));
+  });
 
   test('continuation requests use Onboarding authorization only', () async {
     final repository = _repository((request) async {
