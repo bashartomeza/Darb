@@ -4,7 +4,7 @@
 #
 #   pwsh -NoProfile -File scripts/test-env/start.ps1
 #   pwsh -NoProfile -File scripts/test-env/stop.ps1
-param([int]$ApiPort = 3000, [int]$AdminPort = 5173)
+param([int]$ApiPort = 3000, [int]$AdminPort = 5173, [switch]$RealMail)
 $ErrorActionPreference = "Stop"
 
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
@@ -49,7 +49,8 @@ if (-not (Test-Path $pepperFile)) {
 $env:AUTH_ACTION_TOKEN_PEPPER = (Get-Content $pepperFile -Raw).Trim()
 # Real verification emails: only when the Gmail App Password was stored (set-mail-password.ps1).
 Import-Module (Join-Path $PSScriptRoot "MailPassword.psm1") -Force
-if (Test-MailPassword) {
+# Real emails are off unless -RealMail is passed (the stored App Password is kept either way).
+if ($RealMail -and (Test-MailPassword)) {
   $env:DEMO_SMTP_USER = "basharto30@gmail.com"
   $env:DEMO_SMTP_PASSWORD = Get-MailPassword
   $mailMode = "real emails are sent from $($env:DEMO_SMTP_USER)"
