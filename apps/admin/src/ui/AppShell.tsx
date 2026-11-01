@@ -103,11 +103,8 @@ export function SideNav({
   return (
     <aside className="sidenav">
       <div className="sidenav__brand">
-        <span className="sidenav__logo">
-          <Icon name="local_shipping" size={22} />
-        </span>
         <div>
-          <p className="sidenav__brand-name">{labels.brand}</p>
+          <img className="sidenav__logo-img" src="/darb-logo.png" width={550} height={228} alt={labels.brand} />
           <p className="sidenav__brand-subtitle">{labels.subtitle}</p>
         </div>
       </div>

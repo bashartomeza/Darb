@@ -75,7 +75,7 @@ describe("SimulationComparison", () => {
   it("renders Arabic copy and an error state with retry", async () => {
     const view = await render({ comparisonSimulation: vi.fn().mockResolvedValue({ simulation }) }, "ar");
     expect(view.textContent).toContain("محاكاة");
-    expect(view.textContent).toContain("مساري");
+    expect(view.textContent).toContain("درب");
     act(() => root?.unmount());
     view.remove();
     const failing = await render({ comparisonSimulation: vi.fn().mockRejectedValue(new Error("boom")) });
