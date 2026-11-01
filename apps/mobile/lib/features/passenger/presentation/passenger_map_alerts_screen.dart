@@ -288,8 +288,8 @@ class _MapBodyState extends ConsumerState<_MapBody> {
     // Driver -> destination.
     if (driverLocation != null) {
       final key =
-          '${driverLocation.lat},'
-          '${driverLocation.lng}|'
+          '${routeCoordKey(driverLocation.lat)},'
+          '${routeCoordKey(driverLocation.lng)}|'
           '${destination.latitude},'
           '${destination.longitude}';
 
@@ -804,8 +804,9 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                               _stopMarker(l10n, stop, stopName(stop), route),
 
                         // --------------------------------------------------
-                        for (final checkpoint in checkpointSnapshot.checkpoints)
-                          checkpointTrafficMarker(checkpoint),
+                        ...checkpointTrafficMarkers(
+                          checkpointSnapshot.checkpoints,
+                        ),
                         // CHECKPOINTS
                         //
                         // Invalid or absent coordinates are omitted at parsing.

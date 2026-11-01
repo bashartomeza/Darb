@@ -108,7 +108,9 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
     final destinationLat = trip.destinationLat!;
     final destinationLng = trip.destinationLng!;
 
-    final key = '$startLat,$startLng|$destinationLat,$destinationLng';
+    final key =
+        '${routeCoordKey(startLat)},${routeCoordKey(startLng)}|'
+        '$destinationLat,$destinationLng';
 
     if (_routeFuture == null || _routeKey != key) {
       _routeKey = key;
@@ -1020,9 +1022,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
             // origin/destination/current location stay
             // visually on top when markers overlap.
             //
-            for (final checkpoint in checkpointSnapshot.checkpoints)
-              if (_hasValidCheckpointPosition(checkpoint))
-                checkpointTrafficMarker(checkpoint),
+            ...checkpointTrafficMarkers(checkpointSnapshot.checkpoints),
 
             // ==========================================================
             // ORIGIN
@@ -1065,35 +1065,6 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
         );
       },
     );
-  }
-
-  // ============================================================
-  // CHECKPOINT POSITION VALIDATION
-  // ============================================================
-
-  bool _hasValidCheckpointPosition(Checkpoint checkpoint) {
-    final lat = checkpoint.position.latitude;
-    final lng = checkpoint.position.longitude;
-
-    // Prevent an unmapped checkpoint at (0, 0)
-    // from moving the map viewport to Africa.
-    if (lat == 0 && lng == 0) {
-      return false;
-    }
-
-    if (!lat.isFinite || !lng.isFinite) {
-      return false;
-    }
-
-    if (lat < -90 || lat > 90) {
-      return false;
-    }
-
-    if (lng < -180 || lng > 180) {
-      return false;
-    }
-
-    return true;
   }
 
   // ============================================================

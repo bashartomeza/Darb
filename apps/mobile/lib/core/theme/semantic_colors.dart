@@ -78,6 +78,14 @@ class SemanticColors {
   static const upcomingRoute = Color(0xFFAEAEAE);
 
   // ---------------------------------------------------------------------------
+  // Checkpoint / roadblock status — the single source for map markers and
+  // status chips. Green = open, red = closed, orange = moderate congestion.
+  // ---------------------------------------------------------------------------
+  static const checkpointOpen = Color(0xFF3A7C07);
+  static const checkpointClosed = Color(0xFFEB3223);
+  static const checkpointCongested = Color(0xFFFA5F12);
+
+  // ---------------------------------------------------------------------------
   // Role & entity indicators — §B "Semantic & map colors". Used for map
   // markers, avatars and badges so a role reads the same way everywhere.
   // ---------------------------------------------------------------------------
