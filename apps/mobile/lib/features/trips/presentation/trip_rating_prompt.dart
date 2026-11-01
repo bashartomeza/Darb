@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../data/trip_repository.dart';
 
@@ -107,8 +108,9 @@ class _TripRatingPromptState extends ConsumerState<TripRatingPrompt> {
       margin: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+        color: AppTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +132,7 @@ class _TripRatingPromptState extends ConsumerState<TripRatingPrompt> {
                     star <= _stars
                         ? Icons.star_rounded
                         : Icons.star_border_rounded,
-                    color: const Color(0xFFFA5F12),
+                    color: AppTheme.primary,
                   ),
                 ),
             ],

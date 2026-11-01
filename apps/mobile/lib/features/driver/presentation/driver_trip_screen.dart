@@ -2459,17 +2459,17 @@ _CheckpointStatusStyle _checkpointStatusStyle(
   switch (parseCheckpointStatus(status)) {
     case CheckpointStatus.open:
       return const _CheckpointStatusStyle(
-        color: Color(0xFF16A34A),
+        color: SemanticColors.success,
         icon: Icons.check_circle_rounded,
       );
     case CheckpointStatus.congested:
       return const _CheckpointStatusStyle(
-        color: Color(0xFFF59E0B),
+        color: SemanticColors.warning,
         icon: Icons.traffic_rounded,
       );
     case CheckpointStatus.closed:
       return const _CheckpointStatusStyle(
-        color: Color(0xFFDC2626),
+        color: SemanticColors.error,
         icon: Icons.block_rounded,
       );
     case CheckpointStatus.unknown:

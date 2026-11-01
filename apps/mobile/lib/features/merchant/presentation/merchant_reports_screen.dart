@@ -4,7 +4,6 @@ import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/merchant_report_provider.dart';
@@ -24,13 +23,6 @@ class MerchantReportsScreen extends ConsumerWidget {
 
     return Scaffold(
       key: const ValueKey('merchantReportsTab'),
-      appBar: AppBar(
-        title: Text(l10n.navReports),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
       body: SafeArea(
         top: false,
         bottom: false,

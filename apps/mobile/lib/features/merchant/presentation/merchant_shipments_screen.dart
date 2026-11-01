@@ -6,7 +6,6 @@ import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/masari_section.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/state_views.dart';
@@ -35,13 +34,6 @@ class MerchantShipmentsScreen extends ConsumerWidget {
         await ref.read(merchantDashboardProvider.notifier).refresh();
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.shipmentsTitle),
-          actions: const [
-            LanguageSwitch(),
-            SizedBox(width: AppTokens.spaceSmall),
-          ],
-        ),
         body: SafeArea(
           top: false,
           bottom: false,
