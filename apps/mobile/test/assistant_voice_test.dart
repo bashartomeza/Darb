@@ -44,6 +44,16 @@ class _FakeSpeech implements SpeechService {
 class _Repo implements PassengerAssistantRepository {
   final asked = <String>[];
   @override
+  Future<PassengerAssistantState> loadConversation() async =>
+      const PassengerAssistantState();
+  @override
+  Future<void> clearConversation() async {}
+  @override
+  Future<void> linkSavedRequest({
+    required String conversationId,
+    required String requestId,
+  }) async {}
+  @override
   Future<PassengerAssistantReply> ask({
     required String message,
     required String locale,

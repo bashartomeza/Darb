@@ -9,6 +9,12 @@ These screenshots were captured from the real local React/Vite admin console and
 
 Technical IDs and coordinates are intentionally visible where they demonstrate real API state. No JWT, reset key, password hash, database credential, or unauthorized phone number is shown.
 
+## Where the data is saved
+
+`scripts/test-env/start.ps1` runs the API on the permanent MySQL database `darb`. Everything created in the apps is stored there and is still there after a refresh, an app restart or a server restart. Before the API starts, the script applies any pending migrations (log: `.staging-data/test-env/migrate.log`). The demo reset always refuses `darb` (`apps/api/src/lib/demoResetSafety.ts`), and `start.ps1` lists no database as resettable in this mode.
+
+For scripted checks that wipe data (`run-checks.mjs`, `reset-data.ps1`), start with `start.ps1 -Disposable`, which uses the separate `darb_demo` database.
+
 ## Sending the verification emails for real (optional)
 
 By default the demo only writes the normal-user six-digit email code to `.staging-data/test-env/email-codes.txt`. To also send it from `basharto30@gmail.com`:

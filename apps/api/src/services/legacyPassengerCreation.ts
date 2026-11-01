@@ -5,6 +5,8 @@ import { auditEvent } from "../lib/audit.js";
 import { claimIdempotency, completeIdempotency } from "../lib/idempotency.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../middleware/error.js";
+import { LOCKED_CORRIDOR_KEY } from "../modules/demoReset.js";
+import { legacyRouteTimingWhere } from "./legacyCapacity.js";
 
 const OPERATION = "legacy_passenger_request_create_v1";
 export type LegacyPassengerCreationInput = {
@@ -16,10 +18,26 @@ export type LegacyPassengerCreationInput = {
   destination_lng: number;
   preferred_time: Date;
   passenger_count: number;
+  /** The driver route the passenger picked; saved on the request as its matching pin. */
+  selected_driver_route_id?: string;
 };
 type Actor = { id: string; idempotencyKey?: string };
 function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+/** The supply filter matching ranks from, narrowed to the one route the passenger picked. */
+function selectableRouteWhere(routeId: string, seats: number, now: Date): Prisma.DriverRouteWhereInput {
+  return {
+    id: routeId,
+    status: "active",
+    corridor_key: LOCKED_CORRIDOR_KEY,
+    canonical_availability_version: null,
+    operational_mode: "legacy",
+    seats_available: { gte: seats },
+    driver: { verified: true, user: { role: "driver", account_status: "active" } },
+    ...legacyRouteTimingWhere(now),
+  };
 }
 
 export function createLegacyPassengerCreationService(db: PrismaClient = prisma) {
@@ -35,6 +53,9 @@ export function createLegacyPassengerCreationService(db: PrismaClient = prisma) 
           destination_lng: input.destination_lng,
           preferred_time: input.preferred_time.toISOString(),
           passenger_count: input.passenger_count,
+          // Only present when a route was picked, so keys issued for unpinned
+          // requests keep their original request digest.
+          ...(input.selected_driver_route_id ? { selected_driver_route_id: input.selected_driver_route_id } : {}),
         };
         const claim = actor.idempotencyKey === undefined ? undefined : await claimIdempotency(tx, {
           operation: OPERATION,
@@ -59,6 +80,14 @@ export function createLegacyPassengerCreationService(db: PrismaClient = prisma) 
           return { resource, replayed: true };
         }
         if (input.preferred_time <= new Date()) throw new HttpError(400, "preferred_time_in_past");
+        if (input.selected_driver_route_id) {
+          // Nothing is saved for an unavailable pick: the claim rolls back with it.
+          const route = await tx.driverRoute.findFirst({
+            where: selectableRouteWhere(input.selected_driver_route_id, input.passenger_count, new Date()),
+            select: { id: true },
+          });
+          if (!route) throw new HttpError(409, "selected_driver_route_unavailable");
+        }
         const resource = await tx.passengerRequest.create({ data: {
           passenger_id: actor.id,
           ...payload,

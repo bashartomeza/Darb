@@ -18,7 +18,7 @@ import {
   type LegacyDriverOnlineStateService,
 } from "../services/legacyDriverOnlineState.js";
 
-const LOCKED_ROUTE = {
+export const LOCKED_ROUTE = {
   origin_label: "Hebron / PPU / Bab Al-Zawiya",
   origin_lat: 31.5326,
   origin_lng: 35.0998,

@@ -1005,6 +1005,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.';
 
   @override
+  String get corridorPlacesLoadFailed =>
+      'تعذّر تحميل أماكن المسار. تحقّق من الاتصال وأعد المحاولة.';
+
+  @override
+  String get corridorPlacesUnavailable =>
+      'لا توجد أماكن متاحة على هذا المسار حالياً.';
+
+  @override
   String get noPublishedRoutes => 'لا توجد مسارات منشورة ومؤهلة حالياً.';
 
   @override
@@ -1189,6 +1197,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get returnToDashboard => 'العودة إلى لوحة التحكم';
+
+  @override
+  String get viewRouteRequests => 'عرض طلبات المسار الخاصة بي';
 
   @override
   String get canonicalDriverOffers => 'عروض المسار';
@@ -1828,6 +1839,27 @@ class AppLocalizationsAr extends AppLocalizations {
       'خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.';
 
   @override
+  String get assistantHistoryErrorTitle => 'تعذّر تحميل المحادثة';
+
+  @override
+  String get assistantHistoryErrorBody =>
+      'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get assistantNewChat => 'محادثة جديدة';
+
+  @override
+  String get assistantNewChatTitle => 'بدء محادثة جديدة؟';
+
+  @override
+  String get assistantNewChatBody =>
+      'سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.';
+
+  @override
+  String get assistantNewChatFailed =>
+      'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
   String get assistantClarificationLabel => 'يحتاج مساعد درب إلى توضيح';
 
   @override
@@ -2156,6 +2188,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get incidentCategoryOther => 'أخرى';
+
+  @override
+  String get myIncidentReports => 'بلاغاتي';
+
+  @override
+  String get myIncidentReportsEmpty => 'لم ترسل أي بلاغ بعد.';
+
+  @override
+  String get myIncidentReportsFailed => 'تعذّر تحميل بلاغاتك.';
+
+  @override
+  String get incidentStatusOpen => 'مفتوح';
+
+  @override
+  String get incidentStatusReviewing => 'قيد المراجعة';
+
+  @override
+  String get incidentStatusResolved => 'تمت المعالجة';
 
   @override
   String get notifIncidentUpdatedTitle => 'تحديث على بلاغك';

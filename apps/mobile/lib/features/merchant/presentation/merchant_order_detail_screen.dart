@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
@@ -105,7 +106,7 @@ class _MerchantOrderDetailScreenState
             children: [
               DetailRow(
                 label: l10n.pickup,
-                value: l10n.lockedCorridor,
+                value: localizedCorridorPlace(context, order.pickupLabel),
                 icon: Icons.place_outlined,
               ),
               DetailRow(

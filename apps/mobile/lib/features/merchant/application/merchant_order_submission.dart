@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../auth/application/auth_actor_binding.dart';
+import '../../legacy_corridor/data/legacy_corridor_models.dart';
 import '../data/merchant_models.dart';
 import '../data/merchant_order_operation_storage.dart';
 import '../data/merchant_repository.dart';
@@ -85,10 +86,11 @@ class MerchantOrderSubmission {
     }
     return _resume(pending, actor);
   });
-  Future<MerchantOrder> submit(List<ParcelDraft> parcels) => _run((
-    actor,
-  ) async {
-    final payload = MerchantRepository.createOrderBody(parcels);
+  Future<MerchantOrder> submit(
+    CorridorPlace pickup,
+    List<ParcelDraft> parcels,
+  ) => _run((actor) async {
+    final payload = MerchantRepository.createOrderBody(pickup, parcels);
     final previous = await storage.read(actor.id);
     _require(actor);
     if (previous != null) {
