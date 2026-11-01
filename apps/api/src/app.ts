@@ -47,6 +47,7 @@ import { createCheckpointRouter } from "./modules/checkpoints.js";
 import type { CheckpointService } from "./services/checkpoints.js";
 import { CheckpointDirectoryService } from "./services/checkpointDirectory.js";
 import { LimitedCheckpointDirectoryService } from "./services/limitedCheckpointDirectory.js";
+import { PartnerCheckpointMapService } from "./services/partnerCheckpointMap.js";
 import { MysqlPartnerBudget } from "./services/limitedCheckpointBudget.js";
 import { prisma } from "./lib/prisma.js";
 import { createLimitedCheckpointDirectoryRouter } from "./modules/limitedCheckpointDirectory.js";
@@ -96,6 +97,7 @@ type AppDependencies = {
   checkpointService?: CheckpointService;
   checkpointDirectoryService?: CheckpointDirectoryService;
   limitedCheckpointDirectoryService?: LimitedCheckpointDirectoryService;
+  partnerCheckpointMapService?: PartnerCheckpointMapService;
   legacyDriverOnlineStateService?: LegacyDriverOnlineStateService;
   routePreviewService?: RoutePreviewService;
   passengerAssistantService?: PassengerAssistantService;
@@ -162,7 +164,13 @@ export function createApp(
   app.use("/api/v1", createCheckpointDirectoryRouter(appConfig, directory));
   app.use(
     "/api/v1",
-    createCheckpointRouter(appConfig, dependencies.checkpointService),
+    createCheckpointRouter(
+      appConfig,
+      dependencies.checkpointService,
+      appConfig.partnerCheckpointMapEnabled && limitedDirectory
+        ? dependencies.partnerCheckpointMapService ?? new PartnerCheckpointMapService(limitedDirectory)
+        : undefined
+    ),
   );
   if (appConfig.demoFeaturesEnabled) app.use("/api/v1", createDemoRouter(appConfig));
   app.use(

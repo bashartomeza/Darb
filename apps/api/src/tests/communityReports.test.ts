@@ -127,9 +127,20 @@ describe("community reports API", () => {
     await send({ ...body, description: "hi" }).expect(400);
     await send({ ...body, latitude: 120 }).expect(400);
     await send({ ...body, longitude: undefined }).expect(400);
+    // Map categories need a place; a point outside the service area is refused.
+    await send({ ...body, latitude: undefined, longitude: undefined }).expect(400);
+    await send({ ...body, category: "checkpoint_outdated", latitude: undefined, longitude: undefined }).expect(400);
+    await send({ ...body, latitude: 37.39, longitude: -122.08 }).expect(400);
     expect(prismaMock.communityReport.create).not.toHaveBeenCalled();
     prismaMock.communityReport.count.mockResolvedValue(10);
     await send(body).expect(429);
+  });
+
+  it("accepts driver and other reports without a location", async () => {
+    prismaMock.communityReport.create.mockResolvedValue(row({ category: "other", latitude: null, longitude: null }));
+    const send = (b: object) => request(createApp()).post("/api/v1/community-reports").set(auth("passenger_1")).send(b);
+    await send({ ...body, category: "other", latitude: undefined, longitude: undefined }).expect(201);
+    await send({ ...body, category: "driver_report", latitude: undefined, longitude: undefined }).expect(201);
   });
 
   it("lists reports with vote counts and the caller's vote, hiding the author", async () => {

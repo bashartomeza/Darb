@@ -4,6 +4,8 @@
 .superpowers
 apps/api/data/*
 !apps/api/data/checkpoint-directory.v1.manifest.json
+# Public OpenStreetMap checkpoint positions (ODbL), used to place partner checkpoints.
+!apps/api/data/osm-checkpoints.json
 .env
 **/.env
 **/.env.local
