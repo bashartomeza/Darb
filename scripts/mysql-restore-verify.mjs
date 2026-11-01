@@ -89,7 +89,7 @@ try {
   ];
   const tableCount = Number(mysql(["--batch", "--skip-column-names", "--database", destination, "-e",
     `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN (${expectedTables.map((name) => `'${name}'`).join(",")})`]));
-  if (tableCount !== expectedTables.length) throw new Error("Restored database does not have the expected Masari table identity");
+  if (tableCount !== expectedTables.length) throw new Error("Restored database does not have the expected Darb table identity");
   const check = mysql(["--batch", "--skip-column-names", "--database", destination, "-e", "SELECT 1"]);
   if (check !== "1") throw new Error("Restored database connectivity verification failed");
   console.log(`Restore verification passed for isolated database ${destination}.`);

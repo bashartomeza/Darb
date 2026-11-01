@@ -27,7 +27,7 @@ const { FakeOtpProvider } = await import(dist("lib/otp.js"));
 const { createGmailDelivery } = await import("./gmail-sender.mjs");
 
 // With a stored Gmail App Password the email is also really sent; the file is kept either way,
-// and a failed send is reported in the log without blocking the sign-up. Masari sends no SMS: the
+// and a failed send is reported in the log without blocking the sign-up. Darb sends no SMS: the
 // codes that used to be texted (invited / open sign-up and the phone step) are emailed to the address
 // the app collected, exactly like production, and are also appended to the file for scripted checks.
 const smtpReady = Boolean(process.env.DEMO_SMTP_USER && process.env.DEMO_SMTP_PASSWORD);
@@ -90,4 +90,4 @@ const app = createApp(config, {
   emailDelivery: loggingEmailDelivery,
   phoneVerificationProvider: loggingPhoneProvider
 });
-app.listen(config.port, "0.0.0.0", () => console.log(`Masari test API on ${config.port} (database ${databaseName})`));
+app.listen(config.port, "0.0.0.0", () => console.log(`Darb test API on ${config.port} (database ${databaseName})`));

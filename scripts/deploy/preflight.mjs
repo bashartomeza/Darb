@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Read-only deployment preflight for the Masari API environment.
+// Read-only deployment preflight for the Darb API environment.
 // Usage: node scripts/deploy/preflight.mjs [--env-file <path>] [--target production|staging]
 // Validates the environment against the rules in apps/api/src/config.ts and
 // docs/deployment/DEPLOY_RUNBOOK.md. Prints PASS/FAIL/WARN per item and never
@@ -124,7 +124,7 @@ export function runPreflight(env, options = {}) {
 
   if (bool("PUBLIC_ONBOARDING_ENABLED")) add("PUBLIC_ONBOARDING_ENABLED", (val("OTP_PROVIDER") || "disabled") === "email", "PUBLIC_ONBOARDING_ENABLED requires OTP_PROVIDER=email in staging/production");
   const otpProvider = val("OTP_PROVIDER") || "disabled";
-  add("OTP_PROVIDER", ["disabled", "email"].includes(otpProvider), "OTP_PROVIDER must be disabled or email (fake is forbidden; Masari sends no SMS, codes go by email)");
+  add("OTP_PROVIDER", ["disabled", "email"].includes(otpProvider), "OTP_PROVIDER must be disabled or email (fake is forbidden; Darb sends no SMS, codes go by email)");
   if (otpProvider === "email") add("OTP_PROVIDER_EMAIL", val("EMAIL_DELIVERY") === "smtp", "OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp");
   add("SUPPORTED_PHONE_REGIONS", (val("SUPPORTED_PHONE_REGIONS") || "PS").toUpperCase() === "PS", "SUPPORTED_PHONE_REGIONS must be PS");
   add("GOOGLE_PASSENGER_SIGNUP_MODE", (val("GOOGLE_PASSENGER_SIGNUP_MODE") || "disabled") === "disabled", "Google passenger signup must stay disabled in staging/production (config refuses otherwise)");
