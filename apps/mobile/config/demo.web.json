@@ -1,13 +1,7 @@
 {
   "APP_ENV": "demo",
   "API_BASE_URL": "http://localhost:3000",
-  "ENABLE_DEMO_FEATURES": true,
-  "DEMO_PASSENGER_EMAIL": "demo.passenger@masari.app",
-  "DEMO_PASSENGER_PASSWORD": "PvXQJtv-lyrlTUSO",
-  "DEMO_DRIVER_EMAIL": "demo.driver@masari.app",
-  "DEMO_DRIVER_PASSWORD": "dKptblExHDPAaJha",
-  "DEMO_MERCHANT_EMAIL": "demo.merchant@masari.app",
-  "DEMO_MERCHANT_PASSWORD": "l89yP1Gjz_7I827I",
+  "ENABLE_DEMO_FEATURES": false,
   "GOOGLE_WEB_CLIENT_ID": "1022684049298-9b93jtqtip50jua3grjnrvovu90f7jho.apps.googleusercontent.com",
   "GOOGLE_IOS_CLIENT_ID": "",
   "GOOGLE_SERVER_CLIENT_ID": "1022684049298-9b93jtqtip50jua3grjnrvovu90f7jho.apps.googleusercontent.com"

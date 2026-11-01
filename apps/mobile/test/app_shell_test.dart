@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/core/widgets/brand_logo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +22,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'test_app_config.dart';
 
 void main() {
-  for (final method in ['email', 'google']) {
+  // Google sign-up has its own role onboarding (google_onboarding_widget_test).
+  for (final method in ['email']) {
     testWidgets(
       '$method registration requires displayed consent before session creation',
       (tester) async {
@@ -409,10 +409,10 @@ void main() {
   testWidgets('Arabic login screen defaults to RTL', (tester) async {
     await _pumpApp(tester);
 
-    expect(find.byType(BrandLogo), findsOneWidget);
+    expect(find.text('أهلاً بعودتك'), findsOneWidget);
     expect(find.text('تسجيل الدخول'), findsWidgets);
     expect(
-      Directionality.of(tester.element(find.byType(BrandLogo))),
+      Directionality.of(tester.element(find.text('أهلاً بعودتك'))),
       TextDirection.rtl,
     );
     expect(find.textContaining('counter', findRichText: true), findsNothing);
@@ -424,9 +424,9 @@ void main() {
     await tester.tap(find.byTooltip('English'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(BrandLogo), findsOneWidget);
+    expect(find.text('Welcome Back'), findsOneWidget);
     expect(
-      Directionality.of(tester.element(find.byType(BrandLogo))),
+      Directionality.of(tester.element(find.text('Welcome Back'))),
       TextDirection.ltr,
     );
     final preferences = await SharedPreferences.getInstance();
@@ -436,52 +436,18 @@ void main() {
   testWidgets('saved English is restored', (tester) async {
     await _pumpApp(tester, localeValues: {DomainLabels.localeStorageKey: 'en'});
 
-    expect(find.text('Sign in'), findsWidgets);
+    expect(find.text('Login'), findsWidgets);
     expect(
-      Directionality.of(tester.element(find.byType(BrandLogo))),
+      Directionality.of(tester.element(find.text('Welcome Back'))),
       TextDirection.ltr,
     );
-  });
-
-  testWidgets('demo account preset fills correct values', (tester) async {
-    await _pumpApp(tester);
-
-    await tester.ensureVisible(find.byKey(const ValueKey('demo-passenger')));
-    await tester.tap(find.byKey(const ValueKey('demo-passenger')));
-    await tester.pump();
-
-    final email = tester.widget<EditableText>(
-      find.descendant(
-        of: find.byKey(const ValueKey('emailField')),
-        matching: find.byType(EditableText),
-      ),
-    );
-    final password = tester.widget<EditableText>(
-      find.descendant(
-        of: find.byKey(const ValueKey('passwordField')),
-        matching: find.byType(EditableText),
-      ),
-    );
-    expect(email.controller.text, 'passenger@demo.masari');
-    expect(password.controller.text, 'mobile-test-passenger-secret');
-  });
-
-  testWidgets('production login does not render demo account presets', (
-    tester,
-  ) async {
-    await _pumpApp(tester, config: productionTestAppConfig);
-    expect(find.byKey(const ValueKey('demo-passenger')), findsNothing);
-    expect(find.byKey(const ValueKey('demo-driver')), findsNothing);
-    expect(find.byKey(const ValueKey('demo-merchant')), findsNothing);
   });
 
   testWidgets('loading disables login button', (tester) async {
     final response = Completer<http.Response>();
     await _pumpApp(tester, handler: (request) => response.future);
 
-    await tester.ensureVisible(find.byKey(const ValueKey('demo-passenger')));
-    await tester.tap(find.byKey(const ValueKey('demo-passenger')));
-    await tester.pump();
+    await _fillLogin(tester);
     await tester.ensureVisible(find.byKey(const ValueKey('loginButton')));
     await tester.tap(find.byKey(const ValueKey('loginButton')));
     await tester.pump();
@@ -503,9 +469,7 @@ void main() {
           http.Response('{"error":"invalid_credentials"}', 401),
     );
 
-    await tester.ensureVisible(find.byKey(const ValueKey('demo-passenger')));
-    await tester.tap(find.byKey(const ValueKey('demo-passenger')));
-    await tester.pump();
+    await _fillLogin(tester);
     await tester.ensureVisible(find.byKey(const ValueKey('loginButton')));
     await tester.tap(find.byKey(const ValueKey('loginButton')));
     await tester.pump(const Duration(milliseconds: 100));
@@ -523,9 +487,7 @@ void main() {
           http.Response('{"error":"invalid_credentials"}', 401),
     );
 
-    await tester.ensureVisible(find.byKey(const ValueKey('demo-passenger')));
-    await tester.tap(find.byKey(const ValueKey('demo-passenger')));
-    await tester.pump();
+    await _fillLogin(tester);
     await tester.ensureVisible(find.byKey(const ValueKey('loginButton')));
     await tester.tap(find.byKey(const ValueKey('loginButton')));
     await tester.pumpAndSettle();
@@ -563,9 +525,7 @@ void main() {
           return http.Response('{"error":"invalid_credentials"}', 401);
         },
       );
-      await tester.ensureVisible(find.byKey(const ValueKey('demo-passenger')));
-      await tester.tap(find.byKey(const ValueKey('demo-passenger')));
-      await tester.pump();
+      await _fillLogin(tester);
       await tester.ensureVisible(find.byKey(const ValueKey('loginButton')));
       await tester.tap(find.byKey(const ValueKey('loginButton')));
       await tester.pump();
@@ -706,13 +666,19 @@ void main() {
     );
 
     expect(find.byKey(const ValueKey('passengerHome')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('logoutButton')));
+    // Passenger logout lives on the Settings tab of the redesigned shell.
+    await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('logoutCurrentSession')),
+    );
+    await tester.tap(find.byKey(const ValueKey('logoutCurrentSession')));
     await tester.pumpAndSettle();
     expect(find.text('Confirm logout'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('confirmSecurityActionButton')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Sign in'), findsWidgets);
+    expect(find.text('Login'), findsWidgets);
     expect(find.byTooltip('Arabic'), findsOneWidget);
   });
 
@@ -725,7 +691,7 @@ void main() {
       handler: _passengerHandler,
     );
 
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
 
     expect(find.text('الأمان والجلسات'), findsWidgets);
@@ -748,7 +714,7 @@ void main() {
       handler: _passengerHandler,
     );
 
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
 
     expect(find.text('Security and sessions'), findsWidgets);
@@ -766,7 +732,7 @@ void main() {
       secureValues: {TokenStorage.tokenKey: 'token'},
       handler: _passengerHandler,
     );
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('revokeCurrentSession')));
@@ -807,7 +773,7 @@ void main() {
         return _passengerHandler(request);
       },
     );
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('revokeSession')));
@@ -828,7 +794,7 @@ void main() {
       secureValues: {TokenStorage.tokenKey: 'token'},
       handler: _passengerHandler,
     );
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('logoutAllSessions')));
@@ -852,7 +818,7 @@ void main() {
         return _passengerHandler(request);
       },
     );
-    await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+    await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('logoutAllSessions')));
     await tester.pumpAndSettle();
@@ -881,7 +847,13 @@ void main() {
       },
     );
 
-    await tester.tap(find.byKey(const ValueKey('logoutButton')));
+    // Passenger logout lives on the Settings tab of the redesigned shell.
+    await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('logoutCurrentSession')),
+    );
+    await tester.tap(find.byKey(const ValueKey('logoutCurrentSession')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirmSecurityActionButton')));
     await tester.pumpAndSettle();
@@ -892,6 +864,18 @@ void main() {
       isNull,
     );
   });
+}
+
+Future<void> _fillLogin(WidgetTester tester) async {
+  await tester.enterText(
+    find.byKey(const ValueKey('emailField')),
+    'sara@example.com',
+  );
+  await tester.enterText(
+    find.byKey(const ValueKey('passwordField')),
+    'correct-horse-battery',
+  );
+  await tester.pump();
 }
 
 Future<void> _pumpApp(

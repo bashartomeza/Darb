@@ -20,7 +20,7 @@ Choose a new lowercase database name beginning `masari_restore_`. The destinatio
 npm run mysql:restore:verify -- -- --dump backups/mysql/<file>.sql --database masari_restore_rehearsal_yyyymmdd --confirm-isolated --cleanup
 ```
 
-The command validates the checksum, refuses unsafe/non-empty destinations, creates an `utf8mb4_0900_ai_ci` isolated database, restores, checks Prisma migration status and expected Masari tables, executes a read-only connectivity check, and drops only the validated isolated database when `--cleanup` is present. Omit `--cleanup` when an operator needs to inspect a failed rehearsal; remove it manually only after confirming the name.
+The command validates the checksum, refuses unsafe/non-empty destinations, creates an `utf8mb4_0900_ai_ci` isolated database, restores, checks Prisma migration status and expected Darb tables, executes a read-only connectivity check, and drops only the validated isolated database when `--cleanup` is present. Omit `--cleanup` when an operator needs to inspect a failed rehearsal; remove it manually only after confirming the name.
 
 The second `--` shown above preserves named arguments with npm 10 on Windows. Calling `node scripts/mysql-restore-verify.mjs --dump ...` directly is equivalent.
 

@@ -1,6 +1,6 @@
 # HTTP security baseline
 
-M6B1B establishes the API transport baseline without changing Masari domain contracts or database structures.
+M6B1B establishes the API transport baseline without changing Darb domain contracts or database structures.
 
 ## Request pipeline
 

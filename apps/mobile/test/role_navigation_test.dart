@@ -144,11 +144,24 @@ void main() {
     testWidgets('bottom navigation survives every tab', (tester) async {
       await _pumpApp(tester, handler: _passengerHandler);
 
-      for (final index in [1, 2, 3, 4, 0, 1]) {
+      // The passenger bar has four tabs; branch 3 (notifications) is opened
+      // from Home's bell instead, covered by the next test.
+      for (final index in [1, 2, 4, 0, 1]) {
         await _tapTab(tester, index);
         expect(find.byType(RoleShellScaffold), findsOneWidget);
         expect(_bar(tester).currentIndex, index);
       }
+      expect(find.byKey(const ValueKey('roleNavigation-3')), findsNothing);
+    });
+
+    testWidgets('the home bell opens the notifications branch', (tester) async {
+      await _pumpApp(tester, handler: _passengerHandler);
+
+      await tester.tap(find.byKey(const ValueKey('passengerNotifications')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+      expect(_bar(tester).currentIndex, 3);
     });
 
     testWidgets('the trips tab lists the request history', (tester) async {
@@ -204,7 +217,9 @@ void main() {
       await _pumpApp(tester, handler: _passengerHandler);
       final account = _accountTab(tester);
 
-      await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+      GoRouter.of(
+        tester.element(find.byType(RoleShellScaffold)),
+      ).go('/security/sessions');
       await tester.pumpAndSettle();
 
       expect(find.text('الأمان والجلسات'), findsWidgets);

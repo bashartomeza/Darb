@@ -1,8 +1,8 @@
-# Masari Privacy Notice
+# Darb Privacy Notice
 
 Last updated: 29 October 2026
 
-This notice explains what personal data Masari collects, why, who sees it and how long we keep it.
+This notice explains what personal data Darb collects, why, who sees it and how long we keep it.
 
 ## 1. What we collect
 - **Account data:** your name, phone number, email address, role (passenger, driver or shop owner), language, and a password or Google sign-in identifier.
@@ -11,7 +11,7 @@ This notice explains what personal data Masari collects, why, who sees it and ho
 - **Location:** your device location when you use features that need it, such as finding a pick-up point or, for drivers, being online for trips. We do not collect it when those features are not in use.
 - **Driver and shop documents:** photos or files of a driving licence, vehicle registration and similar documents, with expiry dates.
 - **Parcel data:** the receiver's name and phone number that a sender gives us.
-- **Assistant messages:** the text you type to Ask Masari.
+- **Assistant messages:** the text you type to Ask Darb.
 - **Technical data:** device type, app version, IP address and security logs, used to keep the Service safe.
 - **Notifications:** a device token if you allow push notifications.
 
@@ -20,14 +20,14 @@ To create and secure your account; to match passengers with trips and parcels wi
 
 ## 3. Who sees it
 - **Other users, only as needed for a trip or parcel:** a driver sees a passenger's name, pick-up point and booking; a passenger sees the driver's name, vehicle and trust information; a parcel receiver is contacted using the details the sender gave.
-- **Masari staff** with an administrator role, to review documents and handle support, with access limited to what the work needs.
-- **Service providers** that run parts of the Service for us under our instructions: hosting, email delivery, maps, push notifications and the AI provider that processes Ask Masari text. We send them only what is needed.
+- **Darb staff** with an administrator role, to review documents and handle support, with access limited to what the work needs.
+- **Service providers** that run parts of the Service for us under our instructions: hosting, email delivery, maps, push notifications and the AI provider that processes Ask Darb text. We send them only what is needed.
 - **Authorities,** when the law requires.
 
 We do not sell your personal data.
 
 ## 4. Assistant
-Text you type to Ask Masari is sent to an AI provider so it can suggest a trip. Do not type sensitive personal details into it.
+Text you type to Ask Darb is sent to an AI provider so it can suggest a trip. Do not type sensitive personal details into it.
 
 ## 5. How long we keep it
 - Sign-up attempts, one-time codes and security counters are kept briefly and deleted automatically.
@@ -43,7 +43,7 @@ You can ask us to show you your data, correct it, or delete your account. You ca
 We protect data with encryption in transit, hashed passwords and codes, restricted staff access and logging. No system is perfectly secure, so please protect your password and codes.
 
 ## 8. Children
-Masari is for people aged 18 or over. If we learn that someone younger has an account, we will close it.
+Darb is for people aged 18 or over. If we learn that someone younger has an account, we will close it.
 
 ## 9. Changes
 If we change this notice in an important way, we will tell you in the app and ask you to review it.

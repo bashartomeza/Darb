@@ -19,7 +19,7 @@ const cleanOptional = (maximum: number) =>
 const createSchema = z.strictObject({
   role: z.enum([OnboardingRole.passenger, OnboardingRole.driver, OnboardingRole.merchant]),
   phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH),
-  // Masari sends no SMS: the one-time code is emailed here. The phone number stays the admin-vouched identity.
+  // Darb sends no SMS: the one-time code is emailed here. The phone number stays the admin-vouched identity.
   contact_email: contactEmailSchema,
   region: z.string().trim().regex(/^[A-Za-z]{2}$/).optional(),
   campaign: cleanOptional(100),
@@ -88,7 +88,8 @@ function serializeInvitation(invitation: {
 
 export function createAdminInvitationRouter(appConfig: AppConfig) {
   const onboarding = appConfig.onboarding;
-  if (!appConfig.invitationsEnabled || !onboarding) throw new Error("invitation_router_requires_enabled_configuration");
+  const invitationKey = onboarding?.keys.invitationCode;
+  if (!appConfig.invitationsEnabled || !onboarding || !invitationKey) throw new Error("invitation_router_requires_enabled_configuration");
   const router = Router();
   router.use("/admin/invitations", requireAuth, requireRole("admin"));
 
@@ -121,7 +122,7 @@ export function createAdminInvitationRouter(appConfig: AppConfig) {
           campaign: input.campaign,
           source: input.source,
           expiresAt: new Date(Date.now() + expiresInDays * 86_400_000),
-          keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+          keys: { code: invitationKey, phone: onboarding.keys.phoneDigest }
         });
         await auditEvent(tx, {
           userId: req.user!.id,

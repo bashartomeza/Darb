@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../data/google_sign_in_service.dart';
 import '../../data/auth_repository.dart';
+import 'auth_style.dart';
 import 'google_render_button_stub.dart'
     if (dart.library.js_interop) 'google_render_button_web.dart';
 
@@ -89,7 +89,6 @@ class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final capabilities = ref.watch(authCapabilitiesProvider);
     if (!_service.isConfigured ||
         capabilities.value?['google_mobile_login_available'] != true) {
@@ -111,16 +110,33 @@ class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
       );
     }
 
-    return OutlinedButton.icon(
-      key: const ValueKey('googleSignInButton'),
-      onPressed: widget.enabled && !_busy ? _authenticateNative : null,
-      icon: _busy
-          ? const SizedBox.square(
-              dimension: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.g_mobiledata, size: 24),
-      label: Text(l10n.continueWithGoogle),
+    return SizedBox(
+      height: AuthStyle.fieldHeight,
+      child: OutlinedButton(
+        key: const ValueKey('googleSignInButton'),
+        onPressed: widget.enabled && !_busy ? _authenticateNative : null,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AuthStyle.ink,
+          side: const BorderSide(color: AuthStyle.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AuthStyle.radius),
+          ),
+          textStyle: const TextStyle(fontSize: 16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _busy
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const GoogleGMark(),
+            const SizedBox(width: 8),
+            const Text('Google'),
+          ],
+        ),
+      ),
     );
   }
 }

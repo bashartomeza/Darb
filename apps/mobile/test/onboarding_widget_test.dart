@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/core/widgets/brand_logo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,7 +47,7 @@ void main() {
     expect(find.byKey(const ValueKey('invitationCodeField')), findsNothing);
   });
 
-  testWidgets('driver continues to the invitation flow', (tester) async {
+  testWidgets('driver registers without an invitation', (tester) async {
     await _pumpApp(tester, onboardingEnabled: true);
 
     await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
@@ -56,11 +55,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('register-role-driver')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('invitationCodeField')), findsOneWidget);
+    expect(find.byKey(const ValueKey('invitationCodeField')), findsNothing);
     expect(find.byKey(const ValueKey('onboardingPhoneField')), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingEmailField')), findsOneWidget);
   });
 
-  testWidgets('shop owner continues to the invitation flow', (tester) async {
+  testWidgets('shop owner registers without an invitation', (tester) async {
     await _pumpApp(tester, onboardingEnabled: true);
 
     await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
@@ -68,8 +68,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('register-role-merchant')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('invitationCodeField')), findsOneWidget);
+    expect(find.byKey(const ValueKey('invitationCodeField')), findsNothing);
     expect(find.byKey(const ValueKey('onboardingPhoneField')), findsOneWidget);
+    expect(find.byKey(const ValueKey('onboardingEmailField')), findsOneWidget);
   });
 
   testWidgets('disabled config hides the application status link', (
@@ -83,31 +84,35 @@ void main() {
     );
   });
 
-  testWidgets('driver sign-up while invitations are off stays on the chooser', (
-    tester,
-  ) async {
-    await _pumpApp(
-      tester,
-      onboardingEnabled: true,
-      disableAfterFirstConfig: true,
-    );
+  testWidgets(
+    'driver sign-up while registration is unavailable stays on the chooser',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        onboardingEnabled: true,
+        disableAfterFirstConfig: true,
+      );
 
-    await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register-role-driver')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('register-role-driver')));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('invitationCodeField')), findsNothing);
-    expect(find.byKey(const ValueKey('register-role-driver')), findsOneWidget);
-    expect(find.text('التسجيل غير متاح مؤقتاً.'), findsOneWidget);
-  });
+      expect(find.byKey(const ValueKey('invitationCodeField')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('register-role-driver')),
+        findsOneWidget,
+      );
+      expect(find.text('التسجيل غير متاح مؤقتاً.'), findsOneWidget);
+    },
+  );
 
   testWidgets('direct onboarding route while disabled returns safely', (
     tester,
   ) async {
     await _pumpApp(tester);
 
-    GoRouter.of(tester.element(find.byType(BrandLogo))).go('/onboarding');
+    GoRouter.of(tester.element(find.text('أهلاً بعودتك'))).go('/onboarding');
     await tester.pumpAndSettle();
 
     expect(find.text('التسجيل غير متاح مؤقتاً.'), findsOneWidget);
@@ -260,27 +265,35 @@ void main() {
     expect(find.byKey(const ValueKey('loginButton')), findsNothing);
   });
 
-  testWidgets('invitation code is optional when open signup is on', (
-    tester,
-  ) async {
-    await _pumpApp(
-      tester,
-      handler: (request) async {
-        if (request.url.path.endsWith('/onboarding/config')) {
-          return http.Response(_openConfigBody, 200);
-        }
-        return http.Response('{"error":"not_found"}', 404);
-      },
-    );
+  testWidgets(
+    'registration asks for phone and email, never an invitation code',
+    (tester) async {
+      await _pumpApp(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/onboarding/config')) {
+            return http.Response(_openConfigBody, 200);
+          }
+          return http.Response('{"error":"not_found"}', 404);
+        },
+      );
 
-    await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('register-role-driver')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('register-role-driver')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('رمز الدعوة (اختياري)'), findsOneWidget);
-    expect(find.byKey(const ValueKey('onboardingPhoneField')), findsOneWidget);
-  });
+      expect(find.textContaining('رمز الدعوة'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('onboardingPhoneField')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('onboardingEmailField')),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('submit stays locked until every required document is on file', (
     tester,
@@ -459,10 +472,10 @@ Future<void> _pumpApp(
 }
 
 const _openConfigBody =
-    '{"enabled":true,"registration_roles":["passenger","driver","merchant"],"open_registration_roles":["driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
+    '{"enabled":true,"registration_roles":["driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
 
 const _enabledConfigBody =
-    '{"enabled":true,"registration_roles":["passenger","driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
+    '{"enabled":true,"registration_roles":["driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
 
 String _consentBody(String version) => jsonEncode({
   'documents': [

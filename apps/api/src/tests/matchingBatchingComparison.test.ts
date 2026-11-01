@@ -650,7 +650,7 @@ describe("matching, batching, comparison", () => {
     expect(prismaMock.parcelBatch.create).not.toHaveBeenCalled();
   });
 
-  it("admin can run comparison and Masari wins seeded scenario", async () => {
+  it("admin can run comparison and Darb wins seeded scenario", async () => {
     prismaMock.merchantOrder.findFirst.mockResolvedValue(merchantOrder);
     prismaMock.passengerRequest.findFirst.mockResolvedValue(passengerRequest);
     prismaMock.comparisonRun.create.mockImplementation(({ data }) => ({ id: "comparison_1", ...data }));

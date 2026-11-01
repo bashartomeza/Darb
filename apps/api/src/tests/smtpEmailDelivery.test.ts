@@ -95,7 +95,7 @@ const message = (extra: Record<string, unknown> = {}) => ({
   to: "rider@example.com", locale: "en" as const, purpose: "email_verification" as const,
   actionToken: "482913", expiresAt: new Date(Date.now() + 15 * 60_000), ...extra
 });
-const base = { fromAddress: "no-reply@masari.example", fromName: "Masari", user: "mailer", password: "s3cret-pass", timeoutMs: 3000 };
+const base = { fromAddress: "no-reply@masari.example", fromName: "Darb", user: "mailer", password: "s3cret-pass", timeoutMs: 3000 };
 const plain = (port: number, extra = {}) => createSmtpEmailDelivery({ ...base, host: "127.0.0.1", port, secure: "starttls", plaintextForTests: true, ...extra });
 const decodeParts = (data: string) => {
   const parts = [...data.matchAll(/Content-Type: (text\/\w+); charset=UTF-8\nContent-Transfer-Encoding: base64\n\n([\s\S]*?)\n--/g)];
@@ -113,13 +113,13 @@ describe("SMTP email delivery", () => {
       expect(Buffer.from(auth.slice(11), "base64").toString()).toBe("\u0000mailer\u0000s3cret-pass");
       expect(smtp.lines).toContain("MAIL FROM:<no-reply@masari.example>");
       expect(smtp.lines).toContain("RCPT TO:<rider@example.com>");
-      expect(smtp.data).toMatch(/^From: "?Masari"? <no-reply@masari\.example>$/m);
+      expect(smtp.data).toMatch(/^From: "?Darb"? <no-reply@masari\.example>$/m);
       expect(smtp.data).toMatch(/^To: <rider@example\.com>$/m);
       expect(smtp.data).toMatch(/^Subject: =\?UTF-8\?B\?/m);
       expect(smtp.data).toMatch(/Content-Type: multipart\/alternative; boundary="masari_[0-9a-f]+"/);
       const parts = decodeParts(smtp.data);
       expect(parts["text/plain"]).toMatch(/\r\n\r\n482913\r\n\r\n/);
-      expect(parts["text/plain"]).toContain("مساري");
+      expect(parts["text/plain"]).toContain("درب");
       expect(parts["text/plain"]).toContain("15 دقيقة");
       expect(parts["text/html"]).toContain('dir="rtl"');
       expect(parts["text/html"]).toContain("482913");
@@ -202,9 +202,9 @@ describe("SMTP email delivery", () => {
   it("refuses a sender display name that carries a header break, and encodes Arabic names", async () => {
     const smtp = await fakeSmtp();
     try {
-      await expect(plain(smtp.port, { fromName: "Masari\r\nBcc: x@y.example" }).send(message())).rejects.toMatchObject({ code: "smtp_header_invalid" });
+      await expect(plain(smtp.port, { fromName: "Darb\r\nBcc: x@y.example" }).send(message())).rejects.toMatchObject({ code: "smtp_header_invalid" });
       expect(smtp.connections).toBe(0);
-      await plain(smtp.port, { fromName: "مساري" }).send(message());
+      await plain(smtp.port, { fromName: "درب" }).send(message());
       expect(smtp.data).toMatch(/^From: =\?UTF-8\?B\?[A-Za-z0-9+/=]+\?= <no-reply@masari\.example>$/m);
       expect(smtp.data).not.toMatch(/^Bcc:/m);
     } finally { await smtp.close(); }
@@ -220,7 +220,7 @@ describe("SMTP email delivery", () => {
     });
     it("keeps ASCII subjects and splits long UTF-8 subjects into short encoded words", () => {
       expect(encodeHeaderText("Hello")).toBe("Hello");
-      const encoded = encodeHeaderText("رمز التحقق من مساري ".repeat(4));
+      const encoded = encodeHeaderText("رمز التحقق من درب ".repeat(4));
       for (const word of encoded.split("\r\n ")) {
         expect(word.length).toBeLessThanOrEqual(75);
         expect(Buffer.from(word.slice(10, -2), "base64").toString("utf8")).not.toContain("�");
@@ -229,7 +229,7 @@ describe("SMTP email delivery", () => {
     });
     it("renders the code alone on a line with the expiry in minutes, in both languages", () => {
       const en = renderAuthEmail(message({ expiresAt: new Date(Date.now() + 10 * 60_000 - 5) }));
-      expect(en.subject).toBe("Your Masari verification code");
+      expect(en.subject).toBe("Your Darb verification code");
       expect(en.text).toMatch(/\r\n\r\n482913\r\n\r\nThe code expires in 10 minutes\./);
       const ar = renderAuthEmail(message({ locale: "ar", purpose: "password_set", expiresAt: new Date(Date.now() + 5 * 60_000) }));
       expect(ar.text).toMatch(/\r\n\r\n482913\r\n\r\nينتهي الرمز بعد 5 دقيقة\./);

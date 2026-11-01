@@ -53,7 +53,7 @@ The directory action is hidden without its separate capability. It uses the
 existing authenticated actor binding/revision to fence capability and catalog
 reads, including pre-send and post-response checks. Account/session changes
 select a distinct provider instance; old results and captured search state
-cannot be reused by the next session. The screen uses existing Masari surfaces,
+cannot be reused by the next session. The screen uses existing Darb surfaces,
 Arabic names grouped by city, Arabic substring search, and neutral unavailable
 traffic text. It has no map or navigation destination conversion.
 

@@ -117,8 +117,8 @@ contact the provider, enable production, change permissions or deploy.
    in a shell argument, source file, prompt, browser, screenshot, CI or report.
    Disable HTTP tracing/proxy body/header capture for this check.
 3. After explicit owner authorization, enable only the limited gate in that
-   isolated backend. Make **one authenticated Masari directory read**, not a
-   browser request to the provider. Exercise repeated Masari reads within 15
+   isolated backend. Make **one authenticated Darb directory read**, not a
+   browser request to the provider. Exercise repeated Darb reads within 15
    seconds to confirm backend coalescing/cache behavior; do not intentionally
    exhaust quota or provoke authorization errors with real credentials.
 4. A privileged operator checks response schema/types, stable IDs, city counts

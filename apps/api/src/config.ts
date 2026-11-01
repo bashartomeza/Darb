@@ -106,7 +106,8 @@ const rawSchema = z.object({
   EMAIL_CODE_MAX_PER_EMAIL_PER_DAY: z.coerce.number().int().min(1).max(100).default(10),
   INVITATIONS_ENABLED: z.string().optional(),
   PUBLIC_ONBOARDING_ENABLED: z.string().optional(),
-  OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED: z.string().optional(),
+  EMAIL_VERIFICATION_DISABLED: z.string().optional(),
+  PHONE_VERIFICATION_DISABLED: z.string().optional(),
   OPEN_SIGNUP_MAX_STARTS_PER_HOUR: z.coerce.number().int().min(1).max(10_000).default(200),
   DRIVER_DOCUMENTS_ENABLED: z.string().optional(),
   DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
@@ -168,7 +169,7 @@ export type AppConfig = ReturnType<typeof createConfig>;
 
 export class ConfigurationError extends Error {
   constructor(problems: string[]) {
-    super(`Invalid Masari configuration: ${problems.join("; ")}`);
+    super(`Invalid Darb configuration: ${problems.join("; ")}`);
     this.name = "ConfigurationError";
   }
 }
@@ -231,7 +232,6 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   const invitationsEnabled = parseBoolean("INVITATIONS_ENABLED", raw.INVITATIONS_ENABLED);
   const driverDocumentsEnabled = parseBoolean("DRIVER_DOCUMENTS_ENABLED", raw.DRIVER_DOCUMENTS_ENABLED);
   const publicOnboardingEnabled = parseBoolean("PUBLIC_ONBOARDING_ENABLED", raw.PUBLIC_ONBOARDING_ENABLED);
-  const openSignupEnabled = parseBoolean("OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED", raw.OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED);
   const testLegalFixturesEnabled = parseBoolean(
     "ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED",
     raw.ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED
@@ -332,14 +332,10 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (raw.OTP_PROVIDER === "email" && raw.EMAIL_DELIVERY !== "smtp") {
     problems.push("OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp (and the SMTP_* settings)");
   }
-  if (openSignupEnabled && !publicOnboardingEnabled) {
-    problems.push("OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED requires PUBLIC_ONBOARDING_ENABLED");
-  }
-  if (openSignupEnabled && !driverDocumentsEnabled) {
-    problems.push("OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED requires DRIVER_DOCUMENTS_ENABLED so applicants can upload their documents");
-  }
-  if (publicOnboardingEnabled && !invitationsEnabled) {
-    problems.push("PUBLIC_ONBOARDING_ENABLED requires INVITATIONS_ENABLED");
+  // Driver and shop-owner registration is self-service: applicants upload their own documents
+  // before the application reaches the Admin review queue, so storage must be configured.
+  if (publicOnboardingEnabled && !driverDocumentsEnabled) {
+    problems.push("PUBLIC_ONBOARDING_ENABLED requires DRIVER_DOCUMENTS_ENABLED so applicants can upload their documents");
   }
   if (publicOnboardingEnabled && raw.OTP_PROVIDER !== "fake" && raw.OTP_PROVIDER !== "email") {
     problems.push("PUBLIC_ONBOARDING_ENABLED requires OTP_PROVIDER=email (or fake in local, test, or demo)");
@@ -413,6 +409,13 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (productionLike && raw.GOOGLE_PASSENGER_SIGNUP_MODE !== "disabled") {
     problems.push("google_signup_prerequisite_missing: approved delivery providers, published legal releases, and runtime rehearsal required");
   }
+  // Local development only: email sign-up skips the emailed code and unverified
+  // email accounts may sign in. Staging and production always verify.
+  const emailVerificationDisabled = parseBoolean("EMAIL_VERIFICATION_DISABLED", raw.EMAIL_VERIFICATION_DISABLED);
+  if (productionLike && emailVerificationDisabled) problems.push("EMAIL_VERIFICATION_DISABLED is only allowed outside staging and production");
+  // Local development only: adding a phone to the profile needs no code. The number is stored unverified.
+  const phoneVerificationDisabled = parseBoolean("PHONE_VERIFICATION_DISABLED", raw.PHONE_VERIFICATION_DISABLED);
+  if (productionLike && phoneVerificationDisabled) problems.push("PHONE_VERIFICATION_DISABLED is only allowed outside staging and production");
   if (googleOAuthClientIds.some((clientId) => isUnsafeSecret(clientId))) {
     problems.push("GOOGLE_OAUTH_CLIENT_IDS contains a placeholder value");
   }
@@ -425,9 +428,13 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     idempotency: raw.IDEMPOTENCY_KEY_PEPPER,
     abuse: raw.ABUSE_KEY_PEPPER
   };
-  if (invitationsEnabled) {
+  // Registration no longer needs invitations. The invitation-code pepper is only required
+  // when the (optional) Admin invitation feature itself is switched on.
+  const onboardingEnabled = publicOnboardingEnabled || invitationsEnabled;
+  if (onboardingEnabled) {
     for (const [name, value] of Object.entries(onboardingSecrets)) {
-      if (!value) problems.push(`${name} pepper is required when invitations are enabled`);
+      if (name === "invitationCode" && !invitationsEnabled && !value) continue;
+      if (!value) problems.push(`${name} pepper is required when onboarding is enabled`);
       else if (isUnsafeSecret(value)) problems.push(`${name} pepper uses a known placeholder or default value`);
     }
     const configuredSecrets = Object.values(onboardingSecrets).filter((value): value is string => Boolean(value));
@@ -503,7 +510,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     if (!missing.length) {
       email = { delivery: "smtp", smtp: {
         host: raw.SMTP_HOST!, port: raw.SMTP_PORT ?? (raw.SMTP_SECURE === "tls" ? 465 : 587), secure: raw.SMTP_SECURE,
-        user: raw.SMTP_USER, password: raw.SMTP_PASSWORD, fromAddress: raw.EMAIL_FROM_ADDRESS!, fromName: raw.EMAIL_FROM_NAME ?? "Masari"
+        user: raw.SMTP_USER, password: raw.SMTP_PASSWORD, fromAddress: raw.EMAIL_FROM_ADDRESS!, fromName: raw.EMAIL_FROM_NAME ?? "Darb"
       } };
     }
   }
@@ -666,7 +673,8 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     invitationsEnabled,
     otpProvider: raw.OTP_PROVIDER,
     publicOnboardingEnabled,
-    openSignupEnabled,
+    emailVerificationDisabled,
+    phoneVerificationDisabled,
     openSignupMaxStartsPerHour: raw.OPEN_SIGNUP_MAX_STARTS_PER_HOUR,
     driverDocuments: driverDocumentsEnabled
       ? { dir: raw.DRIVER_DOCUMENTS_DIR!, retentionDays: raw.DRIVER_DOCUMENT_RETENTION_DAYS }
@@ -684,7 +692,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           }
         }
       : undefined,
-    onboarding: invitationsEnabled
+    onboarding: onboardingEnabled
       ? {
           otpProvider: raw.OTP_PROVIDER,
           supportedRegions: ["PS"] as const,
@@ -696,7 +704,9 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           otpMaxSendsPerPhoneDay: raw.OTP_MAX_SENDS_PER_PHONE_DAY,
           adminInvitationMaxPerHour: raw.ADMIN_INVITATION_MAX_PER_HOUR,
           keys: {
-            invitationCode: { secret: onboardingSecrets.invitationCode!, version: raw.INVITATION_CODE_KEY_VERSION },
+            invitationCode: onboardingSecrets.invitationCode
+              ? { secret: onboardingSecrets.invitationCode, version: raw.INVITATION_CODE_KEY_VERSION }
+              : undefined,
             phoneDigest: { secret: onboardingSecrets.phoneDigest!, version: raw.PHONE_DIGEST_KEY_VERSION },
             otpCode: { secret: onboardingSecrets.otpCode!, version: raw.OTP_CODE_KEY_VERSION },
             onboardingSession: {

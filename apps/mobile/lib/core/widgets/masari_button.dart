@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/passenger_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/semantic_colors.dart';
 
@@ -128,9 +129,31 @@ class MasariButton extends StatelessWidget {
         ),
       };
 
+  /// The passenger design's palette: one orange accent on white.
+  ({Color background, Color foreground, BorderSide? border})
+  get _passengerPalette => switch (variant) {
+    MasariButtonVariant.primary || MasariButtonVariant.action => (
+      background: PassengerStyle.orange,
+      foreground: Colors.white,
+      border: null,
+    ),
+    MasariButtonVariant.secondary => (
+      background: PassengerStyle.orangeContainer,
+      foreground: PassengerStyle.onOrangeContainer,
+      border: null,
+    ),
+    MasariButtonVariant.outline => (
+      background: Colors.transparent,
+      foreground: PassengerStyle.orange,
+      border: const BorderSide(color: PassengerStyle.orange),
+    ),
+    MasariButtonVariant.destructive => _palette,
+  };
+
   @override
   Widget build(BuildContext context) {
-    final palette = _palette;
+    final passenger = PassengerTheme.isActive(context);
+    final palette = passenger ? _passengerPalette : _palette;
     final enabled = onPressed != null && !busy;
 
     final child = busy
@@ -177,13 +200,17 @@ class MasariButton extends StatelessWidget {
         minimumSize: Size(expand ? double.infinity : 0, AppTokens.buttonHeight),
         padding: const EdgeInsets.symmetric(horizontal: AppTokens.spaceMedium),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusAction),
+          borderRadius: BorderRadius.circular(
+            passenger ? PassengerStyle.radiusButton : AppTokens.radiusAction,
+          ),
         ),
-        textStyle: const TextStyle(
-          fontFamily: AppTheme.fontFamily,
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-        ),
+        textStyle: passenger
+            ? PassengerStyle.inter(size: 16, height: 20, weight: 600)
+            : const TextStyle(
+                fontFamily: AppTheme.fontFamily,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
       ),
       child: child,
     );

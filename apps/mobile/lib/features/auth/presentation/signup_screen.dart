@@ -5,14 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
 import '../application/auth_controller.dart';
 import 'auth_completion_screen.dart';
 import 'credential_actions.dart';
 import 'widgets/auth_divider.dart';
+import 'widgets/auth_style.dart';
 import 'widgets/google_auth_button.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -51,76 +50,81 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final error = auth.error;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.createAccount)),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        actions: const [LanguageSwitch()],
+      ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppTokens.spaceMedium),
-          children: [
-            const Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: LanguageSwitch(),
-            ),
-            const SizedBox(height: AppTokens.spaceMedium),
-            Text(
-              l10n.createAccount,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: AppTokens.spaceExtraSmall),
-            Text(
-              l10n.createAccountSubtitle,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceVariant,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: AppTokens.spaceMedium,
               ),
-            ),
-            const SizedBox(height: AppTokens.spaceLarge),
-            MasariCard(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      key: const ValueKey('nameField'),
-                      controller: _nameController,
-                      textCapitalization: TextCapitalization.words,
-                      autofillHints: const [AutofillHints.name],
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [LengthLimitingTextInputFormatter(120)],
-                      decoration: InputDecoration(labelText: l10n.fullName),
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                          ? l10n.nameRequired
-                          : null,
-                    ),
-                    const SizedBox(height: AppTokens.spaceMedium),
-                    TextFormField(
-                      key: const ValueKey('emailField'),
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                        LengthLimitingTextInputFormatter(191),
-                      ],
-                      decoration: InputDecoration(labelText: l10n.email),
-                      validator: (value) => _validateEmail(l10n, value),
-                    ),
-                    const SizedBox(height: AppTokens.spaceMedium),
-                    TextFormField(
-                      key: const ValueKey('passwordField'),
-                      controller: _passwordController,
-                      obscureText: !_showPassword,
-                      autofillHints: const [AutofillHints.newPassword],
-                      onFieldSubmitted: (_) => _register(),
-                      decoration: InputDecoration(
-                        labelText: l10n.password,
+              children: [
+                const Center(child: AuthLogo()),
+                const SizedBox(height: 26),
+                AuthHeader(
+                  title: l10n.createAccount,
+                  subtitle: l10n.createAccountSubtitle,
+                ),
+                const SizedBox(height: 40),
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AuthTextField(
+                        key: const ValueKey('nameField'),
+                        controller: _nameController,
+                        hint: l10n.fullName,
+                        icon: Icons.person_rounded,
+                        textCapitalization: TextCapitalization.words,
+                        autofillHints: const [AutofillHints.name],
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(120),
+                        ],
+                        validator: (value) =>
+                            (value == null || value.trim().isEmpty)
+                            ? l10n.nameRequired
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      AuthTextField(
+                        key: const ValueKey('emailField'),
+                        controller: _emailController,
+                        hint: l10n.email,
+                        icon: Icons.email_rounded,
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                          LengthLimitingTextInputFormatter(191),
+                        ],
+                        validator: (value) => _validateEmail(l10n, value),
+                      ),
+                      const SizedBox(height: 16),
+                      AuthTextField(
+                        key: const ValueKey('passwordField'),
+                        controller: _passwordController,
+                        hint: l10n.password.toLowerCase(),
+                        icon: Icons.lock_rounded,
+                        obscureText: !_showPassword,
+                        autofillHints: const [AutofillHints.newPassword],
+                        onFieldSubmitted: (_) => _register(),
                         helperText: authText(
                           context,
                           'Use 12–72 characters (maximum 72 UTF-8 bytes).',
                           'استخدم 12–72 حرفاً (بحد أقصى 72 بايت UTF-8).',
                         ),
-                        suffixIcon: IconButton(
+                        suffix: IconButton(
                           tooltip: _showPassword
                               ? l10n.hidePassword
                               : l10n.showPassword,
@@ -128,75 +132,74 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               setState(() => _showPassword = !_showPassword),
                           icon: Icon(
                             _showPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: AuthStyle.hint,
+                            size: 20,
                           ),
                         ),
+                        validator: (value) =>
+                            (value == null || !validNewPassword(value))
+                            ? authText(
+                                context,
+                                'Use 12–72 characters (maximum 72 UTF-8 bytes).',
+                                'استخدم 12–72 حرفاً (بحد أقصى 72 بايت UTF-8).',
+                              )
+                            : null,
                       ),
-                      validator: (value) =>
-                          (value == null || !validNewPassword(value))
-                          ? authText(
-                              context,
-                              'Use 12–72 characters (maximum 72 UTF-8 bytes).',
-                              'استخدم 12–72 حرفاً (بحد أقصى 72 بايت UTF-8).',
-                            )
-                          : null,
-                    ),
-                    if (error != null || _googleFailed) ...[
-                      const SizedBox(height: AppTokens.spaceMedium),
-                      Text(
-                        _googleFailed
-                            ? l10n.googleSignInFailed
-                            : error is ApiException &&
-                                  [
-                                    'explicit_link_required',
-                                    'google_signup_unavailable',
-                                  ].contains(error.message)
-                            ? authFailure(context, error)
-                            : _errorMessage(l10n, error!),
-                        key: const ValueKey('signUpError'),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                      if (error != null || _googleFailed) ...[
+                        const SizedBox(height: AppTokens.spaceMedium),
+                        Text(
+                          _googleFailed
+                              ? l10n.googleSignInFailed
+                              : error is ApiException &&
+                                    [
+                                      'explicit_link_required',
+                                      'google_signup_unavailable',
+                                    ].contains(error.message)
+                              ? authFailure(context, error)
+                              : _errorMessage(l10n, error!),
+                          key: const ValueKey('signUpError'),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
+                      ],
+                      const SizedBox(height: 16),
+                      AuthPrimaryButton(
+                        buttonKey: const ValueKey('signUpButton'),
+                        label: l10n.signUp,
+                        loading: loading,
+                        onPressed: loading ? null : _register,
+                      ),
+                      const SizedBox(height: 18),
+                      AuthDivider(label: l10n.orSeparator),
+                      const SizedBox(height: 8),
+                      AuthSwitchPrompt(
+                        actionKey: const ValueKey('goToSignInButton'),
+                        prompt: l10n.haveAccountPrompt,
+                        action: l10n.login,
+                        onPressed: loading ? null : () => context.pop(),
+                      ),
+                      const SizedBox(height: 8),
+                      GoogleAuthButton(
+                        enabled: !loading,
+                        onIdToken: _registerWithGoogle,
+                        onError: (_) {
+                          if (mounted) {
+                            setState(() {
+                              _googleBusy = false;
+                              _googleFailed = true;
+                            });
+                          }
+                        },
                       ),
                     ],
-                    const SizedBox(height: AppTokens.spaceLarge),
-                    FilledButton(
-                      key: const ValueKey('signUpButton'),
-                      onPressed: loading ? null : _register,
-                      child: loading
-                          ? const SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(l10n.signUp),
-                    ),
-                    const SizedBox(height: AppTokens.spaceMedium),
-                    AuthDivider(label: l10n.orSeparator),
-                    const SizedBox(height: AppTokens.spaceMedium),
-                    GoogleAuthButton(
-                      enabled: !loading,
-                      onIdToken: _registerWithGoogle,
-                      onError: (_) {
-                        if (mounted) {
-                          setState(() {
-                            _googleBusy = false;
-                            _googleFailed = true;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: AppTokens.spaceSmall),
-                    TextButton(
-                      key: const ValueKey('goToSignInButton'),
-                      onPressed: loading ? null : () => context.pop(),
-                      child: Text(l10n.alreadyHaveAccount),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -226,10 +229,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       _googleFailed = false;
       _googleBusy = true;
     });
-    await ref
+    final pendingApplication = await ref
         .read(authControllerProvider.notifier)
-        .loginWithGoogle(idToken: idToken);
+        .loginWithGoogle(
+          idToken: idToken,
+          locale: Localizations.localeOf(context).languageCode,
+        );
     if (mounted) setState(() => _googleBusy = false);
+    // A driver awaiting Admin approval sees their application, not the app.
+    if (pendingApplication && mounted) context.go('/onboarding');
   }
 }
 

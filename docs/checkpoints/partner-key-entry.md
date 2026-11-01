@@ -38,6 +38,6 @@ Only the limited partner-directory gate is on. Every demo, map, checkpoint-feed 
 
 ## Step 3: the one live read (needs your explicit go-ahead first)
 
-Do not do this step until the owner has confirmed the historical key was revoked or rotated (EDIT-05) and has said, in writing, to make exactly one provider-backed read. Then make one authenticated read of `GET /api/v1/limited-checkpoint-directory` through Masari (never straight to the provider), repeat it within 15 seconds to confirm the cache, record only counts and pass or fail in `docs/qa/EVIDENCE_INDEX.md`, stop the API, and remove the stored key if it will not be used again.
+Do not do this step until the owner has confirmed the historical key was revoked or rotated (EDIT-05) and has said, in writing, to make exactly one provider-backed read. Then make one authenticated read of `GET /api/v1/limited-checkpoint-directory` through Darb (never straight to the provider), repeat it within 15 seconds to confirm the cache, record only counts and pass or fail in `docs/qa/EVIDENCE_INDEX.md`, stop the API, and remove the stored key if it will not be used again.
 
 Provider responses, IDs, headers and the key itself are never written to a report.

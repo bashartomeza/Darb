@@ -67,6 +67,13 @@ test("onboarding peppers are required and distinct only when invitations are ena
   assert.ok(failing(runPreflight(env)).includes("PEPPERS_DISTINCT"));
 });
 
+test("public onboarding needs the onboarding peppers but not the invitation-code pepper", () => {
+  const env = { ...goodEnv(), PUBLIC_ONBOARDING_ENABLED: "true", OTP_PROVIDER: "email" };
+  const ids = failing(runPreflight(env));
+  assert.ok(ids.includes("PHONE_DIGEST_PEPPER"));
+  assert.ok(!ids.includes("INVITATION_CODE_PEPPER"));
+});
+
 test("env file parsing works and output never reveals secret values", () => {
   const dir = mkdtempSync(join(tmpdir(), "masari-preflight-"));
   try {
@@ -133,7 +140,8 @@ test("the smtp password never appears in preflight output", () => {
 
 test("OTP_PROVIDER=email needs SMTP, fake is refused, and public onboarding needs the email provider", () => {
   const smtp = { EMAIL_DELIVERY: "smtp", SMTP_HOST: "smtp.mail.example.org", SMTP_USER: "svc-mailer", SMTP_PASSWORD: "x".repeat(24), EMAIL_FROM_ADDRESS: "no-reply@masari.aynur.ps" };
-  assert.deepEqual(failing(runPreflight({ ...goodEnv(), ...smtp, OTP_PROVIDER: "email", PUBLIC_ONBOARDING_ENABLED: "true" })).filter((id) => /OTP|PUBLIC/.test(id)), []);
+  const peppers = Object.fromEntries(["PHONE_DIGEST_PEPPER", "OTP_CODE_PEPPER", "ONBOARDING_SESSION_PEPPER", "IDEMPOTENCY_KEY_PEPPER", "ABUSE_KEY_PEPPER"].map((name, i) => [name, String(i + 1).repeat(40)]));
+  assert.deepEqual(failing(runPreflight({ ...goodEnv(), ...smtp, ...peppers, OTP_PROVIDER: "email", PUBLIC_ONBOARDING_ENABLED: "true" })).filter((id) => /OTP|PUBLIC|PEPPER/.test(id)), []);
   assert.ok(failing(runPreflight({ ...goodEnv(), OTP_PROVIDER: "email" })).includes("OTP_PROVIDER_EMAIL"));
   assert.ok(failing(runPreflight({ ...goodEnv(), OTP_PROVIDER: "fake" })).includes("OTP_PROVIDER"));
   assert.ok(failing(runPreflight({ ...goodEnv(), PUBLIC_ONBOARDING_ENABLED: "true" })).includes("PUBLIC_ONBOARDING_ENABLED"));

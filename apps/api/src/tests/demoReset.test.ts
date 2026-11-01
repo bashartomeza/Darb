@@ -251,7 +251,7 @@ describe("demo reset", () => {
     });
     expect(tx.serviceRouteVersion.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        description_ar: expect.stringContaining("مساري"),
+        description_ar: expect.stringContaining("درب"),
         geometry_status: "available",
         estimated_distance_meters: 21_530
       })

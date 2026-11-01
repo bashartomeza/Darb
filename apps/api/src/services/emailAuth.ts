@@ -24,10 +24,11 @@ const consentInput = z.strictObject({ id: z.string().min(1).max(191), type: z.en
 export const emailStartSchema = z.strictObject({ name: z.string().trim().min(1).max(120), email: canonicalEmail, password: newPassword, locale });
 const emailCode = z.string().regex(/^\d{6}$/);
 // A registration is proven either by the 6-digit code from the email or by the longer token that
-// verify/confirm hands back; exactly one of the two.
+// verify/confirm hands back; at most one of the two. Neither is accepted only for a registration
+// started while EMAIL_VERIFICATION_DISABLED (local development).
 export const emailCompleteBase = z.strictObject({ registration_token: registrationToken, email_verification_token: actionToken.optional(), email_verification_code: emailCode.optional(), locale,
   consents: z.array(consentInput).length(3), adult_self_attestation: z.literal(true), device_name: z.string().trim().min(1).max(120).optional() });
-export const emailCompleteSchema = emailCompleteBase.refine((v) => (v.email_verification_token === undefined) !== (v.email_verification_code === undefined));
+export const emailCompleteSchema = emailCompleteBase.refine((v) => v.email_verification_token === undefined || v.email_verification_code === undefined);
 export const emailProofStartSchema = z.strictObject({ email: canonicalEmail, locale });
 // The emailed proof is always the 6-digit code. It belongs either to a pending registration (identified by its
 // sealed registration_token) or to an existing account (identified by its email), never both.
@@ -35,7 +36,8 @@ export const emailProofConfirmSchema = z.strictObject({ code: emailCode, registr
   .refine((v) => (v.registration_token === undefined) !== (v.email === undefined));
 export const passwordResetSchema = z.strictObject({ email: canonicalEmail, code: emailCode, password: newPassword });
 export const passwordSetSchema = z.strictObject({ password: newPassword, current_password: z.string().min(1).max(200).optional(), reauthentication_code: emailCode.optional() });
-const envelopeSchema = z.strictObject({ name: z.string(), email: canonicalEmail, passwordHash: z.string().regex(/^\$2[aby]\$\d\d\$.{53}$/), expires: z.number(), nonce: z.string() });
+const envelopeSchema = z.strictObject({ name: z.string(), email: canonicalEmail, passwordHash: z.string().regex(/^\$2[aby]\$\d\d\$.{53}$/), expires: z.number(), nonce: z.string(),
+  unverified: z.literal(true).optional() });
 
 // The pre-consent identity remains only in a short-lived authenticated-encrypted
 // client envelope. Database actions hold only keyed digests, never this payload.
@@ -125,6 +127,7 @@ export class EmailAuthService {
   }
 
   async start(input: z.infer<typeof emailStartSchema>) {
+    if (this.config.emailVerificationDisabled) return this.startUnverified(input);
     const key = this.key(); const sender = this.sender();
     // Starting a registration never reveals whether the address is taken, so a plain 429 leaks nothing.
     if (!(await this.mayIssueEmailCode(input.email, "email_verification"))) throw new HttpError(429, "rate_limited");
@@ -137,15 +140,31 @@ export class EmailAuthService {
     return { registration_token: envelope, expires_at: new Date(expires).toISOString(), next_action: "verify_email" };
   }
 
+  /**
+   * Local development (EMAIL_VERIFICATION_DISABLED): no code is issued or emailed. The sealed envelope is marked
+   * unverified, so it can only complete while the flag is still set, and the account keeps email_verified_at null.
+   */
+  private async startUnverified(input: z.infer<typeof emailStartSchema>) {
+    const key = this.key();
+    const expires = Date.now() + 24 * 60 * 60 * 1000;
+    const envelope = seal({ name: input.name, email: input.email, passwordHash: await bcrypt.hash(input.password, 12), expires, nonce: randomBytes(16).toString("hex"), unverified: true }, key);
+    return { registration_token: envelope, expires_at: new Date(expires).toISOString(), next_action: "accept_consents" };
+  }
+
   async complete<T>(input: z.infer<typeof emailCompleteSchema>, createSession: (tx: Prisma.TransactionClient, user: Awaited<ReturnType<PrismaClient["user"]["create"]>>) => Promise<T>, requestId?: string) {
     const payload = open(input.registration_token, this.key());
     // A code attempt is counted before the transaction so a rollback cannot hand the guess back.
+    const unproven = input.email_verification_code === undefined && input.email_verification_token === undefined;
+    // An unverified envelope never completes with a proof, and only completes without one while the flag is set.
+    if (unproven ? !(this.config.emailVerificationDisabled && payload.unverified) : payload.unverified) throw new HttpError(400, "auth_action_invalid");
     const checked = input.email_verification_code === undefined ? undefined : await this.checkCode(input.registration_token, input.email_verification_code);
     return this.db.$transaction(async (tx) => {
-      const proof = checked
-        ? await this.consumeChecked(tx, checked)
-        : await this.consume(tx, input.email_verification_token!, "email_verification");
-      if (proof.user_id || !subjectMatches(proof.subject_digest, input.registration_token, this.key())) throw new HttpError(400, "auth_action_invalid");
+      if (!unproven) {
+        const proof = checked
+          ? await this.consumeChecked(tx, checked)
+          : await this.consume(tx, input.email_verification_token!, "email_verification");
+        if (proof.user_id || !subjectMatches(proof.subject_digest, input.registration_token, this.key())) throw new HttpError(400, "auth_action_invalid");
+      }
       if (await tx.user.findUnique({ where: { email: payload.email } })) throw new HttpError(409, "explicit_link_required");
       const effective = await this.releases.current(new Date(), tx);
       if (!effective.ready) throw new HttpError(409, "consent_version_changed");
@@ -154,8 +173,8 @@ export class EmailAuthService {
         throw new HttpError(409, "consent_version_changed");
       }
       const now = new Date();
-      const user = await tx.user.create({ data: { name: payload.name, email: payload.email, password_hash: payload.passwordHash, email_verified_at: now,
-        phone: null, phone_verified_at: null, profile_state: "phone_required", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
+      const user = await tx.user.create({ data: { name: payload.name, email: payload.email, password_hash: payload.passwordHash, email_verified_at: unproven ? null : now,
+        phone: null, phone_verified_at: null, profile_state: unproven ? "complete" : "phone_required", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
       await tx.userConsent.createMany({ data: documents.map((d) => ({ user_id: user.id, consent_document_id: d.id, accepted_at: now,
         source: "email_registration", request_id: requestId, app_release: this.config.appRelease })) });
       const session = await createSession(tx, user);

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Read-only deployment preflight for the Masari API environment.
+// Read-only deployment preflight for the Darb API environment.
 // Usage: node scripts/deploy/preflight.mjs [--env-file <path>] [--target production|staging]
 // Validates the environment against the rules in apps/api/src/config.ts and
 // docs/deployment/DEPLOY_RUNBOOK.md. Prints PASS/FAIL/WARN per item and never
@@ -92,13 +92,16 @@ export function runPreflight(env, options = {}) {
   const core = Object.values(secrets).filter(Boolean);
   add("SECRETS_DISTINCT", new Set(core).size === core.length, "JWT_SECRET, REFRESH_TOKEN_PEPPER and AUTH_ACTION_TOKEN_PEPPER must differ from each other");
 
-  if (bool("INVITATIONS_ENABLED")) {
-    const peppers = PEPPERS.map((n) => [n, val(n)]);
-    for (const [name, v] of peppers) add(name, v.length >= 32 && !isPlaceholder(v), `${name} required (32+ chars) when INVITATIONS_ENABLED=true`);
+  // Self-service registration (PUBLIC_ONBOARDING_ENABLED) needs the onboarding peppers; the invitation-code
+  // pepper is only needed while the optional Admin invitation feature is on.
+  if (bool("INVITATIONS_ENABLED") || bool("PUBLIC_ONBOARDING_ENABLED")) {
+    const invitationsOn = bool("INVITATIONS_ENABLED");
+    const peppers = PEPPERS.filter((n) => invitationsOn || n !== "INVITATION_CODE_PEPPER").map((n) => [n, val(n)]);
+    for (const [name, v] of peppers) add(name, v.length >= 32 && !isPlaceholder(v), `${name} required (32+ chars) when onboarding or invitations are enabled`);
     const all = [...peppers.map(([, v]) => v), ...core].filter(Boolean);
     add("PEPPERS_DISTINCT", new Set(all).size === all.length, "all onboarding peppers must be distinct from each other and from core secrets");
   } else {
-    results.push({ id: "ONBOARDING_PEPPERS", status: "PASS", message: "invitations disabled; onboarding peppers not required" });
+    results.push({ id: "ONBOARDING_PEPPERS", status: "PASS", message: "onboarding and invitations disabled; onboarding peppers not required" });
   }
 
   const origins = val("CORS_ORIGINS").split(",").map((o) => o.trim()).filter(Boolean);
@@ -124,7 +127,7 @@ export function runPreflight(env, options = {}) {
 
   if (bool("PUBLIC_ONBOARDING_ENABLED")) add("PUBLIC_ONBOARDING_ENABLED", (val("OTP_PROVIDER") || "disabled") === "email", "PUBLIC_ONBOARDING_ENABLED requires OTP_PROVIDER=email in staging/production");
   const otpProvider = val("OTP_PROVIDER") || "disabled";
-  add("OTP_PROVIDER", ["disabled", "email"].includes(otpProvider), "OTP_PROVIDER must be disabled or email (fake is forbidden; Masari sends no SMS, codes go by email)");
+  add("OTP_PROVIDER", ["disabled", "email"].includes(otpProvider), "OTP_PROVIDER must be disabled or email (fake is forbidden; Darb sends no SMS, codes go by email)");
   if (otpProvider === "email") add("OTP_PROVIDER_EMAIL", val("EMAIL_DELIVERY") === "smtp", "OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp");
   add("SUPPORTED_PHONE_REGIONS", (val("SUPPORTED_PHONE_REGIONS") || "PS").toUpperCase() === "PS", "SUPPORTED_PHONE_REGIONS must be PS");
   add("GOOGLE_PASSENGER_SIGNUP_MODE", (val("GOOGLE_PASSENGER_SIGNUP_MODE") || "disabled") === "disabled", "Google passenger signup must stay disabled in staging/production (config refuses otherwise)");

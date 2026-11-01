@@ -23,8 +23,6 @@ await check("D08,E04,E05,E06,E07,A16,A17", "notifications, incident reports and 
 
 console.log("== Clean start, then roles, approvals and sign-up");
 powershellReset();
-const invitations = readFileSync(resolve(stateDir, "invitations.txt"), "utf8");
-void invitations;
 
 const login = async (email, password, path = "/auth/login") => http(path, { method: "POST", body: { email, password } });
 const loginByPhone = async (phone, password) => http("/auth/mobile/login", { method: "POST", body: { phone, password } });
@@ -161,14 +159,12 @@ await check("A14", "rejected application can be reopened; history keeps the reje
   must(v.history.some((h) => h.decision === "rejected") && v.history.some((h) => h.decision === "reopened"), "history incomplete");
 });
 
-// --- Sign-up with invitations (all three roles), documents, rejection
-const phones = { passenger: "+970590003001", driverA: "+970590003002", driverB: "+970590003003", merchant: "+970590003004" };
-async function invite(role, phone) {
-  return (await http("/admin/invitations", { method: "POST", token: adminToken(), body: { role, phone, contact_email: `qa.${phone.slice(-4)}@example.com` }, expect: 201 })).json.code;
-}
-async function signUp({ role, phone, code, name }) {
+// --- Self-service sign-up (driver and shop owner, no invitation), documents, rejection
+const phones = { driverA: "+970590003002", driverB: "+970590003003", merchant: "+970590003004" };
+async function signUp({ role, phone, name }) {
   const consents = (await http("/onboarding/consents?locale=en", { expect: 200 })).json.documents;
-  const started = (await http("/onboarding/attempts", { method: "POST", headers: { "idempotency-key": `qa-start-${phone.slice(-4)}-${Date.now()}` }, body: { invitation_code: code, role, phone, locale: "en" }, expect: 201 })).json;
+  const email = `qa.${phone.slice(-4)}@example.com`;
+  const started = (await http("/onboarding/attempts", { method: "POST", headers: { "idempotency-key": `qa-start-${phone.slice(-4)}-${Date.now()}` }, body: { role, phone, email, locale: "en" }, expect: 201 })).json;
   const continuation = `Onboarding ${started.onboarding_token}`;
   await new Promise((r) => setTimeout(r, 400));
   const wrong = await http(`/onboarding/attempts/${started.attempt.id}/verify`, { method: "POST", token: continuation, headers: { "idempotency-key": `qa-wrong-${phone.slice(-4)}-${Date.now()}` }, body: { otp: "000000" } });
@@ -184,26 +180,11 @@ async function signUp({ role, phone, code, name }) {
 }
 
 const people = {};
-await check("C01,C02,C03", "passenger signs up: wrong code refused, right code works, active at once", async () => {
-  const code = await invite("passenger", phones.passenger);
-  const wrongPhone = await http("/onboarding/attempts", { method: "POST", headers: { "idempotency-key": `qa-bad-${Date.now()}` }, body: { invitation_code: code, role: "passenger", phone: "+970590009998", locale: "en" } });
-  must(wrongPhone.status === 404, `wrong phone gave ${wrongPhone.status}`); // C14
-  const r = await signUp({ role: "passenger", phone: phones.passenger, code, name: "QA Passenger" });
-  must(r.wrongStatus >= 400, "wrong OTP was accepted");
-  must(r.done.account_status === "active", `status ${r.done.account_status}`);
-  people.passenger = r;
-  const signedIn = await loginByPhone(phones.passenger, r.password);
-  must(signedIn.status === 200 && signedIn.json.user.role === "passenger", `phone sign-in gave ${signedIn.status} ${JSON.stringify(signedIn.json).slice(0, 80)}`);
-  const me = await http("/me", { token: signedIn.json.token, expect: 200 });
-  must(me.json.user.phone === phones.passenger, "wrong account");
-  const wrongPw = await loginByPhone(phones.passenger, "not-the-password");
-  must(wrongPw.status === 401, `wrong password gave ${wrongPw.status}`);
-});
-await check("C14", "an invitation cannot be reused", async () => {
-  const code = await invite("passenger", "+970590003010");
-  await signUp({ role: "passenger", phone: "+970590003010", code, name: "QA Reuse" });
-  const again = await http("/onboarding/attempts", { method: "POST", headers: { "idempotency-key": `qa-reuse-${Date.now()}` }, body: { invitation_code: code, role: "passenger", phone: "+970590003010", locale: "en" } });
-  must(again.status >= 400 || again.json?.attempt?.status !== "otp_sent", `reuse gave ${again.status}`);
+await check("C01,C02,C03", "registration needs no invitation: passengers use email sign-up, an invitation code is refused", async () => {
+  const passenger = await http("/onboarding/attempts", { method: "POST", headers: { "idempotency-key": `qa-pax-${Date.now()}` }, body: { role: "passenger", phone: "+970590009997", email: "qa.pax@example.com", locale: "en" } });
+  must(passenger.status === 404, `passenger onboarding gave ${passenger.status}`);
+  const legacy = await http("/onboarding/attempts", { method: "POST", headers: { "idempotency-key": `qa-bad-${Date.now()}` }, body: { invitation_code: "ABCDEFGHJKLMNPQRSTUV2345", role: "driver", phone: "+970590009998", email: "qa.legacy@example.com", locale: "en" } });
+  must(legacy.status === 400, `an invitation code gave ${legacy.status}`); // C14
 });
 
 const jpeg = Buffer.from("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=", "base64");
@@ -212,8 +193,7 @@ async function upload(token, kind, bytes, expect) {
   return http(`/onboarding/driver-documents?kind=${kind}`, { method: "POST", token: `Onboarding ${token}`, raw: bytes, headers: { "content-type": "application/octet-stream" }, expect });
 }
 await check("C04,C05,C06,C07,C08,C09", "driver signs up, uploads documents, wrong type refused, delete works, limit of six", async () => {
-  const code = await invite("driver", phones.driverA);
-  const r = await signUp({ role: "driver", phone: phones.driverA, code, name: "QA Driver A" });
+  const r = await signUp({ role: "driver", phone: phones.driverA, name: "QA Driver A" });
   must(r.done.account_status === "pending", `status ${r.done.account_status}`);
   const token = r.done.onboarding_status_token;
   must(token, "no pending-review token");
@@ -251,8 +231,7 @@ await check("C10,C11,C12,F05", "admin downloads the document; pending driver can
   await upload(people.driverA.token, "other", jpeg).then((r) => must([401, 403, 409].includes(r.status), `upload after approval gave ${r.status}`));
 });
 await check("A15,F03", "reject needs a reason; a rejected applicant is closed out", async () => {
-  const code = await invite("driver", phones.driverB);
-  const r = await signUp({ role: "driver", phone: phones.driverB, code, name: "QA Driver B" });
+  const r = await signUp({ role: "driver", phone: phones.driverB, name: "QA Driver B" });
   const list = await http("/admin/driver-verifications?status=pending", { token: adminToken(), expect: 200 });
   const v = list.json.verifications.find((x) => x.candidate.phone === phones.driverB);
   await http(`/admin/driver-verifications/${v.candidate.id}/reject`, { method: "POST", token: adminToken(), body: { expected_revision: v.revision }, expect: 400 });
@@ -263,8 +242,7 @@ await check("A15,F03", "reject needs a reason; a rejected applicant is closed ou
   must([401, 403].includes(rejectedLogin.status), `rejected applicant sign-in gave ${rejectedLogin.status}`);
 });
 await check("C13,A10", "merchant signs up (pending); rejection needs a reason and disables the account", async () => {
-  const code = await invite("merchant", phones.merchant);
-  const r = await signUp({ role: "merchant", phone: phones.merchant, code, name: "QA Merchant" });
+  const r = await signUp({ role: "merchant", phone: phones.merchant, name: "QA Merchant" });
   must(r.done.account_status === "pending", `status ${r.done.account_status}`);
   const users = await http("/admin/users?role=merchant&account_status=pending", { token: adminToken(), expect: 200 });
   const m = users.json.users.find((u) => u.phone === phones.merchant);
@@ -291,8 +269,7 @@ await check("C13,A10", "merchant signs up (pending); rejection needs a reason an
   must([401, 403].includes(disabledLogin.status), `disabled merchant sign-in gave ${disabledLogin.status}`);
 });
 await check("C15", "an applicant can check their application status", async () => {
-  const code = await invite("merchant", "+970590003011");
-  const r = await signUp({ role: "merchant", phone: "+970590003011", code, name: "QA Merchant 2" });
+  const r = await signUp({ role: "merchant", phone: "+970590003011", name: "QA Merchant 2" });
   const status = await http("/onboarding/status", { token: `Onboarding ${r.done.onboarding_status_token}`, expect: 200 });
   must(status.json.onboarding_status === "pending_review", `status ${status.json.onboarding_status}`);
 });

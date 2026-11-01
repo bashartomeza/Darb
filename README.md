@@ -1,6 +1,8 @@
-# Masari — مساري
+# Darb — درب
 
-Masari is a Palestine-focused, Arabic-first smart route-sharing logistics application for the Hebron / PPU / Bab Al-Zawiya to Bethlehem corridor. The repository contains the Express/Prisma API, Flutter mobile application, and React/Vite admin dashboard.
+Formerly named Masari; technical identifiers (package ids, database, domain) still use masari until migrated.
+
+Darb is a Palestine-focused, Arabic-first smart route-sharing logistics application for the Hebron / PPU / Bab Al-Zawiya to Bethlehem corridor. The repository contains the Express/Prisma API, Flutter mobile application, and React/Vite admin dashboard.
 
 ## Prerequisites
 

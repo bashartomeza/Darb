@@ -1,6 +1,6 @@
 # M7C3C2 accessibility and responsive behavior
 
-The shared-offer flow uses scrollable Material layouts, directional alignment, wrapped text, and standard controls with Material minimum target sizing. Arabic remains the default RTL locale and uses the correct `مساري` brand; English is LTR.
+The shared-offer flow uses scrollable Material layouts, directional alignment, wrapped text, and standard controls with Material minimum target sizing. Arabic remains the default RTL locale and uses the correct `درب` brand; English is LTR.
 
 Semantics provide one concise shared-offer card announcement rather than repeating every visual child. The summary includes route, composition, status, and aggregate counts but no IDs or private data. Stop events are announced as one stop name followed by its non-zero aggregate event counts. Status is textual rather than color-only.
 

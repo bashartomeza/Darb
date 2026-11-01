@@ -36,7 +36,7 @@ import {
   visibleNavItems,
   type AdminRouteId
 } from "./navigation";
-import { AppShell, Button, Icon, Notice, SideNav, TopBar } from "./ui";
+import { AppShell, Button, Notice, SideNav, TopBar } from "./ui";
 import { GoogleAdminSignIn } from "./GoogleAdminSignIn";
 
 export { ADMIN_TOKEN_KEY, clearAdminSession } from "./session";
@@ -496,11 +496,8 @@ export function App({
             </Button>
           </div>
           <div className="login-card__brand">
-            <span className="sidenav__logo">
-              <Icon name="local_shipping" size={22} />
-            </span>
             <div>
-              <p className="sidenav__brand-name">{t("brandName")}</p>
+              <img className="login-card__logo" src="/darb-logo.png" width={550} height={228} alt={t("brandName")} />
               <p className="sidenav__brand-subtitle">{t("appName")}</p>
             </div>
           </div>

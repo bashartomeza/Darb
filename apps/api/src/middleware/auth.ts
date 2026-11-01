@@ -74,9 +74,10 @@ export async function authenticateAuthToken(token: string, options: { allowRevok
   if (!session.revoked_at) {
     await prisma.authSession.update({ where: { id: session.id }, data: { last_used_at: new Date() } });
   }
+  // EMAIL_VERIFICATION_DISABLED (local development only) lets unverified email accounts through.
   // profile_state is non-null in the database. The fallback only supports
   // narrow legacy test doubles that predate this schema field.
-  return { ...claims, profileState: session.user.profile_state ?? "complete", emailVerified: hasVerifiedContact(session.user) };
+  return { ...claims, profileState: session.user.profile_state ?? "complete", emailVerified: config.emailVerificationDisabled || hasVerifiedContact(session.user) };
 }
 
 function authMiddleware(options: { allowRevoked?: boolean } = {}) {

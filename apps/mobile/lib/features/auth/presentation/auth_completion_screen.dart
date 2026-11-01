@@ -166,6 +166,13 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
     final response = await ref
         .read(authRepositoryProvider)
         .startPhone(value, Localizations.localeOf(context).languageCode);
+    // The API saves the number straight away when phone verification is off
+    // (local development), so there is no code to enter.
+    if (response['next_action'] == 'phone_saved') {
+      _phoneConfirmed = true;
+      await ref.read(authControllerProvider.notifier).reloadProfile();
+      return;
+    }
     if (response['action_token'] is! String) {
       throw const ApiException(ApiErrorType.validation, 'invalid_response');
     }
@@ -214,7 +221,17 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider).value;
-    final email = state?.registrationGrant?['next_action'] == 'verify_email';
+    // Local development: the API saves the phone without a code.
+    final phoneOff =
+        ref
+            .watch(authCapabilitiesProvider)
+            .value?['phone_verification_disabled'] ==
+        true;
+    final nextAction = state?.registrationGrant?['next_action'];
+    final email =
+        nextAction == 'verify_email' || nextAction == 'accept_consents';
+    // No emailed code when the API skips verification (local development).
+    final needsCode = nextAction == 'verify_email';
     final error = _error ?? state?.error;
     final title = widget.phone
         ? authText(context, 'Verify your phone', 'تحقق من رقم هاتفك')
@@ -236,8 +253,12 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
               Text(
                 authText(
                   context,
-                  'Add a real contact number before using Darb services. We email the verification code to the email address on your account.',
-                  'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
+                  phoneOff
+                      ? 'Add a real contact number before using Darb services.'
+                      : 'Add a real contact number before using Darb services. We email the verification code to the email address on your account.',
+                  phoneOff
+                      ? 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب.'
+                      : 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
                 ),
               ),
               TextField(
@@ -260,8 +281,16 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                 child: Text(
                   authText(
                     context,
-                    _phoneToken == null ? 'Send code' : 'Resend code',
-                    _phoneToken == null ? 'إرسال الرمز' : 'إعادة إرسال الرمز',
+                    phoneOff
+                        ? 'Continue'
+                        : _phoneToken == null
+                        ? 'Send code'
+                        : 'Resend code',
+                    phoneOff
+                        ? 'متابعة'
+                        : _phoneToken == null
+                        ? 'إرسال الرمز'
+                        : 'إعادة إرسال الرمز',
                   ),
                 ),
               ),
@@ -351,7 +380,7 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                 ),
             ],
             if ((widget.phone && _phoneToken != null) ||
-                (!widget.phone && email))
+                (!widget.phone && needsCode))
               TextField(
                 key: const ValueKey('authProof'),
                 controller: _code,
@@ -384,32 +413,34 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                 ),
               ),
             const SizedBox(height: 16),
-            FilledButton(
-              key: const ValueKey('completeAuth'),
-              onPressed:
-                  _busy ||
-                      (widget.phone
-                          ? !_phoneConfirmed &&
-                                (_phoneToken == null ||
-                                    !RegExp(
-                                      r'^\d{6}$',
-                                    ).hasMatch(_code.text.trim()))
-                          : _documents == null ||
-                                _accepted.length != 3 ||
-                                (email
-                                    ? !RegExp(
+            // With phone verification off, the button above already saves the number.
+            if (!(phoneOff && widget.phone && !_phoneConfirmed))
+              FilledButton(
+                key: const ValueKey('completeAuth'),
+                onPressed:
+                    _busy ||
+                        (widget.phone
+                            ? !_phoneConfirmed &&
+                                  (_phoneToken == null ||
+                                      !RegExp(
                                         r'^\d{6}$',
-                                      ).hasMatch(_code.text.trim())
-                                    : _name.text.trim().isEmpty))
-                  ? null
-                  : _confirm,
-              child: _busy
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(authText(context, 'Continue', 'متابعة')),
-            ),
+                                      ).hasMatch(_code.text.trim()))
+                            : _documents == null ||
+                                  _accepted.length != 3 ||
+                                  (needsCode
+                                      ? !RegExp(
+                                          r'^\d{6}$',
+                                        ).hasMatch(_code.text.trim())
+                                      : !email && _name.text.trim().isEmpty))
+                    ? null
+                    : _confirm,
+                child: _busy
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(authText(context, 'Continue', 'متابعة')),
+              ),
             TextButton(
               onPressed: _busy
                   ? null

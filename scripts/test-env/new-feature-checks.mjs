@@ -116,12 +116,10 @@ async function emailCodeChecks(admin) {
   });
 }
 
-// Open sign-up helpers (no invitation code).
-async function openSignUp({ role, phone, name, invitationCode }) {
+// Self-service sign-up helpers (no invitation code).
+async function openSignUp({ role, phone, name }) {
   const consents = (await http("/onboarding/consents?locale=en", { expect: 200 })).json.documents;
-  const body = { role, phone, locale: "en" };
-  if (invitationCode) body.invitation_code = invitationCode;
-  else body.email = `qa.open.${phone.slice(-4)}@example.com`;
+  const body = { role, phone, locale: "en", email: `qa.open.${phone.slice(-4)}@example.com` };
   const started = (await http("/onboarding/attempts", { method: "POST", headers: { "idempotency-key": key("start") }, body, expect: 201 })).json;
   const continuation = `Onboarding ${started.onboarding_token}`;
   await sleep(400);

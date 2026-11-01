@@ -62,21 +62,17 @@ class OnboardingRepository {
   }
 
   Future<StartAttemptResult> start({
-    required String invitationCode,
     required OnboardingRole role,
     required String phone,
-    String email = '',
+    required String email,
     required String locale,
     required String idempotencyKey,
   }) async {
     final json = await _post(
       '/onboarding/attempts',
       body: {
-        if (invitationCode.trim().isNotEmpty)
-          'invitation_code': invitationCode.trim()
-        else
-          // Open sign-up only: the one-time code is emailed (Masari sends no SMS).
-          'email': email.trim(),
+        // Darb sends no SMS: the one-time code is emailed to this address.
+        'email': email.trim(),
         'role': role.apiValue,
         'phone': phone.trim(),
         'locale': locale,
