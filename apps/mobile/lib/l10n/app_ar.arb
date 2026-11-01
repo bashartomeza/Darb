@@ -463,7 +463,6 @@
       }
     }
   },
-  "whereToGo": "إلى أين تريد الذهاب؟",
   "smartSearch": "بحث ذكي",
   "destinationSearchHint": "مثال: من البوليتكنك إلى بيت لحم",
   "quickDestinations": "الوجهات السريعة",
@@ -1129,5 +1128,49 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mapStraightLineNote": "تعذر حساب الطريق: يظهر خط مستقيم",
+  "mapCheckpointsUnavailable": "بيانات الحواجز غير متوفرة",
+  "mapCheckpointsLoadFailed": "تعذر تحميل الحواجز",
+  "checkpointOfficialUnknown": "الحالة الرسمية: غير منشورة",
+  "checkpointEnteringChanged": "دخول: آخر تغيير {time}",
+  "@checkpointEnteringChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLeavingChanged": "خروج: آخر تغيير {time}",
+  "@checkpointLeavingChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointCommunitySays": "المجتمع يقول: {status} (غير مؤكد)",
+  "@checkpointCommunitySays": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "communityStatusOpen": "مفتوح",
+  "communityStatusClosed": "مغلق",
+  "communityStatusOutdated": "قد تكون الحالة قديمة",
+  "checkpointPositionOsm": "الموقع: © مساهمو OpenStreetMap (ODbL)",
+  "checkpointsUnplacedTitle": "حواجز بلا موقع على الخريطة",
+  "checkpointsUnplacedBody": "يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.",
+  "communityPickLocation": "اضغط على الخريطة لتحديد المكان",
+  "communityUseMyLocation": "استخدام موقعي الحالي",
+  "communityLocationRequired": "حدد المكان على الخريطة لهذا النوع من البلاغات.",
+  "communityLocationOptional": "الموقع (اختياري)",
+  "communityLocationOutside": "هذا المكان خارج منطقة خدمة درب.",
+  "communityLocationUnavailable": "موقعك الحالي غير متاح.",
+  "communityLocationSet": "تم تحديد المكان على الخريطة",
+  "communityClearLocation": "إزالة المكان",
+  "mapRouteLabel": "المسار",
+  "merchantOrderMapTitle": "مسار الطلب"
 }

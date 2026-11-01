@@ -55,6 +55,9 @@ class Checkpoint {
     this.leavingStatus,
     this.enteringStatusLastUpdated,
     this.leavingStatusLastUpdated,
+    this.enteringLastChangedText,
+    this.leavingLastChangedText,
+    this.positionFromOpenStreetMap = false,
   });
 
   final String id;
@@ -68,6 +71,15 @@ class Checkpoint {
   final String? leavingStatus;
   final DateTime? enteringStatusLastUpdated;
   final DateTime? leavingStatusLastUpdated;
+
+  /// The provider's "last changed" times exactly as published. The partner feed
+  /// does not always say which timezone they are in, so they are shown as
+  /// given and never converted or read as a traffic state.
+  final String? enteringLastChangedText;
+  final String? leavingLastChangedText;
+
+  /// The pin comes from an OpenStreetMap name match, not from the provider.
+  final bool positionFromOpenStreetMap;
 
   String get displayName => nameAr.trim().isNotEmpty
       ? nameAr.trim()
@@ -113,8 +125,49 @@ class Checkpoint {
       leavingStatus: leaving,
       enteringStatusLastUpdated: _date(json['entering_status_last_updated']),
       leavingStatusLastUpdated: _date(json['leaving_status_last_updated']),
+      enteringLastChangedText: _text(json['entering_status_last_updated']),
+      leavingLastChangedText: _text(json['leaving_status_last_updated']),
+      positionFromOpenStreetMap: json['position_source'] == 'openstreetmap',
     );
   }
+}
+
+/// A provider checkpoint with no trustworthy map position: listed by name,
+/// never pinned at a guessed place.
+class UnplacedCheckpoint {
+  const UnplacedCheckpoint({
+    required this.id,
+    required this.nameAr,
+    this.city = '',
+    this.enteringLastChangedText,
+    this.leavingLastChangedText,
+  });
+
+  final String id;
+  final String nameAr;
+  final String city;
+  final String? enteringLastChangedText;
+  final String? leavingLastChangedText;
+
+  static UnplacedCheckpoint? tryParse(Object? value) {
+    if (value is! Map<String, dynamic>) return null;
+    final id = _text(value['id']);
+    final name = _text(value['name_ar']);
+    if (id == null || name == null) return null;
+    return UnplacedCheckpoint(
+      id: id,
+      nameAr: name,
+      city: _text(value['city']) ?? '',
+      enteringLastChangedText: _text(value['entering_status_last_updated']),
+      leavingLastChangedText: _text(value['leaving_status_last_updated']),
+    );
+  }
+}
+
+/// "2026-11-01T09:30:00" -> "2026-11-01 09:30", without any timezone change.
+String formatProviderTime(String raw) {
+  final match = RegExp(r'^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})').firstMatch(raw);
+  return match == null ? raw : '${match.group(1)} ${match.group(2)}';
 }
 
 double? _coordinate(dynamic value, double limit) {
@@ -137,10 +190,22 @@ class CheckpointSnapshot {
     required this.checkpoints,
     this.fetchedAt,
     this.stale = false,
+    this.unplaced = const [],
+    this.source,
+    this.positionAttribution,
   });
   final List<Checkpoint> checkpoints;
   final DateTime? fetchedAt;
   final bool stale;
+
+  /// Provider checkpoints the server could not place on the map.
+  final List<UnplacedCheckpoint> unplaced;
+
+  /// `feed` (coordinate feed) or `aweenrayeh_partner`.
+  final String? source;
+
+  /// Credit for positions taken from OpenStreetMap, when any are.
+  final String? positionAttribution;
   static const empty = CheckpointSnapshot(checkpoints: <Checkpoint>[]);
 
   factory CheckpointSnapshot.fromJson(Map<String, dynamic> json) {
@@ -155,10 +220,17 @@ class CheckpointSnapshot {
         continue;
       }
     }
+    final unplaced = json['unplaced'];
     return CheckpointSnapshot(
       checkpoints: List.unmodifiable(checkpoints),
       fetchedAt: _date(json['fetched_at'] ?? json['generatedAt']),
       stale: json['stale'] == true,
+      unplaced: List.unmodifiable([
+        if (unplaced is List)
+          for (final value in unplaced) ?UnplacedCheckpoint.tryParse(value),
+      ]),
+      source: _text(json['source']),
+      positionAttribution: _text(json['position_attribution']),
     );
   }
 }

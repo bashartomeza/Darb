@@ -31,7 +31,9 @@ export function createCapabilitiesRouter(appConfig: AppConfig, directory?: Check
       // Coordinates and geometry reach clients only through the canonical
       // catalog, so the map gate is the catalog gate plus the maps flag.
       maps_available: appConfig.mapsEnabled && appConfig.routeManagementEnabled,
-      checkpoints_available: appConfig.checkpointsEnabled,
+      checkpoints_available:
+        appConfig.checkpointsEnabled ||
+        (appConfig.partnerCheckpointMapEnabled && ["passenger", "driver"].includes((req as AuthenticatedRequest).user?.role ?? "")),
       // Existing Flutter versions reject unknown fields. New directory clients
       // explicitly opt into this extension; legacy responses stay byte-shaped.
       ...(req.query.include === "checkpoint-directory" ? {

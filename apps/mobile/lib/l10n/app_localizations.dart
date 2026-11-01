@@ -5173,6 +5173,144 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'{up} تأييد، {down} اعتراض'**
   String communityVoteCounts(int up, int down);
+
+  /// No description provided for @mapStraightLineNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر حساب الطريق: يظهر خط مستقيم'**
+  String get mapStraightLineNote;
+
+  /// No description provided for @mapCheckpointsUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات الحواجز غير متوفرة'**
+  String get mapCheckpointsUnavailable;
+
+  /// No description provided for @mapCheckpointsLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل الحواجز'**
+  String get mapCheckpointsLoadFailed;
+
+  /// No description provided for @checkpointOfficialUnknown.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة الرسمية: غير منشورة'**
+  String get checkpointOfficialUnknown;
+
+  /// No description provided for @checkpointEnteringChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'دخول: آخر تغيير {time}'**
+  String checkpointEnteringChanged(String time);
+
+  /// No description provided for @checkpointLeavingChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'خروج: آخر تغيير {time}'**
+  String checkpointLeavingChanged(String time);
+
+  /// No description provided for @checkpointCommunitySays.
+  ///
+  /// In ar, this message translates to:
+  /// **'المجتمع يقول: {status} (غير مؤكد)'**
+  String checkpointCommunitySays(String status);
+
+  /// No description provided for @communityStatusOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوح'**
+  String get communityStatusOpen;
+
+  /// No description provided for @communityStatusClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلق'**
+  String get communityStatusClosed;
+
+  /// No description provided for @communityStatusOutdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'قد تكون الحالة قديمة'**
+  String get communityStatusOutdated;
+
+  /// No description provided for @checkpointPositionOsm.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع: © مساهمو OpenStreetMap (ODbL)'**
+  String get checkpointPositionOsm;
+
+  /// No description provided for @checkpointsUnplacedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حواجز بلا موقع على الخريطة'**
+  String get checkpointsUnplacedTitle;
+
+  /// No description provided for @checkpointsUnplacedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.'**
+  String get checkpointsUnplacedBody;
+
+  /// No description provided for @communityPickLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط على الخريطة لتحديد المكان'**
+  String get communityPickLocation;
+
+  /// No description provided for @communityUseMyLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدام موقعي الحالي'**
+  String get communityUseMyLocation;
+
+  /// No description provided for @communityLocationRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدد المكان على الخريطة لهذا النوع من البلاغات.'**
+  String get communityLocationRequired;
+
+  /// No description provided for @communityLocationOptional.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع (اختياري)'**
+  String get communityLocationOptional;
+
+  /// No description provided for @communityLocationOutside.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المكان خارج منطقة خدمة درب.'**
+  String get communityLocationOutside;
+
+  /// No description provided for @communityLocationUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعك الحالي غير متاح.'**
+  String get communityLocationUnavailable;
+
+  /// No description provided for @communityLocationSet.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديد المكان على الخريطة'**
+  String get communityLocationSet;
+
+  /// No description provided for @communityClearLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة المكان'**
+  String get communityClearLocation;
+
+  /// No description provided for @mapRouteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار'**
+  String get mapRouteLabel;
+
+  /// No description provided for @merchantOrderMapTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسار الطلب'**
+  String get merchantOrderMapTitle;
 }
 
 class _AppLocalizationsDelegate

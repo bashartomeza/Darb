@@ -2817,4 +2817,85 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityVoteCounts(int up, int down) {
     return '$up support, $down dispute';
   }
+
+  @override
+  String get mapStraightLineNote =>
+      'Road route unavailable: showing a straight line';
+
+  @override
+  String get mapCheckpointsUnavailable => 'Checkpoint data unavailable';
+
+  @override
+  String get mapCheckpointsLoadFailed => 'Checkpoints could not be loaded';
+
+  @override
+  String get checkpointOfficialUnknown => 'Official status: not published';
+
+  @override
+  String checkpointEnteringChanged(String time) {
+    return 'Entering: last changed $time';
+  }
+
+  @override
+  String checkpointLeavingChanged(String time) {
+    return 'Leaving: last changed $time';
+  }
+
+  @override
+  String checkpointCommunitySays(String status) {
+    return 'Community says: $status (unverified)';
+  }
+
+  @override
+  String get communityStatusOpen => 'open';
+
+  @override
+  String get communityStatusClosed => 'closed';
+
+  @override
+  String get communityStatusOutdated => 'status may be outdated';
+
+  @override
+  String get checkpointPositionOsm =>
+      'Position: © OpenStreetMap contributors (ODbL)';
+
+  @override
+  String get checkpointsUnplacedTitle => 'Checkpoints without a map position';
+
+  @override
+  String get checkpointsUnplacedBody =>
+      'Listed by the provider, but no reliable position is known, so they are not pinned.';
+
+  @override
+  String get communityPickLocation => 'Tap the map to set where this is';
+
+  @override
+  String get communityUseMyLocation => 'Use my current location';
+
+  @override
+  String get communityLocationRequired =>
+      'Choose the place on the map for this kind of report.';
+
+  @override
+  String get communityLocationOptional => 'Location (optional)';
+
+  @override
+  String get communityLocationOutside =>
+      'That place is outside Darb\'s service area.';
+
+  @override
+  String get communityLocationUnavailable =>
+      'Your current location is not available.';
+
+  @override
+  String get communityLocationSet => 'Place set on the map';
+
+  @override
+  String get communityClearLocation => 'Remove place';
+
+  @override
+  String get mapRouteLabel => 'Route';
+
+  @override
+  String get merchantOrderMapTitle => 'Order route';
 }

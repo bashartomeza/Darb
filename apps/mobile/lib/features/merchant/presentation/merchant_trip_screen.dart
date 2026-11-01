@@ -11,7 +11,9 @@ import '../../../core/widgets/darb_card.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
+import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../data/merchant_models.dart';
+import 'merchant_order_route_map.dart';
 import 'merchant_ui.dart';
 
 class MerchantTripScreen extends ConsumerStatefulWidget {
@@ -97,6 +99,16 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
         : ((location.sequence + 1) / 7).clamp(0.0, 1.0);
     return Column(
       children: [
+        if (state.order.routeWaypoints.length >= 2) ...[
+          MerchantOrderRouteMap(
+            key: const ValueKey('merchantTripMap'),
+            order: state.order,
+            vehicle: location == null
+                ? null
+                : GeoPoint(location.lat, location.lng),
+          ),
+          const SizedBox(height: AppTokens.spaceMedium),
+        ],
         DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

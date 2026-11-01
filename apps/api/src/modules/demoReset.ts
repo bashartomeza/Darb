@@ -9,6 +9,7 @@ import { authenticateAuthToken } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { DEMO_ROUTE_POINTS } from "../lib/geo.js";
+import { PARTNER_BUDGET_BUCKET } from "../services/limitedCheckpointBudget.js";
 import {
   assertDemoResetDatabaseSafe,
   DemoResetDatabaseNotAllowedError
@@ -143,7 +144,9 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
     await tx.invitation.deleteMany();
     await tx.consentDocument.deleteMany();
     await tx.consentRelease.deleteMany();
-    await tx.abuseCounter.deleteMany();
+    // The partner key budget belongs to the real provider, not to demo data:
+    // resetting it could exceed the provider's rate limit, so it is kept.
+    await tx.abuseCounter.deleteMany({ where: { bucket_type: { not: PARTNER_BUDGET_BUCKET } } });
     await tx.idempotencyRecord.deleteMany();
     await tx.refreshToken.deleteMany();
     await tx.authSession.deleteMany();

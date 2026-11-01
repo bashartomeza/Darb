@@ -442,7 +442,6 @@
   "greetingMorning": "Good morning, {name}",
   "greetingAfternoon": "Good afternoon, {name}",
   "greetingEvening": "Good evening, {name}",
-  "whereToGo": "Where do you want to go?",
   "smartSearch": "Smart search",
   "destinationSearchHint": "e.g. from PPU to Bethlehem",
   "quickDestinations": "Quick destinations",
@@ -1028,5 +1027,49 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mapStraightLineNote": "Road route unavailable: showing a straight line",
+  "mapCheckpointsUnavailable": "Checkpoint data unavailable",
+  "mapCheckpointsLoadFailed": "Checkpoints could not be loaded",
+  "checkpointOfficialUnknown": "Official status: not published",
+  "checkpointEnteringChanged": "Entering: last changed {time}",
+  "@checkpointEnteringChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLeavingChanged": "Leaving: last changed {time}",
+  "@checkpointLeavingChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointCommunitySays": "Community says: {status} (unverified)",
+  "@checkpointCommunitySays": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "communityStatusOpen": "open",
+  "communityStatusClosed": "closed",
+  "communityStatusOutdated": "status may be outdated",
+  "checkpointPositionOsm": "Position: © OpenStreetMap contributors (ODbL)",
+  "checkpointsUnplacedTitle": "Checkpoints without a map position",
+  "checkpointsUnplacedBody": "Listed by the provider, but no reliable position is known, so they are not pinned.",
+  "communityPickLocation": "Tap the map to set where this is",
+  "communityUseMyLocation": "Use my current location",
+  "communityLocationRequired": "Choose the place on the map for this kind of report.",
+  "communityLocationOptional": "Location (optional)",
+  "communityLocationOutside": "That place is outside Darb's service area.",
+  "communityLocationUnavailable": "Your current location is not available.",
+  "communityLocationSet": "Place set on the map",
+  "communityClearLocation": "Remove place",
+  "mapRouteLabel": "Route",
+  "merchantOrderMapTitle": "Order route"
 }

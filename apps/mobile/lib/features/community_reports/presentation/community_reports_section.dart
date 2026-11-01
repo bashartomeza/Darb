@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart' show TileProvider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
@@ -10,7 +11,12 @@ import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/darb_bottom_nav.dart';
 import '../../../core/widgets/darb_map.dart';
+import 'package:latlong2/latlong.dart';
+
+import '../../../core/maps/checkpoint_map_markers.dart';
+import '../../../core/maps/service_area.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
+import '../../checkpoints/domain/checkpoint_models.dart';
 import '../application/community_reports_controller.dart';
 import '../data/community_report_models.dart';
 
@@ -64,26 +70,111 @@ Color communityGroupColor(CommunityReportGroup group) => switch (group) {
 
 /// Map pins for reports that carry a location. Labels repeat the category and
 /// place only, never the free-text description, and flag the report as
-/// unverified.
+/// unverified. Disputed reports are drawn faded; well-supported ones get a
+/// badge. Reports outside the service area are not drawn.
 List<DarbMapMarker> communityReportMarkers(
   AppLocalizations l10n,
-  List<CommunityReport> reports,
-) {
+  List<CommunityReport> reports, {
+  DateTime? now,
+}) {
+  final at = now ?? DateTime.now();
   return [
     for (final report in reports)
-      if (report.hasLocation)
-        DarbMapMarker(
-          position: GeoPoint(report.latitude!, report.longitude!),
-          icon: report.category.icon,
-          color: communityGroupColor(report.category.group),
-          label:
-              '${l10n.communityUnverifiedPrefix}'
-              '${communityCategoryLabel(l10n, report.category)} - '
-              '${report.locationName}',
-          size: 30,
-        ),
+      if (report.hasLocation &&
+          DarbServiceArea.contains(report.latitude!, report.longitude!))
+        _reportMarker(l10n, report, report.badges(at)),
   ];
 }
+
+DarbMapMarker _reportMarker(
+  AppLocalizations l10n,
+  CommunityReport report,
+  Set<CommunityReportBadge> badges,
+) {
+  final disputed = badges.contains(CommunityReportBadge.disputed);
+  final supported = badges.contains(CommunityReportBadge.wellSupported);
+  return DarbMapMarker(
+    position: GeoPoint(report.latitude!, report.longitude!),
+    icon: report.category.icon,
+    color: communityGroupColor(report.category.group),
+    type: DarbMapMarkerType.report,
+    dimmed: disputed,
+    badgeIcon: supported ? Icons.verified_rounded : null,
+    label: [
+      '${l10n.communityUnverifiedPrefix}'
+          '${communityCategoryLabel(l10n, report.category)} - '
+          '${report.locationName}',
+      if (disputed) l10n.communityBadgeDisputed,
+      if (supported) l10n.communityBadgeWellSupported,
+    ].join('\n'),
+    size: 30,
+  );
+}
+
+/// How close a checkpoint-related report must be to count for a checkpoint.
+const communityCheckpointRadiusMeters = 300.0;
+
+/// Reports older than this no longer describe a checkpoint's current state.
+const communityCheckpointMaxAge = Duration(hours: 6);
+
+/// What recent, not-disputed community reports within 300 m say about each
+/// checkpoint, keyed by checkpoint id. Votes and reports never change the
+/// official status; this is only shown next to it.
+Map<String, CheckpointCommunityNote> communityCheckpointNotes(
+  Iterable<Checkpoint> checkpoints,
+  List<CommunityReport> reports, {
+  DateTime? now,
+}) {
+  final at = now ?? DateTime.now();
+  const distance = Distance();
+  final relevant = [
+    for (final report in reports)
+      if (report.hasLocation &&
+          _claimFor(report.category) != null &&
+          at.difference(report.createdAt) <= communityCheckpointMaxAge &&
+          !report.badges(at).contains(CommunityReportBadge.disputed))
+        report,
+  ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  final notes = <String, CheckpointCommunityNote>{};
+  for (final checkpoint in checkpoints) {
+    final here = LatLng(
+      checkpoint.position.latitude,
+      checkpoint.position.longitude,
+    );
+    for (final report in relevant) {
+      final meters = distance.as(
+        LengthUnit.Meter,
+        here,
+        LatLng(report.latitude!, report.longitude!),
+      );
+      if (meters > communityCheckpointRadiusMeters) continue;
+      notes[checkpoint.id] = CheckpointCommunityNote(
+        claim: _claimFor(report.category)!,
+        wellSupported: report
+            .badges(at)
+            .contains(CommunityReportBadge.wellSupported),
+      );
+      break; // The most recent nearby report speaks for the community.
+    }
+  }
+  return notes;
+}
+
+CommunityCheckpointClaim? _claimFor(CommunityReportCategory category) =>
+    switch (category) {
+      // "Open but marked closed": people there say it is open.
+      CommunityReportCategory.checkpointOpenMarkedClosed =>
+        CommunityCheckpointClaim.open,
+      CommunityReportCategory.checkpointClosedMarkedOpen =>
+        CommunityCheckpointClaim.closed,
+      CommunityReportCategory.checkpointOutdated =>
+        CommunityCheckpointClaim.outdated,
+      CommunityReportCategory.roadClosure => CommunityCheckpointClaim.closed,
+      CommunityReportCategory.roadCongestion =>
+        CommunityCheckpointClaim.congested,
+      CommunityReportCategory.roadReopened => CommunityCheckpointClaim.open,
+      _ => null,
+    };
 
 /// Community reports list with filters, votes and a submit sheet.
 class CommunityReportsSection extends ConsumerStatefulWidget {
@@ -438,8 +529,18 @@ class _Pill extends StatelessWidget {
 
 /// Submit sheet. Sensitive categories show a reminder to describe only what was
 /// seen, and the server never returns the author or any driver details.
+///
+/// The place is chosen by tapping the small map or with the current location,
+/// and must be inside Darb's service area. Map-related categories cannot be
+/// sent without one; driver and "other" reports may be.
 class CommunityReportForm extends ConsumerStatefulWidget {
-  const CommunityReportForm({super.key});
+  const CommunityReportForm({this.initialPoint, this.tileProvider, super.key});
+
+  /// Pre-selected place, e.g. where the user long-pressed a map.
+  final GeoPoint? initialPoint;
+
+  /// Tests pass a fake tile source.
+  final TileProvider? tileProvider;
 
   @override
   ConsumerState<CommunityReportForm> createState() =>
@@ -450,9 +551,21 @@ class _CommunityReportFormState extends ConsumerState<CommunityReportForm> {
   final _description = TextEditingController();
   final _location = TextEditingController();
   CommunityReportCategory _category = CommunityReportCategory.roadCongestion;
-  bool _attach = false;
+  GeoPoint? _point;
+  bool _locating = false;
   bool _submitting = false;
   String? _error;
+  String? _locationError;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialPoint;
+    if (initial != null &&
+        DarbServiceArea.contains(initial.latitude, initial.longitude)) {
+      _point = initial;
+    }
+  }
 
   @override
   void dispose() {
@@ -461,9 +574,46 @@ class _CommunityReportFormState extends ConsumerState<CommunityReportForm> {
     super.dispose();
   }
 
+  bool get _locationMissing => _category.requiresLocation && _point == null;
+
   bool get _valid =>
       _description.text.trim().length >= communityReportDescriptionMinLength &&
-      _location.text.trim().length >= 2;
+      _location.text.trim().length >= 2 &&
+      !_locationMissing;
+
+  void _setPoint(LatLng point) {
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      if (DarbServiceArea.containsLatLng(point)) {
+        _point = GeoPoint(point.latitude, point.longitude);
+        _locationError = null;
+      } else {
+        _locationError = l10n.communityLocationOutside;
+      }
+    });
+  }
+
+  Future<void> _useCurrentLocation() async {
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    await ref.read(currentPositionProvider.notifier).refresh();
+    if (!mounted) return;
+    final here = ref.read(currentPositionProvider).value;
+    setState(() {
+      _locating = false;
+      if (here == null) {
+        _locationError = l10n.communityLocationUnavailable;
+      } else if (!DarbServiceArea.contains(here.latitude, here.longitude)) {
+        // e.g. an emulator's default position abroad: never sent as a place.
+        _locationError = l10n.communityLocationOutside;
+      } else {
+        _point = here;
+      }
+    });
+  }
 
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context);
@@ -474,10 +624,7 @@ class _CommunityReportFormState extends ConsumerState<CommunityReportForm> {
       _error = null;
     });
     try {
-      GeoPoint? point;
-      if (_attach) {
-        point = ref.read(currentPositionProvider).value;
-      }
+      final point = _point;
       await ref
           .read(communityReportsProvider.notifier)
           .submit(
@@ -504,6 +651,7 @@ class _CommunityReportFormState extends ConsumerState<CommunityReportForm> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final point = _point;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -560,13 +708,76 @@ class _CommunityReportFormState extends ConsumerState<CommunityReportForm> {
             border: const OutlineInputBorder(),
           ),
         ),
-        SwitchListTile(
-          key: const ValueKey('communityAttach'),
-          contentPadding: EdgeInsets.zero,
-          title: Text(l10n.communityAttachLocation),
-          value: _attach,
-          onChanged: _submitting ? null : (v) => setState(() => _attach = v),
+        Text(
+          _category.requiresLocation
+              ? l10n.communityPickLocation
+              : '${l10n.communityLocationOptional} - ${l10n.communityPickLocation}',
+          key: const ValueKey('communityPickHint'),
+          style: theme.textTheme.labelLarge,
         ),
+        const SizedBox(height: AppTokens.spaceExtraSmall),
+        DarbMap(
+          key: const ValueKey('communityLocationMap'),
+          height: 200,
+          emptyLabel: l10n.communityPickLocation,
+          attributionLabel: l10n.mapAttribution,
+          tileProvider: widget.tileProvider,
+          interactive: !_submitting,
+          onTap: _submitting ? null : _setPoint,
+          markers: [
+            if (point != null)
+              DarbMapMarker(
+                position: point,
+                icon: _category.icon,
+                color: communityGroupColor(_category.group),
+                type: DarbMapMarkerType.destination,
+                label: l10n.communityLocationSet,
+                size: 30,
+              ),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: TextButton.icon(
+                key: const ValueKey('communityUseMyLocation'),
+                onPressed: _submitting || _locating
+                    ? null
+                    : _useCurrentLocation,
+                icon: _locating
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location_rounded),
+                label: Text(l10n.communityUseMyLocation),
+              ),
+            ),
+            if (point != null)
+              TextButton(
+                key: const ValueKey('communityClearLocation'),
+                onPressed: _submitting
+                    ? null
+                    : () => setState(() => _point = null),
+                child: Text(l10n.communityClearLocation),
+              ),
+          ],
+        ),
+        if (_locationError != null)
+          Text(
+            _locationError!,
+            key: const ValueKey('communityLocationError'),
+            style: TextStyle(color: theme.colorScheme.error),
+          )
+        else if (_locationMissing)
+          Text(
+            l10n.communityLocationRequired,
+            key: const ValueKey('communityLocationRequired'),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppTheme.onSurfaceVariant,
+            ),
+          ),
         if (_error != null)
           Text(
             _error!,

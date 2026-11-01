@@ -24,6 +24,12 @@ authenticated Darb endpoint.
 | `CHECKPOINTS_API_KEY` | when enabled | Never leaves the server |
 | `CHECKPOINTS_TIMEOUT_MS` | no | 500–15000, default 6000; includes response-body consumption |
 | `CHECKPOINTS_CACHE_TTL_SECONDS` | no | 0–3600, default 60 |
+| `PARTNER_CHECKPOINT_MAP_ENABLED` | — | Used only when `CHECKPOINTS_ENABLED` is off. Requires `AWEENRAYEH_LIMITED_DIRECTORY_ENABLED`; serves partner rows placed by an OpenStreetMap name match (passenger/driver only). See `docs/checkpoints/map-sources.md` |
+
+With the partner source the response also carries `source: "aweenrayeh_partner"`,
+an `unplaced` list (rows with no reliable position, never pinned), the raw
+`entering_status_last_updated` / `leaving_status_last_updated` times and
+`position_source: "openstreetmap"` on each pin. Its `status` is always `unknown`.
 
 ## Response
 
