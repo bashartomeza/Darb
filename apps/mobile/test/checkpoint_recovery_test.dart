@@ -52,7 +52,7 @@ void main() {
       expect(result.fetchedAt, DateTime.utc(2026, 10, 16, 9, 1));
       expect(
         checkpointTrafficMarker(checkpoint).color,
-        const Color(0xFFDC2626),
+        const Color(0xFFEB3223),
       );
     },
   );
@@ -79,12 +79,12 @@ void main() {
 
   test('both maps share canonical traffic semantics including unknown', () {
     for (final entry in <String, Color>{
-      'closed': const Color(0xFFDC2626),
-      'مغلق': const Color(0xFFDC2626),
-      'open': const Color(0xFF16A34A),
-      'سالك': const Color(0xFF16A34A),
-      'congested': const Color(0xFFF59E0B),
-      'أزمة': const Color(0xFFF59E0B),
+      'closed': const Color(0xFFEB3223),
+      'مغلق': const Color(0xFFEB3223),
+      'open': const Color(0xFF3A7C07),
+      'سالك': const Color(0xFF3A7C07),
+      'congested': const Color(0xFFFA5F12),
+      'أزمة': const Color(0xFFFA5F12),
       'unknown': const Color(0xFF64748B),
     }.entries) {
       final checkpoint = Checkpoint.fromJson(row(status: entry.key));
