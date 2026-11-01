@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:darb_mobile/core/api/api_error.dart';
 import 'package:darb_mobile/features/incidents/data/incident_repository.dart';
 import 'package:darb_mobile/features/incidents/presentation/report_incident_sheet.dart';
@@ -8,10 +9,17 @@ import 'package:darb_mobile/features/notifications/data/notification_models.dart
 import 'package:darb_mobile/features/notifications/presentation/notifications_screen.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import 'support/auth_test_support.dart';
+
 class _FakeIncidents implements IncidentRepository {
   final List<({IncidentCategory category, String description, String? tripId})>
   sent = [];
   Object? failure;
+  Object? listFailure;
+  int listReads = 0;
+
+  /// Stands in for the server rows `GET /incidents` returns, oldest first.
+  final List<IncidentReport> saved = [];
 
   @override
   get apiClient => throw UnimplementedError();
@@ -25,6 +33,24 @@ class _FakeIncidents implements IncidentRepository {
     final error = failure;
     if (error != null) throw error;
     sent.add((category: category, description: description, tripId: tripId));
+    saved.add(
+      IncidentReport(
+        id: 'inc_${saved.length + 1}',
+        category: category,
+        description: description.trim(),
+        status: IncidentStatus.open,
+        createdAt: DateTime(2026, 10, 25),
+        tripId: tripId,
+      ),
+    );
+  }
+
+  @override
+  Future<List<IncidentReport>> mine() async {
+    listReads++;
+    final error = listFailure;
+    if (error != null) throw error;
+    return saved.reversed.toList();
   }
 }
 
@@ -51,7 +77,97 @@ Future<void> _openSheet(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _openMyReports(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('myIncidentReportsButton')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets('a sent report is listed under "My reports" with its status', (
+    tester,
+  ) async {
+    final repo = _FakeIncidents();
+    await _pumpButton(tester, repo);
+
+    await _openMyReports(tester);
+    expect(
+      find.byKey(const ValueKey('myIncidentReportsEmpty')),
+      findsOneWidget,
+    );
+    Navigator.of(tester.element(find.byType(MyIncidentReportsList))).pop();
+    await tester.pumpAndSettle();
+
+    await _openSheet(tester);
+    await tester.tap(find.byKey(const ValueKey('incidentCategory-delay')));
+    await tester.enterText(
+      find.byKey(const ValueKey('incidentDescription')),
+      'The driver arrived late',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('incidentSubmit')));
+    await tester.pumpAndSettle();
+
+    await _openMyReports(tester);
+    // Read again from the repository, not a copy kept from the first open.
+    expect(repo.listReads, 2);
+    expect(find.byKey(const ValueKey('incidentReport-inc_1')), findsOneWidget);
+    expect(find.text('Delay'), findsOneWidget);
+    expect(find.text('Open'), findsOneWidget);
+    expect(find.textContaining('The driver arrived late'), findsOneWidget);
+  });
+
+  testWidgets('"My reports" offers a retry when the list cannot load', (
+    tester,
+  ) async {
+    final repo = _FakeIncidents()..listFailure = StateError('offline');
+    await _pumpButton(tester, repo);
+    await _openMyReports(tester);
+    expect(
+      find.byKey(const ValueKey('myIncidentReportsError')),
+      findsOneWidget,
+    );
+
+    repo
+      ..listFailure = null
+      ..saved.add(
+        IncidentReport(
+          id: 'inc_9',
+          category: IncidentCategory.safety,
+          description: 'Unsafe overtaking',
+          status: IncidentStatus.reviewing,
+          createdAt: DateTime(2026, 10, 24),
+        ),
+      );
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('Under review'), findsOneWidget);
+  });
+
+  test("the repository reads the caller's reports from GET /incidents", () async {
+    final paths = <String>[];
+    final auth = TestAuthenticatedClient(
+      handler: (request) async {
+        paths.add('${request.method} ${request.url.path}');
+        return http.Response(
+          '{"incidents":[{"id":"inc_1","trip_id":"trip_1","category":"parcel_damage",'
+          '"description":"Box crushed","status":"resolved","admin_note":null,'
+          '"revision":2,"reviewed_at":null,"resolved_at":null,'
+          '"created_at":"2026-10-25T10:00:00.000Z"},'
+          '{"id":"inc_2","trip_id":null,"category":"something_new",'
+          '"description":"New kind","status":"open",'
+          '"created_at":"2026-10-24T10:00:00.000Z"}]}',
+          200,
+        );
+      },
+    );
+    final reports = await IncidentRepository(apiClient: auth.client).mine();
+    expect(paths, ['GET /api/v1/incidents']);
+    expect(reports.first.category, IncidentCategory.parcelDamage);
+    expect(reports.first.status, IncidentStatus.resolved);
+    expect(reports.first.tripId, 'trip_1');
+    expect(reports.last.category, IncidentCategory.other);
+  });
+
   testWidgets('sending needs a real description, then files against the trip', (
     tester,
   ) async {

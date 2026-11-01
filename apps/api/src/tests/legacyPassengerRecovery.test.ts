@@ -111,6 +111,57 @@ describe("legacy passenger creation recovery", () => {
     expect(rows[0]).toMatchObject({ pickup_label: "جامعة بوليتكنك فلسطين", destination_label: "Selected place" });
   });
 
+  describe("selected driver route", () => {
+    let selectable: Set<string>;
+    beforeEach(() => {
+      selectable = new Set(["route_selected"]);
+      // Selection lookups carry the matching supply filter; driver-owned lookups do not.
+      const ownedLookup = db.driverRoute.findFirst.getMockImplementation()!;
+      db.driverRoute.findFirst.mockImplementation(async (args) => args.where.driver?.verified
+        ? (selectable.has(args.where.id) ? { id: args.where.id } : null)
+        : ownedLookup(args));
+    });
+
+    it("saves the pick on the request and returns it", async () => {
+      const response = await create("passenger_1", { ...body(), selected_driver_route_id: "route_selected" }, "pin-key-1").expect(201);
+      expect(response.body.request.selected_driver_route_id).toBe("route_selected");
+      expect(rows[0]).toMatchObject({ selected_driver_route_id: "route_selected" });
+      expect(db.driverRoute.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          id: "route_selected", status: "active", operational_mode: "legacy", canonical_availability_version: null,
+          seats_available: { gte: 1 }, driver: { verified: true, user: { role: "driver", account_status: "active" } },
+        }),
+      }));
+    });
+
+    it("returns null for a request without a pick", async () => {
+      const response = await create("passenger_1", body(), "pin-key-2").expect(201);
+      expect(response.body.request.selected_driver_route_id).toBeNull();
+    });
+
+    it("saves nothing when the picked route is unavailable", async () => {
+      const response = await create("passenger_1", { ...body(), selected_driver_route_id: "route_gone" }, "pin-key-3").expect(409);
+      expect(response.body.error).toBe("selected_driver_route_unavailable");
+      expect(rows).toHaveLength(0);
+      expect(records).toHaveLength(0);
+      expect(audits).toHaveLength(0);
+    });
+
+    it("replays the committed pick and binds the key to it", async () => {
+      const payload = { ...body(), selected_driver_route_id: "route_selected" };
+      const first = await create("passenger_1", payload, "pin-key-4").expect(201);
+      // A replay returns the saved row even after the route stops being selectable.
+      selectable.clear();
+      const replay = await create("passenger_1", payload, "pin-key-4").expect(201);
+      expect(replay.body.request).toMatchObject({ id: first.body.request.id, selected_driver_route_id: "route_selected" });
+      selectable.add("route_other");
+      await create("passenger_1", { ...payload, selected_driver_route_id: "route_other" }, "pin-key-4").expect(409);
+      const { selected_driver_route_id: _pick, ...unpinned } = payload;
+      await create("passenger_1", unpinned, "pin-key-4").expect(409);
+      expect(rows).toHaveLength(1);
+    });
+  });
+
   it("rejects a request without a place name instead of saving bare coordinates", async () => {
     const response = await create("passenger_noname", { ...body(), pickup_label: "" }, "names-key-2");
     expect(response.status).toBe(400);

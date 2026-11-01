@@ -13,6 +13,7 @@ class PassengerRequest {
     required this.passengerCount,
     required this.status,
     required this.createdAt,
+    this.selectedDriverRouteId,
   });
 
   final String id;
@@ -29,6 +30,10 @@ class PassengerRequest {
   final int passengerCount;
   final String status;
   final DateTime createdAt;
+
+  /// The driver route the passenger picked when booking, saved on the request
+  /// by the server. Null when matching may choose the best compatible route.
+  final String? selectedDriverRouteId;
 
   bool get canCancel =>
       status == 'pending' || status == 'matched' || status == 'accepted';
@@ -54,6 +59,11 @@ class PassengerRequest {
       status: _string(json, 'status'),
 
       createdAt: DateTime.parse(_string(json, 'created_at')).toLocal(),
+
+      selectedDriverRouteId: switch (json['selected_driver_route_id']) {
+        final String id when id.isNotEmpty => id,
+        _ => null,
+      },
     );
   }
 }

@@ -1191,6 +1191,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get returnToDashboard => 'العودة إلى لوحة التحكم';
 
   @override
+  String get viewRouteRequests => 'عرض طلبات المسار الخاصة بي';
+
+  @override
   String get canonicalDriverOffers => 'عروض المسار';
 
   @override
@@ -2156,6 +2159,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get incidentCategoryOther => 'أخرى';
+
+  @override
+  String get myIncidentReports => 'بلاغاتي';
+
+  @override
+  String get myIncidentReportsEmpty => 'لم ترسل أي بلاغ بعد.';
+
+  @override
+  String get myIncidentReportsFailed => 'تعذّر تحميل بلاغاتك.';
+
+  @override
+  String get incidentStatusOpen => 'مفتوح';
+
+  @override
+  String get incidentStatusReviewing => 'قيد المراجعة';
+
+  @override
+  String get incidentStatusResolved => 'تمت المعالجة';
 
   @override
   String get notifIncidentUpdatedTitle => 'تحديث على بلاغك';

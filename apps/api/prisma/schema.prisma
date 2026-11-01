@@ -887,6 +887,7 @@ model DriverRoute {
   mode_trips Trip[] @relation("TripAvailabilityMode")
   canonical_manifests CanonicalTripManifest[]
   canonical_attempts CanonicalDemandAttempt[]
+  selected_by_passenger_requests PassengerRequest[] @relation("PassengerRequestSelectedRoute")
 
   @@index([corridor_key])
   @@index([route_version_id, availability_status, departure_at])
@@ -1082,15 +1083,20 @@ model PassengerRequest {
   fare_unit_minor               Int?
   fare_total_minor              Int?
   fare_currency                 String?    @db.Char(3)
+  /// The driver route the passenger picked when booking. Matching for this
+  /// request is pinned to it; null means "best compatible route".
+  selected_driver_route_id      String?
 
   passenger    User                 @relation(fields: [passenger_id], references: [id], onDelete: Cascade)
   route_version ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  selected_driver_route DriverRoute? @relation("PassengerRequestSelectedRoute", fields: [selected_driver_route_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
   matches      Match[]
   trips        Trip[]
   canonical_dispatch CanonicalDemandDispatch?
   canonical_manifest_members CanonicalTripManifestMember[]
 
   @@index([route_version_id, requested_departure_from])
+  @@index([selected_driver_route_id])
   @@unique([id, route_version_id], map: "passenger_requests_route_ownership_key")
   @@unique([id, operational_mode], map: "passenger_requests_mode_ownership_key")
   @@unique([id, route_version_id, operational_mode], map: "passenger_requests_route_mode_ownership_key")

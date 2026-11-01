@@ -168,6 +168,8 @@ void main() {
           'destination_lng': 35.2024,
           'preferred_time': '2030-01-02T12:00:00.000Z',
           'passenger_count': 2,
+          // Saved on the request by the server as its matching pin.
+          'selected_driver_route_id': 'route_1',
         });
         expect(requests[2].url.path, '/api/v1/matches/run');
         expect(jsonDecode(requests[2].body), {
