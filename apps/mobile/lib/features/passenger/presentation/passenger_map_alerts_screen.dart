@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/driver/presentation/driver_trip_screen.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/location/location_service.dart';
@@ -39,7 +38,7 @@ class PassengerMapAlertsScreen extends ConsumerWidget {
     final view = ref.watch(passengerMapViewProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F4),
+      backgroundColor: const Color(0xFFFFFFFF),
       appBar: _buildAppBar(context, l10n),
       body: SafeArea(
         child: view.when(
@@ -65,40 +64,20 @@ class PassengerMapAlertsScreen extends ConsumerWidget {
     BuildContext context,
     AppLocalizations l10n,
   ) {
-    const orange = Color(0xFFFA5F12);
-
     return AppBar(
-      backgroundColor: navy,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      centerTitle: true,
-      toolbarHeight: 76,
+      toolbarHeight: 64,
       leading: IconButton(
-        tooltip: 'Back',
+        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
         icon: const Icon(Icons.arrow_back_rounded, size: 26),
         onPressed: () => context.go('/passenger'),
       ),
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            l10n.navMapAlerts,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
-            ),
-          ),
-          const SizedBox(height: 7),
-          Container(
-            width: 34,
-            height: 3,
-            decoration: BoxDecoration(
-              color: orange,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        ],
+      title: Text(
+        l10n.navMapAlerts,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          color: AppTheme.onSurface,
+        ),
       ),
       actions: const [
         CheckpointDirectoryAction(),
@@ -122,11 +101,11 @@ class _MapBody extends ConsumerStatefulWidget {
 }
 
 class _MapBodyState extends ConsumerState<_MapBody> {
-  static const Color _navy = Color(0xFF292524);
+  static const Color _navy = Color(0xFF1C1A1A);
   static const Color _navyLight = Color(0xFFFA5F12);
   static const Color _orange = Color(0xFFFA5F12);
-  static const Color _mutedText = Color(0xFF64748B);
-  static const Color _border = Color(0xFFE2E8F0);
+  static const Color _mutedText = Color(0xFF707070);
+  static const Color _border = Color(0xFFE0E0E0);
 
   Future<OsrmRouteResult>? _routeFuture;
   String? _routeKey;
@@ -1390,9 +1369,9 @@ class _ReportsPanel extends StatefulWidget {
 
 class _ReportsPanelState extends State<_ReportsPanel> {
   static const _orange = Color(0xFFFA5F12);
-  static const _ink = Color(0xFF292524);
-  static const _muted = Color(0xFF78716C);
-  static const _border = Color(0xFFF0E4DB);
+  static const _ink = Color(0xFF1C1A1A);
+  static const _muted = Color(0xFF707070);
+  static const _border = Color(0xFFE0E0E0);
   final List<_RoadReport> _reports = [];
 
   Future<void> _createReport() async {
@@ -1439,7 +1418,7 @@ class _ReportsPanelState extends State<_ReportsPanel> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF0E5),
+                  color: const Color(0xFFFFE8DC),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
@@ -1512,7 +1491,7 @@ class _ReportsPanelState extends State<_ReportsPanel> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF0E5),
+                  color: const Color(0xFFFFE8DC),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -1531,7 +1510,7 @@ class _ReportsPanelState extends State<_ReportsPanel> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFAF7),
+                color: const Color(0xFFF6F6F6),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: _border),
               ),
@@ -1539,7 +1518,7 @@ class _ReportsPanelState extends State<_ReportsPanel> {
                 children: [
                   Icon(
                     Icons.mark_chat_unread_outlined,
-                    color: Color(0xFFB8A69A),
+                    color: Color(0xFFAEAEAE),
                     size: 28,
                   ),
                   SizedBox(height: 8),
@@ -1588,8 +1567,8 @@ class _RoadReportTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const orange = Color(0xFFFA5F12);
-    const ink = Color(0xFF292524);
-    const muted = Color(0xFF78716C);
+    const ink = Color(0xFF1C1A1A);
+    const muted = Color(0xFF707070);
     final icon = switch (report.category) {
       'الحواجز' => Icons.shield_outlined,
       'الرحلة والمواصلات' => Icons.directions_bus_rounded,
@@ -1602,7 +1581,7 @@ class _RoadReportTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFF0E4DB)),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1611,7 +1590,7 @@ class _RoadReportTile extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF0E5),
+              color: const Color(0xFFFFE8DC),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: orange, size: 20),
@@ -1695,8 +1674,8 @@ class _CreateRoadReportSheet extends StatefulWidget {
 
 class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
   static const _orange = Color(0xFFFA5F12);
-  static const _ink = Color(0xFF292524);
-  static const _muted = Color(0xFF78716C);
+  static const _ink = Color(0xFF1C1A1A);
+  static const _muted = Color(0xFF707070);
   static const _categories = <String>[
     'الطريق',
     'الحواجز',
@@ -1775,7 +1754,7 @@ class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE7DDD6),
+                    color: const Color(0xFFE0E0E0),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -1813,10 +1792,10 @@ class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
                     label: Text(category),
                     selected: selected,
                     showCheckmark: false,
-                    selectedColor: const Color(0xFFFFE8D8),
-                    backgroundColor: const Color(0xFFFFFAF7),
+                    selectedColor: const Color(0xFFFFE8DC),
+                    backgroundColor: const Color(0xFFF6F6F6),
                     side: BorderSide(
-                      color: selected ? _orange : const Color(0xFFEDE2DA),
+                      color: selected ? _orange : const Color(0xFFE0E0E0),
                     ),
                     labelStyle: TextStyle(
                       color: selected ? _orange : _ink,
@@ -1845,18 +1824,18 @@ class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
                 isExpanded: true,
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: const Color(0xFFFFFAF7),
+                  fillColor: const Color(0xFFF6F6F6),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 13,
                     vertical: 13,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFEDE2DA)),
+                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFEDE2DA)),
+                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -1895,7 +1874,7 @@ class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
                   hintText: 'مثال: مدخل الخليل أو شارع الجامعة',
                   hintStyle: const TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFFB2A39A),
+                    color: Color(0xFFAEAEAE),
                   ),
                   prefixIcon: const Icon(
                     Icons.location_on_outlined,
@@ -1903,14 +1882,14 @@ class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
                     size: 20,
                   ),
                   filled: true,
-                  fillColor: const Color(0xFFFFFAF7),
+                  fillColor: const Color(0xFFF6F6F6),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFEDE2DA)),
+                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFEDE2DA)),
+                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
                   ),
                 ),
               ),
@@ -1934,18 +1913,18 @@ class _CreateRoadReportSheetState extends State<_CreateRoadReportSheet> {
                       'اكتبي وصفًا مختصرًا يساعد الآخرين على فهم الحالة...',
                   hintStyle: const TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFFB2A39A),
+                    color: Color(0xFFAEAEAE),
                   ),
                   alignLabelWithHint: true,
                   filled: true,
-                  fillColor: const Color(0xFFFFFAF7),
+                  fillColor: const Color(0xFFF6F6F6),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFEDE2DA)),
+                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFEDE2DA)),
+                    borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -2002,10 +1981,10 @@ class _CheckpointsPanel extends ConsumerWidget {
   final AsyncValue<CheckpointSnapshot> state;
   final bool arabic;
 
-  static const _navy = Color(0xFF102A43);
+  static const _navy = Color(0xFF1C1A1A);
   static const _orange = Color(0xFFFA5F12);
-  static const _orangeSoft = Color(0xFFFFF3EA);
-  static const _textMuted = Color(0xFF64748B);
+  static const _orangeSoft = Color(0xFFFFE8DC);
+  static const _textMuted = Color(0xFF707070);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2490,7 +2469,7 @@ class _CheckpointCityTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFE9E2DE)),
+            border: Border.all(color: const Color(0xFFE0E0E0)),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -2499,7 +2478,7 @@ class _CheckpointCityTile extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3EA),
+                  color: const Color(0xFFFFE8DC),
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: const Icon(
@@ -2515,7 +2494,7 @@ class _CheckpointCityTile extends StatelessWidget {
                     Text(
                       city,
                       style: const TextStyle(
-                        color: Color(0xFF102A43),
+                        color: Color(0xFF1C1A1A),
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                       ),
@@ -2526,7 +2505,7 @@ class _CheckpointCityTile extends StatelessWidget {
                         Text(
                           '${checkpoints.length} حاجز',
                           style: const TextStyle(
-                            color: Color(0xFF64748B),
+                            color: Color(0xFF707070),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -2562,7 +2541,7 @@ class _CheckpointCityTile extends StatelessWidget {
                     ? Icons.chevron_left_rounded
                     : Icons.arrow_forward_ios_rounded,
                 size: 17,
-                color: const Color(0xFF94A3B8),
+                color: const Color(0xFFAEAEAE),
               ),
             ],
           ),
@@ -2584,7 +2563,7 @@ class _CheckpointDetailCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFE9E2DE)),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -2596,7 +2575,7 @@ class _CheckpointDetailCard extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3EA),
+                  color: const Color(0xFFFFE8DC),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -2610,7 +2589,7 @@ class _CheckpointDetailCard extends StatelessWidget {
                 child: Text(
                   name,
                   style: const TextStyle(
-                    color: Color(0xFF102A43),
+                    color: Color(0xFF1C1A1A),
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),
@@ -2681,7 +2660,7 @@ class _CheckpointDirectionStatus extends StatelessWidget {
               Text(
                 label ?? '',
                 style: const TextStyle(
-                  color: Color(0xFF64748B),
+                  color: Color(0xFF707070),
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
@@ -2712,7 +2691,7 @@ class _CheckpointDirectionStatus extends StatelessWidget {
                 ? 'التحديث: غير متوفر'
                 : 'التحديث: ${_formatCheckpointTime(updatedAt)}',
             style: const TextStyle(
-              color: Color(0xFF64748B),
+              color: Color(0xFF707070),
               fontSize: 9,
               fontWeight: FontWeight.w600,
             ),
@@ -2756,8 +2735,8 @@ _CheckpointStatusStyle _checkpointStatusStyle(String? status) {
       );
     default:
       return const _CheckpointStatusStyle(
-        color: Color(0xFF64748B),
-        background: Color(0xFFF8FAFC),
+        color: Color(0xFF707070),
+        background: Color(0xFFF6F6F6),
         icon: Icons.help_outline_rounded,
       );
   }
@@ -2777,7 +2756,7 @@ class _CheckpointSheetHandle extends StatelessWidget {
     width: 38,
     height: 4,
     decoration: BoxDecoration(
-      color: const Color(0xFFCBD5E1),
+      color: const Color(0xFFE0E0E0),
       borderRadius: BorderRadius.circular(10),
     ),
   );
@@ -2886,7 +2865,7 @@ class _ModernCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: const Color(0xFFE0E0E0)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.035),
@@ -2972,7 +2951,7 @@ class _RoutePoint extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            color: Color(0xFF102A43),
+            color: Color(0xFF1C1A1A),
             fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
@@ -3010,7 +2989,7 @@ class _InfoItem extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                style: const TextStyle(color: Color(0xFF707070), fontSize: 11),
               ),
               const SizedBox(height: 3),
               Text(
@@ -3018,7 +2997,7 @@ class _InfoItem extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Color(0xFF102A43),
+                  color: Color(0xFF1C1A1A),
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),

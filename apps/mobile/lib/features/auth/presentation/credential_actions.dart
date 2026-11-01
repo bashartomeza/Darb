@@ -130,8 +130,10 @@ class _CredentialActionDialogState
         content: SizedBox(
           width: 420,
           child: SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 4),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              spacing: 14,
               children: [
                 if (_done)
                   Semantics(

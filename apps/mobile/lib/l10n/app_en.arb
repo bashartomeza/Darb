@@ -921,5 +921,10 @@
   "passengerUpcomingTrips": "Upcoming Trips",
   "passengerNoUpcomingTitle": "No upcoming trips",
   "passengerNoUpcomingBody": "Search for a new ride and book your seat.",
-  "passengerWeekStrip": "This week"
+  "passengerWeekStrip": "This week",
+  "tripsStatTotal": "Total",
+  "tripsStatActive": "Active",
+  "tripsStatUpcoming": "Upcoming",
+  "tripsStatPast": "Past",
+  "tripsFilterAll": "All"
 }

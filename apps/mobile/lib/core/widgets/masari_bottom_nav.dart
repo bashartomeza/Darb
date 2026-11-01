@@ -41,12 +41,13 @@ class MasariBottomNav extends StatelessWidget {
       selectedIndex: currentIndex.clamp(0, items.length - 1),
       onDestinationSelected: onSelected,
       destinations: [
-        for (final item in items)
+        for (var i = 0; i < items.length; i++)
           NavigationDestination(
-            icon: Icon(item.icon),
-            selectedIcon: Icon(item.selectedIcon),
-            label: item.label,
-            tooltip: item.label,
+            key: ValueKey('roleNavigation-$i'),
+            icon: Icon(items[i].icon),
+            selectedIcon: Icon(items[i].selectedIcon),
+            label: items[i].label,
+            tooltip: items[i].label,
           ),
       ],
     );

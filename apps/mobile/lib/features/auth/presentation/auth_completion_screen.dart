@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_error.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/darb_page.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
@@ -245,221 +248,248 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
         automaticallyImplyLeading: false,
         actions: const [LanguageSwitch()],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            if (widget.phone) ...[
-              Text(
-                authText(
-                  context,
-                  phoneOff
-                      ? 'Add a real contact number before using Darb services.'
-                      : 'Add a real contact number before using Darb services. We email the verification code to the email address on your account.',
-                  phoneOff
-                      ? 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب.'
-                      : 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
-                ),
+      body: DarbFormPage(
+        icon: widget.phone
+            ? Icons.phone_iphone_rounded
+            : Icons.verified_user_outlined,
+        title: title,
+        subtitle: widget.phone
+            ? authText(
+                context,
+                phoneOff
+                    ? 'Add a real contact number before using Darb services.'
+                    : 'Add a real contact number before using Darb services. We email the verification code to the email address on your account.',
+                phoneOff
+                    ? 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب.'
+                    : 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
+              )
+            : authText(
+                context,
+                'Read and accept all required documents to create your passenger account.',
+                'اقرأ ووافق على المستندات المطلوبة لإنشاء حساب الراكب.',
               ),
-              TextField(
-                key: const ValueKey('profilePhone'),
-                controller: _phone,
-                enabled: !_busy && !_phoneConfirmed && _phoneToken == null,
-                textDirection: TextDirection.ltr,
-                keyboardType: TextInputType.phone,
-                autofillHints: const [AutofillHints.telephoneNumber],
-                decoration: InputDecoration(
-                  labelText: authText(
-                    context,
-                    'Phone in international format (+country code)',
-                    'الهاتف بالصيغة الدولية (+رمز الدولة)',
-                  ),
-                ),
-              ),
-              FilledButton(
-                onPressed: _busy || _phoneConfirmed ? null : _sendPhone,
-                child: Text(
-                  authText(
-                    context,
-                    phoneOff
-                        ? 'Continue'
-                        : _phoneToken == null
-                        ? 'Send code'
-                        : 'Resend code',
-                    phoneOff
-                        ? 'متابعة'
-                        : _phoneToken == null
-                        ? 'إرسال الرمز'
-                        : 'إعادة إرسال الرمز',
-                  ),
-                ),
-              ),
-              if (_phoneToken != null)
-                TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () => setState(() {
-                          _phoneToken = null;
-                          _verifiedPhone = null;
-                          _code.clear();
-                        }),
-                  child: Text(
-                    authText(
-                      context,
-                      'Change phone number',
-                      'تغيير رقم الهاتف',
-                    ),
-                  ),
-                ),
-            ] else ...[
-              Text(
-                authText(
-                  context,
-                  'Read and accept all required documents to create your passenger account.',
-                  'اقرأ ووافق على المستندات المطلوبة لإنشاء حساب الراكب.',
-                ),
-              ),
-              if (!email)
+        children: [
+          if (widget.phone) ...[
+            DarbFormCard(
+              children: [
                 TextField(
-                  controller: _name,
-                  textInputAction: TextInputAction.next,
+                  key: const ValueKey('profilePhone'),
+                  controller: _phone,
+                  enabled: !_busy && !_phoneConfirmed && _phoneToken == null,
+                  textDirection: TextDirection.ltr,
+                  keyboardType: TextInputType.phone,
+                  autofillHints: const [AutofillHints.telephoneNumber],
                   decoration: InputDecoration(
-                    labelText: authText(context, 'Full name', 'الاسم الكامل'),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-              if (_documents == null && _error == null)
-                const Center(child: CircularProgressIndicator()),
-              for (final document
-                  in _documents ?? <Map<String, dynamic>>[]) ...[
-                ExpansionTile(
-                  title: Text(
-                    authText(
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                    labelText: authText(
                       context,
-                      switch (document['type']) {
-                        'terms' => 'Terms of service',
-                        'privacy' => 'Privacy policy',
-                        _ => 'Adult self-attestation',
-                      },
-                      switch (document['type']) {
-                        'terms' => 'شروط الخدمة',
-                        'privacy' => 'سياسة الخصوصية',
-                        _ => 'الإقرار ببلوغ السن القانوني',
-                      },
-                    ),
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SelectableText(document['content'] as String),
-                    ),
-                  ],
-                ),
-                CheckboxListTile(
-                  value: _accepted.contains(document['id']),
-                  onChanged: _busy
-                      ? null
-                      : (checked) => setState(() {
-                          checked == true
-                              ? _accepted.add(document['id'] as String)
-                              : _accepted.remove(document['id']);
-                        }),
-                  title: Text(
-                    authText(
-                      context,
-                      'I have read and accept this document',
-                      'قرأت هذا المستند وأوافق عليه',
+                      'Phone in international format (+country code)',
+                      'الهاتف بالصيغة الدولية (+رمز الدولة)',
                     ),
                   ),
                 ),
+                if (_phoneToken != null) _codeField(context),
               ],
-              if (_error != null && _documents == null)
-                TextButton(
-                  onPressed: () => _loadConsents(_locale!),
-                  child: Text(authText(context, 'Retry', 'إعادة المحاولة')),
-                ),
-            ],
-            if ((widget.phone && _phoneToken != null) ||
-                (!widget.phone && needsCode))
-              TextField(
-                key: const ValueKey('authProof'),
-                controller: _code,
-                focusNode: _codeFocus,
-                textDirection: TextDirection.ltr,
-                autocorrect: false,
-                enableSuggestions: false,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(6),
-                ],
-                autofillHints: const [AutofillHints.oneTimeCode],
-                onChanged: (_) => setState(() {}),
-                onSubmitted: (_) => _busy ? null : _confirm(),
-                decoration: InputDecoration(
-                  labelText: authText(
-                    context,
-                    'Six-digit code from your email',
-                    'الرمز المكون من ستة أرقام من بريدك الإلكتروني',
-                  ),
-                ),
-              ),
-            if (error != null)
-              Semantics(
-                liveRegion: true,
-                child: Text(
-                  authFailure(context, error),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-            const SizedBox(height: 16),
-            // With phone verification off, the button above already saves the number.
-            if (!(phoneOff && widget.phone && !_phoneConfirmed))
-              FilledButton(
-                key: const ValueKey('completeAuth'),
-                onPressed:
-                    _busy ||
-                        (widget.phone
-                            ? !_phoneConfirmed &&
-                                  (_phoneToken == null ||
-                                      !RegExp(
-                                        r'^\d{6}$',
-                                      ).hasMatch(_code.text.trim()))
-                            : _documents == null ||
-                                  _accepted.length != 3 ||
-                                  (needsCode
-                                      ? !RegExp(
-                                          r'^\d{6}$',
-                                        ).hasMatch(_code.text.trim())
-                                      : !email && _name.text.trim().isEmpty))
-                    ? null
-                    : _confirm,
-                child: _busy
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(authText(context, 'Continue', 'متابعة')),
-              ),
-            TextButton(
-              onPressed: _busy
-                  ? null
-                  : () => widget.phone
-                        ? ref.read(authControllerProvider.notifier).logout()
-                        : ref
-                              .read(authControllerProvider.notifier)
-                              .cancelRegistration(),
+            ),
+            const SizedBox(height: AppTokens.spaceMedium),
+            FilledButton(
+              onPressed: _busy || _phoneConfirmed ? null : _sendPhone,
               child: Text(
                 authText(
                   context,
-                  widget.phone ? 'Sign out' : 'Cancel registration',
-                  widget.phone ? 'تسجيل الخروج' : 'إلغاء التسجيل',
+                  phoneOff
+                      ? 'Continue'
+                      : _phoneToken == null
+                      ? 'Send code'
+                      : 'Resend code',
+                  phoneOff
+                      ? 'متابعة'
+                      : _phoneToken == null
+                      ? 'إرسال الرمز'
+                      : 'إعادة إرسال الرمز',
                 ),
               ),
             ),
+            if (_phoneToken != null)
+              TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => setState(() {
+                        _phoneToken = null;
+                        _verifiedPhone = null;
+                        _code.clear();
+                      }),
+                child: Text(
+                  authText(context, 'Change phone number', 'تغيير رقم الهاتف'),
+                ),
+              ),
+          ] else ...[
+            if (!email) ...[
+              TextField(
+                controller: _name,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: authText(context, 'Full name', 'الاسم الكامل'),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: AppTokens.spaceMedium),
+            ],
+            if (_documents == null && _error == null)
+              const Center(child: CircularProgressIndicator()),
+            for (final document in _documents ?? <Map<String, dynamic>>[]) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
+                child: Material(
+                  color: AppTheme.surfaceContainerLow,
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+                    side: const BorderSide(color: AppTheme.outlineVariant),
+                  ),
+                  child: Column(
+                    children: [
+                      ExpansionTile(
+                        shape: const Border(),
+                        collapsedShape: const Border(),
+                        title: Text(
+                          authText(
+                            context,
+                            switch (document['type']) {
+                              'terms' => 'Terms of service',
+                              'privacy' => 'Privacy policy',
+                              _ => 'Adult self-attestation',
+                            },
+                            switch (document['type']) {
+                              'terms' => 'شروط الخدمة',
+                              'privacy' => 'سياسة الخصوصية',
+                              _ => 'الإقرار ببلوغ السن القانوني',
+                            },
+                          ),
+                        ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: SelectableText(
+                              document['content'] as String,
+                            ),
+                          ),
+                        ],
+                      ),
+                      CheckboxListTile(
+                        value: _accepted.contains(document['id']),
+                        onChanged: _busy
+                            ? null
+                            : (checked) => setState(() {
+                                checked == true
+                                    ? _accepted.add(document['id'] as String)
+                                    : _accepted.remove(document['id']);
+                              }),
+                        title: Text(
+                          authText(
+                            context,
+                            'I have read and accept this document',
+                            'قرأت هذا المستند وأوافق عليه',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (_error != null && _documents == null)
+              TextButton(
+                onPressed: () => _loadConsents(_locale!),
+                child: Text(authText(context, 'Retry', 'إعادة المحاولة')),
+              ),
+            if (needsCode) ...[
+              const SizedBox(height: AppTokens.spaceSmall),
+              _codeField(context),
+            ],
           ],
-        ),
+          if (error != null) ...[
+            const SizedBox(height: AppTokens.spaceMedium),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                authFailure(context, error),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppTokens.spaceMedium),
+          // With phone verification off, the button above already saves the number.
+          if (!(phoneOff && widget.phone && !_phoneConfirmed))
+            FilledButton(
+              key: const ValueKey('completeAuth'),
+              onPressed:
+                  _busy ||
+                      (widget.phone
+                          ? !_phoneConfirmed &&
+                                (_phoneToken == null ||
+                                    !RegExp(
+                                      r'^\d{6}$',
+                                    ).hasMatch(_code.text.trim()))
+                          : _documents == null ||
+                                _accepted.length != 3 ||
+                                (needsCode
+                                    ? !RegExp(
+                                        r'^\d{6}$',
+                                      ).hasMatch(_code.text.trim())
+                                    : !email && _name.text.trim().isEmpty))
+                  ? null
+                  : _confirm,
+              child: _busy
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(authText(context, 'Continue', 'متابعة')),
+            ),
+          TextButton(
+            onPressed: _busy
+                ? null
+                : () => widget.phone
+                      ? ref.read(authControllerProvider.notifier).logout()
+                      : ref
+                            .read(authControllerProvider.notifier)
+                            .cancelRegistration(),
+            child: Text(
+              authText(
+                context,
+                widget.phone ? 'Sign out' : 'Cancel registration',
+                widget.phone ? 'تسجيل الخروج' : 'إلغاء التسجيل',
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _codeField(BuildContext context) => TextField(
+    key: const ValueKey('authProof'),
+    controller: _code,
+    focusNode: _codeFocus,
+    textDirection: TextDirection.ltr,
+    autocorrect: false,
+    enableSuggestions: false,
+    keyboardType: TextInputType.number,
+    inputFormatters: [
+      FilteringTextInputFormatter.digitsOnly,
+      LengthLimitingTextInputFormatter(6),
+    ],
+    autofillHints: const [AutofillHints.oneTimeCode],
+    onChanged: (_) => setState(() {}),
+    onSubmitted: (_) => _busy ? null : _confirm(),
+    decoration: InputDecoration(
+      prefixIcon: const Icon(Icons.pin_outlined),
+      labelText: authText(
+        context,
+        'Six-digit code from your email',
+        'الرمز المكون من ستة أرقام من بريدك الإلكتروني',
+      ),
+    ),
+  );
 }

@@ -4759,6 +4759,36 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'هذا الأسبوع'**
   String get passengerWeekStrip;
+
+  /// No description provided for @tripsStatTotal.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإجمالي'**
+  String get tripsStatTotal;
+
+  /// No description provided for @tripsStatActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'نشطة'**
+  String get tripsStatActive;
+
+  /// No description provided for @tripsStatUpcoming.
+  ///
+  /// In ar, this message translates to:
+  /// **'قادمة'**
+  String get tripsStatUpcoming;
+
+  /// No description provided for @tripsStatPast.
+  ///
+  /// In ar, this message translates to:
+  /// **'سابقة'**
+  String get tripsStatPast;
+
+  /// No description provided for @tripsFilterAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get tripsFilterAll;
 }
 
 class _AppLocalizationsDelegate

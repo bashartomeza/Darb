@@ -669,7 +669,7 @@ class _TripStats extends StatelessWidget {
           Expanded(
             child: _StatItem(
               value: total,
-              label: 'Total',
+              label: AppLocalizations.of(context).tripsStatTotal,
               icon: Icons.route_rounded,
             ),
           ),
@@ -677,7 +677,7 @@ class _TripStats extends StatelessWidget {
           Expanded(
             child: _StatItem(
               value: active,
-              label: 'Active',
+              label: AppLocalizations.of(context).tripsStatActive,
               icon: Icons.navigation_rounded,
             ),
           ),
@@ -685,7 +685,7 @@ class _TripStats extends StatelessWidget {
           Expanded(
             child: _StatItem(
               value: upcoming,
-              label: 'Upcoming',
+              label: AppLocalizations.of(context).tripsStatUpcoming,
               icon: Icons.schedule_rounded,
             ),
           ),
@@ -693,7 +693,7 @@ class _TripStats extends StatelessWidget {
           Expanded(
             child: _StatItem(
               value: past,
-              label: 'Past',
+              label: AppLocalizations.of(context).tripsStatPast,
               icon: Icons.check_circle_outline_rounded,
             ),
           ),
@@ -801,7 +801,7 @@ class _FilterBar extends StatelessWidget {
       child: Row(
         children: [
           _FilterChip(
-            label: 'All',
+            label: AppLocalizations.of(context).tripsFilterAll,
             count: activeCount + upcomingCount + pastCount + cancelledCount,
             selected: selectedFilter == _TripFilter.all,
             onTap: () => onChanged(_TripFilter.all),

@@ -2549,4 +2549,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get passengerWeekStrip => 'هذا الأسبوع';
+
+  @override
+  String get tripsStatTotal => 'الإجمالي';
+
+  @override
+  String get tripsStatActive => 'نشطة';
+
+  @override
+  String get tripsStatUpcoming => 'قادمة';
+
+  @override
+  String get tripsStatPast => 'سابقة';
+
+  @override
+  String get tripsFilterAll => 'الكل';
 }
