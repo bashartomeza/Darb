@@ -1,5 +1,7 @@
 # Draft legal texts
 
+Note: the texts name the product Darb (درب). Check the name again before publishing if it changes.
+
 Status: **drafts written by the development team's assistant. They have not been reviewed by a lawyer and are not legal advice.** Publish them only after a qualified lawyer in Palestine has read and approved them.
 
 Files (publish all six as one consent release, see `docs/admin/consent-management.md` and runbook section 8):
@@ -18,8 +20,8 @@ If any of these change, change the text before publishing.
 - Minimum age 18; one account per person.
 - Email one-time codes; Google sign-in is optional.
 - Driver documents are deleted automatically 90 days after the review decision (`DRIVER_DOCUMENT_RETENTION_DAYS=90`).
-- The Ask Masari text goes to an external AI provider (`ASSISTANT_PROVIDER`).
-- Payments are between the user and the driver; Masari does not process them.
+- The Ask Darb text goes to an external AI provider (`ASSISTANT_PROVIDER`).
+- Payments are between the user and the driver; Darb does not process them.
 - Governing law is "the laws applicable in Palestine"; contact is the in-app support option (no email address or postal address is given).
 
 ## Points for the lawyer

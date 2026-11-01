@@ -11,36 +11,36 @@ export type RenderedEmail = { subject: string; text: string; html: string };
 type Copy = { subject: string; intro: string; expiry: (minutes: number) => string; ignore: string; secret: string };
 
 const enExpiry = (m: number) => `The code expires in ${m} ${m === 1 ? "minute" : "minutes"}.`;
-const enSecret = "Never share this code with anyone. Masari staff will never ask for it.";
+const enSecret = "Never share this code with anyone. Darb staff will never ask for it.";
 const arExpiry = (m: number) => `ينتهي الرمز بعد ${m} دقيقة.`;
-const arSecret = "لا تشارك هذا الرمز مع أحد. لن يطلبه منك فريق مساري أبداً.";
+const arSecret = "لا تشارك هذا الرمز مع أحد. لن يطلبه منك فريق درب أبداً.";
 
 const COPY: Record<Locale, Record<Purpose, Copy>> = {
   en: {
     email_verification: {
-      subject: "Your Masari verification code",
-      intro: "Enter this verification code in the Masari app to finish creating your account:",
+      subject: "Your Darb verification code",
+      intro: "Enter this verification code in the Darb app to finish creating your account:",
       expiry: enExpiry,
       ignore: "If you did not ask for it, you can ignore this message.",
       secret: enSecret
     },
     password_reset: {
-      subject: "Reset your Masari password",
-      intro: "Enter this code in the Masari app to reset your password:",
+      subject: "Reset your Darb password",
+      intro: "Enter this code in the Darb app to reset your password:",
       expiry: enExpiry,
       ignore: "If you did not ask to reset your password, you can ignore this message; your password has not changed.",
       secret: enSecret
     },
     phone_code: {
-      subject: "Your Masari verification code",
-      intro: "Enter this verification code in the Masari app to continue. Masari sends codes by email, not by text message:",
+      subject: "Your Darb verification code",
+      intro: "Enter this verification code in the Darb app to continue. Darb sends codes by email, not by text message:",
       expiry: enExpiry,
       ignore: "If you did not ask for it, you can ignore this message.",
       secret: enSecret
     },
     password_set: {
-      subject: "Set your Masari password",
-      intro: "Enter this code in the Masari app to set a password for your account:",
+      subject: "Set your Darb password",
+      intro: "Enter this code in the Darb app to set a password for your account:",
       expiry: enExpiry,
       ignore: "If you did not ask to set a password, you can ignore this message.",
       secret: enSecret
@@ -48,29 +48,29 @@ const COPY: Record<Locale, Record<Purpose, Copy>> = {
   },
   ar: {
     email_verification: {
-      subject: "رمز التحقق من مساري",
-      intro: "أدخل رمز التحقق هذا في تطبيق مساري لإكمال إنشاء حسابك:",
+      subject: "رمز التحقق من درب",
+      intro: "أدخل رمز التحقق هذا في تطبيق درب لإكمال إنشاء حسابك:",
       expiry: arExpiry,
       ignore: "إن لم تطلب هذا الرمز فتجاهل هذه الرسالة.",
       secret: arSecret
     },
     password_reset: {
-      subject: "إعادة تعيين كلمة مرور مساري",
-      intro: "أدخل هذا الرمز في تطبيق مساري لإعادة تعيين كلمة المرور:",
+      subject: "إعادة تعيين كلمة مرور درب",
+      intro: "أدخل هذا الرمز في تطبيق درب لإعادة تعيين كلمة المرور:",
       expiry: arExpiry,
       ignore: "إن لم تطلب إعادة تعيين كلمة المرور فتجاهل هذه الرسالة؛ لم تتغير كلمة مرورك.",
       secret: arSecret
     },
     phone_code: {
-      subject: "رمز التحقق من مساري",
-      intro: "أدخل رمز التحقق هذا في تطبيق مساري للمتابعة. يرسل مساري الرموز عبر البريد الإلكتروني وليس عبر الرسائل النصية:",
+      subject: "رمز التحقق من درب",
+      intro: "أدخل رمز التحقق هذا في تطبيق درب للمتابعة. يرسل درب الرموز عبر البريد الإلكتروني وليس عبر الرسائل النصية:",
       expiry: arExpiry,
       ignore: "إن لم تطلب هذا الرمز فتجاهل هذه الرسالة.",
       secret: arSecret
     },
     password_set: {
-      subject: "تعيين كلمة مرور مساري",
-      intro: "أدخل هذا الرمز في تطبيق مساري لتعيين كلمة مرور لحسابك:",
+      subject: "تعيين كلمة مرور درب",
+      intro: "أدخل هذا الرمز في تطبيق درب لتعيين كلمة مرور لحسابك:",
       expiry: arExpiry,
       ignore: "إن لم تطلب تعيين كلمة مرور فتجاهل هذه الرسالة.",
       secret: arSecret

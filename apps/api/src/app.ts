@@ -108,7 +108,7 @@ export function createApp(
 ) {
   const app = express();
   const logger = dependencies.logger ?? createOperationalLogger(appConfig);
-  // OTP_PROVIDER=email: Masari sends no SMS, so both phone-code flows (onboarding attempts and the phone step after
+  // OTP_PROVIDER=email: Darb sends no SMS, so both phone-code flows (onboarding attempts and the phone step after
   // email sign-up) deliver their code through the approved SMTP email delivery.
   if (appConfig.otpProvider === "email" && dependencies.emailDelivery) {
     dependencies = {

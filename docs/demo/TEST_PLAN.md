@@ -1,4 +1,4 @@
-# Masari test plan (Admin site + Android app)
+# Darb test plan (Admin site + Android app)
 
 Everything runs on a disposable demo database. Nothing here touches real data, a real SMS provider or the checkpoint provider.
 
@@ -14,7 +14,7 @@ Everything runs on a disposable demo database. Nothing here touches real data, a
 | Demo app sign-ins (email + password from `apps/api/.env`) | passenger `demo.passenger@masari.app`, driver `demo.driver@masari.app` (and `demo.driver2@masari.app`), merchant `demo.merchant@masari.app` — passwords are `DEMO_PASSENGER_PASSWORD`, `DEMO_DRIVER_PASSWORD`, `DEMO_MERCHANT_PASSWORD` |
 | Sign-up invitation codes | `.staging-data/test-env/invitations.txt` (passenger +970590002001, driver +970590002002, merchant +970590002003) |
 | Email verification code (normal user sign-up) | the newest line for that email in `.staging-data/test-env/email-codes.txt` (no real email is sent; type the six-digit code into the app) |
-| One-time codes (Masari sends no SMS; they go by email) | the newest line of `.staging-data/test-env/otp.txt`; with the demo mail account set up the code is also emailed to the address entered in the app (not for the fixed QA numbers +97059000200x and +97059000300x or `@example.com` addresses) |
+| One-time codes (Darb sends no SMS; they go by email) | the newest line of `.staging-data/test-env/otp.txt`; with the demo mail account set up the code is also emailed to the address entered in the app (not for the fixed QA numbers +97059000200x and +97059000300x or `@example.com` addresses) |
 | Sample files on the emulator (Downloads) | `licence.jpg` (valid), `vehicle-registration.pdf` (valid), `not-really-an-image.jpg` (text pretending to be a photo) |
 | Pending / rejected demo accounts | Demo Pending Merchant, Demo Pending Driver, Demo Rejected Driver (already seeded) |
 
@@ -46,7 +46,7 @@ Start everything: `pwsh -NoProfile -File scripts/test-env/start.ps1`. Stop: `scr
 | A18 | Matching, Shipments & batching, Trips & tracking, Comparison pages | They show the seeded demo data (the combined passenger+parcel trip, the 1-trip-vs-6 comparison) without errors |
 | A19 | Sign out, then press the browser Back button | You are not let back into the Admin pages |
 | A20 | Reports page → Success metrics (or `GET /api/v1/admin/success-metrics`, and `/export` for the CSV): open it as the Admin, then try it as a passenger and without signing in | Admin: figures for the last 30 days with the previous period for comparison, a CSV download; passenger: refused (403); not signed in: 401; a start date after the end date, or a range over a year, is refused |
-| A21 | Matching / Batching page → Simulated comparison tab (or `GET /api/v1/compare/simulation?seed=7`) | Manual, nearest-driver and Masari results, labelled as simulated; the same seed always gives the same numbers, another seed differs; nothing is written; passengers cannot call it |
+| A21 | Matching / Batching page → Simulated comparison tab (or `GET /api/v1/compare/simulation?seed=7`) | Manual, nearest-driver and Darb results, labelled as simulated; the same seed always gives the same numbers, another seed differs; nothing is written; passengers cannot call it |
 
 ## B. Phone: signing in
 
@@ -66,7 +66,7 @@ Use the codes in `invitations.txt`. After each sign-up, read the code from `otp.
 
 | ID | Do | Expect |
 | --- | --- | --- |
-| C01 | Sign-in screen → "New to Masari? Create an account" | A screen asks "How will you use Masari?" with three choices: Normal user, Driver, Shop owner. Normal user opens the email sign-up form; Driver and Shop owner open the invitation-code and phone screen with the role already chosen; Back returns to sign-in |
+| C01 | Sign-in screen → "New to Darb? Create an account" | A screen asks "How will you use Darb?" with three choices: Normal user, Driver, Shop owner. Normal user opens the email sign-up form; Driver and Shop owner open the invitation-code and phone screen with the role already chosen; Back returns to sign-in |
 | C02 | Enter a wrong code | A clear error; you can try again |
 | C03 | Choose Shop owner (invitation code and +970590002003), enter the right code (from `otp.txt`), then name, a password of at least 15 characters, tick the three consents, Create account | Account created; the screen says the account is pending and an admin review usually takes up to 24 hours |
 | C04 | Repeat for the driver (+970590002002) | The screen says "Application under review" and shows a "Verification documents" card |
@@ -187,7 +187,7 @@ Run after a reset so the seeded data is fresh. Use the demo accounts.
 
 ## G. Not in scope (do not report these as bugs)
 
-There is no SMS at all (Masari sends codes by email; the demo reads them from `otp.txt`) and real email delivery (codes come from `email-codes.txt`), push notifications, payments and real money movement (route fares are display-only estimates; earnings amounts are not tracked), live tracking, PDF or Excel exports, maps and the checkpoint feeds (switched off), and anything on a real server (hosting is not set up yet).
+There is no SMS at all (Darb sends codes by email; the demo reads them from `otp.txt`) and real email delivery (codes come from `email-codes.txt`), push notifications, payments and real money movement (route fares are display-only estimates; earnings amounts are not tracked), live tracking, PDF or Excel exports, maps and the checkpoint feeds (switched off), and anything on a real server (hosting is not set up yet).
 
 ## Results
 

@@ -101,7 +101,7 @@ Invitation codes keep working exactly as before. In addition, drivers and shop o
 
 `OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED` (default `false`). When it is `false` the start endpoint answers 404 `onboarding_unavailable` for any request without an invitation code, the app keeps asking for one, and nothing else changes. Turning it on needs `PUBLIC_ONBOARDING_ENABLED=true` (which needs `INVITATIONS_ENABLED=true`) and `DRIVER_DOCUMENTS_ENABLED=true`; the API refuses to start otherwise. `GET /api/v1/onboarding/config` reports `open_registration_roles` (`["driver","merchant"]` when on, `[]` when off) and the app reads it. `OPEN_SIGNUP_MAX_STARTS_PER_HOUR` (default 200) is the shared hourly budget for new open sign-ups.
 
-In staging and production it needs `OTP_PROVIDER=email` (which needs `EMAIL_DELIVERY=smtp`): Masari sends no SMS, so the applicant types an email address in the first step and the one-time code is emailed there. That proves the mailbox, not the phone, so an open applicant's phone number stays unverified (they sign in with the email). See `docs/security/email-codes-instead-of-sms.md`.
+In staging and production it needs `OTP_PROVIDER=email` (which needs `EMAIL_DELIVERY=smtp`): Darb sends no SMS, so the applicant types an email address in the first step and the one-time code is emailed there. That proves the mailbox, not the phone, so an open applicant's phone number stays unverified (they sign in with the email). See `docs/security/email-codes-instead-of-sms.md`.
 
 ### The flow
 

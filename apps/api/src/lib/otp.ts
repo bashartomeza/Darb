@@ -19,7 +19,7 @@ export interface OtpProvider {
   send(input: { phoneE164: string; email?: string; code: string; locale: "ar" | "en"; expiresAt: Date; idempotencyKey: string }): Promise<OtpDeliveryResult>;
 }
 
-/** Delivers the one-time code by email (Masari sends no SMS). Nothing but the delivery outcome is returned or logged. */
+/** Delivers the one-time code by email (Darb sends no SMS). Nothing but the delivery outcome is returned or logged. */
 export class EmailOtpProvider implements OtpProvider {
   readonly name = "email";
   readonly provesPhone = false;

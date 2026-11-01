@@ -8,16 +8,16 @@ const encodedSubject = (text) => `=?UTF-8?B?${b64(text)}?=`;
 
 const COPY = {
   en: {
-    email_verification: { subject: "Your Masari verification code", intro: "Paste this verification code into the Masari app to finish creating your account:" },
-    password_reset: { subject: "Reset your Masari password", intro: "Paste this code into the Masari app to reset your password:" },
-    password_set: { subject: "Set your Masari password", intro: "Paste this code into the Masari app to set your password:" },
-    phone_code: { subject: "Your Masari verification code", intro: "Paste this verification code into the Masari app to continue (Masari sends codes by email, not by text message):" }
+    email_verification: { subject: "Your Darb verification code", intro: "Paste this verification code into the Darb app to finish creating your account:" },
+    password_reset: { subject: "Reset your Darb password", intro: "Paste this code into the Darb app to reset your password:" },
+    password_set: { subject: "Set your Darb password", intro: "Paste this code into the Darb app to set your password:" },
+    phone_code: { subject: "Your Darb verification code", intro: "Paste this verification code into the Darb app to continue (Darb sends codes by email, not by text message):" }
   },
   ar: {
-    email_verification: { subject: "رمز التحقق من مساري", intro: "الصق رمز التحقق هذا في تطبيق مساري لإكمال إنشاء حسابك:" },
-    password_reset: { subject: "إعادة تعيين كلمة مرور مساري", intro: "الصق هذا الرمز في تطبيق مساري لإعادة تعيين كلمة المرور:" },
-    password_set: { subject: "تعيين كلمة مرور مساري", intro: "الصق هذا الرمز في تطبيق مساري لتعيين كلمة المرور:" },
-    phone_code: { subject: "رمز التحقق من مساري", intro: "الصق رمز التحقق هذا في تطبيق مساري للمتابعة (يرسل مساري الرموز عبر البريد الإلكتروني وليس عبر الرسائل النصية):" }
+    email_verification: { subject: "رمز التحقق من درب", intro: "الصق رمز التحقق هذا في تطبيق درب لإكمال إنشاء حسابك:" },
+    password_reset: { subject: "إعادة تعيين كلمة مرور درب", intro: "الصق هذا الرمز في تطبيق درب لإعادة تعيين كلمة المرور:" },
+    password_set: { subject: "تعيين كلمة مرور درب", intro: "الصق هذا الرمز في تطبيق درب لتعيين كلمة المرور:" },
+    phone_code: { subject: "رمز التحقق من درب", intro: "الصق رمز التحقق هذا في تطبيق درب للمتابعة (يرسل درب الرموز عبر البريد الإلكتروني وليس عبر الرسائل النصية):" }
   }
 };
 
@@ -32,7 +32,7 @@ export function buildMessage({ from, message }) {
     message.locale === "ar" ? `ينتهي الرمز بعد ${minutes} دقيقة تقريباً. إن لم تطلبه فتجاهل هذه الرسالة.` : `The code expires in about ${minutes} minutes. If you did not ask for it, ignore this message.`
   ].join("\r\n");
   const headers = [
-    `From: Masari demo <${from}>`,
+    `From: Darb demo <${from}>`,
     `To: ${message.to}`,
     `Subject: ${encodedSubject(copy.subject)}`,
     "MIME-Version: 1.0",

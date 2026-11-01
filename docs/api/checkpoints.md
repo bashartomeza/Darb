@@ -13,7 +13,7 @@ are **unverified**. The mobile app does **not** call it
 directly. Doing so would ship the upstream key inside the APK, put a second
 network origin outside the session boundary, and leave the app parsing a schema
 owned by another team. The key lives in server config; the app sees one
-authenticated Masari endpoint.
+authenticated Darb endpoint.
 
 ## Configuration
 

@@ -1,6 +1,6 @@
 # Consent release management
 
-Masari stores operational consent content as plain UTF-8 text in MySQL. The server canonicalizes text to Unicode NFC, converts CRLF/CR newlines to LF, preserves all other whitespace, bounds each localized document to 30,000 characters and 32,000 UTF-8 bytes, and calculates the SHA-256 digest. Admin clients never submit a digest and no server process fetches an external content URL.
+Darb stores operational consent content as plain UTF-8 text in MySQL. The server canonicalizes text to Unicode NFC, converts CRLF/CR newlines to LF, preserves all other whitespace, bounds each localized document to 30,000 characters and 32,000 UTF-8 bytes, and calculates the SHA-256 digest. Admin clients never submit a digest and no server process fetches an external content URL.
 
 A release is one opaque version identifier and exactly six documents: Terms, Privacy Notice and Adult 18+ Attestation in Arabic and English. Draft creation and edits are atomic. Every edit requires the current release revision; stale requests fail with HTTP 409. Approved content cannot be edited through the service.
 

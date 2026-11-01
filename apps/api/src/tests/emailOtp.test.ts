@@ -6,7 +6,7 @@ import { renderAuthEmail } from "../services/emailTemplates.js";
 const expiresAt = new Date(Date.now() + 5 * 60_000);
 const base = { phoneE164: "+970590000001", code: "123456", locale: "en" as const, expiresAt, idempotencyKey: "challenge-1" };
 
-describe("EmailOtpProvider (Masari sends no SMS)", () => {
+describe("EmailOtpProvider (Darb sends no SMS)", () => {
   it("emails the code to the attempt's address and does not claim to prove the phone", async () => {
     const send = vi.fn().mockResolvedValue(undefined);
     const provider = new EmailOtpProvider({ kind: "approved", send });

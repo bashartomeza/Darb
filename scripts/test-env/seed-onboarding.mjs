@@ -59,7 +59,7 @@ const people = [
   { role: "merchant", phone: "+970590002003" }
 ];
 const lines = [];
-// Masari sends no SMS: each invitation records the email its one-time code is sent to.
+// Darb sends no SMS: each invitation records the email its one-time code is sent to.
 // DEMO_CODE_INBOX (the tester's own mailbox) when set, otherwise a placeholder address (codes are still in the log file).
 for (const person of people) {
   const contact_email = process.env.DEMO_CODE_INBOX || `${person.role}.demo@example.com`;

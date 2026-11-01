@@ -168,7 +168,7 @@ export type AppConfig = ReturnType<typeof createConfig>;
 
 export class ConfigurationError extends Error {
   constructor(problems: string[]) {
-    super(`Invalid Masari configuration: ${problems.join("; ")}`);
+    super(`Invalid Darb configuration: ${problems.join("; ")}`);
     this.name = "ConfigurationError";
   }
 }
@@ -503,7 +503,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     if (!missing.length) {
       email = { delivery: "smtp", smtp: {
         host: raw.SMTP_HOST!, port: raw.SMTP_PORT ?? (raw.SMTP_SECURE === "tls" ? 465 : 587), secure: raw.SMTP_SECURE,
-        user: raw.SMTP_USER, password: raw.SMTP_PASSWORD, fromAddress: raw.EMAIL_FROM_ADDRESS!, fromName: raw.EMAIL_FROM_NAME ?? "Masari"
+        user: raw.SMTP_USER, password: raw.SMTP_PASSWORD, fromAddress: raw.EMAIL_FROM_ADDRESS!, fromName: raw.EMAIL_FROM_NAME ?? "Darb"
       } };
     }
   }

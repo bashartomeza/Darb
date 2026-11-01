@@ -1,6 +1,6 @@
 # One-time codes by email instead of SMS
 
-Decision (owner): Masari does not use SMS, in demo or production. Every code that used to be texted is emailed through the existing SMTP delivery (`EMAIL_DELIVERY=smtp`, `smtpEmailDelivery.ts`). Setting `OTP_PROVIDER=email` selects this behaviour; SMTP is the only delivery requirement for go-live.
+Decision (owner): Darb does not use SMS, in demo or production. Every code that used to be texted is emailed through the existing SMTP delivery (`EMAIL_DELIVERY=smtp`, `smtpEmailDelivery.ts`). Setting `OTP_PROVIDER=email` selects this behaviour; SMTP is the only delivery requirement for go-live.
 
 ## What goes by email
 

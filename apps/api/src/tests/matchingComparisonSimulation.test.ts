@@ -139,7 +139,7 @@ describe("matching comparison simulation", () => {
     }
   });
 
-  it("Masari picks the driver the real scoring function ranks first", () => {
+  it("Darb picks the driver the real scoring function ranks first", () => {
     const near = driver("a-near-wrong", { direction: "reverse", origin: corridorPoint(0.1, 0.2), destination: corridorPoint(0) });
     const onRoute = driver("b-route", { origin: corridorPoint(0, 1.5) });
     const req = passengerRequest("r1");
@@ -156,12 +156,12 @@ describe("matching comparison simulation", () => {
       }).finalScore;
     expect(scoreOf(onRoute)).toBeGreaterThan(scoreOf(near));
     const raw = runScenario(scenario([near, onRoute], [req]), params);
-    // Nearest takes the closer wrong-direction driver (large detour); Masari takes the route-aligned one.
+    // Nearest takes the closer wrong-direction driver (large detour); Darb takes the route-aligned one.
     expect(raw.nearest.extraKm).toBeGreaterThan(raw.masari.extraKm);
     expect(raw.masari.vehiclesUsed).toBe(1);
   });
 
-  it("Masari follows real filters: no split of an oversized batch, no departed drivers", () => {
+  it("Darb follows real filters: no split of an oversized batch, no departed drivers", () => {
     const small = driver("small", { parcelCapacity: 3 });
     const orders = [parcelRequest("o1", 0, 2), parcelRequest("o2", 1, 2)];
     const raw = runScenario(scenario([small], orders), params);
