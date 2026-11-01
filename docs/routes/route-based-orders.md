@@ -148,3 +148,37 @@ All behind admin auth, independent of `ROUTE_MANAGEMENT_ENABLED`:
 - `PATCH /api/v1/admin/operating-routes/:id` `{ active: bool }` → pause/resume the current version.
 - `GET /api/v1/admin/cities` → `{ cities: [ {id, name_ar, name_en, latitude, longitude} ] }`.
 - `POST /api/v1/admin/cities` `{ name_ar, name_en, latitude, longitude }` (inside the service area: lat 29.4–33.4, lng 34.2–35.95) → the new city.
+
+## As implemented (API)
+
+Details the contract left open, as the API answers them:
+
+- Validation errors use the existing `400 { error: "validation_error", details }`
+  shape (details too short/long, missing `service_route_id`, unknown fields on
+  strict bodies). `*_details` reject control characters (a newline is allowed).
+- Storage: requests, orders, parcels and driver routes keep the route's
+  current `route_version_id`; matches never carry one (legacy matches stay
+  route-less, as the database requires).
+- `POST /admin/operating-routes` → `201 { routes: [ <admin route> ] }` (the
+  created direction(s)). `both_directions` defaults to `false`; with it, an
+  existing way back is kept and only the missing direction is created. Unknown
+  or non-city stops → `404 city_not_found`; the same city twice → `400
+  identical_route_endpoints`.
+- `PATCH /admin/operating-routes/:id` → `{ route: <admin route> }`; idempotent;
+  a retired route or one without a published/paused version → `409
+  route_unavailable`; unknown id → `404 route_not_found`.
+- `POST /admin/cities` → `201 { city: {...} }`; outside the service area →
+  `400 city_outside_service_area`; a city with that English name → `409
+  city_exists`. The stop key is `city-<slug of name_en>`.
+- `PUT /driver/online-state` going online with no active driver route and no
+  `service_route_id` → `400 service_route_id_required`; already online on a
+  different route → `409 route_already_active`.
+- `POST /passenger/parcels` (route body) → `201 { parcel, replayed,
+  handover_code, request_id }` (`handover_code` once, `null` on replays). The
+  API then asks for a driver on the route; with none yet the parcel stays
+  `searching` and `POST /matches/run { merchantOrderId }` (allowed for the
+  sending passenger) asks again. Parcels also serialize `trip_id`. A route
+  parcel can be cancelled until a driver accepts it (a pending offer is
+  withdrawn).
+- Merchant parcels accept `size` `S|M|L` or `small|medium|large`; they
+  serialize `receiver_name` and `receiver_phone_masked`.

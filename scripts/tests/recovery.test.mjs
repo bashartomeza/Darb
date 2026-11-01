@@ -119,7 +119,8 @@ test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secre
       "20261102100000_community_reports",
       "20261102120000_rename_masari_to_darb",
       "20261103120000_passenger_request_selected_route",
-      "20261103130000_passenger_assistant_history"
+      "20261103130000_passenger_assistant_history",
+      "20261104120000_route_based_orders"
     ]
   );
   rmSync(directory, { recursive: true, force: true });

@@ -13,7 +13,8 @@ const prismaMock = vi.hoisted(() => ({
   auditEvent: { create: vi.fn() },
   idempotencyRecord: { create: vi.fn(), findUniqueOrThrow: vi.fn(), updateMany: vi.fn() },
   merchantOrder: { create: vi.fn(), findFirst: vi.fn() },
-  deliveryHandover: { findUnique: vi.fn(), create: vi.fn() }
+  deliveryHandover: { findUnique: vi.fn(), create: vi.fn() },
+  serviceRoute: { findUnique: vi.fn() }
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -23,6 +24,7 @@ vi.mock("../lib/abuseCounters.js", () => ({
 
 const { createApp } = await import("../app.js");
 const { consumeAbuseCounter } = await import("../lib/abuseCounters.js");
+const { findOperatingRoute } = await import("./operatingRouteFixture.js");
 
 const merchant = { id: "merchant_1", role: "merchant", name: "M", phone: "+5", demo_account: true };
 const driver = { id: "driver_1", role: "driver", name: "D", phone: "+3", demo_account: true };
@@ -63,6 +65,8 @@ describe("merchant bulk orders API", () => {
     prismaMock.authSession.update.mockResolvedValue({});
     prismaMock.auditEvent.create.mockResolvedValue({ id: "audit" });
     prismaMock.$transaction.mockImplementation((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
+    // Coordinate files ride the predefined Hebron → Bethlehem route.
+    prismaMock.serviceRoute.findUnique.mockImplementation(findOperatingRoute());
     prismaMock.idempotencyRecord.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => {
       const key = `${data.operation}|${data.scope_digest}|${data.idempotency_key}`;
       if (state.records.has(key)) throw p2002();

@@ -1,18 +1,31 @@
-import { createHash } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { claimIdempotency, completeIdempotency } from "../lib/idempotency.js";
-import { Prisma } from "../generated/prisma/client.js";
 import { auditEvent } from "../lib/audit.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { releaseLegacyCapacity } from "../services/legacyCapacity.js";
-import { describeHandover, issueHandover } from "../services/deliveryHandover.js";
+import { describeHandover } from "../services/deliveryHandover.js";
+import {
+  createdOrderInclude,
+  createLegacyMerchantOrder,
+  MERCHANT_CREATE_OPERATION,
+  merchantCreateDigest,
+  type RouteOrderInput
+} from "../services/legacyMerchantOrders.js";
 import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
 import { BATCHING_LIMITS } from "../lib/batchingConfig.js";
+import { maskPhone, normalizePhoneToE164, PhoneNormalizationError } from "../lib/phone.js";
+import {
+  detailsSchema,
+  routeFields,
+  routeSummarySelect,
+  serviceRouteIdSchema,
+  type RouteSummary
+} from "../services/operatingRoutes.js";
 
+/** Older app builds: a place name and coordinates per parcel; mapped to the Hebron → Bethlehem route. */
 export const parcelSchema = z.object({
   destination_label: z.string().min(1),
   destination_lat: latitudeSchema,
@@ -28,12 +41,80 @@ export const createOrderSchema = z.object({
   parcels: z.array(parcelSchema).min(1).max(BATCHING_LIMITS.maxParcelsPerOrder)
 });
 
-export const MERCHANT_CREATE_OPERATION = "legacy_merchant_order_create_v1";
-const MERCHANT_CREATE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const SIZE_WORDS: Record<string, "S" | "M" | "L"> = { s: "S", small: "S", m: "M", medium: "M", l: "L", large: "L" };
+/** Sizes as today (S, M, L); the words small / medium / large are accepted too. */
+export const parcelSizeSchema = z
+  .string()
+  .trim()
+  .transform((value) => SIZE_WORDS[value.toLowerCase()])
+  .pipe(z.enum(["S", "M", "L"]));
+const noControlCharacters = (value: string) => !/[\u0000-\u001f\u007f]/.test(value);
+
+/** Route-based parcel: the drop-off as text, and an optional receiver. */
+export const routeParcelSchema = z.object({
+  dropoff_details: detailsSchema,
+  size: parcelSizeSchema,
+  priority: z.enum(["low", "normal", "high"]).default("normal"),
+  receiver_name: z.string().trim().min(2).max(80).refine(noControlCharacters).optional(),
+  receiver_phone: z.string().trim().min(5).max(32).optional()
+});
+
+/** Route-based order: a predefined route and the pickup as text. */
+export const createRouteOrderSchema = z.object({
+  service_route_id: serviceRouteIdSchema,
+  pickup_details: detailsSchema,
+  parcels: z.array(routeParcelSchema).min(1).max(BATCHING_LIMITS.maxParcelsPerOrder)
+});
+
+export type LegacyMerchantOrderInput = z.infer<typeof createOrderSchema>;
+export type RouteMerchantOrderInput = z.infer<typeof createRouteOrderSchema>;
+
+export function parseMerchantOrderBody(body: unknown): LegacyMerchantOrderInput | RouteMerchantOrderInput {
+  return body && typeof body === "object" && "service_route_id" in body
+    ? createRouteOrderSchema.parse(body)
+    : createOrderSchema.parse(body);
+}
+
+/** A parsed body as the creation service takes it; receiver phones are normalised here. */
+export function toOrderInput(input: LegacyMerchantOrderInput | RouteMerchantOrderInput) {
+  if (!("service_route_id" in input)) return input;
+  return {
+    service_route_id: input.service_route_id,
+    pickup_details: input.pickup_details,
+    parcels: input.parcels.map((parcel) => ({
+      dropoff_details: parcel.dropoff_details,
+      size: parcel.size,
+      priority: parcel.priority,
+      receiver_name: parcel.receiver_name ?? null,
+      receiver_phone: normalizeReceiverPhone(parcel.receiver_phone)
+    }))
+  } satisfies RouteOrderInput;
+}
+
+/** Receiver phones are stored in E.164, like every other phone. */
+export function normalizeReceiverPhone(value: string | undefined) {
+  if (value === undefined) return null;
+  try {
+    return normalizePhoneToE164(value, { region: "PS" });
+  } catch (error) {
+    if (error instanceof PhoneNormalizationError) throw new HttpError(400, "invalid_receiver_phone");
+    throw error;
+  }
+}
+
 export const merchantCreateIdempotencyKey = z.string().regex(/^[A-Za-z0-9._:-]{8,128}$/);
-export const merchantCreateDigest = (value: string) => createHash("sha256").update(value).digest("hex");
+export { createLegacyMerchantOrder, MERCHANT_CREATE_OPERATION, merchantCreateDigest };
 
 export const merchantRouter = Router();
+
+function maskedPhone(value: unknown) {
+  if (typeof value !== "string" || value === "") return null;
+  try {
+    return maskPhone(value);
+  } catch {
+    return null;
+  }
+}
 
 function serializeLegacyParcel(value: Record<string, unknown>) {
   return {
@@ -45,7 +126,11 @@ function serializeLegacyParcel(value: Record<string, unknown>) {
     size: value.size,
     priority: value.priority,
     status: value.status,
-    batch_id: value.batch_id
+    batch_id: value.batch_id,
+    dropoff_details: value.dropoff_details ?? null,
+    receiver_name: value.receiver_name ?? null,
+    // The full number is only ever read by the delivering driver's trip.
+    receiver_phone_masked: maskedPhone(value.receiver_phone)
   };
 }
 
@@ -107,6 +192,8 @@ function serializeLegacyMerchantOrder(value: Record<string, unknown>) {
     pickup_label: value.pickup_label,
     pickup_lat: value.pickup_lat,
     pickup_lng: value.pickup_lng,
+    ...routeFields(value.route_version as RouteSummary),
+    pickup_details: value.pickup_details ?? null,
     status: value.status,
     created_at: value.created_at,
     trip_id: tripId,
@@ -123,6 +210,7 @@ function serializeLegacyMerchantOrder(value: Record<string, unknown>) {
 const merchantOrderInclude = {
   parcels: true,
   delivery_handover: true,
+  route_version: routeSummarySelect,
   parcel_batches: {
     select: {
       id: true,
@@ -228,105 +316,16 @@ merchantRouter.get("/merchant/order-operation", async (req: AuthenticatedRequest
     }
     const order = await prisma.merchantOrder.findFirst({
       where: { id: record.resource_id, merchant_id: req.user!.id, canonical_entry_version: null },
-      include: { parcels: true, delivery_handover: true }
+      include: createdOrderInclude
     });
     if (!order) throw new HttpError(409, "idempotency_replay_unavailable");
     res.json({ order: serializeLegacyMerchantOrder(order as unknown as Record<string, unknown>), replayed: true });
   } catch (error) { next(error); }
 });
 
-/**
- * The one merchant order creation path. The single-order endpoint and the bulk
- * upload both call it, so validation shape, idempotency, audit and the
- * transaction isolation level cannot diverge.
- */
-export async function createLegacyMerchantOrder(
-  userId: string,
-  input: z.infer<typeof createOrderSchema>,
-  key: string | undefined
-) {
-  const normalized = {
-    pickup_label: input.pickup_label,
-    pickup_lat: input.pickup_lat.toFixed(6),
-    pickup_lng: input.pickup_lng.toFixed(6),
-    parcels: input.parcels.map((parcel) => ({
-      destination_label: parcel.destination_label,
-      destination_lat: parcel.destination_lat.toFixed(6),
-      destination_lng: parcel.destination_lng.toFixed(6),
-      size: parcel.size,
-      priority: parcel.priority
-    }))
-  };
-  const result = await prisma.$transaction(async (tx) => {
-    const claim = key === undefined ? undefined : await claimIdempotency(tx, {
-      operation: MERCHANT_CREATE_OPERATION,
-      scopeDigest: merchantCreateDigest(`${MERCHANT_CREATE_OPERATION}:${userId}`),
-      keyDigest: merchantCreateDigest(key),
-      keyVersion: 1,
-      requestDigest: merchantCreateDigest(JSON.stringify(normalized)),
-      preserveCompleted: true,
-      // Completed keys are never reclaimed into a different order. Mobile
-      // creation retries stop at seven days; older recovery uses read-only lookup.
-      expiresAt: new Date(Date.now() + MERCHANT_CREATE_RETENTION_MS)
-    });
-    if (claim?.kind === "conflict") throw new HttpError(409, "idempotency_conflict");
-    if (claim?.kind === "failed") throw new HttpError(409, "idempotency_failed");
-    if (claim?.kind === "in_progress") throw new HttpError(409, "idempotency_in_progress");
-    if (claim?.kind === "replay") {
-      if (claim.record.resource_type !== "MerchantOrder" || !claim.record.resource_id) {
-        throw new HttpError(409, "idempotency_replay_unavailable");
-      }
-      const original = await tx.merchantOrder.findFirst({
-        where: { id: claim.record.resource_id, merchant_id: userId, canonical_entry_version: null },
-        include: { parcels: true, delivery_handover: true }
-      });
-      if (!original) throw new HttpError(409, "idempotency_replay_unavailable");
-      return { order: original, replayed: true, handoverCode: null as string | null };
-    }
-
-    const created = await tx.merchantOrder.create({
-      data: {
-        merchant_id: userId,
-        pickup_label: normalized.pickup_label,
-        pickup_lat: normalized.pickup_lat,
-        pickup_lng: normalized.pickup_lng,
-        status: "submitted",
-        parcels: {
-          create: normalized.parcels.map((parcel) => ({
-            ...parcel,
-            status: "pending" as const
-          }))
-        }
-      },
-      include: { parcels: true, delivery_handover: true }
-    });
-    // The receiver's handover code; the sender passes it on, the driver enters it at delivery.
-    const handover = await issueHandover(tx, created.id);
-    const order = { ...created, delivery_handover: await tx.deliveryHandover.findUnique({ where: { merchant_order_id: created.id } }) };
-    await auditEvent(tx, {
-      userId,
-      action: AuditAction.merchant_order_created,
-      entityType: "MerchantOrder",
-      entityId: order.id,
-      metadata: { parcel_count: order.parcels.length }
-    });
-    if (claim?.kind === "claimed") {
-      await completeIdempotency(tx, {
-        recordId: claim.record.id,
-        claimVersion: claim.record.claim_version,
-        resourceType: "MerchantOrder",
-        resourceId: order.id,
-        responseStatus: 201
-      });
-    }
-    return { order, replayed: false, handoverCode: handover.code };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-  return result;
-}
-
 merchantRouter.post("/merchant/orders", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const input = createOrderSchema.parse(req.body);
+    const input = toOrderInput(parseMerchantOrderBody(req.body));
     // Old clients without an Idempotency-Key remain supported; new clients send
     // one durable key per user-confirmed order to obtain replay-safe creation.
     const rawKey = req.header("idempotency-key");

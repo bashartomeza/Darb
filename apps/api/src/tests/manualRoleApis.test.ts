@@ -20,11 +20,14 @@ const prismaMock = vi.hoisted(() => ({
   driverVerification: { count: vi.fn() },
   incident: { count: vi.fn() },
   deliveryHandover: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
+  serviceRoute: { findUnique: vi.fn() },
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
 
 const { createApp } = await import("../app.js");
+const { findOperatingRoute, HEBRON_TO_BETHLEHEM, routeSummary } = await import("./operatingRouteFixture.js");
+const driverRouteBody = { service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: 2, parcel_capacity_available: 5 };
 
 type Role = "passenger" | "driver" | "merchant" | "admin";
 
@@ -112,6 +115,8 @@ describe("manual role APIs", () => {
     prismaMock.deliveryHandover.create.mockResolvedValue({});
     prismaMock.$queryRaw.mockResolvedValue([{ id: "profile_1" }]);
     prismaMock.driverRoute.findFirst.mockResolvedValue(null);
+    // Coordinate bodies ride the predefined Hebron → Bethlehem route.
+    prismaMock.serviceRoute.findUnique.mockImplementation(findOperatingRoute());
   });
 
   it("passenger can create request", async () => {
@@ -290,17 +295,25 @@ describe("manual role APIs", () => {
     await request(createApp()).patch("/api/v1/passenger/requests/req_1/cancel").set(auth("passenger_1")).expect(409);
   });
 
-  it("driver can create locked corridor route", async () => {
+  it("driver can create a route on a predefined route", async () => {
     prismaMock.driverProfile.findUnique.mockResolvedValue({ id: "profile_1", user_id: "driver_1" });
     prismaMock.driverRoute.create.mockResolvedValue({ id: "route_1", corridor_key: "hebron-ppu-bab-al-zawiya-to-bethlehem", status: "active" });
 
     const response = await request(createApp())
       .post("/api/v1/driver/routes")
       .set(auth("driver_1"))
-      .send({ seats_available: 2, parcel_capacity_available: 5 })
+      .send(driverRouteBody)
       .expect(201);
 
     expect(response.body.route.status).toBe("active");
+    expect(prismaMock.driverRoute.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        origin_label: "Hebron",
+        destination_label: "Bethlehem",
+        corridor_key: "hebron-to-bethlehem",
+        route_version_id: HEBRON_TO_BETHLEHEM.current_version.id
+      })
+    }));
   });
 
   it("rolls driver route creation back when its audit fails", async () => {
@@ -315,15 +328,17 @@ describe("manual role APIs", () => {
       try { return await callback(prismaMock); } catch (error) { routes = before; throw error; }
     });
     await request(createApp()).post("/api/v1/driver/routes").set(auth("driver_1"))
-      .send({ seats_available: 2, parcel_capacity_available: 5 }).expect(500);
+      .send(driverRouteBody).expect(500);
     expect(routes).toHaveLength(0);
   });
 
   it("recovers an exact driver route creation retry without another operational route", async () => {
     prismaMock.driverProfile.findUnique.mockResolvedValue({ id: "profile_1", user_id: "driver_1" });
-    prismaMock.driverRoute.findFirst.mockResolvedValue({ id: "original_route", status: "active", seats_available: 2, parcel_capacity_available: 5 });
+    prismaMock.driverRoute.findFirst.mockResolvedValue({
+      id: "original_route", status: "active", seats_available: 2, parcel_capacity_available: 5, route_version: routeSummary()
+    });
     const response = await request(createApp()).post("/api/v1/driver/routes").set(auth("driver_1"))
-      .send({ seats_available: 2, parcel_capacity_available: 5 }).expect(201);
+      .send(driverRouteBody).expect(201);
     expect(response.body.route.id).toBe("original_route");
     expect(prismaMock.driverRoute.create).not.toHaveBeenCalled();
     expect(prismaMock.auditEvent.create).not.toHaveBeenCalled();
@@ -334,7 +349,7 @@ describe("manual role APIs", () => {
     prismaMock.driverProfile.findUnique.mockResolvedValue({ id: "profile_1", user_id: "driver_1" });
     prismaMock.driverRoute.findFirst.mockResolvedValue({ id: "existing_route", status: "active", seats_available: 1, parcel_capacity_available: 0 });
     await request(createApp()).post("/api/v1/driver/routes").set(auth("driver_1"))
-      .send({ seats_available: 2, parcel_capacity_available: 5 }).expect(409);
+      .send(driverRouteBody).expect(409);
     expect(prismaMock.driverRoute.create).not.toHaveBeenCalled();
   });
 
@@ -342,12 +357,13 @@ describe("manual role APIs", () => {
     await request(createApp()).post("/api/v1/driver/routes").set(auth("passenger_1")).send({}).expect(403);
   });
 
-  it("route outside corridor is rejected", async () => {
+  it("a driver route must name a predefined route", async () => {
     await request(createApp())
       .post("/api/v1/driver/routes")
       .set(auth("driver_1"))
       .send({ origin_label: "Ramallah", destination_label: "Nablus" })
       .expect(400);
+    expect(prismaMock.driverRoute.create).not.toHaveBeenCalled();
   });
 
   it("driver can deactivate own active route", async () => {
@@ -424,7 +440,7 @@ describe("manual role APIs", () => {
 
     const responses = await Promise.all([
       request(createApp()).post("/api/v1/passenger/requests").set(auth("passenger_1")).send(passengerBody).expect(201),
-      request(createApp()).post("/api/v1/driver/routes").set(auth("driver_1")).send({}).expect(201),
+      request(createApp()).post("/api/v1/driver/routes").set(auth("driver_1")).send({ service_route_id: HEBRON_TO_BETHLEHEM.id }).expect(201),
       request(createApp()).post("/api/v1/merchant/orders").set(auth("merchant_1")).send(merchantBody).expect(201)
     ]);
     for (const [index, response] of responses.entries()) {

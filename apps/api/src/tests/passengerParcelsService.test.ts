@@ -245,3 +245,127 @@ describe("receiver retention purge", () => {
     expect(db.passengerParcelDetail.updateMany).not.toHaveBeenCalled();
   });
 });
+
+describe("route-based passenger parcels (legacy pipeline)", () => {
+  const routeInput = {
+    serviceRouteId: "service_route_hebron_bethlehem",
+    pickupDetails: "PPU main gate",
+    dropoffDetails: "Manger Square",
+    preferredTime: new Date(Date.now() + 3_600_000),
+    size: "M" as const,
+    note: "books",
+    receiverName: "Sami",
+    receiverPhone: "+970591234567",
+    forbiddenItemsAcknowledged: true as const
+  };
+  const routeActor = { id: "passenger_1", idempotencyKey: "route-parcel-key-1" };
+
+  async function routeDb(counts: { open?: number; recent?: number } = {}) {
+    const { findOperatingRoute } = await import("./operatingRouteFixture.js");
+    const db = makeDb(counts);
+    const records: any[] = [];
+    Object.assign(db, {
+      serviceRoute: { findUnique: vi.fn(findOperatingRoute()) },
+      idempotencyRecord: {
+        create: vi.fn(async ({ data }: any) => {
+          const record = { id: `record_${records.length + 1}`, state: "processing", claim_version: 1, ...data };
+          records.push(record);
+          return record;
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: vi.fn(async () => records[0])
+      },
+      deliveryHandover: { findUnique: vi.fn().mockResolvedValue(null), create: vi.fn().mockResolvedValue({}) },
+      match: { findMany: vi.fn().mockResolvedValue([]), updateMany: vi.fn() },
+      driverRoute: { update: vi.fn() }
+    });
+    db.merchantOrder.create = vi.fn(async ({ data }: any) => ({
+      id: "order_1", ...data, parcels: data.parcels.create.map((parcel: object, index: number) => ({ id: `parcel_${index + 1}`, ...parcel }))
+    }));
+    db.parcel.count = vi.fn().mockResolvedValue(1);
+    db.passengerParcelDetail.findFirst.mockResolvedValue(detailRow({}, { canonical_dispatch: null, canonical_entry_version: null }));
+    return db;
+  }
+
+  it("creates a legacy order owned by the passenger on the chosen route, with a receiver code", async () => {
+    const db = await routeDb();
+    const result = await createPassengerParcelService(db).createForRoute(routeInput, routeActor);
+    const data = db.merchantOrder.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      merchant_id: "passenger_1",
+      pickup_label: "Hebron",
+      pickup_details: "PPU main gate",
+      route_version_id: "route_version_hebron_bethlehem",
+      requested_departure_from: routeInput.preferredTime,
+      status: "submitted"
+    });
+    expect(data).not.toHaveProperty("canonical_entry_version");
+    expect(data.requested_departure_until.getTime() - routeInput.preferredTime.getTime())
+      .toBe(PASSENGER_PARCEL_LIMITS.routeDepartureWindowMinutes * 60_000);
+    expect(data.parcels.create).toEqual([expect.objectContaining({ destination_label: "Bethlehem", dropoff_details: "Manger Square", size: "M", priority: "normal" })]);
+    // The receiver stays in the detail row only, never on the parcel a driver reads.
+    expect(data.parcels.create[0]).toMatchObject({ receiver_name: null, receiver_phone: null });
+    expect(db.passengerParcelDetail.create.mock.calls[0][0].data).toMatchObject({ order_id: "order_1", sender_id: "passenger_1", receiver_phone: "+970591234567", note: "books" });
+    expect(db.deliveryHandover.create).toHaveBeenCalledTimes(1);
+    expect(result.handoverCode).toMatch(/^\d{6}$/);
+    expect(db.idempotencyRecord.create.mock.calls[0][0].data.operation).toBe("passenger_parcel_route_create_v1");
+  });
+
+  it("applies the passenger limits and refuses a past time", async () => {
+    const full = await routeDb({ open: PASSENGER_PARCEL_LIMITS.maximumOpen });
+    await expect(createPassengerParcelService(full).createForRoute(routeInput, routeActor))
+      .rejects.toMatchObject({ statusCode: 409, message: "passenger_parcel_limit_reached" });
+    const past = await routeDb();
+    await expect(createPassengerParcelService(past).createForRoute({ ...routeInput, preferredTime: new Date(Date.now() - 1000) }, routeActor))
+      .rejects.toMatchObject({ statusCode: 400, message: "preferred_time_in_past" });
+    expect(past.merchantOrder.create).not.toHaveBeenCalled();
+  });
+
+  it("answers route_unavailable for a route that is not live", async () => {
+    const db = await routeDb();
+    await expect(createPassengerParcelService(db).createForRoute({ ...routeInput, serviceRouteId: "gone" }, routeActor))
+      .rejects.toMatchObject({ statusCode: 409, message: "route_unavailable" });
+  });
+
+  it("serializes the route and the details", () => {
+    const view = serializePassengerParcel(detailRow({}, {
+      canonical_dispatch: null,
+      pickup_details: "PPU main gate",
+      route_version: { service_route_id: "service_route_hebron_bethlehem", name_ar: "الخليل ← بيت لحم", name_en: "Hebron → Bethlehem" },
+      trips: [{ id: "trip_1", status: "accepted" }]
+    }, { dropoff_details: "Manger Square" }) as never);
+    expect(view).toMatchObject({
+      service_route_id: "service_route_hebron_bethlehem",
+      route_name_ar: "الخليل ← بيت لحم",
+      route_name_en: "Hebron → Bethlehem",
+      pickup_details: "PPU main gate",
+      dropoff_details: "Manger Square",
+      trip_id: "trip_1"
+    });
+  });
+
+  it("cancels while an offer waits for the driver, withdrawing it and its capacity", async () => {
+    const db = await routeDb();
+    db.passengerParcelDetail.findFirst.mockResolvedValue(detailRow({}, { status: "matched", canonical_dispatch: null }));
+    db.match.findMany.mockResolvedValue([{ id: "match_1", driver_route_id: "route_1", legacy_capacity_held: true }]);
+    db.match.updateMany.mockResolvedValue({ count: 1 });
+    await createPassengerParcelService(db).cancel("passenger_1", "order_1");
+    expect(db.driverRoute.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "route_1" }, data: expect.objectContaining({ parcel_capacity_available: { increment: 1 } })
+    }));
+    expect(db.match.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["match_1"] } }, data: { status: "invalidated", legacy_demand_key: null, legacy_capacity_held: false }
+    });
+    expect(db.merchantOrder.updateMany).toHaveBeenCalledWith({ where: { id: "order_1", status: { in: ["submitted", "matched"] } }, data: { status: "cancelled" } });
+    expect(db.passengerParcelDetail.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ receiver_phone: null }) }));
+    expect(db.canonicalDemandDispatch.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses to cancel once a driver accepted the parcel", async () => {
+    const db = await routeDb();
+    db.passengerParcelDetail.findFirst.mockResolvedValue(detailRow({}, { status: "assigned", canonical_dispatch: null }, { status: "assigned" }));
+    await expect(createPassengerParcelService(db).cancel("passenger_1", "order_1"))
+      .rejects.toMatchObject({ statusCode: 409, message: "parcel_cannot_be_cancelled" });
+    expect(db.merchantOrder.updateMany).not.toHaveBeenCalled();
+  });
+});
