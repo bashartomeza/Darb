@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_back_button.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_back_button.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
 import '../application/merchant_order_submission.dart';
@@ -133,7 +133,7 @@ class _CreateMerchantOrderScreenState
       key: const ValueKey('merchantCreateOrder'),
       appBar: AppBar(
         title: Text(l10n.createOrder),
-        leading: const MasariBackButton(fallback: '/merchant'),
+        leading: const DarbBackButton(fallback: '/merchant'),
         actions: const [LanguageSwitch()],
       ),
       body: SafeArea(
@@ -141,7 +141,7 @@ class _CreateMerchantOrderScreenState
           padding: const EdgeInsets.all(AppTokens.spaceLarge),
           children: [
             const SizedBox(height: AppTokens.spaceLarge),
-            MasariCard(
+            DarbCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -209,7 +209,7 @@ class _CreateMerchantOrderScreenState
 
   Widget _parcelCard(AppLocalizations l10n, int index, ParcelDraft parcel) {
     final controller = ref.read(merchantOrderDraftProvider.notifier);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppTokens.spaceMedium,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
-import 'masari_card.dart';
+import 'darb_card.dart';
 import 'status_chip.dart';
 
 /// Maps a domain status string to a semantic tone.
@@ -33,8 +33,8 @@ StatusTone statusToneFor(String status) => switch (status) {
 /// Section titles live *outside* the card. Putting the title on the surface
 /// with the data made every card open with a same-weight line of text, which is
 /// what made the old dashboards hard to scan.
-class MasariSection extends StatelessWidget {
-  const MasariSection({
+class DarbSection extends StatelessWidget {
+  const DarbSection({
     required this.title,
     required this.child,
     this.titleKey,
@@ -168,8 +168,8 @@ class DetailRow extends StatelessWidget {
 /// A fixed anatomy — title row with status, body, then a single action row —
 /// so every card in the app is read the same way. Optional parts collapse
 /// entirely rather than leaving gaps.
-class MasariInfoCard extends StatelessWidget {
-  const MasariInfoCard({
+class DarbInfoCard extends StatelessWidget {
+  const DarbInfoCard({
     required this.title,
     this.subtitle,
     this.icon,
@@ -218,7 +218,7 @@ class MasariInfoCard extends StatelessWidget {
     final theme = Theme.of(context);
     final hasActions = primaryAction != null || secondaryAction != null;
 
-    return MasariCard(
+    return DarbCard(
       onTap: onTap,
       background: emphasis ? AppTheme.surfaceContainerLow : null,
       border: emphasis

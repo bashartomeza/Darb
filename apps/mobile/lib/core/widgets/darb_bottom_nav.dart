@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_tokens.dart';
 
 /// One destination in the bottom navigation bar.
-class MasariNavItem {
-  const MasariNavItem({
+class DarbNavItem {
+  const DarbNavItem({
     required this.icon,
     required this.selectedIcon,
     required this.label,
@@ -23,15 +23,15 @@ class MasariNavItem {
 /// Destinations are supplied per role rather than fixed, so each role shows
 /// only navigation that maps to functionality it actually has. RTL ordering is
 /// handled by Flutter: under Arabic the first destination sits on the right.
-class MasariBottomNav extends StatelessWidget {
-  const MasariBottomNav({
+class DarbBottomNav extends StatelessWidget {
+  const DarbBottomNav({
     required this.items,
     required this.currentIndex,
     required this.onSelected,
     super.key,
   }) : assert(items.length >= 2, 'a nav bar needs at least two destinations');
 
-  final List<MasariNavItem> items;
+  final List<DarbNavItem> items;
   final int currentIndex;
   final ValueChanged<int> onSelected;
 
@@ -58,7 +58,7 @@ class MasariBottomNav extends StatelessWidget {
 ///
 /// Scrolls internally and caps at 90% of screen height, so tall content on a
 /// small screen stays reachable instead of overflowing.
-Future<T?> showMasariBottomSheet<T>({
+Future<T?> showDarbBottomSheet<T>({
   required BuildContext context,
   required Widget child,
   bool isDismissible = true,

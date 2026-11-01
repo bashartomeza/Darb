@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/fares/fare.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/fare_estimate.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../application/canonical_route_controller.dart';
 import '../domain/canonical_route_models.dart';
 
@@ -51,7 +51,7 @@ class _Unavailable extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(AppTokens.spaceLarge),
-          child: MasariCard(
+          child: DarbCard(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -252,7 +252,7 @@ class OperationStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     liveRegion: true,
-    child: MasariCard(
+    child: DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

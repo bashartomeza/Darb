@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_models.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_models.dart';
 
 import '../../../core/geo/reverse_geocoder.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_map.dart';
+import '../../../core/widgets/darb_map.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 
 class PassengerLocationPickerScreen extends StatefulWidget {
@@ -74,13 +74,13 @@ class _PassengerLocationPickerScreenState
             SizedBox(
               height: 430,
               width: double.infinity,
-              child: MasariMap(
+              child: DarbMap(
                 height: 430,
                 emptyLabel: 'اختاري موقعًا من الخريطة',
                 attributionLabel: '© OpenStreetMap contributors',
                 markers: [
                   if (point != null)
-                    MasariMapMarker(
+                    DarbMapMarker(
                       position: GeoPoint(point.latitude, point.longitude),
                       icon: Icons.location_on_rounded,
                       color: theme.colorScheme.primary,

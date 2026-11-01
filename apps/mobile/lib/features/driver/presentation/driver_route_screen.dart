@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/foreground_refresh.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../application/driver_controller.dart';
 import '../application/legacy_driver_route_mutation.dart';
 import '../data/driver_models.dart';
@@ -130,7 +130,7 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
                 ),
                 data: (state) {
                   final route = state.currentRoute;
-                  return MasariCard(
+                  return DarbCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [

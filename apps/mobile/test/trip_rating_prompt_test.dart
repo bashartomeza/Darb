@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/trips/data/trip_repository.dart';
-import 'package:masari_mobile/features/trips/presentation/trip_rating_prompt.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/trips/data/trip_repository.dart';
+import 'package:darb_mobile/features/trips/presentation/trip_rating_prompt.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 class _FakeTrips implements TripRepository {
   int? existing;

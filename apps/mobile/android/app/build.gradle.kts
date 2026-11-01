@@ -34,7 +34,7 @@ val allowDebugSigning =
     (project.findProperty("allowDebugSigning") ?: System.getenv("MASARI_ALLOW_DEBUG_SIGNING"))?.toString() == "true"
 
 android {
-    namespace = "ps.masari.mobile"
+    namespace = "ps.darb.mobile"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -44,7 +44,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "ps.masari.mobile"
+        applicationId = "ps.darb.mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

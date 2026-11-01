@@ -15,7 +15,7 @@ Import-Module (Join-Path $PSScriptRoot "PartnerKey.psm1") -Force
 
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 $server = Join-Path $root "apps\api\dist\server.js"
-if (-not (Test-Path -LiteralPath $server)) { throw "Build the API first: npm run build -w @masari/api" }
+if (-not (Test-Path -LiteralPath $server)) { throw "Build the API first: npm run build -w @darb/api" }
 
 foreach ($name in "DATABASE_URL", "JWT_SECRET") {
   if (-not (Get-Item -Path "Env:$name" -ErrorAction SilentlyContinue)) { throw "$name must be set in this shell." }

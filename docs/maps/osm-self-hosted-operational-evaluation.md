@@ -6,7 +6,7 @@ Evidence date: 2026-08-07. Candidate: `OSM_SELF_HOSTED_VALHALLA`. This is a disp
 
 The current 119.35 MB Geofabrik extract independently rebuilt into a 196.25 MB Valhalla tile directory in about 261 seconds. The earlier run observed about 257 MiB warm service memory and about 730 MiB peak sampled build memory. A bounded 20-way request batch completed without error. These results make the stack operationally credible for further evaluation, but do not establish HA, recovery objectives, multi-region behavior or sustained throughput.
 
-The evidence service used a digest-pinned container, fixed public fixture inputs, POST requests and a localhost-only port. It had no credential, public ingress, Masari database connection, arbitrary base URL or path into staging/production. Production must not depend on `tile.openstreetmap.org` or `nominatim.openstreetmap.org`; those community services are not a Masari SLA.
+The evidence service used a digest-pinned container, fixed public fixture inputs, POST requests and a localhost-only port. It had no credential, public ingress, Darb database connection, arbitrary base URL or path into staging/production. Production must not depend on `tile.openstreetmap.org` or `nominatim.openstreetmap.org`; those community services are not a Darb SLA.
 
 The independent Nominatim import took about 332 seconds, reached roughly 3 GiB peak observed memory, and occupied about 3.2 GB including roughly 2.1 GB of retained WAL; the database itself reported about 1.19 GB. PostgreSQL/PostGIS, replication/update design, backups, restore testing, vacuum/index maintenance and WAL controls make `NOMINATIM_OPERATIONAL_COMPLEXITY=HIGH`. Valhalla's immutable-graph rebuild/promotion model is `VALHALLA_OPERATIONAL_COMPLEXITY=MODERATE`.
 
@@ -19,7 +19,7 @@ A later independently approved design would need:
 - rollback to a known graph, health/readiness checks, request deadlines, bounded queues and resource limits;
 - monitoring for graph age, build failures, route error classes, latency, saturation and disk growth;
 - backups only where they are more efficient than deterministic rebuilds, plus tested disaster recovery;
-- network isolation, authentication from Masari services, TLS between hosts, patching and container provenance controls;
+- network isolation, authentication from Darb services, TLS between hosts, patching and container provenance controls;
 - production packaging that never shell-traces database credentials (the original disposable wrapper did; the corrected evidence script redirects xtrace and the independent rerun found zero secret-bearing trace patterns);
 - broader route/vehicle/access testing and human review before production use;
 - an explicit renderer/tile choice and visible OpenStreetMap attribution.
@@ -28,7 +28,7 @@ Geofabrik publishes daily regional extracts, while Nominatim and Valhalla each r
 
 ## Privacy, cost and vendor characteristics
 
-Self-hosting can keep canonical stop coordinates and route requests inside Masari-controlled infrastructure and avoids third-party request telemetry. That is a privacy advantage, not automatic compliance: infrastructure logs, access control, retention, backups and regional hosting still need review. There is no per-request vendor fee in this evidence run, but compute, storage, bandwidth, observability, on-call work, upgrades and ODbL compliance are real costs. Operational gate G10 is therefore `CONDITIONAL`.
+Self-hosting can keep canonical stop coordinates and route requests inside Darb-controlled infrastructure and avoids third-party request telemetry. That is a privacy advantage, not automatic compliance: infrastructure logs, access control, retention, backups and regional hosting still need review. There is no per-request vendor fee in this evidence run, but compute, storage, bandwidth, observability, on-call work, upgrades and ODbL compliance are real costs. Operational gate G10 is therefore `CONDITIONAL`.
 
 | Dimension | OSM/Valhalla observed or known | Google current state |
 |---|---|---|
@@ -39,7 +39,7 @@ Self-hosting can keep canonical stop coordinates and route requests inside Masar
 | Vendor lock-in | Open data and open-source engine; graph/config behavior still engine-specific | Managed platform; content/storage and display constraints remain unapproved |
 | Infrastructure cost | Self-funded compute/storage/operations; no per-call fee measured | Demo evidence only; production billing/account approval unresolved |
 | Attribution | OpenStreetMap attribution and license access required | Google attribution/display rules apply |
-| Maintenance | Masari owns imports, graph builds, updates, monitoring and incidents | Managed service, account/SLA still unreviewed |
+| Maintenance | Darb owns imports, graph builds, updates, monitoring and incidents | Managed service, account/SLA still unreviewed |
 | Offline/self-host | Supported and demonstrated locally | Not established for this design |
 
 Routing, geocoding, tiles and rendering remain separable. A future stack could combine MapLibre, properly sourced OSM-derived tiles, Valhalla and Nominatim/Pelias, but none is integrated or enabled by M7D1B.
@@ -59,4 +59,4 @@ Routing, geocoding, tiles and rendering remain separable. A future stack could c
 | G9 privacy | PASS | local evidence sent no fixture/user data to a routing/geocoding provider |
 | G10 operational complexity/cost | CONDITIONAL | feasible footprint, but production SRE/TCO evidence is incomplete |
 
-`OSM_VALHALLA_CANDIDATE=CONDITIONAL`. Failed geocoding gates do not invalidate Valhalla routing, because Masari may select separate routing and geocoding systems. Final provider selection remains `NO_PROVIDER_APPROVED_YET`.
+`OSM_VALHALLA_CANDIDATE=CONDITIONAL`. Failed geocoding gates do not invalidate Valhalla routing, because Darb may select separate routing and geocoding systems. Final provider selection remains `NO_PROVIDER_APPROVED_YET`.

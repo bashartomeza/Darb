@@ -2,16 +2,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/geo/reverse_geocoder.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_back_button.dart';
-import '../../../core/widgets/masari_card.dart';
-import '../../../core/widgets/masari_map.dart';
+import '../../../core/widgets/darb_back_button.dart';
+import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/darb_map.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../matching/data/matching_repository.dart';
 import '../data/passenger_models.dart';
@@ -148,7 +148,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.createRequest),
-        leading: const MasariBackButton(fallback: '/passenger'),
+        leading: const DarbBackButton(fallback: '/passenger'),
         actions: const [LanguageSwitch()],
       ),
       body: SafeArea(
@@ -169,7 +169,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
             const SizedBox(height: AppTokens.spaceLarge),
 
             // From / To card with a dotted connector between the two stops.
-            MasariCard(
+            DarbCard(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppTokens.spaceMedium,
                 vertical: AppTokens.spaceSmall,
@@ -212,17 +212,17 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
 
             if (_pickup != null || _destination != null) ...[
               const SizedBox(height: AppTokens.spaceMedium),
-              MasariCard(
+              DarbCard(
                 padding: EdgeInsets.zero,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
-                  child: MasariMap(
+                  child: DarbMap(
                     height: 240,
                     emptyLabel: '',
                     attributionLabel: '© OpenStreetMap contributors',
                     markers: [
                       if (_pickup != null)
-                        MasariMapMarker(
+                        DarbMapMarker(
                           position: GeoPoint(
                             _pickup!.latitude,
                             _pickup!.longitude,
@@ -232,7 +232,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
                           label: _pickup!.label,
                         ),
                       if (_destination != null)
-                        MasariMapMarker(
+                        DarbMapMarker(
                           position: GeoPoint(
                             _destination!.latitude,
                             _destination!.longitude,
@@ -250,7 +250,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
             const SizedBox(height: AppTokens.spaceMedium),
 
             // Passengers, time and date.
-            MasariCard(
+            DarbCard(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppTokens.spaceMedium,
                 vertical: AppTokens.spaceSmall,

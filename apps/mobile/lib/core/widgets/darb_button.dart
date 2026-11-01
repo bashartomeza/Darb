@@ -5,9 +5,9 @@ import '../theme/passenger_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/semantic_colors.dart';
 
-/// The emphasis levels defined by the Masari design system's §G.1 button
+/// The emphasis levels defined by the Darb design system's §G.1 button
 /// hierarchy.
-enum MasariButtonVariant {
+enum DarbButtonVariant {
   /// Warm orange, white text. High emphasis — the one action for this
   /// screen or sheet.
   primary,
@@ -37,55 +37,55 @@ enum MasariButtonVariant {
 ///
 /// Handles the states screens keep needing: a busy spinner that preserves the
 /// button's height (so layouts don't jump mid-request), an optional leading
-/// icon, and full-width by default since most Masari buttons anchor a section.
+/// icon, and full-width by default since most Darb buttons anchor a section.
 ///
 /// Labels come from the caller so localisation stays at the screen level.
-class MasariButton extends StatelessWidget {
-  const MasariButton({
+class DarbButton extends StatelessWidget {
+  const DarbButton({
     required this.label,
     required this.onPressed,
-    this.variant = MasariButtonVariant.primary,
+    this.variant = DarbButtonVariant.primary,
     this.icon,
     this.busy = false,
     this.expand = true,
     super.key,
   });
 
-  const MasariButton.action({
+  const DarbButton.action({
     required this.label,
     required this.onPressed,
     this.icon,
     this.busy = false,
     this.expand = true,
     super.key,
-  }) : variant = MasariButtonVariant.action;
+  }) : variant = DarbButtonVariant.action;
 
-  const MasariButton.secondary({
+  const DarbButton.secondary({
     required this.label,
     required this.onPressed,
     this.icon,
     this.busy = false,
     this.expand = true,
     super.key,
-  }) : variant = MasariButtonVariant.secondary;
+  }) : variant = DarbButtonVariant.secondary;
 
-  const MasariButton.outline({
+  const DarbButton.outline({
     required this.label,
     required this.onPressed,
     this.icon,
     this.busy = false,
     this.expand = true,
     super.key,
-  }) : variant = MasariButtonVariant.outline;
+  }) : variant = DarbButtonVariant.outline;
 
-  const MasariButton.destructive({
+  const DarbButton.destructive({
     required this.label,
     required this.onPressed,
     this.icon,
     this.busy = false,
     this.expand = true,
     super.key,
-  }) : variant = MasariButtonVariant.destructive;
+  }) : variant = DarbButtonVariant.destructive;
 
   final String label;
 
@@ -93,7 +93,7 @@ class MasariButton extends StatelessWidget {
   /// regardless, so a slow request cannot be submitted twice.
   final VoidCallback? onPressed;
 
-  final MasariButtonVariant variant;
+  final DarbButtonVariant variant;
   final IconData? icon;
   final bool busy;
 
@@ -102,27 +102,27 @@ class MasariButton extends StatelessWidget {
 
   ({Color background, Color foreground, BorderSide? border}) get _palette =>
       switch (variant) {
-        MasariButtonVariant.primary => (
+        DarbButtonVariant.primary => (
           background: SemanticColors.action,
           foreground: SemanticColors.onAction,
           border: null,
         ),
-        MasariButtonVariant.action => (
+        DarbButtonVariant.action => (
           background: SemanticColors.action,
           foreground: SemanticColors.onAction,
           border: null,
         ),
-        MasariButtonVariant.secondary => (
+        DarbButtonVariant.secondary => (
           background: AppTheme.primaryContainer,
           foreground: AppTheme.onPrimaryContainer,
           border: null,
         ),
-        MasariButtonVariant.outline => (
+        DarbButtonVariant.outline => (
           background: Colors.transparent,
           foreground: AppTheme.secondary,
           border: null,
         ),
-        MasariButtonVariant.destructive => (
+        DarbButtonVariant.destructive => (
           background: SemanticColors.error,
           foreground: SemanticColors.onError,
           border: null,
@@ -132,22 +132,22 @@ class MasariButton extends StatelessWidget {
   /// The passenger design's palette: one orange accent on white.
   ({Color background, Color foreground, BorderSide? border})
   get _passengerPalette => switch (variant) {
-    MasariButtonVariant.primary || MasariButtonVariant.action => (
+    DarbButtonVariant.primary || DarbButtonVariant.action => (
       background: PassengerStyle.orange,
       foreground: Colors.white,
       border: null,
     ),
-    MasariButtonVariant.secondary => (
+    DarbButtonVariant.secondary => (
       background: PassengerStyle.orangeContainer,
       foreground: PassengerStyle.onOrangeContainer,
       border: null,
     ),
-    MasariButtonVariant.outline => (
+    DarbButtonVariant.outline => (
       background: Colors.transparent,
       foreground: PassengerStyle.orange,
       border: const BorderSide(color: PassengerStyle.orange),
     ),
-    MasariButtonVariant.destructive => _palette,
+    DarbButtonVariant.destructive => _palette,
   };
 
   @override
@@ -191,7 +191,7 @@ class MasariButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: palette.background,
         foregroundColor: palette.foreground,
-        disabledBackgroundColor: variant == MasariButtonVariant.outline
+        disabledBackgroundColor: variant == DarbButtonVariant.outline
             ? Colors.transparent
             : AppTheme.surfaceContainerHigh,
         disabledForegroundColor: AppTheme.outline,

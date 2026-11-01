@@ -1,6 +1,6 @@
 # Android release signing and build
 
-Application id: `ps.masari.mobile`. Closes gap G4 in `docs/deployment/DEPLOY_RUNBOOK.md`.
+Application id: `ps.darb.mobile`. Closes gap G4 in `docs/deployment/DEPLOY_RUNBOOK.md`.
 
 ## How signing works
 

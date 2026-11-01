@@ -24,7 +24,7 @@ These were found while auditing. They are not fixed here.
 
 - **G1 (closed) Production email delivery.** `apps/api/src/services/smtpEmailDelivery.ts` is an approved SMTP `EmailDelivery` (STARTTLS or implicit TLS, AUTH PLAIN/LOGIN, certificate verification, timeouts, header-injection protection, bilingual templates in `emailTemplates.ts`), enabled with `EMAIL_DELIVERY=smtp` and wired in `server.ts`. Email sign-up, verification and password reset/set work in staging and production once the SMTP variables below are set. Without them those endpoints still answer 503 `email_auth_unavailable` (fail-closed).
 - **G2 (closed by decision) No SMS provider.** Darb will not use SMS. `OTP_PROVIDER=email` emails the onboarding code (invited and open sign-up) and the phone-step code after email sign-up through the same SMTP delivery as G1; it needs `EMAIL_DELIVERY=smtp`. `OTP_PROVIDER=fake` stays refused in staging/production. SMTP is the only delivery requirement; public onboarding (`PUBLIC_ONBOARDING_ENABLED`) may be enabled in production once `OTP_PROVIDER=email`, the onboarding peppers and the legal text exist. A phone number whose code only went to an email is stored unverified (see the trade-off document).
-- **G3 No first-admin bootstrap. RESOLVED.** `npm run admin:create -w @masari/api` creates the first (or an additional) admin from a hidden password prompt, and `npm run admin:list -w @masari/api` lists admins read-only. See section 7.
+- **G3 No first-admin bootstrap. RESOLVED.** `npm run admin:create -w @darb/api` creates the first (or an additional) admin from a hidden password prompt, and `npm run admin:list -w @darb/api` lists admins read-only. See section 7.
 - **G4 Release APK was signed with the debug key. RESOLVED.** `apps/mobile/android/app/build.gradle.kts` now signs release builds from git-ignored `android/key.properties` or `MASARI_KEYSTORE_*` environment variables and fails the build if neither is present. CI uses an explicit debug-signing opt-in. The owner must still generate the upload keystore: see `docs/mobile/ANDROID_RELEASE.md`.
 - **G5 `.env.production.example` leaves `AUTH_ACTION_TOKEN_PEPPER` commented out**, but it is required for email actions and the preflight treats it as required. Uncomment it in the example.
 - **G6 `compose.staging.yml` is incomplete for a real deploy.** It passes only a subset of variables (no `AUTH_ACTION_TOKEN_PEPPER`, no driver-document variables or volume) and publishes `127.0.0.1:3001`, while the production doc assumes port 3000. There is no production compose file.
@@ -129,16 +129,16 @@ It prints PASS, FAIL or WARN per item and never prints values. Exit code 1 means
 
 Gap G3 is resolved by `npm run admin:create`. Admin sign-in is by **email and password** at `/api/v1/auth/admin/login` (phone login is blocked for admins). Run it once, from the operator machine or inside the API container, with the owner present, after migrations (section 6) and with the production environment file loaded (`APP_ENV=production`, `DATABASE_URL` from the env file).
 
-1. Build once (`npm run build -w @masari/api`); the runtime image already contains `apps/api/dist/scripts/createAdmin.js`.
+1. Build once (`npm run build -w @darb/api`); the runtime image already contains `apps/api/dist/scripts/createAdmin.js`.
 2. Dry run first. Nothing is written:
 
    ```sh
-   npm run admin:create -w @masari/api -- --email <admin email> --name "<admin name>" --dry-run
+   npm run admin:create -w @darb/api -- --email <admin email> --name "<admin name>" --dry-run
    ```
 3. Create the admin. The password is read from a **hidden prompt** (typed twice) and is never a command-line argument:
 
    ```sh
-   npm run admin:create -w @masari/api -- --email <admin email> --name "<admin name>"
+   npm run admin:create -w @darb/api -- --email <admin email> --name "<admin name>"
    ```
 
    Non-interactive alternatives, both still keeping the password out of argv and shell history: `--password-file <path>` (a file with mode 0600, delete it afterwards) or `--password-stdin`. `ADMIN_EMAIL` and `ADMIN_NAME` may replace the flags.
@@ -146,7 +146,7 @@ Gap G3 is resolved by `npm run admin:create`. Admin sign-in is by **email and pa
 5. Confirm with the read-only listing (email, status, created and last login times; no hashes):
 
    ```sh
-   npm run admin:list -w @masari/api
+   npm run admin:list -w @darb/api
    ```
 6. Safety rules built into the command:
    - It refuses if the email already exists. To set a new password for an existing admin add `--reset-password`: it replaces the hash, increments `security_version`, revokes all sessions and writes an `admin_password_reset_cli` audit event.
@@ -255,7 +255,7 @@ cd apps/mobile
 flutter build apk --release --build-number=<N> --dart-define=APP_ENV=production --dart-define=ENABLE_DEMO_FEATURES=false --dart-define=API_BASE_URL=https://masari.aynur.ps
 ```
 
-The same keys are in `apps/mobile/config/production.example.json` (`--dart-define-from-file`). The application id is `ps.masari.mobile`. Output: `apps/mobile/build/app/outputs/flutter-apk/app-release.apk`. Check `apksigner verify --print-certs` shows the release certificate, not "Android Debug".
+The same keys are in `apps/mobile/config/production.example.json` (`--dart-define-from-file`). The application id is `ps.darb.mobile`. Output: `apps/mobile/build/app/outputs/flutter-apk/app-release.apk`. Check `apksigner verify --print-certs` shows the release certificate, not "Android Debug".
 
 ## 14. Smoke-test checklist after deploy
 
@@ -265,7 +265,7 @@ Replace nothing with real credentials in this document; use the owner's admin ac
 - [ ] `http://masari.aynur.ps` redirects to HTTPS; certificate is valid and not expiring soon.
 - [ ] `http://<host>:3000` is not reachable from outside.
 - [ ] Admin site loads at `/`, a deep link reload works (SPA fallback), no demo controls or credential presets are visible.
-- [ ] `npm run admin:create -w @masari/api -- --email <admin email> --name "<name>" --dry-run` succeeds against production (validates the guard and flags, writes nothing), and `npm run admin:list -w @masari/api` shows the bootstrap admin as `active`.
+- [ ] `npm run admin:create -w @darb/api -- --email <admin email> --name "<name>" --dry-run` succeeds against production (validates the guard and flags, writes nothing), and `npm run admin:list -w @darb/api` shows the bootstrap admin as `active`.
 - [ ] Admin sign-in with the bootstrap account works; sign-out works; a wrong password is rejected.
 - [ ] Demo endpoints are absent: the demo reset route returns 404.
 - [ ] Settings shows consent onboarding `READY` after the release is active.

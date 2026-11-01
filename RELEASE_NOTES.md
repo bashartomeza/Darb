@@ -1,6 +1,6 @@
-# Masari Hackathon MySQL Demo — Release Notes
+# Darb Hackathon MySQL Demo — Release Notes
 
-- Release name: **Masari Hackathon MySQL Demo**
+- Release name: **Darb Hackathon MySQL Demo**
 - Release date: **2026-07-13**
 - Final Git reference: annotated tag **`v0.2.0-hackathon-mysql`**
 - Final Git commit: resolved during packaging.
@@ -27,7 +27,7 @@ Application behavior remains frozen. This release changes only the database prov
 - Protected deterministic demo reset and seeded demo identities.
 - JWT login, `/me`, role authorization, and ownership isolation.
 - Passenger requests, driver locked routes, merchant orders/parcels/batching, explainable combined matching, acceptance, trip lifecycle, and deterministic tracking.
-- Masari versus nearest-driver deterministic comparison.
+- Darb versus nearest-driver deterministic comparison.
 - Arabic-first React/Vite admin judge console.
 - Android Flutter app for passenger, driver, and merchant roles.
 - Preflight, full API smoke, runbook, eight-minute judge script, and screenshot backup.

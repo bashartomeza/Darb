@@ -6,7 +6,7 @@ This is a design artifact. It introduces no schema, migration, endpoint, UI, pro
 
 ## 1. Decision summary and evidence boundary
 
-Masari's approved canonical place catalog, not a generic provider, is the authority for public places and transport stops. M7D1B's fixed acceptance gate was Arabic >=95%, English >=95%, and overall >=95%. Final overall/top-1 results were Nominatim 85.0%, Google Places Text Search 80.0%, Photon 75.0%, Pelias 41.7%, and Google Geocoding v4 35.0%. No generic provider passed, and M7D1C does not rerun those benchmarks.
+Darb's approved canonical place catalog, not a generic provider, is the authority for public places and transport stops. M7D1B's fixed acceptance gate was Arabic >=95%, English >=95%, and overall >=95%. Final overall/top-1 results were Nominatim 85.0%, Google Places Text Search 80.0%, Photon 75.0%, Pelias 41.7%, and Google Geocoding v4 35.0%. No generic provider passed, and M7D1C does not rerun those benchmarks.
 
 The following decisions remain authoritative:
 
@@ -26,7 +26,7 @@ The following decisions remain authoritative:
 A place is canonical only when all of these conditions hold:
 
 1. It represents a public, operationally relevant locality, institution, landmark, transport facility, or approved physical stop—not a private home or a person's location history.
-2. An authorized Masari editor submitted a bounded bilingual identity and an allowed coordinate source.
+2. An authorized Darb editor submitted a bounded bilingual identity and an allowed coordinate source.
 3. A different authorized reviewer verified identity, locality, coordinates, precision, provenance, retention rights, and duplicate candidates.
 4. An authorized approver who did not propose the searchable content approved an immutable revision and activated the stable place. The reviewer may also be the approver where staffing policy permits, but self-approval is never permitted.
 5. The current revision and all searchable aliases remain active, approved, and audit-linked.
@@ -89,7 +89,7 @@ A field-level assertion supports a revision or alias. It records the field group
 
 ### `PlaceExternalReference`
 
-An isolated provider reference contains place ID, provider, reference type, allowed opaque reference token, storage-policy version, collected/refreshed/expiry times, and active/retired state. It does not make provider names, coordinates, categories, or other content canonical. A provider token is never used as Masari's public place ID.
+An isolated provider reference contains place ID, provider, reference type, allowed opaque reference token, storage-policy version, collected/refreshed/expiry times, and active/retired state. It does not make provider names, coordinates, categories, or other content canonical. A provider token is never used as Darb's public place ID.
 
 ### Existing `Stop` and route entities
 
@@ -211,7 +211,7 @@ Every canonical coordinate requires latitude/longitude, precision class (`survey
 
 Allowed source classes are:
 
-- `MASARI_SURVEYED`: documented field verification under Masari procedure;
+- `MASARI_SURVEYED`: documented field verification under Darb procedure;
 - `ORGANIZATION_PROVIDED`: supplied by the responsible public organization with retainable permission;
 - `OPERATOR_VERIFIED`: independently checked by trained operators against an approved retainable source/process;
 - `COMPATIBLE_OPEN_DATA`: dataset whose license, attribution, and redistribution use are approved;
@@ -384,7 +384,7 @@ No migration 19 is created in M7D1C.
 
 **Q2. Who may create/approve one?** A capability-scoped editor creates; an authorized reviewer/approver verifies and approves. High-risk changes require a different actor.
 
-**Q3. What source may provide coordinates?** Masari survey, authorized organization, trained verification, or approved compatible open data. OSM use is legal-review gated; restricted commercial discovery is not canonical evidence.
+**Q3. What source may provide coordinates?** Darb survey, authorized organization, trained verification, or approved compatible open data. OSM use is legal-review gated; restricted commercial discovery is not canonical evidence.
 
 **Q4. How are aliases normalized?** With language/script-specific, conservative, versioned deterministic rules; normalization never itself asserts equivalence.
 

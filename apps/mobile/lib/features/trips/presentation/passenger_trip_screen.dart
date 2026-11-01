@@ -4,15 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/maps/checkpoint_map_markers.dart';
 import '../../../core/maps/osrm_route_service.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_map.dart';
+import '../../../core/widgets/darb_map.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../checkpoints/application/checkpoint_controller.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
@@ -1000,7 +1000,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
             ? GeoPoint(trip.destinationLat!, trip.destinationLng!)
             : null;
 
-        return MasariMap(
+        return DarbMap(
           emptyLabel: l10n.noLocationYet,
           attributionLabel: l10n.mapAttribution,
 
@@ -1010,7 +1010,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
 
           paths: [
             if (pathPoints.length >= 2)
-              MasariMapPath(points: pathPoints, color: _orange, width: 7),
+              DarbMapPath(points: pathPoints, color: _orange, width: 7),
           ],
 
           markers: [
@@ -1028,7 +1028,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
             // ORIGIN
             // ==========================================================
             if (origin != null)
-              MasariMapMarker(
+              DarbMapMarker(
                 position: origin,
                 icon: Icons.trip_origin_rounded,
                 color: _orange,
@@ -1040,26 +1040,26 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
             // DESTINATION
             // ==========================================================
             if (destination != null)
-              MasariMapMarker(
+              DarbMapMarker(
                 position: destination,
                 icon: Icons.flag_rounded,
                 color: _orangeDark,
                 label: l10n.mapDestinationLabel(_destinationCity(data)),
                 size: 42,
-                type: MasariMapMarkerType.destination,
+                type: DarbMapMarkerType.destination,
               ),
 
             // ==========================================================
             // CURRENT LOCATION
             // ==========================================================
             if (data.location != null)
-              MasariMapMarker(
+              DarbMapMarker(
                 position: GeoPoint(data.location!.lat, data.location!.lng),
                 icon: Icons.local_shipping_rounded,
                 color: _orange,
                 label: localizedLocationSource(l10n, data.location!.source),
                 size: 50,
-                type: MasariMapMarkerType.driver,
+                type: DarbMapMarkerType.driver,
               ),
           ],
         );

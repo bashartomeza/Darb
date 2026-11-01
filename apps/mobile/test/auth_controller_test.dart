@@ -6,16 +6,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/application/auth_actor_binding.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
-import 'package:masari_mobile/features/driver/data/driver_repository.dart';
-import 'package:masari_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
-import 'package:masari_mobile/features/onboarding/data/onboarding_storage.dart';
-import 'package:masari_mobile/features/passenger/application/passenger_history_controller.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
+import 'package:darb_mobile/features/onboarding/data/onboarding_storage.dart';
+import 'package:darb_mobile/features/passenger/application/passenger_history_controller.dart';
 
 import 'test_app_config.dart';
 
@@ -116,7 +116,7 @@ void main() {
       final container = _container((request) async {
         if (request.url.path.endsWith('/auth/mobile/login')) {
           return http.Response(
-            '{"token":"access-value","access_token":"access-value","access_token_expires_in":900,"refresh_token":"refresh-value","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:00:00.000Z","expires_at":"2026-07-17T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"user_1","name":"Demo Passenger","phone":"+970590000001","role":"passenger","demo_account":true}}',
+            '{"token":"access-value","access_token":"access-value","access_token_expires_in":900,"refresh_token":"refresh-value","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:00:00.000Z","expires_at":"2026-07-17T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"user_1","name":"Demo Passenger","phone":"+970590000001","role":"passenger","demo_account":true}}',
             200,
           );
         }

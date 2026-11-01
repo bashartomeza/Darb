@@ -2,7 +2,7 @@ import type { Comparison } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
 import { BentoGrid, Button, Card, CardHeader, EmptyState, KpiCard, MeterBar, StatusBadge } from "../../ui";
 
-/** Masari versus the nearest-driver baseline. */
+/** Darb versus the nearest-driver baseline. */
 export function ComparisonPanel({
   comparison,
   canAct,

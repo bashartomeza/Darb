@@ -5,26 +5,26 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/application/auth_actor_binding.dart';
-import 'package:masari_mobile/features/auth/data/session_coordinator.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
-import 'package:masari_mobile/features/canonical_routes/application/canonical_route_controller.dart';
-import 'package:masari_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
-import 'package:masari_mobile/features/driver/application/driver_controller.dart';
-import 'package:masari_mobile/features/driver/data/driver_models.dart';
-import 'package:masari_mobile/features/driver/data/driver_repository.dart';
-import 'package:masari_mobile/features/matching/data/matching_models.dart';
-import 'package:masari_mobile/features/trips/data/trip_models.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
+import 'package:darb_mobile/features/auth/data/session_coordinator.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/canonical_routes/application/canonical_route_controller.dart';
+import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
+import 'package:darb_mobile/features/driver/application/driver_controller.dart';
+import 'package:darb_mobile/features/driver/data/driver_models.dart';
+import 'package:darb_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/matching/data/matching_models.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 import 'support/auth_test_support.dart';
 import 'test_app_config.dart';
 import 'support/booking_recovery_test_support.dart';
-import 'package:masari_mobile/features/driver/application/legacy_driver_route_mutation.dart';
+import 'package:darb_mobile/features/driver/application/legacy_driver_route_mutation.dart';
 
 void main() {
   test(

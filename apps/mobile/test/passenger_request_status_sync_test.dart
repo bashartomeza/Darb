@@ -6,15 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/features/auth/data/session_coordinator.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
-import 'package:masari_mobile/core/widgets/language_switch.dart';
-import 'package:masari_mobile/features/auth/application/auth_actor_binding.dart';
-import 'package:masari_mobile/features/auth/data/authenticated_api_client.dart';
-import 'package:masari_mobile/features/passenger/application/passenger_controller.dart';
-import 'package:masari_mobile/features/passenger/presentation/request_detail_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/features/auth/data/session_coordinator.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/core/widgets/language_switch.dart';
+import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
+import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
+import 'package:darb_mobile/features/passenger/application/passenger_controller.dart';
+import 'package:darb_mobile/features/passenger/presentation/request_detail_screen.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
 

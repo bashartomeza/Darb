@@ -143,7 +143,7 @@ expect(() => parseMatchQuery({ source: 'canonical' }, now)).toThrow();
 expect(() => parseBatchQuery({ status: 'completed' }, now)).toThrow();
 expect(parseMatchQuery({ demand_kind: 'combined', search: ' m1 ' }, now).search).toBe('m1');
 ```
-- [x] Run `npm run test -w @masari/api -- src/tests/adminMatchingMonitoringContracts.test.ts`; confirm red before code.
+- [x] Run `npm run test -w @darb/api -- src/tests/adminMatchingMonitoringContracts.test.ts`; confirm red before code.
 - [x] Implement strict Zod parsing: numeric scalar strings only, integer bounds, paired UTC Z ranges, max31 days, no future until, blank search normalized absent, IDs/search max191. Preserve unknown-key rejection.
 - [x] Implement typed predicates from spec section3 and selects from section6:
 ```ts
@@ -172,7 +172,7 @@ expect(result.data.items[0].score).toBe('0.875');
 expect(result.observed_at).toBe(now.toISOString());
 ```
   Score preserves decimal value, not trailing-zero display formatting. Test exact keys, method allowlist, null route, zero-filled maps, page/count and missing/excluded 404.
-- [x] Run `npm run test -w @masari/api -- src/tests/adminMatchingMonitoringService.test.ts`; confirm red.
+- [x] Run `npm run test -w @darb/api -- src/tests/adminMatchingMonitoringService.test.ts`; confirm red.
 - [x] Implement all reads with shared eligibility and explicit serialization. Details use findFirst(id AND eligibility), missing -> HttpError(404,'not_found'). Each method captures observed_at before a RepeatableRead transaction with maxWait2000/timeout5000. Page/count share transaction; no N+1. Filters are typed WhereInput built from exact query fields:
 ```ts
 const rows = await tx.match.findMany({
@@ -196,7 +196,7 @@ const app = createApp(undefined, { adminMatchingMonitoringService: service });
 await request(app).get('/api/v1/admin/matching-batching/overview').expect(401);
 expect(service.overview).not.toHaveBeenCalled();
 ```
-- [x] Run `npm run test -w @masari/api -- src/tests/adminMatchingMonitoringApi.test.ts`; confirm intended failures.
+- [x] Run `npm run test -w @darb/api -- src/tests/adminMatchingMonitoringApi.test.ts`; confirm intended failures.
 - [x] Add factory, router-level requireAuth/requireRole('admin'), six handlers and app dependency/mount. Existing Express5 error handling handles rejected async handlers:
 ```ts
 router.get('/matches/:id', async (req, res) => {
@@ -228,7 +228,7 @@ expect(gate.isCurrent(old)).toBe(false);
 expect(gate.isCurrent(current)).toBe(true);
 gate.invalidate(); expect(gate.isCurrent(current)).toBe(false);
 ```
-- [x] Run `npm run test -w @masari/admin -- src/api.test.ts src/features/monitoring/monitoringState.test.ts`; confirm red.
+- [x] Run `npm run test -w @darb/admin -- src/api.test.ts src/features/monitoring/monitoringState.test.ts`; confirm red.
 - [x] Add wrappers inside createApiClient using its private apiRequest (do not bypass session handling):
 ```ts
 monitoringMatch: (token: string, id: string) =>
@@ -243,7 +243,7 @@ monitoringMatch: (token: string, id: string) =>
 **Consumes:** client/types/gate. **Produces:** `MatchingBatchingMonitoring({api,token}:{api:ApiClient;token:string})` and `MatchingResults({api,token}:{api:ApiClient;token:string})` React components. Overview initial tab; Task6 connects Batches before feature completion.
 
 - [x] Add React DOM tests using existing jsdom/React act/createRoot patterns and localized static rendering. Mock six monitoring methods; legacy action mocks throw if called. Assert separate request/order cards, current-state vs creation-cohort labels, unavailable notices, both combined links, Score label, no success-rate/confidence or algorithm controls. Extend existing navigation fixture with demoEnabled=false and require matchingBatching available.
-- [x] Run `npm run test -w @masari/admin -- src/navigation.test.ts src/features/monitoring/MatchingBatchingMonitoring.test.tsx src/features/monitoring/MatchingResults.test.tsx`; confirm red.
+- [x] Run `npm run test -w @darb/admin -- src/navigation.test.ts src/features/monitoring/MatchingBatchingMonitoring.test.tsx src/features/monitoring/MatchingResults.test.tsx`; confirm red.
 - [x] Build table/detail and Overview using existing UI primitives. Matching filters are date/status/kind/exact-ID; change resets page1. Each endpoint has independent generation/state and last successful observed_at. Request function uses this pattern, with local state typed ObservationState<MatchRow>:
 ```tsx
 const generation = gate.begin();
@@ -270,7 +270,7 @@ const batch: BatchRow = { id: 'b1', status: 'assigned',
   selected_driver_route: null };
 ```
   Render and assert BOTH different statuses, Current eligible order contents, No selected route, 25 rows then one row, and no completed/savings/timeline claims. Test list filters and independent detail/member timestamps.
-- [x] Run `npm run test -w @masari/admin -- src/features/monitoring/LegacyBatches.test.tsx`; confirm red.
+- [x] Run `npm run test -w @darb/admin -- src/features/monitoring/LegacyBatches.test.tsx`; confirm red.
 - [x] Implement directory/date/status/exact-ID filters, detail and independently paginated members. Invalidate both gates on parent change; clear member rows on parent404/auth failures. Never use Parcel.batch_id or query trips. Render only allowed fields:
 ```tsx
 <tr key={row.id}><td>{row.id}</td><td>{statusLabel(row.status)}</td></tr>
@@ -289,7 +289,7 @@ expect(() => assertMonitoringIntegrationTarget('test','mysql://localhost/masari'
 expect(() => assertMonitoringIntegrationTarget('test','mysql://localhost/card7_ci','other_ci')).toThrow();
 expect(() => assertMonitoringIntegrationTarget('test','mysql://localhost/card7_ci','card7_ci')).not.toThrow();
 ```
-- [x] Run `npm run test -w @masari/api -- src/tests/adminMatchingMonitoringIntegrationSafety.test.ts`; confirm red.
+- [x] Run `npm run test -w @darb/api -- src/tests/adminMatchingMonitoringIntegrationSafety.test.ts`; confirm red.
 - [x] Implement URL path decoding, strict alphanumeric/underscore DB name, case-insensitive masari rejection, _ci suffix, exact allowlist membership and demo/test environment. Call before dynamic Prisma import, no .env loading or connection logging:
 ```ts
 assertMonitoringIntegrationTarget(process.env.APP_ENV, process.env.DATABASE_URL,

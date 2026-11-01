@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/assistant/data/passenger_assistant_repository.dart';
-import 'package:masari_mobile/features/assistant/domain/passenger_assistant_models.dart';
+import 'package:darb_mobile/features/assistant/data/passenger_assistant_repository.dart';
+import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
 
 import 'support/auth_test_support.dart';
 

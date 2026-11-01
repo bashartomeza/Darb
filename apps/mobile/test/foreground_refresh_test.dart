@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/api/authoritative_refresh.dart';
-import 'package:masari_mobile/core/widgets/foreground_refresh.dart';
+import 'package:darb_mobile/core/api/authoritative_refresh.dart';
+import 'package:darb_mobile/core/widgets/foreground_refresh.dart';
 
 void main() {
   testWidgets(

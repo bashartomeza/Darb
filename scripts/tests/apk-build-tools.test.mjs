@@ -27,13 +27,13 @@ test("compiled APK manifests enforce location policy and retain artifact rules",
       ["foreground-service", "FOREGROUND_SERVICE_LOCATION", "", "", 1],
       ["background-sdk-m", "ACCESS_BACKGROUND_LOCATION", "", "", 1, "uses-permission-sdk-m"],
       ["foreground-service-sdk-m", "FOREGROUND_SERVICE_LOCATION", "", "", 1, "uses-permission-sdk-m"],
-      ["exported", "ACCESS_FINE_LOCATION", '<service android:name="ps.masari.Worker" android:exported="true" android:foregroundServiceType="location"/>', "", 1],
-      ["implicit-export", "ACCESS_FINE_LOCATION", '<service android:name="ps.masari.LocationService"><intent-filter><action android:name="ps.masari.LOCATION"/></intent-filter></service>', "", 1],
+      ["exported", "ACCESS_FINE_LOCATION", '<service android:name="ps.darb.Worker" android:exported="true" android:foregroundServiceType="location"/>', "", 1],
+      ["implicit-export", "ACCESS_FINE_LOCATION", '<service android:name="ps.darb.LocationService"><intent-filter><action android:name="ps.darb.LOCATION"/></intent-filter></service>', "", 1],
       ["secret", "ACCESS_FINE_LOCATION", "", "ROUTE_PROVIDER_SECRET", 1],
       ["demo", "ACCESS_FINE_LOCATION", "", "/api/v1/demo/reset", 1],
       ["tracking", "ACCESS_FINE_LOCATION", "", "flutter_background_geolocation", 1]
     ]) {
-      writeFileSync(join(directory, "AndroidManifest.xml"), `<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="ps.masari.fixture"><uses-sdk android:minSdkVersion="24"/><${element} android:name="android.permission.${permission}"/><application>${component}</application></manifest>`);
+      writeFileSync(join(directory, "AndroidManifest.xml"), `<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="ps.darb.fixture"><uses-sdk android:minSdkVersion="24"/><${element} android:name="android.permission.${permission}"/><application>${component}</application></manifest>`);
       writeFileSync(join(directory, "assets", "fixture.bin"), payload);
       const apk = join(directory, `${name}.apk`);
       const build = spawnSync(aapt, ["package", "-f", "-M", join(directory, "AndroidManifest.xml"), "-I", androidJar, "-A", join(directory, "assets"), "-F", apk], { encoding: "utf8" });

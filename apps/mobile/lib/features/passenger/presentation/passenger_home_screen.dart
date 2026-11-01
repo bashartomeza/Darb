@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' show DateFormat;
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/passenger_theme.dart';
 import '../../../core/widgets/state_views.dart';

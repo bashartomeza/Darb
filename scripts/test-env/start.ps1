@@ -17,7 +17,7 @@ foreach ($port in $ApiPort, $AdminPort) {
     throw "Port $port is already in use. Stop whatever is using it (or run stop.ps1) and try again."
   }
 }
-if (-not (Test-Path (Join-Path $root "apps\api\dist\server.js"))) { throw "Build first: npm run build -w @masari/api" }
+if (-not (Test-Path (Join-Path $root "apps\api\dist\server.js"))) { throw "Build first: npm run build -w @darb/api" }
 
 # Settings come from apps/api/.env, then the database is pointed at the disposable demo one.
 $values = @{}
@@ -28,7 +28,7 @@ $databaseUrl = $values["DATABASE_URL"] -replace "/[A-Za-z0-9_]+(\?|$)", "/masari
 
 # Admin site first, with a clean environment (it reads its own apps/admin/.env.local).
 $adminProcess = Start-Process -FilePath (Get-Command npm.cmd).Source `
-  -ArgumentList @("run", "dev", "-w", "@masari/admin", "--", "--port", "$AdminPort", "--strictPort") `
+  -ArgumentList @("run", "dev", "-w", "@darb/admin", "--", "--port", "$AdminPort", "--strictPort") `
   -WorkingDirectory $root -WindowStyle Hidden -PassThru `
   -RedirectStandardOutput (Join-Path $state "admin.log") -RedirectStandardError (Join-Path $state "admin.err.log")
 

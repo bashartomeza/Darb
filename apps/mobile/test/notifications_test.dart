@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
-import 'package:masari_mobile/features/notifications/application/notifications_controller.dart';
-import 'package:masari_mobile/features/notifications/data/notification_models.dart';
-import 'package:masari_mobile/features/notifications/data/notification_repository.dart';
-import 'package:masari_mobile/features/notifications/presentation/notification_bell.dart';
-import 'package:masari_mobile/features/notifications/presentation/notifications_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/notifications/application/notifications_controller.dart';
+import 'package:darb_mobile/features/notifications/data/notification_models.dart';
+import 'package:darb_mobile/features/notifications/data/notification_repository.dart';
+import 'package:darb_mobile/features/notifications/presentation/notification_bell.dart';
+import 'package:darb_mobile/features/notifications/presentation/notifications_screen.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 class _FakeAuth extends AuthController {
   _FakeAuth(this.userId);

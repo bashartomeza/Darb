@@ -9,14 +9,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/app.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/core/i18n/domain_labels.dart';
-import 'package:masari_mobile/core/routing/app_router.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/app.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/core/i18n/domain_labels.dart';
+import 'package:darb_mobile/core/routing/app_router.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_app_config.dart';
@@ -73,7 +73,7 @@ void main() {
           },
         );
         final container = ProviderScope.containerOf(
-          tester.element(find.byType(MasariApp)),
+          tester.element(find.byType(DarbApp)),
         );
         final controller = container.read(authControllerProvider.notifier);
         if (method == 'email') {
@@ -121,7 +121,7 @@ void main() {
           'registration_token': 'sealed-grant',
           'locale': 'en',
           'adult_self_attestation': true,
-          'device_name': 'Masari App',
+          'device_name': 'Darb App',
           'consents': documents
               .map(
                 (d) => {
@@ -696,7 +696,7 @@ void main() {
 
     expect(find.text('الأمان والجلسات'), findsWidgets);
     expect(find.text('الجهاز الحالي'), findsOneWidget);
-    expect(find.text('Masari Android'), findsOneWidget);
+    expect(find.text('Darb Android'), findsOneWidget);
     expect(
       Directionality.of(tester.element(find.text('الجلسات النشطة'))),
       TextDirection.rtl,
@@ -762,7 +762,7 @@ void main() {
         if (path.endsWith('/auth/sessions') && request.method == 'GET') {
           listCalls += 1;
           return http.Response(
-            '{"sessions":[{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:05:00.000Z","expires_at":"2026-08-17T10:00:00.000Z","is_current":true,"revoked":false},{"id":"session_2","client_type":"mobile","device_name":"Other Android","created_at":"2026-07-16T10:00:00.000Z","last_used_at":"2026-07-16T10:05:00.000Z","expires_at":"2026-08-16T10:00:00.000Z","is_current":false,"revoked":false}]}',
+            '{"sessions":[{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:05:00.000Z","expires_at":"2026-08-17T10:00:00.000Z","is_current":true,"revoked":false},{"id":"session_2","client_type":"mobile","device_name":"Other Android","created_at":"2026-07-16T10:00:00.000Z","last_used_at":"2026-07-16T10:05:00.000Z","expires_at":"2026-08-16T10:00:00.000Z","is_current":false,"revoked":false}]}',
             200,
           );
         }
@@ -904,7 +904,7 @@ Future<void> _pumpApp(
           ),
         ),
       ],
-      child: const MasariApp(),
+      child: const DarbApp(),
     ),
   );
   await tester.pumpAndSettle();
@@ -919,7 +919,7 @@ Future<http.Response> _passengerHandler(http.Request request) async {
   if (path.endsWith('/me')) return http.Response(_meBody('passenger'), 200);
   if (path.endsWith('/auth/sessions') && request.method == 'GET') {
     return http.Response(
-      '{"sessions":[{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:05:00.000Z","expires_at":"2026-08-17T10:00:00.000Z","is_current":true,"revoked":false}]}',
+      '{"sessions":[{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:05:00.000Z","expires_at":"2026-08-17T10:00:00.000Z","is_current":true,"revoked":false}]}',
       200,
     );
   }

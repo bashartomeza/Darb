@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../auth/application/auth_actor_binding.dart';
@@ -135,7 +135,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                       ref.invalidate(passengerRequestDetailProvider(requestId)),
                   child: Text(l10n.retry),
                 ),
-                data: (request) => MasariCard(
+                data: (request) => DarbCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

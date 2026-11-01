@@ -1,4 +1,4 @@
-# Masari Demo Start Card
+# Darb Demo Start Card
 
 Database provider: MySQL 8.0.46 on local port 3306, dedicated disposable database `masari_demo`, using `utf8mb4`. The real/pilot `masari` database is permanently ineligible for demo reset.
 

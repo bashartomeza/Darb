@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../canonical_assignments/domain/canonical_assignment_models.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../application/shared_trip_controller.dart';
@@ -107,7 +107,7 @@ class _DriverSharedOfferListScreenState
                         ),
                         const SizedBox(height: AppTokens.spaceMedium),
                         if (state.offers.isEmpty)
-                          MasariCard(child: Text(l10n.noSharedOffers))
+                          DarbCard(child: Text(l10n.noSharedOffers))
                         else
                           for (final offer in state.offers) ...[
                             _SharedOfferCard(
@@ -165,7 +165,7 @@ class _SharedOfferCard extends StatelessWidget {
       excludeSemantics: true,
       label: summary,
       onTap: openOffer,
-      child: MasariCard(
+      child: DarbCard(
         onTap: openOffer,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -398,14 +398,14 @@ class _DriverSharedOfferDetailScreenState
                 children: [
                   _SharedOfferSummary(offer: offer, serverNow: serverNow),
                   const SizedBox(height: AppTokens.spaceMedium),
-                  MasariCard(child: Text(l10n.sharedCapacityNotice)),
+                  DarbCard(child: Text(l10n.sharedCapacityNotice)),
                   const SizedBox(height: AppTokens.spaceMedium),
-                  MasariCard(child: Text(l10n.sharedGroupDecisionNotice)),
+                  DarbCard(child: Text(l10n.sharedGroupDecisionNotice)),
                   if (state.uncertain || state.recoveryPending) ...[
                     const SizedBox(height: AppTokens.spaceMedium),
                     Semantics(
                       liveRegion: true,
-                      child: MasariCard(
+                      child: DarbCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -557,7 +557,7 @@ class _SharedOfferSummary extends StatelessWidget {
       children: [
         Semantics(
           liveRegion: true,
-          child: MasariCard(
+          child: DarbCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -587,7 +587,7 @@ class _SharedOfferSummary extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppTokens.spaceMedium),
-        MasariCard(
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -601,7 +601,7 @@ class _SharedOfferSummary extends StatelessWidget {
         ),
         if (offer.status == SharedOfferStatus.accepted) ...[
           const SizedBox(height: AppTokens.spaceMedium),
-          MasariCard(
+          DarbCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -622,11 +622,11 @@ class _SharedOfferSummary extends StatelessWidget {
         ],
         if (offer.status == SharedOfferStatus.rejected) ...[
           const SizedBox(height: AppTokens.spaceMedium),
-          MasariCard(child: Text(l10n.sharedRejectedNotice)),
+          DarbCard(child: Text(l10n.sharedRejectedNotice)),
         ],
         if (offer.status == SharedOfferStatus.invalidated) ...[
           const SizedBox(height: AppTokens.spaceMedium),
-          MasariCard(child: Text(l10n.sharedInvalidatedNotice)),
+          DarbCard(child: Text(l10n.sharedInvalidatedNotice)),
         ],
       ],
     );
@@ -677,7 +677,7 @@ class _UnavailablePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(AppTokens.spaceLarge),
-    children: [MasariCard(child: Text(message))],
+    children: [DarbCard(child: Text(message))],
   );
 }
 
@@ -690,7 +690,7 @@ class _ErrorPanel extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(AppTokens.spaceLarge),
     children: [
-      MasariCard(
+      DarbCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

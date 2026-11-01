@@ -4,10 +4,10 @@
 
 Set-StrictMode -Version Latest
 
-$script:Target = "Masari/AweenRayehPartnerKey"
+$script:Target = "Darb/AweenRayehPartnerKey"
 
 if (-not ("Masari.CredentialStore" -as [type])) {
-  Add-Type -Namespace Masari -Name CredentialStore -MemberDefinition @'
+  Add-Type -Namespace Darb -Name CredentialStore -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 public struct CREDENTIAL {
   public uint Flags; public uint Type; public string TargetName; public string Comment;

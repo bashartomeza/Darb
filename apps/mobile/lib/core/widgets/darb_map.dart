@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
 import '../maps/map_tile_cache.dart';
 import '../theme/app_tokens.dart';
 
-/// Defines the visual purpose of a Masari map marker.
-enum MasariMapMarkerType {
+/// Defines the visual purpose of a Darb map marker.
+enum DarbMapMarkerType {
   /// Generic map marker.
   normal,
 
@@ -30,15 +30,15 @@ enum MasariMapMarkerType {
 }
 
 /// A pin the map can draw.
-class MasariMapMarker {
-  const MasariMapMarker({
+class DarbMapMarker {
+  const DarbMapMarker({
     required this.position,
     required this.icon,
     required this.color,
     required this.label,
     this.foreground = Colors.white,
     this.size = 34,
-    this.type = MasariMapMarkerType.normal,
+    this.type = DarbMapMarkerType.normal,
   });
 
   final GeoPoint position;
@@ -52,12 +52,12 @@ class MasariMapMarker {
   final double size;
 
   /// Controls the visual treatment of the marker.
-  final MasariMapMarkerType type;
+  final DarbMapMarkerType type;
 }
 
 /// A line the map can draw.
-class MasariMapPath {
-  const MasariMapPath({
+class DarbMapPath {
+  const DarbMapPath({
     required this.points,
     required this.color,
     this.width = 5,
@@ -72,7 +72,7 @@ class MasariMapPath {
   final bool dashed;
 }
 
-/// Modern Masari map surface.
+/// Modern Darb map surface.
 ///
 /// Supports:
 /// - Route paths
@@ -82,8 +82,8 @@ class MasariMapPath {
 /// - Zoom controls
 /// - Fit-to-content
 /// - Map tapping
-class MasariMap extends StatefulWidget {
-  const MasariMap({
+class DarbMap extends StatefulWidget {
+  const DarbMap({
     required this.emptyLabel,
     required this.attributionLabel,
     this.paths = const [],
@@ -104,13 +104,13 @@ class MasariMap extends StatefulWidget {
   /// OpenStreetMap's required credit.
   final String attributionLabel;
 
-  final List<MasariMapPath> paths;
+  final List<DarbMapPath> paths;
 
   /// All markers displayed on the map.
   ///
   /// Checkpoint markers can be supplied here using
-  /// [MasariMapMarkerType.checkpoint].
-  final List<MasariMapMarker> markers;
+  /// [DarbMapMarkerType.checkpoint].
+  final List<DarbMapMarker> markers;
 
   /// Map height.
   final double height;
@@ -141,10 +141,10 @@ class MasariMap extends StatefulWidget {
   final MapTileCache? tileCache;
 
   @override
-  State<MasariMap> createState() => _MasariMapState();
+  State<DarbMap> createState() => _DarbMapState();
 }
 
-class _MasariMapState extends State<MasariMap> {
+class _DarbMapState extends State<DarbMap> {
   final MapController _controller = MapController();
 
   String? _selectedLabel;
@@ -166,7 +166,7 @@ class _MasariMapState extends State<MasariMap> {
     return _ownedProvider!;
   }
 
-  /// Default Masari geographic area.
+  /// Default Darb geographic area.
   static const LatLng _defaultCenter = LatLng(31.6, 35.15);
 
   static const double _defaultZoom = 11;
@@ -183,7 +183,7 @@ class _MasariMapState extends State<MasariMap> {
   }
 
   @override
-  void didUpdateWidget(covariant MasariMap oldWidget) {
+  void didUpdateWidget(covariant DarbMap oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (!_sameMapContent(oldWidget)) {
@@ -230,7 +230,7 @@ class _MasariMapState extends State<MasariMap> {
   /// Marker visual properties are included here because a checkpoint can
   /// keep the same coordinates while its traffic state changes from:
   /// Salek -> Medium congestion -> Congestion.
-  bool _sameMapContent(MasariMap oldWidget) {
+  bool _sameMapContent(DarbMap oldWidget) {
     if (oldWidget.paths.length != widget.paths.length) {
       return false;
     }
@@ -534,7 +534,7 @@ class _MasariMapState extends State<MasariMap> {
   // MARKER
   // ===========================================================================
 
-  Marker _pin(MasariMapMarker marker) {
+  Marker _pin(DarbMapMarker marker) {
     return Marker(
       point: _toLatLng(marker.position),
       width: marker.size + 18,
@@ -564,25 +564,25 @@ class _MasariMapState extends State<MasariMap> {
 class _ModernPin extends StatelessWidget {
   const _ModernPin({required this.marker});
 
-  final MasariMapMarker marker;
+  final DarbMapMarker marker;
 
   @override
   Widget build(BuildContext context) {
     final isLocation =
-        marker.type == MasariMapMarkerType.location ||
+        marker.type == DarbMapMarkerType.location ||
         marker.icon == Icons.my_location_rounded;
 
     final isDriver =
-        marker.type == MasariMapMarkerType.driver ||
+        marker.type == DarbMapMarkerType.driver ||
         marker.icon == Icons.local_shipping_rounded;
 
     final isDestination =
-        marker.type == MasariMapMarkerType.destination ||
+        marker.type == DarbMapMarkerType.destination ||
         marker.icon == Icons.flag_rounded;
 
-    final isCheckpoint = marker.type == MasariMapMarkerType.checkpoint;
+    final isCheckpoint = marker.type == DarbMapMarkerType.checkpoint;
 
-    final isClosure = marker.type == MasariMapMarkerType.closure;
+    final isClosure = marker.type == DarbMapMarkerType.closure;
 
     final pinSize = isLocation
         ? marker.size + 6

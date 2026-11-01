@@ -21,7 +21,7 @@ class AuthRepository {
   final ApiClient apiClient;
   final AuthenticatedApiClient authenticatedApiClient;
 
-  static const _deviceName = 'Masari App';
+  static const _deviceName = 'Darb App';
 
   Future<LoginResult> login({
     required String email,

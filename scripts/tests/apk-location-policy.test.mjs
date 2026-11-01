@@ -11,7 +11,7 @@ import { inspectManifest } from "../lib/apk-location-policy.mjs";
 // manifest declarations, unlike harmless SDK capability strings in classes.dex.
 const manifest = (body = "") => `N: android=http://schemas.android.com/apk/res/android
   E: manifest (line=2)
-    A: package="ps.masari.mobile" (Raw: "ps.masari.mobile")
+    A: package="ps.darb.mobile" (Raw: "ps.darb.mobile")
 ${body}
     E: application (line=20)
 `;
@@ -41,11 +41,11 @@ test("explicitly exported location service is blocked", () => {
   assert.ok(inspectManifest(manifest() + service("        A: android:exported(0x01010010)=(type 0x12)0xffffffff")).includes("exported location service"));
 });
 test("location foreground-service bit identifies a service with an unrelated name", () => {
-  const input = (manifest() + service("        A: android:exported(0x01010010)=(type 0x12)0xffffffff\n        A: android:foregroundServiceType(0x01010599)=(type 0x11)0x18")).replace("com.baseflow.geolocator.GeolocatorLocationService", "ps.masari.Worker");
+  const input = (manifest() + service("        A: android:exported(0x01010010)=(type 0x12)0xffffffff\n        A: android:foregroundServiceType(0x01010599)=(type 0x11)0x18")).replace("com.baseflow.geolocator.GeolocatorLocationService", "ps.darb.Worker");
   assert.ok(inspectManifest(input).includes("exported location service"));
 });
 test("implicit export through an intent-filter is blocked", () => {
-  assert.ok(inspectManifest(manifest() + service("", "        E: intent-filter (line=25)\n          E: action (line=26)\n            A: android:name(0x01010003)=\"ps.masari.LOCATION\"")).includes("exported location service"));
+  assert.ok(inspectManifest(manifest() + service("", "        E: intent-filter (line=25)\n          E: action (line=26)\n            A: android:name(0x01010003)=\"ps.darb.LOCATION\"")).includes("exported location service"));
 });
 test("unresolved export resource fails closed", () => {
   assert.ok(inspectManifest(manifest() + service("        A: android:exported(0x01010010)=@0x7f010001")).length);

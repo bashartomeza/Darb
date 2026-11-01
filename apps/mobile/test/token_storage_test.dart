@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 
 void main() {
   const secureStorage = FlutterSecureStorage();

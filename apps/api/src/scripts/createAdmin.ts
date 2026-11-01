@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { AdminBootstrapError, createOrResetAdmin, validateAdminInput } from "../services/adminBootstrap.js";
 import { parseCliArgs, promptHidden, readPasswordFile, readStdinText, stripTrailingNewline } from "./adminCliInput.js";
 
-const USAGE = `Usage: npm run admin:create -w @masari/api -- --email <email> --name <name> [options]
+const USAGE = `Usage: npm run admin:create -w @darb/api -- --email <email> --name <name> [options]
   --email, --name        or ADMIN_EMAIL / ADMIN_NAME in the environment
   --password-file <path> read the password from a file (mode 0600 recommended)
   --password-stdin       read the password from standard input

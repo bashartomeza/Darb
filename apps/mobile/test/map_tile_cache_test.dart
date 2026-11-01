@@ -3,10 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/maps/map_tile_cache.dart';
-import 'package:masari_mobile/core/widgets/map_cache_tile.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/maps/map_tile_cache.dart';
+import 'package:darb_mobile/core/widgets/map_cache_tile.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 /// Serves a blank tile without touching the network.
 class _FakeTileProvider extends TileProvider {
@@ -70,7 +70,7 @@ Widget _host(Widget child, {Locale locale = const Locale('en')}) => MaterialApp(
 void main() {
   group('MapTileConfig', () {
     test('identifies the app and bounds the cache at 100 MB', () {
-      expect(MapTileConfig.userAgentPackageName, 'ps.masari.mobile');
+      expect(MapTileConfig.userAgentPackageName, 'ps.darb.mobile');
       expect(MapTileConfig.maxCacheBytes, 100 * 1000 * 1000);
       expect(MapTileConfig.tileUrlTemplate, contains('{z}/{x}/{y}'));
     });
@@ -164,7 +164,7 @@ void main() {
     });
   });
 
-  group('MasariMap tile layer', () {
+  group('DarbMap tile layer', () {
     testWidgets('uses the supplied tile provider and shows no offline note', (
       tester,
     ) async {
@@ -173,7 +173,7 @@ void main() {
 
       await tester.pumpWidget(
         _host(
-          MasariMap(
+          DarbMap(
             emptyLabel: 'empty',
             attributionLabel: 'attr',
             tileProvider: provider,
@@ -197,7 +197,7 @@ void main() {
 
       await tester.pumpWidget(
         _host(
-          MasariMap(
+          DarbMap(
             emptyLabel: 'empty',
             attributionLabel: 'attr',
             tileProvider: _FakeTileProvider(),
@@ -228,7 +228,7 @@ void main() {
 
       await tester.pumpWidget(
         _host(
-          MasariMap(
+          DarbMap(
             emptyLabel: 'empty',
             attributionLabel: 'attr',
             tileProvider: _FakeTileProvider(),

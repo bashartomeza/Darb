@@ -2,15 +2,15 @@ import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_map.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_map.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
@@ -123,7 +123,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                     const SizedBox(height: AppTokens.spaceMedium),
                     // No driver position is published to this screen yet, so the
                     // map renders its empty state rather than a decorative one.
-                    MasariMap(
+                    DarbMap(
                       emptyLabel: l10n.mapNoLocation,
                       attributionLabel: l10n.mapAttribution,
                       height: 190,
@@ -134,9 +134,9 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
                     if (canonicalEntry) ...[
                       const SizedBox(height: AppTokens.spaceLarge),
-                      MasariSection(
+                      DarbSection(
                         title: l10n.canonicalRoutes,
-                        child: MasariInfoCard(
+                        child: DarbInfoCard(
                           title: l10n.driverAvailabilities,
                           subtitle: l10n.canonicalRoutesBody,
                           icon: Icons.alt_route_outlined,
@@ -163,7 +163,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
                     if (sharedOffers) ...[
                       const SizedBox(height: AppTokens.spaceMedium),
-                      MasariInfoCard(
+                      DarbInfoCard(
                         title: l10n.sharedOffers,
                         icon: Icons.groups_outlined,
                         primaryAction: CardAction(
@@ -281,7 +281,7 @@ class _InboxSection extends StatelessWidget {
       data: (state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          MasariInfoCard(
+          DarbInfoCard(
             title: l10n.matchInbox,
             icon: Icons.inbox_outlined,
             emphasis: state.proposedMatchCount > 0,
@@ -302,7 +302,7 @@ class _InboxSection extends StatelessWidget {
           ),
           if (state.activeTrip != null) ...[
             const SizedBox(height: AppTokens.spaceMedium),
-            MasariInfoCard(
+            DarbInfoCard(
               title: l10n.activeTrip,
               icon: Icons.local_shipping_outlined,
               statusLabel: driverStatusLabel(l10n, state.activeTrip!.status),

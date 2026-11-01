@@ -216,7 +216,7 @@ export function MatchingResults({ api, token }: { api: ApiClient; token: string 
           <div><span>{t("monitoringMatchId")}</span><strong className="technical-value">{selected.id}</strong></div>
           <div><span>{t("monitoringCurrentStatus")}</span>{entityStatus(selected.status, statuses)}</div>
           <div><span>{t("monitoringScore")}</span><strong className="technical-value">{selected.score}</strong></div>
-          <div><span>{t("monitoringMethod")}</span><strong>{selected.method === "masari_route_score" ? t("monitoringMasariRouteScore") : t("monitoringUnknown")}</strong></div>
+          <div><span>{t("monitoringMethod")}</span><strong>{selected.method === "masari_route_score" ? t("monitoringDarbRouteScore") : t("monitoringUnknown")}</strong></div>
           <div><span>{t("monitoringSelectedRoute")}</span><strong className="technical-value">{selected.driver_route.id}</strong>{entityStatus(selected.driver_route.status, routeStatuses)}</div>
           {selected.passenger_request && <section><h3>{t("monitoringPassengerRequest")}</h3><p className="technical-value">{selected.passenger_request.id}</p><p>{t("monitoringCurrentStatus")}: {entityStatus(selected.passenger_request.status, requestStatuses)}</p><p>{t("monitoringRequestedPassengers")}: {number(selected.passenger_request.passenger_count)}</p></section>}
           {selected.merchant_order && <section><h3>{t("monitoringMerchantOrder")}</h3><p className="technical-value">{selected.merchant_order.id}</p><p>{t("monitoringCurrentStatus")}: {entityStatus(selected.merchant_order.status, orderStatuses)}</p><p>{t("monitoringCurrentOrderParcels")}: {number(selected.merchant_order.parcel_count)}</p></section>}

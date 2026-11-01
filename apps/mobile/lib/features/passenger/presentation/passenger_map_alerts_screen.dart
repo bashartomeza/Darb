@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/location/location_service.dart';
 import '../../../core/maps/osrm_route_service.dart';
@@ -13,9 +13,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
-import '../../../core/widgets/masari_map.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/darb_map.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../community_reports/application/community_reports_controller.dart';
 import '../../community_reports/presentation/community_reports_section.dart';
@@ -521,7 +521,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
           // ==================================================================
           const SizedBox(height: AppTokens.spaceMedium),
 
-          MasariSection(
+          DarbSection(
             title: l10n.checkpoints,
             child: _CheckpointsPanel(
               available: true,
@@ -725,7 +725,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    MasariMap(
+                    DarbMap(
                       emptyLabel: route == null
                           ? l10n.mapSelectRoute
                           : l10n.noLocationYet,
@@ -738,7 +738,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
 
                       paths: [
                         if (pathPoints.length >= 2)
-                          MasariMapPath(
+                          DarbMapPath(
                             points: pathPoints,
                             color: _navyLight,
                             width: 6,
@@ -750,7 +750,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                         // ORIGINAL START
                         // --------------------------------------------------
                         if (origin != null)
-                          MasariMapMarker(
+                          DarbMapMarker(
                             position: origin,
                             icon: Icons.trip_origin_rounded,
                             color: SemanticColors.upcomingRoute,
@@ -762,7 +762,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                         // DESTINATION
                         // --------------------------------------------------
                         if (destination != null)
-                          MasariMapMarker(
+                          DarbMapMarker(
                             position: destination,
                             icon: Icons.flag_rounded,
                             color: SemanticColors.completedRoute,
@@ -774,7 +774,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                         // PASSENGER CURRENT LOCATION
                         // --------------------------------------------------
                         if (position.value != null)
-                          MasariMapMarker(
+                          DarbMapMarker(
                             position: GeoPoint(
                               position.value!.latitude,
                               position.value!.longitude,
@@ -789,7 +789,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                         // CURRENT DRIVER LOCATION
                         // --------------------------------------------------
                         if (driverLocation != null)
-                          MasariMapMarker(
+                          DarbMapMarker(
                             position: GeoPoint(
                               driverLocation.lat,
                               driverLocation.lng,
@@ -913,7 +913,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
     );
   }
 
-  MasariMapMarker _stopMarker(
+  DarbMapMarker _stopMarker(
     AppLocalizations l10n,
     CanonicalStop stop,
     String name,
@@ -923,7 +923,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
 
     final isDestination = stop.id == route.destinationStop?.id;
 
-    return MasariMapMarker(
+    return DarbMapMarker(
       position: stop.position!,
       icon: isOrigin
           ? Icons.trip_origin_rounded
@@ -1106,7 +1106,7 @@ class _DriverArrivalCard extends StatelessWidget {
 
     final etaLabel = etaMinutes == null ? '—' : '$etaMinutes د';
 
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1258,7 +1258,7 @@ class _PassengerRouteSummary extends StatelessWidget {
       return arabic ? stop.nameAr : stop.nameEn;
     }
 
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -2004,7 +2004,7 @@ class _CheckpointsPanel extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     if (!available) {
-      return MasariInfoCard(
+      return DarbInfoCard(
         title: l10n.checkpointsUnavailable,
         subtitle: l10n.checkpointsDisabled,
         icon: Icons.block_outlined,
@@ -2021,7 +2021,7 @@ class _CheckpointsPanel extends ConsumerWidget {
       ),
       data: (snapshot) {
         if (snapshot.checkpoints.isEmpty) {
-          return MasariInfoCard(
+          return DarbInfoCard(
             title: l10n.checkpointsEmpty,
             subtitle: l10n.checkpointCount(0),
             icon: Icons.check_circle_outline,

@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/auth/data/authenticated_api_client.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
-import 'package:masari_mobile/features/driver/data/driver_models.dart';
-import 'package:masari_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/driver/data/driver_models.dart';
+import 'package:darb_mobile/features/driver/data/driver_repository.dart';
 
 import 'support/auth_test_support.dart';
 
@@ -219,4 +219,4 @@ const _locationJson =
     '{"lat":"31.532600","lng":"35.099800","source":"simulated","sequence":0,"recorded_at":"2026-07-13T08:21:00.000Z"}';
 
 const _refreshResponse =
-    '{"token":"new-access","access_token":"new-access","access_token_expires_in":120,"refresh_token":"new-refresh","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-08-06T10:00:00.000Z","last_used_at":"2026-08-06T10:00:00.000Z","expires_at":"2026-08-06T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"driver_1","name":"Driver","phone":"+970590000002","role":"driver","demo_account":false}}';
+    '{"token":"new-access","access_token":"new-access","access_token_expires_in":120,"refresh_token":"new-refresh","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-08-06T10:00:00.000Z","last_used_at":"2026-08-06T10:00:00.000Z","expires_at":"2026-08-06T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"driver_1","name":"Driver","phone":"+970590000002","role":"driver","demo_account":false}}';

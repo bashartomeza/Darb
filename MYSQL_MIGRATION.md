@@ -1,6 +1,6 @@
-# Masari MySQL Migration Guide
+# Darb MySQL Migration Guide
 
-This branch runs Masari on MySQL while preserving the PostgreSQL release at tag `v0.1.0-hackathon`.
+This branch runs Darb on MySQL while preserving the PostgreSQL release at tag `v0.1.0-hackathon`.
 
 ## Validated database target
 
@@ -16,7 +16,7 @@ This branch runs Masari on MySQL while preserving the PostgreSQL release at tag 
   an equivalent reviewed capability) before `prisma migrate deploy`; the application
   database user does not require `SUPER`.
 
-The database must be empty and dedicated to Masari before the first migration. Do not point this branch at an existing non-empty database without a separate reviewed data-migration plan.
+The database must be empty and dedicated to Darb before the first migration. Do not point this branch at an existing non-empty database without a separate reviewed data-migration plan.
 
 ## Safe environment
 
@@ -66,7 +66,7 @@ npm run demo:preflight
 npm run demo:smoke
 ```
 
-Preflight verifies required environment presence without displaying values, MySQL provider/connectivity, `utf8mb4`, database collation, Masari service identity, URL consistency, APK presence, and Android device readiness.
+Preflight verifies required environment presence without displaying values, MySQL provider/connectivity, `utf8mb4`, database collation, Darb service identity, URL consistency, APK presence, and Android device readiness.
 
 ## Fallback
 

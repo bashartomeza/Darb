@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key, this.config});
@@ -34,7 +34,7 @@ class WelcomeScreen extends StatelessWidget {
             const SizedBox(height: AppTokens.spaceSmall),
             Text(l10n.tagline, style: textTheme.titleLarge),
             const SizedBox(height: AppTokens.spaceLarge),
-            MasariCard(
+            DarbCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -47,7 +47,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppTokens.spaceMedium),
-            MasariCard(
+            DarbCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

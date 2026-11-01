@@ -1,6 +1,6 @@
 {
-    "name": "masari_mobile",
-    "short_name": "masari_mobile",
+    "name": "darb_mobile",
+    "short_name": "darb_mobile",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

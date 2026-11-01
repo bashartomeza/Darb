@@ -10,13 +10,13 @@ Places API (New) Text Search searches for places from free-form text. Its offici
 
 The practical product fit is:
 
-| Masari purpose | Appropriate Google capability | Evidence qualification |
+| Darb purpose | Appropriate Google capability | Evidence qualification |
 |---|---|---|
 | Address entry | Geocoding API v4 | Designed for address/location conversion; this public-place corpus is not an address benchmark |
 | City/area search | Geocoding for a known locality/address; Places Text Search for text discovery | Choose by user intent; neither is universally superior |
 | Campus search | Places Text Search | Named-place discovery, subject to ranking, quality, and storage constraints |
 | Landmark/public-facility search | Places Text Search | Named-place discovery, subject to ranking, quality, and storage constraints |
-| Canonical Masari public stops | Provider-neutral reviewed canonical data | Places can discover a candidate/Place ID, but quality and storage rights do not approve persisting Google content as canonical state |
+| Canonical Darb public stops | Provider-neutral reviewed canonical data | Places can discover a candidate/Place ID, but quality and storage rights do not approve persisting Google content as canonical state |
 
 ## Places Text Search method
 

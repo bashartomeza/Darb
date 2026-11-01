@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
-import '../../../core/widgets/masari_button.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_button.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/route_summary_card.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_back_button.dart';
+import '../../../core/widgets/darb_back_button.dart';
 import '../application/passenger_assistant_controller.dart';
 import '../data/speech_service.dart';
 import '../domain/passenger_assistant_models.dart';
@@ -245,7 +245,7 @@ class _PassengerAssistantScreenState
           ? null
           : AppBar(
               title: Text(l10n.assistantTitle),
-              leading: const MasariBackButton(fallback: '/passenger'),
+              leading: const DarbBackButton(fallback: '/passenger'),
             ),
       body: Column(
         children: [
@@ -402,7 +402,7 @@ class _AssistantWelcome extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    return MasariCard(
+    return DarbCard(
       key: const ValueKey('assistantReadyState'),
       padding: const EdgeInsets.all(AppTokens.spaceLarge),
       child: Column(
@@ -619,7 +619,7 @@ class _TripReviewCardState extends State<_TripReviewCard> {
     final theme = Theme.of(context);
     final timeValid = _draft.preferredTime.isAfter(DateTime.now());
 
-    return MasariCard(
+    return DarbCard(
       key: const ValueKey('assistantExtractedData'),
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       child: Column(
@@ -773,7 +773,7 @@ class _TripReviewCardState extends State<_TripReviewCard> {
             ),
           ],
           const SizedBox(height: AppTokens.spaceLarge),
-          MasariButton(
+          DarbButton(
             key: const ValueKey('assistantConfirmSearch'),
             label: widget.searching
                 ? l10n.assistantSearching
@@ -898,7 +898,7 @@ class _ProcessingBubble extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Align(
       alignment: AlignmentDirectional.centerStart,
-      child: MasariCard(
+      child: DarbCard(
         key: const ValueKey('assistantProcessingState'),
         padding: const EdgeInsets.symmetric(
           horizontal: AppTokens.spaceMedium,
@@ -936,7 +936,7 @@ class _AssistantErrorCard extends StatelessWidget {
       _ => l10n.assistantErrorBody,
     };
 
-    return MasariCard(
+    return DarbCard(
       key: const ValueKey('assistantErrorState'),
       background: SemanticColors.errorContainer,
       border: BorderSide.none,
@@ -968,7 +968,7 @@ class _AssistantErrorCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
-          MasariButton.outline(
+          DarbButton.outline(
             key: const ValueKey('assistantRetryButton'),
             label: l10n.retry,
             icon: Icons.refresh,

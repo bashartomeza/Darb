@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/auth/data/authenticated_api_client.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_repository.dart';
-import 'package:masari_mobile/features/passenger/data/trip_offer_source.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_repository.dart';
+import 'package:darb_mobile/features/passenger/data/trip_offer_source.dart';
 
 import 'support/auth_test_support.dart';
 

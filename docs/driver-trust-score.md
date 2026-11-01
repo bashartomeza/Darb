@@ -44,7 +44,7 @@ A driver with no history therefore scores exactly 70 (the same as the default on
 ## When it is recomputed
 
 - Right after a trip is completed, cancelled or failed (driver status update, admin status update), and right after a rating is submitted. This is best-effort: an error is swallowed so a scoring problem never fails the trip or rating request.
-- On a schedule, to repair any missed update and to keep the whole fleet consistent: `npm run trust:recompute -w @masari/api` (after `npm run build`). Like `documents:purge` it is a standalone job meant for a host scheduler; run it nightly. It is safe to run repeatedly.
+- On a schedule, to repair any missed update and to keep the whole fleet consistent: `npm run trust:recompute -w @darb/api` (after `npm run build`). Like `documents:purge` it is a standalone job meant for a host scheduler; run it nightly. It is safe to run repeatedly.
 
 ## Privacy
 

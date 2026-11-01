@@ -6,7 +6,7 @@
 
 **Architecture:** Keep `RouteManagement` as the data/mutation controller and move presentational responsibilities into focused route feature components. A small reducer owns navigation, tabs, dialogs, edit modes, and action-scoped feedback; existing API calls, lifecycle helpers, idempotency behavior, optimistic revision fencing, and authoritative conflict reloads remain the only domain behavior. All new UX behavior is driven by component props and tested through real rendered markup plus reducer/helper tests without adding a routing system or backend facade.
 
-**Tech Stack:** React 19, TypeScript 6, Vite 8, Vitest 4, server-rendered component tests, existing Masari Admin UI primitives and CSS tokens.
+**Tech Stack:** React 19, TypeScript 6, Vite 8, Vitest 4, server-rendered component tests, existing Darb Admin UI primitives and CSS tokens.
 
 **Spec:** `docs/superpowers/specs/2026-08-25-card-6-route-management-design.md`
 
@@ -476,7 +476,7 @@ Expected: only Admin route UX/tests/styles/translations, plan, and QA documentat
 Run the repository’s exact Node/npm environment commands for:
 
 ```powershell
-npm test -w @masari/api
+npm test -w @darb/api
 npm run test:admin
 npm run build:api
 npm run build:admin

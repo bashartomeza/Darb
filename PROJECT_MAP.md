@@ -22,7 +22,7 @@
 - Admin route-management preview remains tied to an existing editable draft route version and server-owned stops. Preview/geocode results are ephemeral, cache TTL remains zero in production-like configuration, no provider result is persisted, and published route geometry remains immutable; the schema and all 18 migrations are unchanged.
 - Production remains fail-closed with `ROUTE_MAPS_ENABLED=false` and `ROUTE_PROVIDER=disabled`; no provider or credential is required and provider calls are zero. Fake is prohibited in staging/production, fallback is never implicit, requests/responses are size- and deadline-bounded, retry is at most one, identical requests are single-flight coalesced, and circuit-breaker recovery is covered.
 - No Flutter/Admin map renderer, provider SDK, client token, location permission, GPS/current-location ingestion, background service, realtime location, tracking, moving marker, live ETA, route deviation, or navigation was added. M7E functionality remains absent.
-- Closure validation passes API 271, Admin 54, Flutter 241, M7C3C1 145, M7C3A 98, M7C1 79, M7H1 reset 45, legacy online 21, M7H1 passenger association 12, public onboarding 76, trusted sessions, onboarding foundation, route lifecycle, backup/restore, all five triggers, production builds, Android permission/artifact scans, and exact merge-head CI. Preflight is 22/22; deterministic smoke remains score 0.9317, sequence 2, trips 1/6, distance 21.53/129.19, cost 43.06/258.38, winner Masari, with zero provider calls.
+- Closure validation passes API 271, Admin 54, Flutter 241, M7C3C1 145, M7C3A 98, M7C1 79, M7H1 reset 45, legacy online 21, M7H1 passenger association 12, public onboarding 76, trusted sessions, onboarding foundation, route lifecycle, backup/restore, all five triggers, production builds, Android permission/artifact scans, and exact merge-head CI. Preflight is 22/22; deterministic smoke remains score 0.9317, sequence 2, trips 1/6, distance 21.53/129.19, cost 43.06/258.38, winner Darb, with zero provider calls.
 - Live provider status is exactly: Mapbox `NOT_EXECUTED`; Google `NOT_EXECUTED`; HERE `NOT_EXECUTED`; Stadia `NOT_EXECUTED`. No live Palestine routing, Arabic acceptance, success rate, latency, attribution, privacy, commercial, quota, or storage conclusion is claimed.
 - Provider selection remains `NO_PROVIDER_APPROVED_YET`; Mapbox is only the conditional next-evaluation lead. Storage rights remain `UNRESOLVED`, including permanent canonical geometry, geocoding-result retention, route polyline retention, and provider reference-ID retention.
 - Open provider evidence remains: credentialed bakeoffs for all four candidates; human Palestine corridor review; live Arabic geocoding; route/geocode success rates and route p50/p95; provider-specific storage and retention rights; final-display and renderer attribution; privacy/DPA/regional processing and request/telemetry retention; commercial/quota/support and production budget approval; renderer/client-token decision; and provider-persistence schema design.
@@ -134,7 +134,7 @@ Accepted obligations and next boundary:
 - M7C3B is closed. M7C3C is not started. Maps/GPS/realtime remain M7D/M7E.
 
 [PROJECT_OVERVIEW]
-Masari is a Palestine-focused smart route-sharing logistics MVP.
+Darb is a Palestine-focused smart route-sharing logistics MVP.
 
 Current implementation status: M7B Canonical Route Management, M7C1 Backend Multi-Route Operational Foundation, M7C2 Flutter Multi-Route Role Flows, and M7C3 canonical matching/shared-trip aggregation, offers, assignments, and Flutter presentation are closed on `production-readiness`. Production canonical matching remains disabled; M7C3C3 was not begun, and M7D/M7E maps, GPS, location ingestion, realtime, ETA, pricing, payment, and dispatch work are not started.
 
@@ -184,7 +184,7 @@ Implemented in M2A:
 Implemented in M2B:
 - Route-based matching API.
 - Merchant parcel batching API.
-- Masari vs nearest-driver comparison API.
+- Darb vs nearest-driver comparison API.
 - Persistent `ParcelBatch`, `Match`, and `ComparisonRun` records.
 - Deterministic Haversine-based demo metrics.
 - Audit events for match decisions, parcel batches, and comparison runs.
@@ -205,7 +205,7 @@ Implemented in M3B:
 - Dashboard overview for seeded users, routes, requests, orders, parcels, and trips.
 - Matching panel with selected route, score, scoring breakdown, and explanation.
 - Parcel batching panel with batch id, parcel count, distance saved, and explanation.
-- Comparison table for Masari vs nearest-driver metrics.
+- Comparison table for Darb vs nearest-driver metrics.
 - Trip control panel for match accept/reject and valid status progression.
 - Deterministic tracking simulation panel with latest location and route-progress trail.
 - Full demo sequence button using existing deterministic APIs.
@@ -235,7 +235,7 @@ Implemented in M4B:
 - Android licenses accepted.
 - `flutter doctor -v` reports Android-capable environment with no issues.
 - Android-only Flutter app created under `apps/mobile`.
-- Android application ID set to `ps.masari.mobile`.
+- Android application ID set to `ps.darb.mobile`.
 - Arabic-default mobile shell implemented with Flutter ARB/gen_l10n.
 - English optional language switch implemented.
 - Locale persists with `masari_locale`.
@@ -560,7 +560,7 @@ Actual folder structure:
     │   │   │   │   └── app_tokens.dart
     │   │   │   └── widgets
     │   │   │       ├── language_switch.dart
-    │   │   │       └── masari_card.dart
+    │   │   │       └── darb_card.dart
     │   │   ├── features
     │   │   │   ├── auth
     │   │   │   │   ├── application
@@ -992,7 +992,7 @@ Comparison response includes:
     "nearest_estimated_distance": "129.18",
     "masari_estimated_cost": "43.06",
     "nearest_estimated_cost": "258.36",
-    "parcel_batching_benefit": "5 parcels can use 1 Masari corridor trip instead of 5 nearest-driver parcel trips.",
+    "parcel_batching_benefit": "5 parcels can use 1 Darb corridor trip instead of 5 nearest-driver parcel trips.",
     "driver_utilization": "1.00",
     "winner": "masari"
   }
@@ -1119,7 +1119,7 @@ Comparison formulas:
 - `estimated_cost = estimated_distance * 2`.
 - `parcel_batching_benefit` explains trip reduction.
 - `driver_utilization = (parcel_count + passenger_count) / (parcel_count + 1)` clamped by deterministic demand formula.
-- Winner is `masari` when Masari cost and trips are less than or equal to nearest-driver baseline.
+- Winner is `masari` when Darb cost and trips are less than or equal to nearest-driver baseline.
 
 [TRIP_STATUS_LOGIC]
 Implemented in M3A.
@@ -1179,7 +1179,7 @@ Features:
 - System Overview panel uses admin dashboard/list endpoints for counts and seeded records.
 - Matching panel calls `POST /api/v1/matches/run` and displays selected route, score, breakdown, and explanation.
 - Parcel Batch panel calls `POST /api/v1/merchant/orders/:id/batch` and displays batch id, parcel count, estimated distance saved, and explanation.
-- Comparison panel calls `POST /api/v1/compare/run` and displays Masari vs nearest-driver metrics in a simple table.
+- Comparison panel calls `POST /api/v1/compare/run` and displays Darb vs nearest-driver metrics in a simple table.
 - Trip Flow panel calls match accept/reject, lists trips, and advances the valid trip lifecycle.
 - Tracking Simulation panel calls simulate step/reset and latest location polling.
 - Full Demo Sequence button runs reset, login, dashboard inputs, match, batch, comparison, accept, complete status progression, and one tracking step.
@@ -1216,8 +1216,8 @@ M3D localization:
 Implemented in M4B under `apps/mobile`.
 
 Scope implemented:
-- Android-only Flutter project `masari_mobile`.
-- Android application ID: `ps.masari.mobile`.
+- Android-only Flutter project `darb_mobile`.
+- Android application ID: `ps.darb.mobile`.
 - Welcome/app-shell route only at `/`.
 - Arabic default locale with RTL.
 - English optional locale with LTR.
@@ -1248,7 +1248,7 @@ M4B Android runtime validation:
 - Initial emulator boot got stuck as ADB `offline`; a cold boot with wiped emulator data recovered it.
 - Runtime device: `emulator-5554`, `sdk gphone64 x86 64`, Android 16 API 36.
 - App launched with `flutter run -d emulator-5554 --no-resident --dart-define=API_BASE_URL=http://10.0.2.2:3000`.
-- `adb shell pm clear ps.masari.mobile` succeeded before runtime validation.
+- `adb shell pm clear ps.darb.mobile` succeeded before runtime validation.
 - Arabic opened by default and used RTL.
 - English switch changed UI to English/LTR.
 - English persisted after force-stop/relaunch.
@@ -1291,7 +1291,7 @@ Scope implemented:
 - Unsupported admin message is localized as:
   - Arabic: `لوحة تحكم المسؤول متاحة عبر تطبيق الويب.`
   - English: `The admin console is available through the web application.`
-- Role home shells show Masari branding, current user name, role label, locked corridor, language switch, logout, workspace-ready copy, and clearly labeled coming-next copy.
+- Role home shells show Darb branding, current user name, role label, locked corridor, language switch, logout, workspace-ready copy, and clearly labeled coming-next copy.
 - No passenger request, driver route, merchant order, match list, match decision, trip, tracking, AI, Socket.IO, GPS, map, registration, refresh-token, or payment feature was implemented.
 
 M4C mobile translations:
@@ -1577,7 +1577,7 @@ M1 validation results:
 
 M2A validation results:
 - Pre-step M1 validation passed: `npm run prisma:validate`, `npm run prisma:generate`, `npm run typecheck`, `npm run test`, `npm run build`.
-- Git initialized and M1 committed as `chore: initialize Masari foundation`.
+- Git initialized and M1 committed as `chore: initialize Darb foundation`.
 - `npm run prisma:validate`: passed.
 - `npm run prisma:generate`: passed.
 - `npm run typecheck`: passed.
@@ -1596,7 +1596,7 @@ M2B validation results:
 - `npm run build`: passed.
 - `npm run db:push`: passed against local PostgreSQL.
 - Real M2B smoke validation passed for demo reset, match run/read, merchant batch, comparison run/read.
-- Real smoke output included match score `0.9317`, batch status `created`, estimated distance saved `86.12`, comparison winner `masari`, Masari trips `1`, nearest-driver trips `6`.
+- Real smoke output included match score `0.9317`, batch status `created`, estimated distance saved `86.12`, comparison winner `masari`, Darb trips `1`, nearest-driver trips `6`.
 
 M3A validation results:
 - Migration integrity check completed.
@@ -1692,7 +1692,7 @@ M4B runtime validation results:
 - Existing AVD `Medium_Phone_API_36.0` found through emulator list.
 - AVD cold boot with wiped emulator data became visible as `emulator-5554`.
 - `flutter devices` reported `sdk gphone64 x86 64 (mobile)`, Android 16 API 36.
-- App data cleared with `adb shell pm clear ps.masari.mobile`.
+- App data cleared with `adb shell pm clear ps.darb.mobile`.
 - Runtime launch passed with `flutter run -d emulator-5554 --no-resident --dart-define=API_BASE_URL=http://10.0.2.2:3000`.
 - Arabic default, RTL, English/LTR switch, relaunch persistence for English, relaunch persistence for Arabic, configured API URL, no counter-template UI, and no visible crash/overflow were verified.
 - No M4B code fix was needed and no separate M4B fix commit was created.
@@ -1817,7 +1817,7 @@ M4E2 validation results:
 
 M4E2 Android/PostgreSQL runtime smoke:
 - Emulator: `emulator-5554`, AVD `Medium_Phone_API_36.0`, Android 16 API 36.
-- Local PostgreSQL remained on port `5432`; an unrelated existing local project occupied port `3000`, so the runtime-only Masari build used API port `3111` and `API_BASE_URL=http://10.0.2.2:3111` without stopping the unrelated process.
+- Local PostgreSQL remained on port `5432`; an unrelated existing local project occupied port `3000`, so the runtime-only Darb build used API port `3111` and `API_BASE_URL=http://10.0.2.2:3111` without stopping the unrelated process.
 - Demo reset passed; passenger matching created match `cmriyy9cm0028bghnls3fe209` for driver 1, while alternate driver 2 inbox returned zero.
 - App data was cleared before launch and Arabic opened by default in RTL.
 - Driver 1 login reached the real driver dashboard with seeded active route, proposed count `1`, and no fabricated active trip.
@@ -1946,12 +1946,12 @@ APK:
 
 [M5B_PRESENTATION_FREEZE]
 Scope freeze:
-- Masari feature development is frozen for the hackathon presentation. Only presentation-blocking corrections are permitted.
+- Darb feature development is frozen for the hackathon presentation. Only presentation-blocking corrections are permitted.
 - No new API, screen, business feature, database table, dependency, matching formula, architecture, AI, Socket.IO, GPS, map, payment, registration, multi-city, app-store, or deployment work was added.
-- The only executable correction was strengthening `demo:preflight` to validate Masari API/admin identity instead of accepting any HTTP 200 response on the expected ports.
+- The only executable correction was strengthening `demo:preflight` to validate Darb API/admin identity instead of accepting any HTTP 200 response on the expected ports.
 
 Designated presentation machine audit (2026-07-13):
-- The exact event judge machine cannot be independently identified from repository context. M5B validated the currently designated presentation machine `C:\Users\basha\Desktop\Masari`; if the event uses another physical machine, run the transfer checklist in `README_DEMO_START.md` before presenting.
+- The exact event judge machine cannot be independently identified from repository context. M5B validated the currently designated presentation machine `C:\Users\basha\Desktop\Darb`; if the event uses another physical machine, run the transfer checklist in `README_DEMO_START.md` before presenting.
 - Windows 11 Pro 24H2, version `10.0.26100`, build `26100` (`flutter doctor` reported `10.0.26100.8655`).
 - Node.js `v22.17.1`; npm `10.9.2`; PostgreSQL `18.3`, Windows service `postgresql-x64-18` running automatically on port 5432.
 - Flutter `3.44.6` stable; Dart `3.12.2`; Android SDK `C:\Users\basha\AppData\Local\Android\Sdk`, platform/build-tools 36.0.0.
@@ -1959,7 +1959,7 @@ Designated presentation machine audit (2026-07-13):
 - AVD `Medium_Phone_API_36.0`, `emulator-5554`, Android 16/API 36.
 - Memory: 15.84 GB total / 3.16 GB free at audit. Disk: C 77.01 GB free; D 163.16 GB free.
 - Active presentation network: Wi-Fi `192.168.6.28`, gateway `192.168.6.1`; VMware and Hyper-V local adapters also present.
-- Port ownership was inspected before stopping anything: verified Masari Node API on 3000, verified Masari Vite on 5173, PostgreSQL on 5432. No unrelated process was terminated.
+- Port ownership was inspected before stopping anything: verified Darb Node API on 3000, verified Darb Vite on 5173, PostgreSQL on 5432. No unrelated process was terminated.
 
 Frozen URLs and artifacts:
 - API `http://localhost:3000`; admin `http://localhost:5173`; Android emulator API `http://10.0.2.2:3000`.
@@ -1982,7 +1982,7 @@ Failure and recovery rehearsal:
 - Restarting the same API configuration restored admin Refresh and mobile Retry; a protected reset then completed without database edits.
 - Full visual recovery time was `89.07` seconds (target under 2 minutes); API was healthy after `53.83` seconds and the recovery reset took `0.45` seconds.
 - A separate final recovery run proved preflight blocks while API is absent and completed API restart + 10/10 preflight + full smoke in `4.10` seconds.
-- Controlled unrelated HTTP services on a temporary port were rejected as “not the Masari API” and “not the Masari admin console,” proving port/service conflict identity detection.
+- Controlled unrelated HTTP services on a temporary port were rejected as “not the Darb API” and “not the Darb admin console,” proving port/service conflict identity detection.
 
 Three final rehearsals using `JUDGE_SCRIPT.md`:
 - The written presenter timeline is fixed at exactly `8:00`; automated technical execution is recorded separately and does not pretend to be spoken presentation time.
@@ -2034,7 +2034,7 @@ Reset and Unicode verification:
 
 Demo tooling and rehearsal:
 - `demo:preflight` loads the ignored API environment when shell values are absent and reports only presence/provider-safe facts.
-- Preflight verifies MySQL protocol, connectivity, expected database, `utf8mb4`, collation, Masari API/admin identity, API URL consistency, APK, and Android device.
+- Preflight verifies MySQL protocol, connectivity, expected database, `utf8mb4`, collation, Darb API/admin identity, API URL consistency, APK, and Android device.
 - `demo:smoke` loads the same ignored environment without displaying values and retains the complete cross-role story and recovery checks.
 - Five full real MySQL rehearsals passed with score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`, alternate-driver isolation, combined trip state, and clean recovery reset.
 - Rehearsal technical durations were 5.46, 5.03, 4.96, 4.99, and 6.03 seconds.
@@ -2192,7 +2192,7 @@ M6B2 validation status (2026-07-13):
 - Local workflow parsing and required-step/reference checks passed for all four workflow files. The standard repository validation passed Prisma validate/generate, workspace typecheck/build, 94 API tests, 12 admin tests, tracked-content scanning, the precise npm audit policy, and 5 tooling safety/reproducibility tests.
 - The production admin artifact scan passed. Flutter dependency/localization generation, 70-file clean formatting, analysis, and all 65 tests passed; the production-like release APK built and its extracted native payload passed the forbidden demo-marker scan. The generated APK remains ignored and is not a release artifact.
 - Both API Docker targets built. Runtime user `node`, missing-configuration failure, explicit empty-database migration, live/ready `200`, protected route `401`, demo reset/comparison/simulation `404`, HSTS/security/request-ID headers, structured logs, and graceful shutdown (0.41 seconds) passed against an isolated MySQL 8 staging simulation with no seeded users.
-- A real local MySQL logical backup and SHA-256 sidecar were created in the ignored backup directory. Restore into `masari_restore_m6b2_20260713` passed checksum, Prisma migration status, Masari physical-table identity, and read-only connectivity checks; verification took 2.876 seconds (3.53 seconds command elapsed) and cleanup removed only the isolated database.
+- A real local MySQL logical backup and SHA-256 sidecar were created in the ignored backup directory. Restore into `masari_restore_m6b2_20260713` passed checksum, Prisma migration status, Darb physical-table identity, and read-only connectivity checks; verification took 2.876 seconds (3.53 seconds command elapsed) and cleanup removed only the isolated database.
 - Demo preflight passed 19/19 and the real MySQL deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`, and reset recovery.
 - Safe release metadata generation passed with two migration checksums and reproducible output under `SOURCE_DATE_EPOCH`.
 
@@ -2403,7 +2403,7 @@ Merge result (2026-07-19):
 - All feature and corrective commits remain visible. The merged migration history contains `20260717195454_onboarding_foundation`, `20260719120000_harden_onboarding_foundation`, and `20260719123000_enforce_single_invitation_attempt`; no previously applied migration was modified.
 
 Post-merge database and validation:
-- The ignored local environment was confirmed present and targeted the intended local Masari development database without exposing values. A fresh checksum-backed ignored backup preceded post-merge verification. Phone preflight reported `total=5`, `valid=5`, `invalid=0`, and `collisions=0` without printing phone values.
+- The ignored local environment was confirmed present and targeted the intended local Darb development database without exposing values. A fresh checksum-backed ignored backup preceded post-merge verification. Phone preflight reported `total=5`, `valid=5`, `invalid=0`, and `collisions=0` without printing phone values.
 - Prisma validation/generation passed. All six migrations were already applied to local MySQL; two migration deploys were idempotent and final status was current with no pending migration.
 - The disposable real-MySQL suite applied all six migrations from empty, redeployed idempotently, and passed deterministic smoke, trusted-session concurrency, invitation single-attempt/consume-revoke races, OTP verification/resend/stale-claim fencing, onboarding-session isolation, exact abuse-counter concurrency, idempotency owner fencing, consent retention, disabled route/provider controls, audit privacy, and demo-reset cleanup.
 - A checksum-verified pre-onboarding backup restored into an isolated database and upgraded through every migration. The fresh post-merge backup restored at current status. Each restore contained nine onboarding tables, 13 foreign keys, the single-attempt unique index, 13 `ascii_bin` digest columns, both required check constraints, and six completed migration rows; both isolated databases were removed after verification.
@@ -2529,7 +2529,7 @@ Validation evidence:
 - Explicit admin validation passed: typecheck, 16 tests, normal build, production-configured build, and production artifact scan.
 - Explicit Flutter validation passed: dependency resolution, localization generation, zero-change formatting, analysis, 122 tests, debug APK build for `http://10.0.2.2:3000`, production-like release APK build, and production APK scan.
 - Real MySQL public onboarding harness passed 67 checks. Live demo preflight passed 22/22 with API, admin, debug APK, MySQL, and Android emulator attached. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
-- Android emulator install/launch smoke passed for package `ps.masari.mobile` using the generated debug APK. The exhaustive invite/OTP/operator UI rehearsal remains required for independent review because the repository does not yet provide a full Flutter integration automation harness for reading fake-provider OTP externally and driving all screens.
+- Android emulator install/launch smoke passed for package `ps.darb.mobile` using the generated debug APK. The exhaustive invite/OTP/operator UI rehearsal remains required for independent review because the repository does not yet provide a full Flutter integration automation harness for reading fake-provider OTP externally and driving all screens.
 
 Remaining after M6C2C:
 - Draft PR creation and independent mobile security/state review remain required before merge. Public launch still requires full manual/operator onboarding rehearsal, a real OTP provider, governed legal publication, storage/backup/retention approval, retention automation, admin invitation UI if desired, and driver/merchant approval operations.

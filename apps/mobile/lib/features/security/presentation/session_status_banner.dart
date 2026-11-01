@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../auth/application/auth_controller.dart';
 
 class SessionStatusBanner extends ConsumerWidget {
@@ -14,7 +14,7 @@ class SessionStatusBanner extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider).value;
     final l10n = AppLocalizations.of(context);
     if (auth?.status == AuthStatus.refreshing) {
-      return MasariCard(
+      return DarbCard(
         child: Row(
           children: [
             const SizedBox.square(
@@ -28,7 +28,7 @@ class SessionStatusBanner extends ConsumerWidget {
       );
     }
     if (auth?.status == AuthStatus.retryableFailure) {
-      return MasariCard(
+      return DarbCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

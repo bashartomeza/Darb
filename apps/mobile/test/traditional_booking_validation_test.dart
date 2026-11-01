@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/assistant/data/passenger_assistant_repository.dart';
-import 'package:masari_mobile/features/assistant/domain/passenger_assistant_models.dart';
-import 'package:masari_mobile/features/passenger/domain/trip_offer.dart';
-import 'package:masari_mobile/features/passenger/presentation/widgets/trip_offer_card.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/assistant/data/passenger_assistant_repository.dart';
+import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
+import 'package:darb_mobile/features/passenger/domain/trip_offer.dart';
+import 'package:darb_mobile/features/passenger/presentation/widgets/trip_offer_card.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
 import 'support/booking_recovery_test_support.dart';

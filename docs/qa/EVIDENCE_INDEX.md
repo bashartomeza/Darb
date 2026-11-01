@@ -38,7 +38,7 @@ This verifies the hosted gates for that head. It does not close EDIT-10: it is n
 
 ## Limited partner directory: one live provider-backed read (EDIT-04, partial)
 
-Run 2026-10-27 at 19:47 UTC by the operator tooling in `scripts/provider-key/`, with the owner's explicit authorization for exactly one read and the owner's confirmation that the historical key was revoked or rotated (not independently verified). Source: `production-readiness` at `863a69c84594c19527c87fdb0e4f2c9bce9592a2`. An isolated API (local environment, no demo features, only the limited gate on) used a disposable database that was dropped afterwards, a synthetic passenger session, and the dedicated replacement key from Windows Credential Manager. The read went through Masari's own endpoint, not directly to the provider.
+Run 2026-10-27 at 19:47 UTC by the operator tooling in `scripts/provider-key/`, with the owner's explicit authorization for exactly one read and the owner's confirmation that the historical key was revoked or rotated (not independently verified). Source: `production-readiness` at `863a69c84594c19527c87fdb0e4f2c9bce9592a2`. An isolated API (local environment, no demo features, only the limited gate on) used a disposable database that was dropped afterwards, a synthetic passenger session, and the dedicated replacement key from Windows Credential Manager. The read went through Darb's own endpoint, not directly to the provider.
 
 | Check | Result |
 | --- | --- |

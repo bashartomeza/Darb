@@ -642,7 +642,7 @@ async function tripChecks() {
     must(/rating/i.test(components) && /experience/i.test(components), `components ${components.slice(0, 160)}`);
     const seen = await http(`/admin/users/${user.id}`, { token: admin, expect: 200 });
     must(seen.json.user.driver_profile.trust_score === profile.trust_score, "the admin sees a different score");
-    const run = () => spawnSync("npm", ["run", "trust:recompute", "-w", "@masari/api"], { cwd: root, env: process.env, shell: true, encoding: "utf8", timeout: 120_000 });
+    const run = () => spawnSync("npm", ["run", "trust:recompute", "-w", "@darb/api"], { cwd: root, env: process.env, shell: true, encoding: "utf8", timeout: 120_000 });
     const first = run();
     const out = (first.stdout ?? "") + (first.stderr ?? "");
     must(first.status === 0 && /Recomputed trust score for \d+ driver\(s\); 0 failed/.test(out), `recompute job: ${out.slice(-200)}`);
@@ -679,7 +679,7 @@ async function tripChecks() {
 // --- Section 9: driver document expiry, restriction and renewal ---------------------------------------------
 const isoDay = (offsetDays) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
 function runExpiryJob() {
-  const r = spawnSync("npm", ["run", "documents:expiry", "-w", "@masari/api"], { cwd: root, env: process.env, shell: true, encoding: "utf8", timeout: 120_000 });
+  const r = spawnSync("npm", ["run", "documents:expiry", "-w", "@darb/api"], { cwd: root, env: process.env, shell: true, encoding: "utf8", timeout: 120_000 });
   const out = (r.stdout ?? "") + (r.stderr ?? "");
   const m = out.match(/Checked (\d+) driver\(s\): sent (\d+) reminder\(s\), restricted (\d+) driver/);
   if (r.status !== 0 || !m) throw new Error(`expiry job failed: ${out.slice(-300)}`);

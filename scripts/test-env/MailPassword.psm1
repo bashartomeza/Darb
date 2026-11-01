@@ -4,10 +4,10 @@
 
 Set-StrictMode -Version Latest
 
-$script:Target = "Masari/DemoGmailAppPassword"
+$script:Target = "Darb/DemoGmailAppPassword"
 
 if (-not ("Masari.MailCredentialStore" -as [type])) {
-  Add-Type -Namespace Masari -Name MailCredentialStore -MemberDefinition @'
+  Add-Type -Namespace Darb -Name MailCredentialStore -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 public struct CREDENTIAL {
   public uint Flags; public uint Type; public string TargetName; public string Comment;

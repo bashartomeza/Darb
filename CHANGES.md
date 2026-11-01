@@ -1,4 +1,4 @@
-# Masari — Change Report
+# Darb — Change Report
 
 ## Added files
 
@@ -33,7 +33,7 @@ The implementation modifies the existing matching, passenger, trip lifecycle, me
 
 ## Deleted files
 
-**None from the original Masari ZIP.**
+**None from the original Darb ZIP.**
 
 No existing source module or feature was removed. The final package retains the complete original project and only adds the files listed above.
 

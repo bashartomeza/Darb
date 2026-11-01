@@ -2,12 +2,12 @@ import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/status_chip.dart';
@@ -87,7 +87,7 @@ class _MerchantOrderDetailScreenState
         // ------------------------------------------------------------------
         // Summary: what this order is and where it stands.
         // ------------------------------------------------------------------
-        MasariInfoCard(
+        DarbInfoCard(
           title: l10n.orderDetails,
           icon: Icons.inventory_2_outlined,
           statusLabel: merchantStatusLabel(l10n, order.status),
@@ -135,7 +135,7 @@ class _MerchantOrderDetailScreenState
         // ------------------------------------------------------------------
         // Batch: consolidating parcels into one corridor trip.
         // ------------------------------------------------------------------
-        MasariSection(
+        DarbSection(
           title: l10n.parcelBatch,
           child: _BatchCard(
             order: order,
@@ -148,7 +148,7 @@ class _MerchantOrderDetailScreenState
         // ------------------------------------------------------------------
         // Matching: finding a driver route for the batch.
         // ------------------------------------------------------------------
-        MasariSection(
+        DarbSection(
           title: l10n.matchResult,
           child: _MatchCard(state: state, busy: _busy, onRunMatch: _runMatch),
         ),
@@ -163,7 +163,7 @@ class _MerchantOrderDetailScreenState
         // rather than something the merchant acts on here.
         // ------------------------------------------------------------------
         const SizedBox(height: AppTokens.spaceLarge),
-        MasariSection(
+        DarbSection(
           title: '${l10n.parcel} (${order.parcels.length})',
           child: Column(
             children: [
@@ -251,7 +251,7 @@ class _BatchCard extends StatelessWidget {
     final batch = order.latestBatch;
 
     if (batch == null) {
-      return MasariInfoCard(
+      return DarbInfoCard(
         title: l10n.createBatch,
         subtitle: l10n.parcelBatchExplanationDemo(order.parcels.length),
         icon: Icons.layers_outlined,
@@ -264,7 +264,7 @@ class _BatchCard extends StatelessWidget {
       );
     }
 
-    return MasariInfoCard(
+    return DarbInfoCard(
       title: l10n.parcelBatch,
       icon: Icons.layers_outlined,
       statusLabel: merchantStatusLabel(l10n, batch.status),
@@ -306,7 +306,7 @@ class _MatchCard extends StatelessWidget {
     final match = state.latestMatch;
 
     if (match == null || state.canRunMatch) {
-      return MasariInfoCard(
+      return DarbInfoCard(
         title: l10n.runMatching,
         subtitle: state.canRunMatch ? null : l10n.matchingUnavailable,
         icon: Icons.travel_explore_outlined,
@@ -321,7 +321,7 @@ class _MatchCard extends StatelessWidget {
       );
     }
 
-    return MasariInfoCard(
+    return DarbInfoCard(
       title: l10n.matchResult,
       icon: Icons.travel_explore_outlined,
       statusLabel: merchantStatusLabel(l10n, match.status),

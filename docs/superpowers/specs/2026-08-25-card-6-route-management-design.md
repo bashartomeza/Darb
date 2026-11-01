@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Card 6 completes and hardens Masari's existing feature-gated Admin route-management implementation. The existing `ServiceRoute`, `ServiceRouteVersion`, `Stop`, and `RouteVersionStop` models and `createRouteManagementService` lifecycle remain authoritative. The Card does not add a parallel Admin facade, a second state machine, a Prisma migration, maps, geocoding, provider integration, or mobile lifecycle changes.
+Card 6 completes and hardens Darb's existing feature-gated Admin route-management implementation. The existing `ServiceRoute`, `ServiceRouteVersion`, `Stop`, and `RouteVersionStop` models and `createRouteManagementService` lifecycle remain authoritative. The Card does not add a parallel Admin facade, a second state machine, a Prisma migration, maps, geocoding, provider integration, or mobile lifecycle changes.
 
 The supported operator flow is:
 

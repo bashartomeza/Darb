@@ -7,7 +7,7 @@ import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
 import 'auth_completion_screen.dart' show authFailure, authText;
@@ -779,7 +779,7 @@ class _GoogleOnboardingScreenState
       for (final document in documents ?? <Map<String, dynamic>>[])
         Padding(
           padding: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
-          child: MasariCard(
+          child: DarbCard(
             padding: EdgeInsets.zero,
             background: Colors.white,
             border: const BorderSide(color: AuthStyle.border),
@@ -1011,7 +1011,7 @@ class _RoleOption extends StatelessWidget {
         button: true,
         child: Opacity(
           opacity: enabled ? 1 : 0.5,
-          child: MasariCard(
+          child: DarbCard(
             onTap: onTap,
             background: selected
                 ? AuthStyle.orange.withValues(alpha: 0.06)

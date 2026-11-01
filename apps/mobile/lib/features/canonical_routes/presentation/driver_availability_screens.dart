@@ -1,12 +1,12 @@
-import '../../../core/widgets/masari_back_button.dart';
+import '../../../core/widgets/darb_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/canonical_route_controller.dart';
 import '../data/canonical_operation_storage.dart';
@@ -44,7 +44,7 @@ class DriverAvailabilityListScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(AppTokens.spaceLarge),
                     children: [
                       if (values.isEmpty)
-                        MasariCard(child: Text(l10n.noAvailabilities))
+                        DarbCard(child: Text(l10n.noAvailabilities))
                       else
                         for (final value in values)
                           Card(
@@ -138,7 +138,7 @@ class _DriverAvailabilityFormScreenState
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.newAvailability),
-          leading: const MasariBackButton(fallback: '/driver'),
+          leading: const DarbBackButton(fallback: '/driver'),
         ),
         body: SafeArea(
           child: ref
@@ -180,7 +180,7 @@ class _DriverAvailabilityFormScreenState
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     if (routes.isEmpty)
-                      MasariCard(child: Text(l10n.noPublishedRoutes))
+                      DarbCard(child: Text(l10n.noPublishedRoutes))
                     else
                       for (final route in routes)
                         RouteCard(
@@ -373,7 +373,7 @@ class _DriverAvailabilityDetailScreenState
                   return ListView(
                     padding: const EdgeInsets.all(AppTokens.spaceLarge),
                     children: [
-                      MasariCard(
+                      DarbCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [

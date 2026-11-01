@@ -4,17 +4,17 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
-import 'package:masari_mobile/features/canonical_assignments/domain/canonical_assignment_models.dart';
-import 'package:masari_mobile/features/canonical_routes/application/canonical_route_controller.dart';
-import 'package:masari_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
-import 'package:masari_mobile/features/canonical_routes/data/canonical_route_repository.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/shared_trips/application/shared_trip_controller.dart';
-import 'package:masari_mobile/features/shared_trips/data/shared_trip_repository.dart';
-import 'package:masari_mobile/features/shared_trips/domain/shared_trip_models.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/canonical_assignments/domain/canonical_assignment_models.dart';
+import 'package:darb_mobile/features/canonical_routes/application/canonical_route_controller.dart';
+import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
+import 'package:darb_mobile/features/canonical_routes/data/canonical_route_repository.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/shared_trips/application/shared_trip_controller.dart';
+import 'package:darb_mobile/features/shared_trips/data/shared_trip_repository.dart';
+import 'package:darb_mobile/features/shared_trips/domain/shared_trip_models.dart';
 
 import 'support/auth_test_support.dart';
 

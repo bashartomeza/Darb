@@ -1,6 +1,6 @@
-# Masari MySQL Demo Runbook
+# Darb MySQL Demo Runbook
 
-This runbook operates the approved Masari judge story without source-code knowledge. The demo is Arabic-first and uses only the locked Hebron / PPU / Bab Al-Zawiya to Bethlehem corridor.
+This runbook operates the approved Darb judge story without source-code knowledge. The demo is Arabic-first and uses only the locked Hebron / PPU / Bab Al-Zawiya to Bethlehem corridor.
 
 ## 1. Required software
 
@@ -49,7 +49,7 @@ Use the same safe local environment in every terminal that starts or validates t
 7. Install the final APK with `adb install -r apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`.
 8. Run `npm run demo:preflight` and require every check to pass.
 9. Run `npm run demo:smoke`; a JSON line with `"ok":true` is the ready signal.
-10. Open the admin URL and launch Masari on the emulator.
+10. Open the admin URL and launch Darb on the emulator.
 
 Do not terminate a process occupying a required port until its ownership is understood.
 
@@ -122,15 +122,15 @@ A clean reset restores 5 users, 2 driver profiles/routes, 1 passenger request, 1
 
 | Time | Presenter story | Expected proof |
 | --- | --- | --- |
-| 0:00–0:45 | Explain Palestine's fragmented passenger/parcel trips and the locked corridor. | Arabic-first Masari identity and corridor are visible. |
+| 0:00–0:45 | Explain Palestine's fragmented passenger/parcel trips and the locked corridor. | Arabic-first Darb identity and corridor are visible. |
 | 0:45–1:30 | Show the passenger request and run matching. | Compatible route, 93.17% deterministic score, breakdown, and explanation. |
 | 1:30–2:30 | Show the merchant's five parcels and create the batch. | Persisted five-parcel batch and 86.12 km estimated saving. |
 | 2:30–3:30 | Run the combined match or use **Run Full Demo Sequence** for automation. | One match connects passenger, merchant order/batch, and selected route. |
 | 3:30–4:30 | Open the selected driver's inbox and accept. | One combined trip; alternate driver has no match. |
 | 4:30–5:30 | Advance valid statuses and simulate multiple points. | Only the next valid action appears; location sequence increases. |
 | 5:30–6:30 | Refresh passenger and merchant observers. | Both see the same trip/location; merchant order, parcels, and batch follow status. |
-| 6:30–7:30 | Show the admin comparison. | Masari uses 1 trip versus 6, 21.53 km versus 129.19 km, and 43.06 versus 258.38 estimated cost. |
-| 7:30–8:00 | Close on shared capacity, fewer trips, and explainable matching. | Winner is Masari; no AI, live GPS, or maps are claimed. |
+| 6:30–7:30 | Show the admin comparison. | Darb uses 1 trip versus 6, 21.53 km versus 129.19 km, and 43.06 versus 258.38 estimated cost. |
+| 7:30–8:00 | Close on shared capacity, fewer trips, and explainable matching. | Winner is Darb; no AI, live GPS, or maps are claimed. |
 
 ## 11. Exact role actions and expected results
 
@@ -182,8 +182,8 @@ Passenger and merchant observers can read only their connected trip. The selecte
 
 ## 13. Comparison talking points
 
-- Masari combines one passenger request and one five-parcel batch on an already-compatible route.
-- Deterministic rehearsal result: 1 Masari trip versus 6 nearest-driver trips.
+- Darb combines one passenger request and one five-parcel batch on an already-compatible route.
+- Deterministic rehearsal result: 1 Darb trip versus 6 nearest-driver trips.
 - Estimated distance: 21.53 km versus 129.19 km.
 - Estimated cost: 43.06 versus 258.38 demo cost units.
 - Batching avoids five independent parcel dispatches and reports 86.12 km estimated distance saved.

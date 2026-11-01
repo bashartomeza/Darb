@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/core/widgets/masari_back_button.dart';
+import 'package:darb_mobile/core/widgets/darb_back_button.dart';
 
 void main() {
   for (final directLink in [true, false]) {
@@ -19,7 +19,7 @@ void main() {
               path: '/detail',
               builder: (_, _) => Scaffold(
                 appBar: AppBar(
-                  leading: const MasariBackButton(fallback: '/home'),
+                  leading: const DarbBackButton(fallback: '/home'),
                 ),
                 body: const Text('Detail'),
               ),

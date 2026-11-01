@@ -2,7 +2,7 @@
 
 Status: proposed; M7D1 closed; M7D1B evidence approved and awaiting human merge; final provider not selected.
 
-Masari needs immutable canonical route geometry but must not couple matching or Trip creation to provider SDKs. Mapbox began as the conditional hosted bakeoff lead. Google, HERE, Stadia-hosted geocoding/routing, and the separate `OSM_SELF_HOSTED_VALHALLA` candidate are evaluated. MapLibre itself is a renderer, not a geocoder or router. Routing, geocoding, tiles and rendering may be selected separately.
+Darb needs immutable canonical route geometry but must not couple matching or Trip creation to provider SDKs. Mapbox began as the conditional hosted bakeoff lead. Google, HERE, Stadia-hosted geocoding/routing, and the separate `OSM_SELF_HOSTED_VALHALLA` candidate are evaluated. MapLibre itself is a renderer, not a geocoder or router. Routing, geocoding, tiles and rendering may be selected separately.
 
 Decision for M7D1: adopt the provider-neutral server abstraction, deterministic fake, protected entity-referenced preview, fixed-host adapters, fail-closed configuration, no fallback, and deterministic checksum. Do not persist preview results or enable any production provider. Do not add a client renderer SDK.
 

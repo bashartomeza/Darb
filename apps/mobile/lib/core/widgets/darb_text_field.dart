@@ -8,8 +8,8 @@ import '../theme/app_tokens.dart';
 /// Alignment is deliberately left to Flutter's directionality rather than being
 /// forced: under the Arabic locale the label, hint and input all align to the
 /// start edge (right), and flip automatically for English.
-class MasariTextField extends StatelessWidget {
-  const MasariTextField({
+class DarbTextField extends StatelessWidget {
+  const DarbTextField({
     required this.controller,
     this.label,
     this.hint,

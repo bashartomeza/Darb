@@ -5,9 +5,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/auth/data/authenticated_api_client.dart';
-import 'package:masari_mobile/features/canonical_assignments/presentation/canonical_assignment_screens.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
+import 'package:darb_mobile/features/canonical_assignments/presentation/canonical_assignment_screens.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'canonical_assignments_test.dart';
 import 'support/auth_test_support.dart';

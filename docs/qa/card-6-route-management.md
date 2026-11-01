@@ -51,7 +51,7 @@ $env:VITE_APP_ENV = 'local'
 $env:VITE_ENABLE_DEMO_FEATURES = 'false'
 $env:VITE_API_BASE_URL = 'http://localhost:3100'
 $env:VITE_ROUTE_MANAGEMENT_ENABLED = 'true'
-npm run dev -w @masari/admin -- --port 5174
+npm run dev -w @darb/admin -- --port 5174
 ```
 
 ## Fixture identities

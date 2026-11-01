@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
 import '../../features/checkpoints/domain/checkpoint_models.dart';
 import '../theme/semantic_colors.dart';
-import '../widgets/masari_map.dart';
+import '../widgets/darb_map.dart';
 
 /// Colour for a checkpoint status: green open, red closed, orange moderate
 /// congestion, neutral grey when the status is unknown.
@@ -36,7 +36,7 @@ bool hasValidCheckpointPosition(Checkpoint checkpoint) {
 
 /// Markers for every checkpoint that can be drawn. Invalid entries are skipped
 /// so one bad record never breaks the map. Shared by every map screen.
-List<MasariMapMarker> checkpointTrafficMarkers(
+List<DarbMapMarker> checkpointTrafficMarkers(
   Iterable<Checkpoint> checkpoints,
 ) => [
   for (final checkpoint in checkpoints)
@@ -46,14 +46,14 @@ List<MasariMapMarker> checkpointTrafficMarkers(
 
 /// Builds a visually distinct marker for a checkpoint and includes both
 /// direction statuses in the information card shown when the marker is tapped.
-MasariMapMarker checkpointTrafficMarker(Checkpoint checkpoint) {
+DarbMapMarker checkpointTrafficMarker(Checkpoint checkpoint) {
   final entering = _normaliseStatus(checkpoint.enteringStatus);
   final leaving = _normaliseStatus(checkpoint.leavingStatus);
 
   // Use the most severe of the two directions to colour the marker.
   final status = checkpoint.status;
 
-  return MasariMapMarker(
+  return DarbMapMarker(
     position: GeoPoint(
       checkpoint.position.latitude,
       checkpoint.position.longitude,
@@ -62,7 +62,7 @@ MasariMapMarker checkpointTrafficMarker(Checkpoint checkpoint) {
     color: checkpointStatusColor(status),
     foreground: Colors.white,
     size: 40,
-    type: MasariMapMarkerType.checkpoint,
+    type: DarbMapMarkerType.checkpoint,
     label: _buildLabel(checkpoint, entering: entering, leaving: leaving),
   );
 }

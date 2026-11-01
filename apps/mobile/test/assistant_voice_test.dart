@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/theme/app_theme.dart';
-import 'package:masari_mobile/features/assistant/data/passenger_assistant_repository.dart';
-import 'package:masari_mobile/features/assistant/data/speech_service.dart';
-import 'package:masari_mobile/features/assistant/domain/passenger_assistant_models.dart';
-import 'package:masari_mobile/features/assistant/presentation/passenger_assistant_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/theme/app_theme.dart';
+import 'package:darb_mobile/features/assistant/data/passenger_assistant_repository.dart';
+import 'package:darb_mobile/features/assistant/data/speech_service.dart';
+import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
+import 'package:darb_mobile/features/assistant/presentation/passenger_assistant_screen.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 class _FakeSpeech implements SpeechService {
   SpeechAvailability availability = SpeechAvailability.available;

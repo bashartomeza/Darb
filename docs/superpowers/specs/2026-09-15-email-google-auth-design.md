@@ -1,4 +1,4 @@
-# Masari Email, Password, and Google Authentication Design
+# Darb Email, Password, and Google Authentication Design
 
 ## Status
 
@@ -107,7 +107,7 @@ unidentified
   -> full_product_access
 ~~~
 
-The final transaction consumes a one-time opaque token, rechecks exact effective legal documents, creates User plus Google ExternalIdentity when applicable, writes consents, and creates a normal Masari session. No user is created before consent.
+The final transaction consumes a one-time opaque token, rechecks exact effective legal documents, creates User plus Google ExternalIdentity when applicable, writes consents, and creates a normal Darb session. No user is created before consent.
 
 ## Exact API contracts
 
@@ -145,7 +145,7 @@ Phone proof uses an injected production provider, rate-limited opaque challenges
 
 Backend verifies RS256 signature, Google issuer, expiry, endpoint-specific audience, sub, and verified email for new signup. Admin accepts only GOOGLE_ADMIN_WEB_CLIENT_ID. Mobile accepts only GOOGLE_MOBILE_SERVER_CLIENT_ID; Android is separately registered by package and signing certificate. Client secrets never enter source, Flutter, Vite, logs, or demo config.
 
-A linked subject signs in even when snapshot email changes. Unknown subject plus matching Masari email returns explicit_link_required; it never links. Linking needs current session and fresh password reauthentication for password users or verified-email reauthentication for passwordless users. Claimed subject is a neutral conflict. Admin has no email fallback and cannot create, link, or promote.
+A linked subject signs in even when snapshot email changes. Unknown subject plus matching Darb email returns explicit_link_required; it never links. Linking needs current session and fresh password reauthentication for password users or verified-email reauthentication for passwordless users. Claimed subject is a neutral conflict. Admin has no email fallback and cannot create, link, or promote.
 
 ## Rollout/configuration
 
@@ -183,7 +183,7 @@ Tests cover Google verification failures; missing email; collisions; all rollout
 
 ## Migration rehearsal
 
-Use only an isolated disposable MySQL database restored from a sanitized production-schema snapshot. Record before/after row counts and checksums; apply schema; dry-run and write backfill; validate indexes/foreign keys; run auth/session integration tests; restore snapshot; record timing, locks, rollback point, and exceptions. Never point to real Masari.
+Use only an isolated disposable MySQL database restored from a sanitized production-schema snapshot. Record before/after row counts and checksums; apply schema; dry-run and write backfill; validate indexes/foreign keys; run auth/session integration tests; restore snapshot; record timing, locks, rollback point, and exceptions. Never point to real Darb.
 
 ## Ready state
 

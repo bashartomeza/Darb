@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/driver/data/driver_repository.dart';
 
 void main() {
   test('parses a reported acceptance rate', () {

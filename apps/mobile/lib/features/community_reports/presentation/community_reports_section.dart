@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/location/location_service.dart';
@@ -8,8 +8,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/foreground_refresh.dart';
-import '../../../core/widgets/masari_bottom_nav.dart';
-import '../../../core/widgets/masari_map.dart';
+import '../../../core/widgets/darb_bottom_nav.dart';
+import '../../../core/widgets/darb_map.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../application/community_reports_controller.dart';
 import '../data/community_report_models.dart';
@@ -65,14 +65,14 @@ Color communityGroupColor(CommunityReportGroup group) => switch (group) {
 /// Map pins for reports that carry a location. Labels repeat the category and
 /// place only, never the free-text description, and flag the report as
 /// unverified.
-List<MasariMapMarker> communityReportMarkers(
+List<DarbMapMarker> communityReportMarkers(
   AppLocalizations l10n,
   List<CommunityReport> reports,
 ) {
   return [
     for (final report in reports)
       if (report.hasLocation)
-        MasariMapMarker(
+        DarbMapMarker(
           position: GeoPoint(report.latitude!, report.longitude!),
           icon: report.category.icon,
           color: communityGroupColor(report.category.group),
@@ -99,7 +99,7 @@ class _CommunityReportsSectionState
   CommunityReportGroup? _group;
   CommunityReportSort _sort = CommunityReportSort.recent;
 
-  Future<void> _add() => showMasariBottomSheet<void>(
+  Future<void> _add() => showDarbBottomSheet<void>(
     context: context,
     child: const CommunityReportForm(),
   );

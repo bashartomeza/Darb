@@ -6,7 +6,7 @@ Accepted for M6B1B.
 
 ## Context
 
-Masari needed request correlation and production JSON logs without allowing bodies, query strings, credentials, phone numbers, or precise locations into operational output. Business `AuditEvent` rows serve a different compliance/history purpose.
+Darb needed request correlation and production JSON logs without allowing bodies, query strings, credentials, phone numbers, or precise locations into operational output. Business `AuditEvent` rows serve a different compliance/history purpose.
 
 ## Decision
 

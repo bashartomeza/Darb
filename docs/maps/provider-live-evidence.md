@@ -43,7 +43,7 @@ No aggregate score can conceal a failed or missing mandatory gate.
 | G9 | Commercial feasibility | CONDITIONAL | UNRESOLVED | UNRESOLVED | CONDITIONAL |
 | G10 | Operational quota/support suitability | CONDITIONAL | UNRESOLVED | UNRESOLVED | CONDITIONAL |
 
-G1 is based on the already-approved M7D1 adapters and deterministic tests, not live evidence. Google fails G6 for the proposed shared canonical record because the published indefinite geocode exception is end-user-specific and logically isolated, while Routes content storage is restricted. HERE fails G6 under standard public terms because results cannot form Masari's multi-year canonical record without separate rights. Mapbox and Stadia remain unresolved because their geocode paths can be made conditional, but published route-result persistence rights do not approve every proposed field.
+G1 is based on the already-approved M7D1 adapters and deterministic tests, not live evidence. Google fails G6 for the proposed shared canonical record because the published indefinite geocode exception is end-user-specific and logically isolated, while Routes content storage is restricted. HERE fails G6 under standard public terms because results cannot form Darb's multi-year canonical record without separate rights. Mapbox and Stadia remain unresolved because their geocode paths can be made conditional, but published route-result persistence rights do not approve every proposed field.
 
 ## OSM self-hosted candidate gates
 
@@ -72,7 +72,7 @@ The corrected Google Routes audit used documented coordinate nesting, a minimal 
 
 M7D1B evidence quality is approved without a provider winner. Mapbox, HERE, and Stadia remain unexecuted and would need separate evidence before any future consideration. Google address and Places quality fail this corpus; its corrected route behavior remains `INSUFFICIENT_EVIDENCE`, and production storage, privacy, commercial, quota, and display design are separately unapproved. The OSM routing candidate still needs real-world access review, ODbL legal approval, renderer attribution design, and production operational/TCO review. These block provider approval and deployment, not closure of the evidence milestone after human merge review.
 
-No generic geocoder is approved as Masari's source of truth. `GOOGLE_DISCOVERY_FALLBACK_CANDIDATE=CONDITIONAL` only for a later optional, ephemeral discovery design; `GOOGLE_CANONICAL_PLACE_SOURCE=REJECTED / NOT_APPROVED`. `CANONICAL_PLACE_CATALOG_DIRECTION=APPROVED`, and the recommended next design milestone is M7D1C — Canonical Palestinian Place Catalog & Search Architecture. M7D1C implementation has not started.
+No generic geocoder is approved as Darb's source of truth. `GOOGLE_DISCOVERY_FALLBACK_CANDIDATE=CONDITIONAL` only for a later optional, ephemeral discovery design; `GOOGLE_CANONICAL_PLACE_SOURCE=REJECTED / NOT_APPROVED`. `CANONICAL_PLACE_CATALOG_DIRECTION=APPROVED`, and the recommended next design milestone is M7D1C — Canonical Palestinian Place Catalog & Search Architecture. M7D1C implementation has not started.
 
 Failure behavior remains covered by deterministic adapter tests for authorization, timeout, rate limit/quota, 5xx, no result, malformed response, bounded retry, circuit breaker, redirect rejection, and credential non-disclosure. Live quota exhaustion or abusive rate testing is prohibited.
 

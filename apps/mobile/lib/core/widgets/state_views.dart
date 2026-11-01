@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 import '../theme/passenger_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/semantic_colors.dart';
-import 'masari_button.dart';
+import 'darb_button.dart';
 
 /// Empty state: a monochromatic teal icon, a short explanation, and a single
 /// clear action underneath.
@@ -73,11 +73,7 @@ class EmptyState extends StatelessWidget {
           ],
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppTokens.spaceLarge),
-            MasariButton(
-              label: actionLabel!,
-              onPressed: onAction,
-              expand: false,
-            ),
+            DarbButton(label: actionLabel!, onPressed: onAction, expand: false),
           ],
         ],
       ),
@@ -146,7 +142,7 @@ class ErrorStateView extends StatelessWidget {
           ],
           if (retryLabel != null && onRetry != null) ...[
             const SizedBox(height: AppTokens.spaceLarge),
-            MasariButton.outline(
+            DarbButton.outline(
               label: retryLabel!,
               onPressed: onRetry,
               icon: Icons.refresh,

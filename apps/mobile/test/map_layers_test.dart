@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
 
 Map<String, dynamic> _stop(String id, double? lat, double? lng, int sequence) =>
     {

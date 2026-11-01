@@ -1,4 +1,4 @@
-package ps.masari.mobile
+package ps.darb.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 

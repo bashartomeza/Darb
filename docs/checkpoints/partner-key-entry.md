@@ -24,11 +24,11 @@ Limits, stated plainly: this ran on one Windows machine, the key is briefly read
 pwsh -NoProfile -File scripts/provider-key/set-partner-key.ps1
 ```
 
-Paste the key at the hidden prompt. It is stored in Windows Credential Manager for your Windows user under `Masari/AweenRayehPartnerKey`. To remove it: add `-Remove`.
+Paste the key at the hidden prompt. It is stored in Windows Credential Manager for your Windows user under `Darb/AweenRayehPartnerKey`. To remove it: add `-Remove`.
 
 ## Step 2: start an isolated API with the key (you, or an operator you authorize)
 
-Use a disposable database (name ending in `_ci`, `_qa` or `_sim`). Set `DATABASE_URL` and `JWT_SECRET` in that shell, build the API once (`npm run build -w @masari/api`), then:
+Use a disposable database (name ending in `_ci`, `_qa` or `_sim`). Set `DATABASE_URL` and `JWT_SECRET` in that shell, build the API once (`npm run build -w @darb/api`), then:
 
 ```powershell
 pwsh -NoProfile -File scripts/provider-key/run-api-with-partner-key.ps1

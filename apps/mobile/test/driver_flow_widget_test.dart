@@ -7,10 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/app.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/app.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_app_config.dart';
@@ -221,7 +221,7 @@ Future<void> _pumpApp(
         appConfigProvider.overrideWithValue(config),
         httpClientProvider.overrideWithValue(MockClient(handler)),
       ],
-      child: const MasariApp(),
+      child: const DarbApp(),
     ),
   );
   await tester.pumpAndSettle();

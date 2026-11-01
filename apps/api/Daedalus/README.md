@@ -1,4 +1,4 @@
-# ai_services — Masari Dispatch NLP Engine
+# ai_services — Darb Dispatch NLP Engine
 
 Parses raw Palestinian-dialect dispatch text into a validated structured
 schema for the matching/dispatch pipeline.

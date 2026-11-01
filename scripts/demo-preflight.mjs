@@ -111,7 +111,7 @@ await checkHttp("API readiness", `${apiBaseUrl}/api/v1/health/ready`, async (res
 });
 await checkHttp("admin console", adminUrl, async (response) => {
   const body = await response.text();
-  return /<title>(Darb|Masari) Admin Console<\/title>/.test(body) ? undefined : "is not the Darb admin console";
+  return /<title>(Darb|Darb) Admin Console<\/title>/.test(body) ? undefined : "is not the Darb admin console";
 });
 
 const adminExample = readFileSync(resolve(root, "apps/admin/.env.example"), "utf8");

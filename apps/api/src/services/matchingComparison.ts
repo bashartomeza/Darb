@@ -419,7 +419,7 @@ export function batchParcelOrders(requests: SimRequest[], windowMin: number): Un
   return units.sort((a, b) => a.readyAt - b.readyAt || a.members[0]!.id.localeCompare(b.members[0]!.id));
 }
 
-function runMasari(scenario: SimScenario, params: SimParams): RawMetrics {
+function runDarb(scenario: SimScenario, params: SimParams): RawMetrics {
   const states = freshStates(scenario);
   const raw = emptyRaw();
   raw.total = scenario.requests.length;
@@ -545,7 +545,7 @@ export type ComparisonSimulation = {
 };
 
 export function runScenario(scenario: SimScenario, params: SimParams): Record<MethodKey, RawMetrics> {
-  return { manual: runManual(scenario, params), nearest: runNearest(scenario, params), masari: runMasari(scenario, params) };
+  return { manual: runManual(scenario, params), nearest: runNearest(scenario, params), masari: runDarb(scenario, params) };
 }
 
 export function runComparisonSimulation(

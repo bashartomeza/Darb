@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Complete and harden Masari's existing feature-gated Admin route-management workflow without changing Prisma, migrations, maps/providers, legacy DriverRoute, or mobile route behavior.
+**Goal:** Complete and harden Darb's existing feature-gated Admin route-management workflow without changing Prisma, migrations, maps/providers, legacy DriverRoute, or mobile route behavior.
 
 **Architecture:** Extend `createRouteManagementService`, its existing Admin router, and the existing `#/routes` workspace. Use bounded Prisma projections and existing draft revisions, add explicit observed-current-version fences to lifecycle mutations, and keep the backend publication validator authoritative. Add a guarded disposable-MySQL harness for concurrency and human-QA fixtures.
 
@@ -60,7 +60,7 @@ Use literal bodies for resume, version retirement, and route retirement. Route r
 
 - [ ] **Step 2: Run the focused API test and verify RED**
 
-Run: `npm test -w @masari/api -- --run src/tests/routeManagementApi.test.ts`
+Run: `npm test -w @darb/api -- --run src/tests/routeManagementApi.test.ts`
 
 Expected: FAIL because lifecycle schemas omit `expected_current_version_id` and service mocks receive the old argument shape.
 
@@ -70,7 +70,7 @@ Extend the Admin detail fixture with 51 historical versions plus forbidden field
 
 - [ ] **Step 4: Run the focused API test and verify the projection test is RED**
 
-Run: `npm test -w @masari/api -- --run src/tests/routeManagementApi.test.ts`
+Run: `npm test -w @darb/api -- --run src/tests/routeManagementApi.test.ts`
 
 Expected: FAIL because the current serializer returns every supplied historical version.
 
@@ -96,7 +96,7 @@ Export `ADMIN_ROUTE_VERSION_HISTORY_LIMIT = 50` from the service. Limit the serv
 Run:
 
 ```powershell
-npm test -w @masari/api -- --run src/tests/routeManagementApi.test.ts
+npm test -w @darb/api -- --run src/tests/routeManagementApi.test.ts
 npm run typecheck:api
 ```
 
@@ -138,7 +138,7 @@ For pause/resume/retire, assert a mismatch occurs before `serviceRouteVersion.up
 
 - [ ] **Step 2: Run the service test and verify RED**
 
-Run: `npm test -w @masari/api -- --run src/tests/routeManagementService.test.ts`
+Run: `npm test -w @darb/api -- --run src/tests/routeManagementService.test.ts`
 
 Expected: FAIL because the guard and structured lifecycle inputs do not yet exist.
 
@@ -162,7 +162,7 @@ Call it after locking the route and before any version/route update. Pause/resum
 Run:
 
 ```powershell
-npm test -w @masari/api -- --run src/tests/routeManagementService.test.ts src/tests/routeManagementApi.test.ts
+npm test -w @darb/api -- --run src/tests/routeManagementService.test.ts src/tests/routeManagementApi.test.ts
 ```
 
 Expected: both files pass.
@@ -233,7 +233,7 @@ Cover resume, version retirement, and route retirement.
 
 - [ ] **Step 2: Run Admin API tests and verify RED**
 
-Run: `npm test -w @masari/admin -- --run src/api.test.ts`
+Run: `npm test -w @darb/admin -- --run src/api.test.ts`
 
 Expected: FAIL because the client currently sends only `reason` or `{}`.
 
@@ -271,7 +271,7 @@ Also prove non-409 errors do not reload and never expose unknown internal text.
 
 - [ ] **Step 5: Run the focused UI test and verify RED**
 
-Run: `npm test -w @masari/admin -- --run src/features/routes/RouteManagement.test.tsx`
+Run: `npm test -w @darb/admin -- --run src/features/routes/RouteManagement.test.tsx`
 
 Expected: FAIL because the helper does not exist.
 
@@ -284,7 +284,7 @@ Add a helper that reloads on every status-409 error and returns localized feedba
 Run:
 
 ```powershell
-npm test -w @masari/admin -- --run src/api.test.ts src/features/routes/RouteManagement.test.tsx
+npm test -w @darb/admin -- --run src/api.test.ts src/features/routes/RouteManagement.test.tsx
 npm run typecheck:admin
 ```
 
@@ -319,7 +319,7 @@ Render the real component with `renderToStaticMarkup`. Assert active unused stop
 
 - [ ] **Step 2: Run the StopEditor test and verify RED**
 
-Run: `npm test -w @masari/admin -- --run src/features/routes/StopEditor.test.tsx`
+Run: `npm test -w @darb/admin -- --run src/features/routes/StopEditor.test.tsx`
 
 Expected: FAIL because `StopEditor.tsx` does not exist.
 
@@ -342,7 +342,7 @@ Also assert the real rendered directory includes status, direction and region fi
 
 - [ ] **Step 5: Run RouteManagement tests and verify RED**
 
-Run: `npm test -w @masari/admin -- --run src/features/routes/RouteManagement.test.tsx src/features/routes/StopEditor.test.tsx`
+Run: `npm test -w @darb/admin -- --run src/features/routes/RouteManagement.test.tsx src/features/routes/StopEditor.test.tsx`
 
 Expected: FAIL on missing filters/readiness/status/preview behavior.
 
@@ -361,7 +361,7 @@ Add bounded localized labels for direction/region filters, route/version/stop st
 Run:
 
 ```powershell
-npm test -w @masari/admin -- --run src/features/routes/RouteManagement.test.tsx src/features/routes/StopEditor.test.tsx src/api.test.ts
+npm test -w @darb/admin -- --run src/features/routes/RouteManagement.test.tsx src/features/routes/StopEditor.test.tsx src/api.test.ts
 npm run test:admin
 npm run build:admin
 ```
@@ -395,7 +395,7 @@ Add a small exported `assertRouteQaDatabase(databaseUrl)` and test it in `routeM
 
 - [ ] **Step 2: Run the guard test and verify RED**
 
-Run: `npm test -w @masari/api -- --run src/tests/routeManagementService.test.ts`
+Run: `npm test -w @darb/api -- --run src/tests/routeManagementService.test.ts`
 
 Expected: FAIL because the QA guard does not exist.
 

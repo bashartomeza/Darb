@@ -5,7 +5,7 @@ import '../theme/app_tokens.dart';
 
 /// The elevation levels the design system defines, used functionally to signal
 /// how content stacks in the user's workflow.
-enum MasariCardLevel {
+enum DarbCardLevel {
   /// Level 1 — the default. A hairline stroke instead of a shadow, so cards
   /// stay legible in bright outdoor light.
   card,
@@ -21,12 +21,12 @@ enum MasariCardLevel {
 ///
 /// [child] and [onTap] keep their original signature: this widget is used in
 /// 80 places, and those call sites continue to work untouched.
-class MasariCard extends StatelessWidget {
-  const MasariCard({
+class DarbCard extends StatelessWidget {
+  const DarbCard({
     required this.child,
     this.onTap,
     this.padding = const EdgeInsets.all(AppTokens.spaceMedium),
-    this.level = MasariCardLevel.card,
+    this.level = DarbCardLevel.card,
     this.background,
     this.border,
     super.key,
@@ -40,7 +40,7 @@ class MasariCard extends StatelessWidget {
   /// more horizontal room on small screens.
   final EdgeInsetsGeometry padding;
 
-  final MasariCardLevel level;
+  final DarbCardLevel level;
 
   /// Overrides the surface colour, e.g. for a highlighted summary card.
   final Color? background;
@@ -49,9 +49,9 @@ class MasariCard extends StatelessWidget {
   final BorderSide? border;
 
   double get _elevation => switch (level) {
-    MasariCardLevel.card => AppTokens.elevationBase,
-    MasariCardLevel.floating => AppTokens.elevationFloating,
-    MasariCardLevel.overlay => AppTokens.elevationOverlay,
+    DarbCardLevel.card => AppTokens.elevationBase,
+    DarbCardLevel.floating => AppTokens.elevationFloating,
+    DarbCardLevel.overlay => AppTokens.elevationOverlay,
   };
 
   @override

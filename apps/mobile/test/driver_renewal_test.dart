@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/auth/application/auth_actor_binding.dart';
-import 'package:masari_mobile/features/auth/data/authenticated_api_client.dart';
-import 'package:masari_mobile/features/driver_renewal/data/driver_renewal_repository.dart';
-import 'package:masari_mobile/features/driver_renewal/presentation/driver_renewal_banner.dart';
-import 'package:masari_mobile/features/driver_renewal/presentation/driver_renewal_screen.dart';
-import 'package:masari_mobile/features/notifications/presentation/notifications_screen.dart';
-import 'package:masari_mobile/features/onboarding/domain/onboarding_models.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
+import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
+import 'package:darb_mobile/features/driver_renewal/data/driver_renewal_repository.dart';
+import 'package:darb_mobile/features/driver_renewal/presentation/driver_renewal_banner.dart';
+import 'package:darb_mobile/features/driver_renewal/presentation/driver_renewal_screen.dart';
+import 'package:darb_mobile/features/notifications/presentation/notifications_screen.dart';
+import 'package:darb_mobile/features/onboarding/domain/onboarding_models.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
 

@@ -10,7 +10,7 @@ created, and the admin UI labels the output as such.
   re-exports it. The live matcher and the simulation therefore share one
   implementation.
 - API: `GET /api/v1/compare/simulation?seed=<int>&manual_response_delay_min=<n>` (admin only)
-- CLI: `npm run simulate:compare -w @masari/api -- [--seed=N] [--delay=MIN] [--out=file.json]`
+- CLI: `npm run simulate:compare -w @darb/api -- [--seed=N] [--delay=MIN] [--out=file.json]`
   prints a table and writes JSON (default `comparison-simulation.json` in the cwd).
 - Admin: Matching / Batching page, "Simulated comparison" tab (EN + AR).
 

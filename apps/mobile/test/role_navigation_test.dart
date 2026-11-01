@@ -1,4 +1,4 @@
-import 'package:masari_mobile/core/widgets/role_nav_scaffold.dart';
+import 'package:darb_mobile/core/widgets/role_nav_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -6,11 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/app.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/core/i18n/domain_labels.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/app.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/core/i18n/domain_labels.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_app_config.dart';
@@ -339,7 +339,7 @@ Future<void> _pumpApp(
         appConfigProvider.overrideWithValue(config),
         httpClientProvider.overrideWithValue(MockClient(handler)),
       ],
-      child: const MasariApp(),
+      child: const DarbApp(),
     ),
   );
   await tester.pumpAndSettle();
@@ -404,7 +404,7 @@ Future<http.Response> _merchantHandler(http.Request request) async {
 Future<http.Response> _sessionsOr404(http.Request request) async {
   if (request.url.path.endsWith('/auth/sessions') && request.method == 'GET') {
     return http.Response(
-      '{"sessions":[{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:05:00.000Z","expires_at":"2026-08-17T10:00:00.000Z","is_current":true,"revoked":false}]}',
+      '{"sessions":[{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:05:00.000Z","expires_at":"2026-08-17T10:00:00.000Z","is_current":true,"revoked":false}]}',
       200,
     );
   }
