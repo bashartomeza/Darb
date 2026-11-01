@@ -212,6 +212,7 @@ class _CreateMerchantOrderScreenState
     return MasariCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: AppTokens.spaceMedium,
         children: [
           Text(
             '${l10n.parcel} ${index + 1}',

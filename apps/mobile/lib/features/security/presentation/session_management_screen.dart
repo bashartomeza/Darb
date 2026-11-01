@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/map_cache_tile.dart';
@@ -55,8 +56,18 @@ class _SessionManagementScreenState
             ),
             children: [
               const SessionStatusBanner(),
-              const CredentialSettings(),
-              const MapCacheTile(),
+              const SizedBox(height: AppTokens.spaceSmall),
+              Material(
+                color: AppTheme.surfaceContainerLow,
+                clipBehavior: Clip.antiAlias,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+                  side: const BorderSide(color: AppTheme.outlineVariant),
+                ),
+                child: const Column(
+                  children: [CredentialSettings(), MapCacheTile()],
+                ),
+              ),
               if (_actionFailed) ...[
                 const SizedBox(height: AppTokens.spaceMedium),
                 OfflineBanner(

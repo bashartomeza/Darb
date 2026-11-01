@@ -92,18 +92,7 @@ class RoleShellScaffold extends StatelessWidget {
         centerTitle: false,
         automaticallyImplyLeading: false,
         leading: isDetail ? MasariBackButton(fallback: roleHome) : null,
-        actions: [
-          if (!wide)
-            Builder(
-              builder: (context) => IconButton(
-                tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-                icon: const Icon(Icons.menu_rounded),
-                onPressed: () => Scaffold.of(context).openDrawer(),
-              ),
-            ),
-          const LanguageSwitch(),
-          const SizedBox(width: 12),
-        ],
+        actions: [const LanguageSwitch(), const SizedBox(width: 12)],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
           child: Divider(height: 1),
@@ -117,9 +106,13 @@ class RoleShellScaffold extends StatelessWidget {
           ),
         ),
       ),
-      drawer: wide
+      bottomNavigationBar: wide
           ? null
-          : Drawer(child: _sidebar(context, arabic, closeDrawer: true)),
+          : MasariBottomNav(
+              items: [for (final d in destinations) d.item],
+              currentIndex: navigationShell.currentIndex,
+              onSelected: _onSelected,
+            ),
     );
     return ColoredBox(
       color: const Color(0xFFF6F6F6),
@@ -182,7 +175,7 @@ class RoleShellScaffold extends StatelessWidget {
     bool closeDrawer = false,
   }) {
     return Material(
-      color: const Color(0xFF1C1A1A),
+      color: Colors.white,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -207,7 +200,7 @@ class RoleShellScaffold extends StatelessWidget {
                       Text(
                         arabic ? 'درب' : 'Darb',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppTheme.onSurface,
                           fontSize: 26,
                           fontWeight: FontWeight.w700,
                         ),
@@ -215,7 +208,7 @@ class RoleShellScaffold extends StatelessWidget {
                       const Text(
                         'D A R B',
                         style: TextStyle(
-                          color: Color(0xFFD0D0D0),
+                          color: AppTheme.onSurfaceVariant,
                           fontSize: 10,
                         ),
                       ),
@@ -226,7 +219,10 @@ class RoleShellScaffold extends StatelessWidget {
               const SizedBox(height: 48),
               Text(
                 arabic ? 'القائمة الرئيسية' : 'MAIN MENU',
-                style: const TextStyle(color: Color(0xFFAEAEAE), fontSize: 12),
+                style: const TextStyle(
+                  color: AppTheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -242,20 +238,23 @@ class RoleShellScaffold extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           tileColor: i == navigationShell.currentIndex
-                              ? const Color(0xFF3A3636)
+                              ? AppTheme.primaryContainer
                               : Colors.transparent,
                           leading: Icon(
                             destinations[i].item.icon,
                             color: i == navigationShell.currentIndex
-                                ? Colors.white
-                                : const Color(0xFFD0D0D0),
+                                ? AppTheme.primary
+                                : AppTheme.onSurfaceVariant,
                           ),
                           title: Text(
                             destinations[i].item.label,
                             style: TextStyle(
                               color: i == navigationShell.currentIndex
-                                  ? Colors.white
-                                  : const Color(0xFFD0D0D0),
+                                  ? AppTheme.onPrimaryContainer
+                                  : AppTheme.onSurface,
+                              fontWeight: i == navigationShell.currentIndex
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                               fontSize: 14,
                             ),
                           ),
@@ -271,7 +270,8 @@ class RoleShellScaffold extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF4A4646)),
+                  color: AppTheme.surfaceContainerLow,
+                  border: Border.all(color: AppTheme.outlineVariant),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -279,7 +279,7 @@ class RoleShellScaffold extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.verified_user_outlined,
-                      color: Color(0xFFFFB590),
+                      color: AppTheme.primary,
                       size: 22,
                     ),
                     const SizedBox(width: 10),
@@ -290,7 +290,7 @@ class RoleShellScaffold extends StatelessWidget {
                           Text(
                             arabic ? 'رحلتك بأمان' : 'Travel with confidence',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppTheme.onSurface,
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
@@ -301,7 +301,7 @@ class RoleShellScaffold extends StatelessWidget {
                                 ? 'تابع رحلاتك وراجع جلسات حسابك.'
                                 : 'Follow your trips and manage your account sessions.',
                             style: const TextStyle(
-                              color: Color(0xFFD0D0D0),
+                              color: AppTheme.onSurfaceVariant,
                               fontSize: 11,
                             ),
                           ),

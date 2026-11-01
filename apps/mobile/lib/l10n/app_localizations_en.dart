@@ -2569,4 +2569,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get passengerWeekStrip => 'This week';
+
+  @override
+  String get tripsStatTotal => 'Total';
+
+  @override
+  String get tripsStatActive => 'Active';
+
+  @override
+  String get tripsStatUpcoming => 'Upcoming';
+
+  @override
+  String get tripsStatPast => 'Past';
+
+  @override
+  String get tripsFilterAll => 'All';
 }

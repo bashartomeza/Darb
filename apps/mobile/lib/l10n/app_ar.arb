@@ -1022,5 +1022,10 @@
   "passengerUpcomingTrips": "الرحلات القادمة",
   "passengerNoUpcomingTitle": "لا توجد رحلات قادمة",
   "passengerNoUpcomingBody": "ابحث عن رحلة جديدة واحجز مقعدك.",
-  "passengerWeekStrip": "هذا الأسبوع"
+  "passengerWeekStrip": "هذا الأسبوع",
+  "tripsStatTotal": "الإجمالي",
+  "tripsStatActive": "نشطة",
+  "tripsStatUpcoming": "قادمة",
+  "tripsStatPast": "سابقة",
+  "tripsFilterAll": "الكل"
 }
