@@ -966,6 +966,23 @@ export function createPublicOnboardingRouter(
             });
             return;
           }
+          if (context.userRole === "driver" && context.userId) {
+            // A rejected application stays account_status=pending; the decision and its reason live on the verification.
+            const verification = await prisma.driverVerification.findUnique({
+              where: { user_id: context.userId },
+              select: { status: true, rejection_reason: true }
+            });
+            if (verification?.status === "rejected") {
+              res.json({
+                role: context.userRole,
+                onboarding_status: "rejected",
+                next_action: "contact_support",
+                rejection_reason: verification.rejection_reason ?? null,
+                request_id: req.requestId
+              });
+              return;
+            }
+          }
           res.json({ role: context.userRole, onboarding_status: "pending_review", next_action: "await_approval", request_id: req.requestId });
           return;
         }

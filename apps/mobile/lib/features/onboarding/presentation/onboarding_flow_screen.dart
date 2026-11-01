@@ -552,17 +552,31 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            needsDocuments
+            state.applicationRejected
+                ? l10n.applicationRejectedTitle
+                : needsDocuments
                 ? l10n.applicationDocumentsRequiredTitle
                 : l10n.applicationUnderReview,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: AppTokens.spaceMedium),
           Text(
-            needsDocuments
+            state.applicationRejected
+                ? l10n.applicationRejectedBody
+                : needsDocuments
                 ? l10n.applicationDocumentsRequiredBody
                 : l10n.pendingReviewBody,
           ),
+          if (state.applicationRejected &&
+              (state.rejectionReason ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppTokens.spaceSmall),
+              child: Text(
+                l10n.applicationRejectedReason(state.rejectionReason!),
+                key: const ValueKey('applicationRejectionReason'),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           if (role != null) Text(_roleLabel(l10n, role)),
           if (needsDocuments) ...[
             const SizedBox(height: AppTokens.spaceMedium),

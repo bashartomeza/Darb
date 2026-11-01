@@ -466,7 +466,7 @@ export type DriverVerification = {
   history: DriverVerificationHistoryEntry[];
   evidence: DriverVerificationEvidence;
 };
-export const EVIDENCE_KINDS = ["driver_licence", "vehicle_registration", "national_id", "insurance", "other"] as const;
+export const EVIDENCE_KINDS = ["driver_licence", "vehicle_registration", "vehicle_photo", "national_id", "insurance", "other"] as const;
 export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
 export type DriverVerificationEvidence = {
   status: "not_collected" | "recorded";

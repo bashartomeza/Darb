@@ -238,6 +238,7 @@ String documentKindLabel(AppLocalizations l10n, String kind) => switch (kind) {
   'commercial_register' => l10n.documentKindCommercialRegister,
   'shop_photo' => l10n.documentKindShopPhoto,
   'vehicle_registration' => l10n.documentKindVehicleRegistration,
+  'vehicle_photo' => l10n.documentKindVehiclePhoto,
   'national_id' => l10n.documentKindNationalId,
   'insurance' => l10n.documentKindInsurance,
   _ => l10n.documentKindOther,

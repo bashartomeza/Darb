@@ -31,6 +31,8 @@ class OnboardingState {
     this.applicationSubmitted = true,
     this.submitting = false,
     this.missingDocuments = const [],
+    this.rejectionReason,
+    this.applicationRejected = false,
   });
 
   const OnboardingState.checking()
@@ -54,6 +56,10 @@ class OnboardingState {
   final bool applicationSubmitted;
   final bool submitting;
   final List<String> missingDocuments;
+
+  /// Set when Admin rejected the application; [rejectionReason] is their note.
+  final bool applicationRejected;
+  final String? rejectionReason;
 
   bool get enabled => config?.enabled == true;
   bool get busy => switch (stage) {
@@ -84,6 +90,8 @@ class OnboardingState {
     bool? applicationSubmitted,
     bool? submitting,
     List<String>? missingDocuments,
+    bool? applicationRejected,
+    String? rejectionReason,
     bool clearError = false,
   }) {
     return OnboardingState(
@@ -103,6 +111,8 @@ class OnboardingState {
       applicationSubmitted: applicationSubmitted ?? this.applicationSubmitted,
       submitting: submitting ?? this.submitting,
       missingDocuments: missingDocuments ?? this.missingDocuments,
+      applicationRejected: applicationRejected ?? this.applicationRejected,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
     );
   }
 }
@@ -586,7 +596,11 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
               stage: OnboardingStage.pendingReview,
               selectedRole: result.role ?? bundle!.selectedRole,
               requestId: result.requestId,
-              applicationSubmitted: result.status == 'pending_review',
+              applicationSubmitted:
+                  result.status == 'pending_review' ||
+                  result.status == 'rejected',
+              applicationRejected: result.status == 'rejected',
+              rejectionReason: result.rejectionReason,
               missingDocuments: result.missingDocuments,
               ambiguousFailure: false,
             ),
@@ -648,7 +662,11 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
             stage: OnboardingStage.pendingReview,
             selectedRole: result.role,
             requestId: result.requestId,
-            applicationSubmitted: result.status == 'pending_review',
+            applicationSubmitted:
+                result.status == 'pending_review' ||
+                result.status == 'rejected',
+            applicationRejected: result.status == 'rejected',
+            rejectionReason: result.rejectionReason,
             missingDocuments: result.missingDocuments,
             ambiguousFailure: false,
             clearError: true,
@@ -717,7 +735,11 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
       if (restored.type == OnboardingBundleType.pendingStatus) {
         if (_isPendingResult(server)) {
           return _stateFromBundle(config, restored).copyWith(
-            applicationSubmitted: server.status == 'pending_review',
+            applicationSubmitted:
+                server.status == 'pending_review' ||
+                server.status == 'rejected',
+            applicationRejected: server.status == 'rejected',
+            rejectionReason: server.rejectionReason,
             missingDocuments: server.missingDocuments,
           );
         }
@@ -967,7 +989,8 @@ bool _isPendingResult(PendingStatusResult result) =>
     (result.status == 'pending_review' &&
         result.nextAction == 'await_approval') ||
     (result.status == 'documents_required' &&
-        result.nextAction == 'upload_documents');
+        result.nextAction == 'upload_documents') ||
+    (result.status == 'rejected' && result.nextAction == 'contact_support');
 
 bool _isAmbiguous(ApiException error) =>
     error.type == ApiErrorType.network ||

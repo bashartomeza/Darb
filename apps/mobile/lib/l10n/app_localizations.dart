@@ -4046,6 +4046,12 @@ abstract class AppLocalizations {
   /// **'ترخيص المركبة'**
   String get documentKindVehicleRegistration;
 
+  /// No description provided for @documentKindVehiclePhoto.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة المركبة'**
+  String get documentKindVehiclePhoto;
+
   /// No description provided for @documentKindNationalId.
   ///
   /// In ar, this message translates to:
@@ -4459,6 +4465,24 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تم إنشاء حسابك لكنه ليس قيد المراجعة بعد. ارفع كل المستندات المطلوبة ثم أرسل طلبك. تستغرق المراجعة عادةً حتى 24 ساعة.'**
   String get applicationDocumentsRequiredBody;
+
+  /// No description provided for @applicationRejectedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم رفض الطلب'**
+  String get applicationRejectedTitle;
+
+  /// No description provided for @applicationRejectedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت مراجعة طلبك كسائق ولم تتم الموافقة عليه. لا يمكنك استخدام ميزات السائق. تواصل مع الدعم إذا كنت ترى أن هذا خطأ.'**
+  String get applicationRejectedBody;
+
+  /// No description provided for @applicationRejectedReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'السبب: {reason}'**
+  String applicationRejectedReason(String reason);
 
   /// No description provided for @documentsStillNeeded.
   ///

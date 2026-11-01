@@ -929,7 +929,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pendingReviewBody =>
-      'تم إنشاء حسابك وهو الآن قيد الانتظار. سيراجعه المشرف وغالباً يستغرق ذلك حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.';
+      'تم إرسال طلبك إلى المشرف وهو بانتظار الموافقة. يستغرق ذلك عادةً حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.';
 
   @override
   String get merchantDocumentsHint =>
@@ -2147,6 +2147,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get documentKindVehicleRegistration => 'ترخيص المركبة';
 
   @override
+  String get documentKindVehiclePhoto => 'صورة المركبة';
+
+  @override
   String get documentKindNationalId => 'الهوية الوطنية';
 
   @override
@@ -2379,6 +2382,18 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get applicationDocumentsRequiredBody =>
       'تم إنشاء حسابك لكنه ليس قيد المراجعة بعد. ارفع كل المستندات المطلوبة ثم أرسل طلبك. تستغرق المراجعة عادةً حتى 24 ساعة.';
+
+  @override
+  String get applicationRejectedTitle => 'تم رفض الطلب';
+
+  @override
+  String get applicationRejectedBody =>
+      'تمت مراجعة طلبك كسائق ولم تتم الموافقة عليه. لا يمكنك استخدام ميزات السائق. تواصل مع الدعم إذا كنت ترى أن هذا خطأ.';
+
+  @override
+  String applicationRejectedReason(String reason) {
+    return 'السبب: $reason';
+  }
 
   @override
   String documentsStillNeeded(String documents) {

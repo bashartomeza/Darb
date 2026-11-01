@@ -284,6 +284,7 @@ class CompleteRegistrationResult {
 const driverDocumentKinds = <String>[
   'driver_licence',
   'vehicle_registration',
+  'vehicle_photo',
   'national_id',
   'insurance',
   'other',
@@ -355,6 +356,7 @@ class DriverDocumentList {
 const driverRequiredDocumentKinds = <String>[
   'driver_licence',
   'vehicle_registration',
+  'vehicle_photo',
   'national_id',
 ];
 
@@ -370,6 +372,7 @@ class PendingStatusResult {
     required this.status,
     required this.nextAction,
     this.missingDocuments = const [],
+    this.rejectionReason,
     this.pendingStatusToken,
     this.pendingStatusExpiresAt,
     this.requestId,
@@ -381,6 +384,9 @@ class PendingStatusResult {
   final String status;
   final String nextAction;
   final List<String> missingDocuments;
+
+  /// Admin's note when `status` is `rejected`.
+  final String? rejectionReason;
   final String? pendingStatusToken;
   final DateTime? pendingStatusExpiresAt;
   final String? requestId;
@@ -395,6 +401,9 @@ class PendingStatusResult {
       role: role,
       status: _requiredString(json, 'onboarding_status'),
       nextAction: _requiredString(json, 'next_action'),
+      rejectionReason: json['rejection_reason'] is String
+          ? json['rejection_reason'] as String
+          : null,
       missingDocuments: json['missing_documents'] is List
           ? (json['missing_documents'] as List).whereType<String>().toList(
               growable: false,

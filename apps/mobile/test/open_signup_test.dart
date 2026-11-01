@@ -99,6 +99,27 @@ void main() {
       expect(result.status, 'documents_required');
       expect(result.missingDocuments, ['national_id']);
     });
+
+    test('status parses a rejected application with its reason', () async {
+      final repository = _repository(
+        (_) async => http.Response(
+          '{"role":"driver","onboarding_status":"rejected","next_action":"contact_support","rejection_reason":"Licence photo is blurry"}',
+          200,
+        ),
+      );
+
+      final result = await repository.status('pending-token');
+
+      expect(result.status, 'rejected');
+      expect(result.rejectionReason, 'Licence photo is blurry');
+    });
+
+    test('a vehicle photo is a required driver document', () {
+      expect(driverRequiredDocumentKinds, contains('vehicle_photo'));
+      expect(driverRequiredDocumentKinds, contains('vehicle_registration'));
+      expect(driverRequiredDocumentKinds, contains('driver_licence'));
+      expect(driverDocumentKinds, contains('vehicle_photo'));
+    });
   });
 
   group('controller', () {
@@ -198,6 +219,27 @@ void main() {
         expect(state.missingDocuments, ['national_id']);
       },
     );
+
+    test('a restored rejected applicant sees the admin reason', () async {
+      final fake = _FakeRepository()
+        ..statusResult = const PendingStatusResult(
+          role: OnboardingRole.driver,
+          status: 'rejected',
+          nextAction: 'contact_support',
+          rejectionReason: 'Licence photo is blurry',
+        );
+      final container = _container(
+        fake,
+        _MemoryStorage()..bundle = _pendingBundle(),
+      );
+      addTearDown(container.dispose);
+
+      final state = await container.read(onboardingControllerProvider.future);
+
+      expect(state.stage, OnboardingStage.pendingReview);
+      expect(state.applicationRejected, isTrue);
+      expect(state.rejectionReason, 'Licence photo is blurry');
+    });
 
     test('submitApplication marks the application as under review', () async {
       final fake = _FakeRepository()

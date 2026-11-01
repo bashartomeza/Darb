@@ -249,8 +249,9 @@ async function selfServiceChecks(admin: string, legal: Array<{ id: string; type:
   check((await uploadDocument("driver-documents", statusToken, "driver_licence")).status === 201, "licence uploaded");
   check((await uploadDocument("driver-documents", statusToken, "insurance")).status === 201, "optional insurance uploaded");
   const partial = await submitApplication(statusToken);
-  check(partial.status === 409 && partial.body.missing_documents.length === 2, "an optional kind does not satisfy the required set");
+  check(partial.status === 409 && partial.body.missing_documents.length === 3, "an optional kind does not satisfy the required set");
   check((await uploadDocument("driver-documents", statusToken, "vehicle_registration")).status === 201, "vehicle registration uploaded");
+  check((await uploadDocument("driver-documents", statusToken, "vehicle_photo")).status === 201, "vehicle photo uploaded");
   check((await uploadDocument("driver-documents", statusToken, "national_id")).status === 201, "national ID uploaded");
   const submitted = await submitApplication(statusToken);
   check(submitted.status === 200 && submitted.body.onboarding_status === "pending_review", "complete application is submitted");

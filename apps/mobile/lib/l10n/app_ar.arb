@@ -302,7 +302,7 @@
   "accountCreated": "تم إنشاء الحساب",
   "signInToContinue": "تم إنشاء حسابك. سجّل الدخول للمتابعة.",
   "applicationUnderReview": "الطلب قيد المراجعة",
-  "pendingReviewBody": "تم إنشاء حسابك وهو الآن قيد الانتظار. سيراجعه المشرف وغالباً يستغرق ذلك حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.",
+  "pendingReviewBody": "تم إرسال طلبك إلى المشرف وهو بانتظار الموافقة. يستغرق ذلك عادةً حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.",
   "merchantDocumentsHint": "للحصول على الموافقة، ارفع صوراً واضحة أو ملفات PDF للسجل التجاري (أو رخصة المتجر) والهوية الوطنية وصورة للمتجر. تُحفظ الملفات على خادمنا ولا يفتحها إلا فريق المراجعة.",
   "documentKindCommercialRegister": "السجل التجاري",
   "documentKindShopPhoto": "صورة المتجر",
@@ -829,6 +829,7 @@
   "documentKind": "نوع المستند",
   "documentKindDriverLicence": "رخصة القيادة",
   "documentKindVehicleRegistration": "ترخيص المركبة",
+  "documentKindVehiclePhoto": "صورة المركبة",
   "documentKindNationalId": "الهوية الوطنية",
   "documentKindInsurance": "التأمين",
   "documentKindOther": "مستند آخر",
@@ -945,6 +946,16 @@
   "availabilityDocumentsExpired": "انتهت صلاحية مستنداتك. أرسل مستندات مجددة لاستعادة الوصول.",
   "applicationDocumentsRequiredTitle": "ارفع مستنداتك",
   "applicationDocumentsRequiredBody": "تم إنشاء حسابك لكنه ليس قيد المراجعة بعد. ارفع كل المستندات المطلوبة ثم أرسل طلبك. تستغرق المراجعة عادةً حتى 24 ساعة.",
+  "applicationRejectedTitle": "تم رفض الطلب",
+  "applicationRejectedBody": "تمت مراجعة طلبك كسائق ولم تتم الموافقة عليه. لا يمكنك استخدام ميزات السائق. تواصل مع الدعم إذا كنت ترى أن هذا خطأ.",
+  "applicationRejectedReason": "السبب: {reason}",
+  "@applicationRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "documentsStillNeeded": "ما زال مطلوباً: {documents}",
   "@documentsStillNeeded": {
     "placeholders": {
