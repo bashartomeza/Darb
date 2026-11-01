@@ -110,6 +110,22 @@ export class IdentityProfileService {
       return { ok: true, provider: "google" };
     }, "google_identity_conflict");
   }
+  /**
+   * Local development (PHONE_VERIFICATION_DISABLED): the number is saved without a code and stays unverified
+   * (phone_verified_at null, so it cannot be used for phone sign-in). Ownership, change and conflict rules match
+   * the verified path. The route picks this instead of phoneStart only while the flag is set.
+   */
+  async phoneSaveUnverified(id: string, version: number, input: z.infer<typeof phoneStartSchema>) {
+    await this.capPhoneConflicts(id, () => this.transaction(async (tx) => {
+      const user = await this.user(tx, id, version);
+      if (user.phone && user.phone !== input.phone) throw new HttpError(409, "phone_change_requires_reauthentication");
+      const owner = await tx.user.findUnique({ where: { phone: input.phone } });
+      if (owner && owner.id !== id) throw new HttpError(409, "phone_already_in_use");
+      const changed = await tx.user.updateMany({ where: { id, security_version: version, account_status: "active" }, data: { phone: input.phone, profile_state: "complete" } });
+      if (changed.count !== 1) throw new HttpError(403, "account_unavailable");
+    }, "phone_already_in_use"));
+    return { ok: true, next_action: "phone_saved", profile_state: "complete" };
+  }
   async phoneStart(id: string, version: number, input: z.infer<typeof phoneStartSchema>) {
     const sender = this.sender(this.phoneProvider, "phone_verification_unavailable");
     const code = generateOtpCode(); const phoneDigest = keyedDigest("masari:auth-profile-phone", input.phone, this.key());

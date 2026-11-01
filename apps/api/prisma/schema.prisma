@@ -379,6 +379,12 @@ enum ExternalIdentityProvider {
   google
 }
 
+enum MerchantSalesChannel {
+  online
+  physical
+  both
+}
+
 enum AuthActionPurpose {
   email_verification
   password_reset
@@ -408,9 +414,12 @@ model User {
   // Set when a driver or shop owner sent a complete application for admin review.
   // Open-signup applicants stay unset until every required document is uploaded.
   review_submitted_at DateTime?
+  /// City the account holder operates in, collected at Google onboarding.
+  city              String?       @db.VarChar(100)
   created_at        DateTime      @default(now())
 
   driver_profile                   DriverProfile?
+  merchant_profile                 MerchantProfile?
   driver_verification              DriverVerification?  @relation("DriverVerificationApplicant")
   merchant_application_documents   MerchantApplicationDocument[]
   driver_verification_reviews      DriverVerification[]  @relation("DriverVerificationReviewer")
@@ -780,6 +789,12 @@ model DriverProfile {
   vehicle_type    String
   seats_total     Int
   parcel_capacity Int
+  /// Applicant-declared details, collected at Google onboarding for Admin review.
+  vehicle_make_model String? @db.VarChar(80)
+  vehicle_color      String? @db.VarChar(30)
+  plate_number       String? @db.VarChar(20)
+  national_id_number String? @db.VarChar(40)
+  licence_number     String? @db.VarChar(40)
   verified        Boolean  @default(false)
   trust_score     Int      @default(70)
   trust_components  Json?
@@ -1765,6 +1780,23 @@ model MerchantApplicationDocument {
 
   @@index([user_id, created_at], map: "mad_user_created_idx")
   @@map("merchant_application_documents")
+}
+
+/// Store details a shop owner gives at Google onboarding.
+model MerchantProfile {
+  id            String               @id @default(cuid())
+  user_id       String               @unique
+  store_name    String               @db.VarChar(120)
+  store_type    String               @db.VarChar(30)
+  sales_channel MerchantSalesChannel
+  city          String               @db.VarChar(100)
+  address       String?              @db.VarChar(200)
+  created_at    DateTime             @default(now())
+  updated_at    DateTime             @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("merchant_profiles")
 }
 
 /// A passenger's 1-5 rating of a completed trip. One per passenger per trip.

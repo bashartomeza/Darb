@@ -302,6 +302,42 @@ abstract class AppLocalizations {
   /// **'المتابعة عبر Google'**
   String get continueWithGoogle;
 
+  /// No description provided for @welcomeBack.
+  ///
+  /// In ar, this message translates to:
+  /// **'أهلاً بعودتك'**
+  String get welcomeBack;
+
+  /// No description provided for @welcomeBackSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'يسعدنا عودتك'**
+  String get welcomeBackSubtitle;
+
+  /// No description provided for @login.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الدخول'**
+  String get login;
+
+  /// No description provided for @noAccountPrompt.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليس لديك حساب؟'**
+  String get noAccountPrompt;
+
+  /// No description provided for @registerAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجّل الآن'**
+  String get registerAction;
+
+  /// No description provided for @haveAccountPrompt.
+  ///
+  /// In ar, this message translates to:
+  /// **'لديك حساب بالفعل؟'**
+  String get haveAccountPrompt;
+
   /// No description provided for @orSeparator.
   ///
   /// In ar, this message translates to:
@@ -1580,12 +1616,6 @@ abstract class AppLocalizations {
   /// **'تعذر إكمال إجراء الجلسة. يرجى إعادة المحاولة.'**
   String get sessionActionFailed;
 
-  /// No description provided for @createInvitedAccount.
-  ///
-  /// In ar, this message translates to:
-  /// **'إنشاء حساب بدعوة'**
-  String get createInvitedAccount;
-
   /// No description provided for @selectAccountType.
   ///
   /// In ar, this message translates to:
@@ -1651,12 +1681,6 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'أرسل طلبات من متجرك. ترفع مستنداتك ويوافق المشرف على حسابك.'**
   String get registerMerchantHelp;
-
-  /// No description provided for @invitationCode.
-  ///
-  /// In ar, this message translates to:
-  /// **'رمز الدعوة'**
-  String get invitationCode;
 
   /// No description provided for @phoneNumber.
   ///
@@ -1805,7 +1829,7 @@ abstract class AppLocalizations {
   /// No description provided for @unableToStartRegistration.
   ///
   /// In ar, this message translates to:
-  /// **'تعذر بدء التسجيل. تحقق من بيانات الدعوة وحاول مرة أخرى.'**
+  /// **'تعذر بدء التسجيل. تحقق من رقم الهاتف والبريد الإلكتروني وحاول مرة أخرى.'**
   String get unableToStartRegistration;
 
   /// No description provided for @incorrectVerificationCode.
@@ -4382,12 +4406,6 @@ abstract class AppLocalizations {
   /// **'ارفع كل المستندات المطلوبة قبل إرسال طلبك.'**
   String get documentsRequiredError;
 
-  /// No description provided for @invitationCodeOptional.
-  ///
-  /// In ar, this message translates to:
-  /// **'رمز الدعوة (اختياري)'**
-  String get invitationCodeOptional;
-
   /// No description provided for @fareEstimatedTitle.
   ///
   /// In ar, this message translates to:
@@ -4585,6 +4603,90 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مستنداتك محدّثة. لا يوجد ما يتطلب التجديد.'**
   String get renewalNothingToRenew;
+
+  /// No description provided for @passengerNavHome.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرئيسية'**
+  String get passengerNavHome;
+
+  /// No description provided for @passengerNavTrips.
+  ///
+  /// In ar, this message translates to:
+  /// **'رحلاتي'**
+  String get passengerNavTrips;
+
+  /// No description provided for @passengerNavMaps.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخرائط'**
+  String get passengerNavMaps;
+
+  /// No description provided for @passengerNavSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإعدادات'**
+  String get passengerNavSettings;
+
+  /// No description provided for @passengerGreetingMorning.
+  ///
+  /// In ar, this message translates to:
+  /// **'صباح الخير'**
+  String get passengerGreetingMorning;
+
+  /// No description provided for @passengerGreetingAfternoon.
+  ///
+  /// In ar, this message translates to:
+  /// **'نهارك سعيد'**
+  String get passengerGreetingAfternoon;
+
+  /// No description provided for @passengerGreetingEvening.
+  ///
+  /// In ar, this message translates to:
+  /// **'مساء الخير'**
+  String get passengerGreetingEvening;
+
+  /// No description provided for @passengerPlanTripTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطّط لرحلتك القادمة'**
+  String get passengerPlanTripTitle;
+
+  /// No description provided for @passengerPlanTripBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن رحلة، شارك الطريق، وصل إلى وجهتك'**
+  String get passengerPlanTripBody;
+
+  /// No description provided for @passengerSearchRide.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن رحلة'**
+  String get passengerSearchRide;
+
+  /// No description provided for @passengerUpcomingTrips.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرحلات القادمة'**
+  String get passengerUpcomingTrips;
+
+  /// No description provided for @passengerNoUpcomingTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد رحلات قادمة'**
+  String get passengerNoUpcomingTitle;
+
+  /// No description provided for @passengerNoUpcomingBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن رحلة جديدة واحجز مقعدك.'**
+  String get passengerNoUpcomingBody;
+
+  /// No description provided for @passengerWeekStrip.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الأسبوع'**
+  String get passengerWeekStrip;
 }
 
 class _AppLocalizationsDelegate

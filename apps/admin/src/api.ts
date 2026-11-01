@@ -423,6 +423,12 @@ export type DriverProfile = {
   vehicle_type: string;
   seats_total: number;
   parcel_capacity: number;
+  /** Declared by the applicant at Google onboarding; absent for Admin-created profiles. */
+  vehicle_make_model?: string | null;
+  vehicle_color?: string | null;
+  plate_number?: string | null;
+  national_id_number?: string | null;
+  licence_number?: string | null;
   verified: boolean;
   trust_score: number;
   /** Per-component breakdown of the trust score; null until first computed. */

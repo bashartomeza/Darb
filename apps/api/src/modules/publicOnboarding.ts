@@ -8,13 +8,11 @@ import type { ConsentLocale, ConsentDocumentType, OnboardingRole } from "../gene
 import { consumeAbuseCounter } from "../lib/abuseCounters.js";
 import { auditEvent } from "../lib/audit.js";
 import { claimIdempotency, completeIdempotency, failIdempotency } from "../lib/idempotency.js";
-import { normalizeInvitationCode } from "../lib/invitations.js";
 import {
   abuseSubjectDigest,
   hexDigestMatches,
   idempotencyKeyDigest,
   idempotencyPayloadDigest,
-  invitationCodeDigest,
   onboardingSessionDigest,
   phoneDigest,
   registrationGrantDigest
@@ -55,16 +53,13 @@ const dummyHash = bcrypt.hash(DUMMY_PASSWORD, 10);
 const roleSchema = z.enum(SUPPORTED_ROLES);
 const localeSchema = z.enum(SUPPORTED_LOCALES);
 const startSchema = z.strictObject({
-  // Absent for open driver / shop-owner signup (OPEN_DRIVER_MERCHANT_SIGNUP_ENABLED).
-  invitation_code: z.string().trim().min(20).max(32).optional(),
   role: roleSchema,
   phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH),
-  // Open sign-up only: Darb sends no SMS, so the one-time code goes to this address.
-  // Invited applicants never supply one; their code goes to the address the Admin recorded.
-  email: contactEmailSchema.optional(),
+  // Darb sends no SMS, so the one-time code goes to this address.
+  email: contactEmailSchema,
   region: z.string().trim().regex(/^[A-Za-z]{2}$/).optional(),
   locale: localeSchema
-}).refine((value) => (value.invitation_code === undefined) === (value.email !== undefined));
+});
 const verifySchema = z.strictObject({ otp: z.string().regex(/^\d{6}$/) });
 const consentInputSchema = z.strictObject({
   id: z.string().min(1).max(191),
@@ -101,14 +96,6 @@ function canonical(value: unknown): string {
 
 function requestIp(req: Request) {
   return req.ip || "unknown";
-}
-
-function invitationAbuseSubject(value: string) {
-  try {
-    return normalizeInvitationCode(value);
-  } catch {
-    return `malformed:${value.trim().toUpperCase()}`;
-  }
 }
 
 function idempotencyKey(req: Request) {
@@ -371,76 +358,6 @@ function startResponse(
 
 /** Conflict answers per source IP per hour; beyond this the endpoint answers 429 instead of confirming a conflict. */
 const REGISTRATION_CONFLICT_IP_HOURLY_LIMIT = 5;
-const PHONE_HOLDER_SELECT = { id: true, phone_verified_at: true, email_verified_at: true } as const;
-
-/**
- * Only an account whose phone was never verified AND that can still sign in by its verified email may lose
- * the number. An account holding a verified phone is never touched.
- */
-function isReleasableHolder(holder: { phone_verified_at: Date | null; email_verified_at: Date | null }) {
-  return holder.phone_verified_at === null && holder.email_verified_at !== null;
-}
-
-/**
- * Admin-vouched claims win over self-typed (unverified) ones: free the number from an unverified holder inside
- * the caller's transaction. Returns false when a verified (or non-releasable) account holds it.
- * The audit record carries no phone, email or code.
- */
-async function releaseUnverifiedPhone(tx: Prisma.TransactionClient, phone: string, requestId: string, invitationId: string) {
-  const holder = await tx.user.findUnique({ where: { phone }, select: PHONE_HOLDER_SELECT });
-  if (!holder) return true;
-  if (!isReleasableHolder(holder)) return false;
-  const released = await tx.user.updateMany({
-    where: { id: holder.id, phone, phone_verified_at: null },
-    data: { phone: null, profile_state: "phone_required" }
-  });
-  if (released.count !== 1) return false;
-  await auditEvent(tx, {
-    userId: holder.id,
-    action: AuditAction.admin_action,
-    entityType: "User",
-    entityId: holder.id,
-    metadata: { event: "unverified_phone_released", reason: "invitation_claim", invitation_id: invitationId, request_id: requestId }
-  });
-  return true;
-}
-
-async function findBoundInvitation(appConfig: AppConfig, input: z.infer<typeof startSchema>, invitationCode: string) {
-  const onboarding = appConfig.onboarding!;
-  const normalizedCode = normalizeInvitationCode(invitationCode);
-  const phone = normalizePhoneToE164(input.phone, { region: input.region });
-  const now = new Date();
-  const invitation = await prisma.invitation.findUnique({
-    where: { code_digest: invitationCodeDigest(normalizedCode, onboarding.keys.invitationCode) },
-    include: { attempt: true }
-  });
-  if (
-    !invitation ||
-    invitation.code_key_version !== onboarding.keys.invitationCode.version ||
-    invitation.intended_role !== input.role ||
-    invitation.phone_digest_version !== onboarding.keys.phoneDigest.version ||
-    !hexDigestMatches(invitation.intended_phone_digest, phoneDigest(phone, onboarding.keys.phoneDigest))
-  ) throw new HttpError(404, "onboarding_unavailable");
-  const recoverableAttempt = Boolean(
-    invitation.attempt &&
-      invitation.attempt.phone_digest === phoneDigest(phone, onboarding.keys.phoneDigest) &&
-      invitation.attempt.intended_role === input.role &&
-      invitation.attempt.expires_at > now &&
-      ["created", "otp_dispatching", "otp_sent", "phone_verified"].includes(invitation.attempt.status)
-  );
-  const unusedInvitation =
-    !invitation.revoked_at &&
-    invitation.expires_at > now &&
-    invitation.used_count < invitation.max_uses &&
-    invitation.max_uses === 1;
-  if (!recoverableAttempt && !unusedInvitation) throw new HttpError(404, "onboarding_unavailable");
-  if (!recoverableAttempt) {
-    // A phone typed in (never verified) by a self-registered account does not block an Admin-vouched claim.
-    const holder = await prisma.user.findUnique({ where: { phone }, select: PHONE_HOLDER_SELECT });
-    if (holder && !isReleasableHolder(holder)) throw new HttpError(404, "onboarding_unavailable");
-  }
-  return { invitation, phone, normalizedCode };
-}
 
 function safeOutcome(
   user: { role: string; account_status: string; review_submitted_at?: Date | null },
@@ -474,8 +391,10 @@ export function createPublicOnboardingRouter(
       const enabled = appConfig.publicOnboardingEnabled && (await legalSetReady(prisma, appConfig));
       res.json({
         enabled,
-        registration_roles: enabled ? [...SUPPORTED_ROLES] : [],
-        open_registration_roles: enabled && appConfig.openSignupEnabled ? [...OPEN_ROLES] : [],
+        // Driver and shop-owner applications are self-service (no invitation); passengers register
+        // through the email sign-up and Google flows, not this one.
+        registration_roles: enabled ? [...OPEN_ROLES] : [],
+        open_registration_roles: enabled ? [...OPEN_ROLES] : [],
         ...(enabled
           ? {
               phone_policy: {
@@ -633,177 +552,25 @@ export function createPublicOnboardingRouter(
 
   router.post("/onboarding/attempts", async (req, res, next) => {
     let claim: Awaited<ReturnType<typeof claimPublicOperation>> | undefined;
-    let recovery: { invitationId: string; phone: string; role: OnboardingRole } | undefined;
     try {
       const input = startSchema.parse(req.body);
       if (!(await legalSetReady(prisma, appConfig))) throw new HttpError(503, "onboarding_unavailable");
       const phone = normalizePhoneToE164(input.phone, { region: input.region });
-      if (input.invitation_code === undefined) {
-        if (!appConfig.openSignupEnabled || !(OPEN_ROLES as readonly string[]).includes(input.role)) {
-          throw new HttpError(404, "onboarding_unavailable");
-        }
-        // Tight per-IP and per-phone caps first, so one source cannot spend the shared hourly budget.
-        await consumeBuckets(req, appConfig, [
-          { type: "open_start_ip", subject: requestIp(req), seconds: 3_600, limit: 10 },
-          { type: "open_start_phone", subject: phone, seconds: 86_400, limit: 5 },
-          { type: "open_start_email", subject: normalizeEmailForAbuse(input.email!), seconds: 86_400, limit: 5 },
-          { type: "open_start_global", subject: "all", seconds: 3_600, limit: appConfig.openSignupMaxStartsPerHour }
-        ]);
-        claim = await claimPublicOperation(req, appConfig, {
-          operation: "onboarding_open_start",
-          scope: phone,
-          payload: { role: input.role, phone, email: input.email, region: input.region, locale: input.locale }
-        });
-        await startOpenAttempt(req, res, input, phone, claim);
-        return;
-      }
-      const normalizedCode = invitationAbuseSubject(input.invitation_code);
+      if (!(OPEN_ROLES as readonly string[]).includes(input.role)) throw new HttpError(404, "onboarding_unavailable");
+      // Tight per-IP and per-phone caps first, so one source cannot spend the shared hourly budget.
       await consumeBuckets(req, appConfig, [
-        { type: "onboarding_start_ip", subject: requestIp(req), seconds: 3_600, limit: 30 },
-        { type: "onboarding_start_phone", subject: phone, seconds: 86_400, limit: 10 },
-        { type: "onboarding_start_invitation", subject: normalizedCode, seconds: 86_400, limit: 10 }
+        { type: "open_start_ip", subject: requestIp(req), seconds: 3_600, limit: 10 },
+        { type: "open_start_phone", subject: phone, seconds: 86_400, limit: 5 },
+        { type: "open_start_email", subject: normalizeEmailForAbuse(input.email), seconds: 86_400, limit: 5 },
+        { type: "open_start_global", subject: "all", seconds: 3_600, limit: appConfig.openSignupMaxStartsPerHour }
       ]);
-      let bound;
-      try {
-        bound = await findBoundInvitation(appConfig, input, input.invitation_code);
-      } catch {
-        throw new HttpError(404, "onboarding_unavailable");
-      }
-      const { invitation } = bound;
-      recovery = { invitationId: invitation.id, phone, role: input.role };
       claim = await claimPublicOperation(req, appConfig, {
-        operation: "onboarding_start",
-        scope: invitation.id,
-        payload: { invitation_code: bound.normalizedCode, role: input.role, phone, region: input.region, locale: input.locale }
+        operation: "onboarding_open_start",
+        scope: phone,
+        payload: { role: input.role, phone, email: input.email, region: input.region, locale: input.locale }
       });
-
-      const existing = invitation.attempt;
-      if (existing) {
-        if (
-          existing.phone_digest !== phoneDigest(phone, onboarding.keys.phoneDigest) ||
-          existing.intended_role !== input.role ||
-          existing.expires_at <= new Date() ||
-          !["created", "otp_dispatching", "otp_sent", "phone_verified"].includes(existing.status)
-        ) throw new HttpError(404, "onboarding_unavailable");
-        const rotated = await rotateContinuation(appConfig, existing.id);
-        if (claim.kind === "claimed") {
-          await completeIdempotency(prisma, {
-            recordId: claim.record.id,
-            claimVersion: claim.record.claim_version,
-            resourceType: "OnboardingAttempt",
-            resourceId: existing.id,
-            responseStatus: 200
-          });
-        }
-        await auditEvent(prisma, {
-          action: AuditAction.onboarding_resumed,
-          entityType: "OnboardingAttempt",
-          entityId: existing.id,
-          metadata: { role: existing.intended_role, request_id: req.requestId }
-        });
-        res.json(startResponse(existing, rotated.token, rotated.session.expires_at, appConfig, req.requestId, existing.status === "created"));
-        return;
-      }
-
-      const now = new Date();
-      const attempt = await prisma.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT id FROM invitations WHERE id = ${invitation.id} FOR UPDATE`;
-        const locked = await tx.invitation.findUnique({ where: { id: invitation.id }, include: { attempt: true } });
-        if (
-          !locked ||
-          locked.attempt ||
-          locked.revoked_at ||
-          locked.expires_at <= now ||
-          locked.used_count !== 0 ||
-          locked.max_uses !== 1 ||
-          locked.intended_role !== input.role ||
-          locked.intended_phone_digest !== phoneDigest(phone, appConfig.onboarding!.keys.phoneDigest)
-        ) throw new Error("start_unavailable");
-        if (!(await releaseUnverifiedPhone(tx, phone, req.requestId, locked.id))) throw new Error("start_unavailable");
-        // Never burn the invitation on a contact email that already has an account: completion would 409 forever.
-        if (provider.provesPhone === false && locked.contact_email &&
-          (await tx.user.findUnique({ where: { email: locked.contact_email }, select: { id: true } }))) throw new Error("start_unavailable");
-        const created = await tx.onboardingAttempt.create({
-          data: {
-            invitation_id: locked.id,
-            intended_role: locked.intended_role,
-            phone_e164: phone,
-            phone_digest: locked.intended_phone_digest,
-            phone_digest_version: locked.phone_digest_version,
-            phone_last4: phoneLast4(phone),
-            delivery_email: locked.contact_email,
-            request_ip_digest: abuseSubjectDigest("onboarding_ip", requestIp(req), appConfig.onboarding!.keys.abuse),
-            request_ip_digest_version: appConfig.onboarding!.keys.abuse.version,
-            created_request_id: req.requestId,
-            expires_at: new Date(now.getTime() + appConfig.publicRegistration!.attemptTtlSeconds * 1_000)
-          }
-        });
-        await tx.invitation.update({
-          where: { id: locked.id },
-          data: { used_count: 1, last_used_at: now }
-        });
-        await tx.invitationRedemption.create({
-          data: { invitation_id: locked.id, onboarding_attempt_id: created.id, redeemed_at: now }
-        });
-        await auditEvent(tx, {
-          action: AuditAction.onboarding_started,
-          entityType: "OnboardingAttempt",
-          entityId: created.id,
-          metadata: { role: created.intended_role, request_id: req.requestId }
-        });
-        return created;
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-      const rotated = await rotateContinuation(appConfig, attempt.id);
-      await consumeBuckets(req, appConfig, otpDayBuckets(appConfig, phone, attempt.delivery_email, requestIp(req)));
-      const delivery = await dispatchOtpChallenge(prisma, provider, {
-        attemptId: attempt.id,
-        key: onboarding.keys.otpCode,
-        ttlSeconds: onboarding.otpTtlSeconds,
-        maxAttempts: onboarding.otpMaxAttempts,
-        maxResends: onboarding.otpMaxResends,
-        resendCooldownSeconds: onboarding.otpResendCooldownSeconds,
-        locale: input.locale,
-        requestId: req.requestId
-      });
-      await completeIdempotency(prisma, {
-        recordId: claim.record.id,
-        claimVersion: claim.record.claim_version,
-        resourceType: "OnboardingAttempt",
-        resourceId: attempt.id,
-        responseStatus: 201
-      });
-      const current = await prisma.onboardingAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
-      res.status(201).json(startResponse(current, rotated.token, rotated.session.expires_at, appConfig, req.requestId, !delivery.accepted));
+      await startOpenAttempt(req, res, input, phone, claim);
     } catch (error) {
-      if (recovery && !(error instanceof HttpError) && !(error instanceof z.ZodError)) {
-        const resumed = await prisma.onboardingAttempt.findUnique({ where: { invitation_id: recovery.invitationId } });
-        if (
-          resumed &&
-          resumed.phone_e164 === recovery.phone &&
-          resumed.intended_role === recovery.role &&
-          resumed.expires_at > new Date() &&
-          ["created", "otp_dispatching", "otp_sent", "phone_verified"].includes(resumed.status)
-        ) {
-          const rotated = await rotateContinuation(appConfig, resumed.id);
-          if (claim?.kind === "claimed") {
-            await completeIdempotency(prisma, {
-              recordId: claim.record.id,
-              claimVersion: claim.record.claim_version,
-              resourceType: "OnboardingAttempt",
-              resourceId: resumed.id,
-              responseStatus: 200
-            });
-          }
-          await auditEvent(prisma, {
-            action: AuditAction.onboarding_resumed,
-            entityType: "OnboardingAttempt",
-            entityId: resumed.id,
-            metadata: { role: resumed.intended_role, request_id: req.requestId }
-          });
-          res.json(startResponse(resumed, rotated.token, rotated.session.expires_at, appConfig, req.requestId, resumed.status !== "otp_sent"));
-          return;
-        }
-      }
       if (claim?.kind === "claimed") {
         await failIdempotency(prisma, {
           recordId: claim.record.id,
@@ -850,8 +617,7 @@ export function createPublicOnboardingRouter(
       }
       await consumeBuckets(req, appConfig, [
         ...otpDayBuckets(appConfig, attempt.phone_e164, attempt.delivery_email, requestIp(req)),
-        { type: "otp_attempt", subject: attempt.id, seconds: 86_400, limit: onboarding.otpMaxResends + 1 },
-        { type: "otp_invitation", subject: attempt.invitation_id ?? attempt.id, seconds: 86_400, limit: onboarding.otpMaxResends + 1 }
+        { type: "otp_attempt", subject: attempt.id, seconds: 86_400, limit: onboarding.otpMaxResends + 1 }
       ]);
       const delivery = await dispatchOtpChallenge(prisma, provider, {
         attemptId,
@@ -1011,23 +777,15 @@ export function createPublicOnboardingRouter(
       const outcome = await prisma.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM onboarding_attempts WHERE id = ${attemptId} FOR UPDATE`;
         const now = new Date();
-        const attempt = await tx.onboardingAttempt.findUnique({
-          where: { id: attemptId },
-          include: { invitation: true, redemption: true }
-        });
+        const attempt = await tx.onboardingAttempt.findUnique({ where: { id: attemptId } });
         if (
           !attempt ||
           attempt.status !== "phone_verified" ||
           attempt.expires_at <= now ||
           attempt.completed_user_id ||
-          (attempt.invitation_id !== null
-            ? !attempt.redemption ||
-              attempt.redemption.invitation_id !== attempt.invitation_id ||
-              !attempt.invitation ||
-              attempt.invitation.revoked_at ||
-              attempt.invitation.used_count !== 1 ||
-              attempt.invitation.expires_at <= now
-            : !appConfig.openSignupEnabled || attempt.intended_role === "passenger") ||
+          // Registration is self-service. An attempt still tied to a retired invitation is never completed.
+          attempt.invitation_id !== null ||
+          attempt.intended_role === "passenger" ||
           !attempt.registration_grant_digest ||
           attempt.registration_grant_key_version !== appConfig.onboarding!.keys.onboardingSession.version ||
           !attempt.registration_grant_expires_at ||
@@ -1037,11 +795,10 @@ export function createPublicOnboardingRouter(
             registrationGrantDigest(input.registration_grant, appConfig.onboarding!.keys.onboardingSession)
           )
         ) throw new HttpError(409, "registration_grant_invalid");
-        // An Admin invitation outranks a self-typed, unverified phone; open sign-up never takes a held number.
-        const phoneFree = attempt.invitation_id !== null
-          ? await releaseUnverifiedPhone(tx, attempt.phone_e164, req.requestId, attempt.invitation_id)
-          : !(await tx.user.findUnique({ where: { phone: attempt.phone_e164 }, select: { id: true } }));
-        if (!phoneFree) throw new HttpError(409, "registration_conflict");
+        // Self-service sign-up never takes over a number that already belongs to an account.
+        if (await tx.user.findUnique({ where: { phone: attempt.phone_e164 }, select: { id: true } })) {
+          throw new HttpError(409, "registration_conflict");
+        }
         const documents = await currentConsentDocuments(tx, input.locale, now);
         if (documents.length !== REQUIRED_CONSENTS.length) throw new HttpError(409, "consent_version_changed");
         for (const document of documents) {
@@ -1052,9 +809,9 @@ export function createPublicOnboardingRouter(
         }
         const pending = attempt.intended_role === "driver" || attempt.intended_role === "merchant";
         // Email-delivered code: it proves the mailbox, not the phone. The mailbox becomes the verified sign-in
-        // identity; the phone counts as verified only when an Admin vouched for it through an invitation.
+        // identity; the phone counts as verified only when the provider itself proves the phone.
         const emailProven = provider.provesPhone === false && attempt.delivery_email !== null;
-        const phoneVouched = attempt.invitation_id !== null || provider.provesPhone !== false;
+        const phoneVouched = provider.provesPhone !== false;
         if (emailProven && (await tx.user.findUnique({ where: { email: attempt.delivery_email! }, select: { id: true } }))) {
           throw new HttpError(409, "registration_conflict");
         }
@@ -1063,7 +820,7 @@ export function createPublicOnboardingRouter(
             name: displayName,
             phone: attempt.phone_e164,
             ...(emailProven ? { email: attempt.delivery_email, email_verified_at: now } : {}),
-            // Admin-issued invitation (or a provider that proves the phone): trusted. Open sign-up by email: unverified.
+            // A provider that proves the phone: trusted. Sign-up by emailed code: phone unverified.
             phone_verified_at: phoneVouched ? now : null,
             profile_state: "complete",
             password_hash: passwordHash,
@@ -1073,9 +830,9 @@ export function createPublicOnboardingRouter(
             status_updated_at: now,
             last_login_at: null,
             demo_account: false,
-            // Invited applicants are in the review queue at once; open-signup applicants must
-            // upload their documents and submit first (POST /onboarding/application/submit).
-            review_submitted_at: pending && attempt.invitation_id === null ? null : now
+            // Applicants upload their documents and submit first (POST /onboarding/application/submit);
+            // only then does the application enter the Admin review queue.
+            review_submitted_at: pending ? null : now
           }
         });
         if (attempt.intended_role === "driver") {
@@ -1099,9 +856,6 @@ export function createPublicOnboardingRouter(
             app_release: appConfig.appRelease
           }))
         });
-        if (attempt.redemption) {
-          await tx.invitationRedemption.update({ where: { id: attempt.redemption.id }, data: { user_id: user.id } });
-        }
         await tx.onboardingAttempt.update({
           where: { id: attempt.id },
           data: {

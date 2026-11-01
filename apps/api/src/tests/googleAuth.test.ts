@@ -7,20 +7,32 @@ import { config } from "../config.js";
 const documents = ["terms", "privacy", "adult_self_attestation"].map((type, i) => ({ id: `doc_${i}`, document_type: type, locale: "en", content_digest: String(i + 1).repeat(64) }));
 const identity = { sub: "google-sub", email: "owner@example.com", emailVerified: true };
 const key = { secret: "test-google-action-key-at-least-32-characters", version: 1 };
-let actions: any[]; let users: any[]; let identities: any[]; let consents: any[];
+let actions: any[]; let users: any[]; let identities: any[]; let consents: any[]; let rows: Record<string, any[]>;
 let db: any; let releases: any; let verifier: any;
-function service(mode: "disabled" | "allowlist" | "open" = "open", allowlist: string[] = []) {
-  return new GoogleAuthService(db, { ...config, authActions: { key }, googleAuth: { mobileClientIds: ["mobile-client"], adminClientIds: ["admin-client"], passengerSignupMode: mode, passengerAllowlist: allowlist } }, verifier, releases);
+const onboardingKeys = { phoneDigest: { secret: "p".repeat(40), version: 1 }, onboardingSession: { secret: "s".repeat(40), version: 1 }, abuse: { secret: "a".repeat(40), version: 1 } };
+function service(mode: "disabled" | "allowlist" | "open" = "open", allowlist: string[] = [], driverSignup = true) {
+  return new GoogleAuthService(db, { ...config, authActions: { key }, googleAuth: { mobileClientIds: ["mobile-client"], adminClientIds: ["admin-client"], passengerSignupMode: mode, passengerAllowlist: allowlist },
+    ...(driverSignup ? { publicOnboardingEnabled: true, onboarding: { keys: onboardingKeys }, publicRegistration: { pendingStatusTtlDays: 14 }, driverDocuments: { dir: "/tmp/docs" } } : { publicOnboardingEnabled: false }) } as any, verifier, releases);
 }
+function roleCompletion(grant: any, role: string, profile: Record<string, unknown>) { return googleCompleteSchema.parse({ ...completion(grant), name: "Rana Haddad", role, profile }); }
+const futureDate = new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10);
+const driverProfile = { phone: "+970599123456", city: "Ramallah", national_id_number: "401234567", licence_number: "DL-12345", licence_expires_at: futureDate,
+  vehicle_type: "Sedan", vehicle_make_model: "Kia Optima", vehicle_color: "White", plate_number: "ab-1234", seats_total: 4, parcel_capacity: 3 };
+const merchantProfile = { phone: "+970599654321", store_name: "Rana Market", store_type: "grocery", sales_channel: "both", city: "Nablus", address: "Main street 5" };
+const ROW_MODELS = ["merchantProfile", "driverProfile", "driverVerification", "onboardingAttempt", "onboardingSession", "auditEvent"];
 function completion(grant: any) { return googleCompleteSchema.parse({ registration_token: grant.registration_token, name: "Passenger", locale: "en", consents: documents.map((d) => ({ id: d.id, type: d.document_type, content_hash: d.content_digest })), adult_self_attestation: true }); }
 describe("Google passenger authentication", () => {
   beforeEach(() => {
-    actions = []; users = []; identities = []; consents = [];
+    actions = []; users = []; identities = []; consents = []; rows = Object.fromEntries(ROW_MODELS.map((model) => [model, []]));
     verifier = vi.fn().mockResolvedValue(identity);
     releases = { current: vi.fn().mockResolvedValue({ ready: true, release: { documents } }) };
     db = {
-      user: { findUnique: vi.fn(async ({ where }: any) => users.find((u) => u.email === where.email) ?? null), create: vi.fn(async ({ data }: any) => { const u = { id: "user_1", ...data }; users.push(u); return u; }) },
+      user: { findUnique: vi.fn(async ({ where }: any) => users.find((u) => where.email ? u.email === where.email : where.phone ? u.phone === where.phone : u.id === where.id) ?? null), create: vi.fn(async ({ data }: any) => { const u = { id: "user_1", ...data }; users.push(u); return u; }) },
       externalIdentity: { findUnique: vi.fn(async ({ where }: any) => identities.find((i) => i.provider_subject === where.provider_provider_subject.provider_subject) ?? null), create: vi.fn(async ({ data }: any) => { identities.push(data); return data; }), update: vi.fn() },
+      ...Object.fromEntries(ROW_MODELS.map((model) => [model, {
+        create: vi.fn(async ({ data }: any) => { const row = { id: model + "_" + rows[model].length, ...data }; rows[model].push(row); return row; }),
+        updateMany: vi.fn(async () => ({ count: 0 }))
+      }])),
       userConsent: { createMany: vi.fn(async ({ data }: any) => { consents.push(...data); return { count: data.length }; }) },
       authActionToken: {
         create: vi.fn(async ({ data }: any) => { const a = { id: `a_${actions.length}`, consumed_at: null, ...data }; actions.push(a); return a; }),
@@ -28,7 +40,7 @@ describe("Google passenger authentication", () => {
         updateMany: vi.fn(async ({ where, data }: any) => { const matches = actions.filter((a) => Object.entries(where).every(([k, v]: any) => k === "expires_at" ? a[k] > v.gt : a[k] === v)); matches.forEach((a) => Object.assign(a, data)); return { count: matches.length }; })
       }
     };
-    db.$transaction = vi.fn(async (callback: any) => { const snapshot = structuredClone({ actions, users, identities, consents }); const { $transaction: _transaction, ...tx } = db; try { return await callback(tx); } catch (e) { ({ actions, users, identities, consents } = snapshot); throw e; } });
+    db.$transaction = vi.fn(async (callback: any) => { const snapshot = structuredClone({ actions, users, identities, consents, rows }); const { $transaction: _transaction, ...tx } = db; try { return await callback(tx); } catch (e) { ({ actions, users, identities, consents, rows } = snapshot); throw e; } });
   });
   it("never links an unknown subject by a matching email", async () => {
     users.push({ id: "existing", email: identity.email });
@@ -45,6 +57,61 @@ describe("Google passenger authentication", () => {
     expect(identities[0]).toMatchObject({ provider: "google", provider_subject: identity.sub }); expect(consents).toHaveLength(3);
     expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });
     await expect(auth.complete(completion(grant), session)).rejects.toMatchObject({ message: "auth_action_invalid" }); expect(users).toHaveLength(1);
+  });
+  it("creates an active passenger with phone and city who can use the app at once", async () => {
+    const auth = service(); const grant = await auth.start("raw");
+    const session = vi.fn().mockResolvedValue({ token: "session" });
+    const result = await auth.complete(roleCompletion(grant, "passenger", { phone: "+970 599 111 222", city: " Ramallah " }), session);
+    expect(result.user).toMatchObject({ role: "passenger", name: "Rana Haddad", phone: "+970599111222", phone_verified_at: null, city: "Ramallah", profile_state: "complete", account_status: "active" });
+    expect(result.session).toEqual({ token: "session" }); expect(result.pending).toBeUndefined();
+  });
+  it("creates an active shop owner with a store profile", async () => {
+    const auth = service(); const grant = await auth.start("raw");
+    const result = await auth.complete(roleCompletion(grant, "merchant", merchantProfile), vi.fn().mockResolvedValue({ token: "session" }));
+    expect(result.user).toMatchObject({ role: "merchant", account_status: "active", profile_state: "complete", phone: "+970599654321" });
+    expect(result.user.review_submitted_at).toBeInstanceOf(Date);
+    expect(rows.merchantProfile[0]).toMatchObject({ user_id: result.user.id, store_name: "Rana Market", store_type: "grocery", sales_channel: "both", city: "Nablus", address: "Main street 5" });
+    expect(result.session).toBeDefined();
+  });
+  it("requires a store address unless the store is online only", () => {
+    const grant = { registration_token: "x".repeat(60) };
+    expect(() => roleCompletion(grant, "merchant", { ...merchantProfile, address: undefined })).toThrow();
+    expect(() => roleCompletion(grant, "merchant", { ...merchantProfile, sales_channel: "online", address: undefined })).not.toThrow();
+  });
+  it("keeps a driver pending with no app session and an unverified profile for Admin review", async () => {
+    const auth = service(); const grant = await auth.start("raw");
+    const session = vi.fn();
+    const result = await auth.complete(roleCompletion(grant, "driver", driverProfile), session);
+    expect(session).not.toHaveBeenCalled(); expect(result.session).toBeUndefined();
+    expect(result.user).toMatchObject({ role: "driver", account_status: "pending", review_submitted_at: null, profile_state: "complete" });
+    expect(rows.driverProfile[0]).toMatchObject({ verified: false, plate_number: "AB-1234", national_id_number: "401234567", licence_number: "DL-12345", vehicle_make_model: "Kia Optima", seats_total: 4 });
+    expect(rows.driverVerification[0]).toMatchObject({ status: "pending", licence_expires_at: new Date(futureDate + "T00:00:00.000Z") });
+    expect(rows.onboardingAttempt[0]).toMatchObject({ intended_role: "driver", status: "completed", completed_user_id: result.user.id, phone_e164: "+970599123456" });
+    expect(rows.onboardingSession[0]).toMatchObject({ purpose: "pending_status", user_id: result.user.id });
+    expect(result.pending?.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(JSON.stringify(rows.onboardingSession)).not.toContain(result.pending!.token);
+  });
+  it("rejects driver signup when document review is not configured, and expired licences", async () => {
+    const grant = await service().start("raw");
+    await expect(service("open", [], false).complete(roleCompletion(grant, "driver", driverProfile), vi.fn())).rejects.toMatchObject({ statusCode: 503, message: "google_driver_signup_unavailable" });
+    await expect(service().complete(roleCompletion(grant, "driver", { ...driverProfile, licence_expires_at: "2020-01-01" }), vi.fn())).rejects.toMatchObject({ message: "licence_expired" });
+    expect(users).toHaveLength(0); expect(actions[0].consumed_at).toBeNull();
+  });
+  it("refuses a phone that belongs to another account without creating anything", async () => {
+    const auth = service(); const grant = await auth.start("raw"); users.push({ id: "other", phone: "+970599111222" });
+    await expect(auth.complete(roleCompletion(grant, "passenger", { phone: "+970599111222", city: "Gaza" }), vi.fn())).rejects.toMatchObject({ statusCode: 409, message: "phone_already_in_use" });
+    expect(users).toHaveLength(1); expect(identities).toHaveLength(0);
+  });
+  it("requires role and profile together and validates the role's profile", () => {
+    const grant = { registration_token: "x".repeat(60) };
+    expect(() => googleCompleteSchema.parse({ ...completion(grant), role: "passenger" })).toThrow();
+    expect(() => googleCompleteSchema.parse({ ...completion(grant), profile: { phone: "+970599111222", city: "Gaza" } })).toThrow();
+    expect(() => roleCompletion(grant, "driver", { ...driverProfile, seats_total: 40 })).toThrow();
+    expect(() => roleCompletion(grant, "passenger", { phone: "+970599111222", city: "Gaza", is_admin: true })).toThrow();
+  });
+  it("signs a pending applicant back in to their application, not the app", async () => {
+    const user = { id: "driver_1", role: "driver", account_status: "pending" }; identities.push({ id: "ext", provider_subject: identity.sub, user });
+    expect(await service().start("raw")).toEqual({ kind: "pending", user });
   });
   it("rolls back consumption/account/identity/consent when session fails", async () => {
     const auth = service(); const grant = await auth.start("raw");

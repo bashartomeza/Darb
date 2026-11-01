@@ -186,14 +186,24 @@ describe("onboarding configuration isolation", () => {
   });
 
   it("enables public onboarding only with its isolated prerequisites", () => {
-    expect(() => localConfig({ PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow(/requires INVITATIONS_ENABLED/);
-    const parsed = localConfig({
-      INVITATIONS_ENABLED: "true",
+    expect(() => localConfig({ PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow(/pepper is required/);
+    expect(() => localConfig({
       PUBLIC_ONBOARDING_ENABLED: "true",
       OTP_PROVIDER: "fake",
-      ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: "true",
       ...enabledSecrets
+    })).toThrow(/requires DRIVER_DOCUMENTS_ENABLED/);
+    // Registration does not depend on invitations: no INVITATIONS_ENABLED and no invitation pepper.
+    const { INVITATION_CODE_PEPPER: _unused, ...withoutInvitationPepper } = enabledSecrets as Record<string, string>;
+    const parsed = localConfig({
+      PUBLIC_ONBOARDING_ENABLED: "true",
+      OTP_PROVIDER: "fake",
+      DRIVER_DOCUMENTS_ENABLED: "true",
+      DRIVER_DOCUMENTS_DIR: process.cwd(),
+      ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: "true",
+      ...withoutInvitationPepper
     });
+    expect(parsed.invitationsEnabled).toBe(false);
+    expect(parsed.onboarding).toBeDefined();
     expect(parsed.publicRegistration).toEqual(expect.objectContaining({
       attemptTtlSeconds: 1800,
       registrationGrantTtlSeconds: 900,

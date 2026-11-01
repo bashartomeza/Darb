@@ -16,35 +16,24 @@ const _policy =
     '"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60';
 
 void main() {
-  group('open signup config', () {
-    test('open roles are parsed and limited to driver and shop owner', () {
+  group('registration config', () {
+    test('driver and shop-owner roles are parsed, no invitation field', () {
       final config = OnboardingConfig.fromJson(
         jsonDecode(
-              '{"enabled":true,"registration_roles":["passenger","driver","merchant"],"open_registration_roles":["driver","merchant","passenger","admin"],$_policy}',
+              '{"enabled":true,"registration_roles":["driver","merchant"],$_policy}',
             )
             as Map<String, dynamic>,
       );
 
-      expect(config.openRegistrationRoles, [
+      expect(config.registrationRoles, [
         OnboardingRole.driver,
         OnboardingRole.merchant,
       ]);
     });
-
-    test('older servers without the field keep invitation-only signup', () {
-      final config = OnboardingConfig.fromJson(
-        jsonDecode(
-              '{"enabled":true,"registration_roles":["passenger","driver","merchant"],$_policy}',
-            )
-            as Map<String, dynamic>,
-      );
-
-      expect(config.openRegistrationRoles, isEmpty);
-    });
   });
 
   group('repository', () {
-    test('start omits the invitation code for open signup', () async {
+    test('start sends the email and never an invitation code', () async {
       final repository = _repository((request) async {
         final body = jsonDecode(request.body) as Map<String, dynamic>;
         expect(body.containsKey('invitation_code'), isFalse);
@@ -54,7 +43,6 @@ void main() {
       });
 
       await repository.start(
-        invitationCode: '  ',
         role: OnboardingRole.driver,
         phone: '+970590000001',
         email: 'driver@example.com',
@@ -114,69 +102,7 @@ void main() {
   });
 
   group('controller', () {
-    test('open driver can start without an invitation code', () async {
-      final fake = _FakeRepository(openRoles: [OnboardingRole.driver]);
-      final container = _container(fake, _MemoryStorage());
-      addTearDown(container.dispose);
-      await container.read(onboardingControllerProvider.future);
-      final controller = container.read(onboardingControllerProvider.notifier)
-        ..chooseRole(OnboardingRole.driver);
-
-      await controller.start(
-        invitationCode: '',
-        phone: '+970590000001',
-        email: 'driver@example.com',
-        locale: 'ar',
-      );
-
-      expect(fake.startCodes, ['']);
-      expect(
-        container.read(onboardingControllerProvider).value?.stage,
-        OnboardingStage.otpSent,
-      );
-    });
-
-    test('open sign-up needs an email address for the code', () async {
-      final fake = _FakeRepository(openRoles: [OnboardingRole.driver]);
-      final container = _container(fake, _MemoryStorage());
-      addTearDown(container.dispose);
-      await container.read(onboardingControllerProvider.future);
-      final controller = container.read(onboardingControllerProvider.notifier)
-        ..chooseRole(OnboardingRole.driver);
-
-      await controller.start(
-        invitationCode: '',
-        phone: '+970590000001',
-        email: 'not-an-email',
-        locale: 'ar',
-      );
-
-      final state = container.read(onboardingControllerProvider).value!;
-      expect(fake.startCodes, isEmpty);
-      expect(state.errorCode, 'validation_error');
-    });
-
-    test('a role that is not open still needs an invitation code', () async {
-      final fake = _FakeRepository(openRoles: [OnboardingRole.driver]);
-      final container = _container(fake, _MemoryStorage());
-      addTearDown(container.dispose);
-      await container.read(onboardingControllerProvider.future);
-      final controller = container.read(onboardingControllerProvider.notifier)
-        ..chooseRole(OnboardingRole.passenger);
-
-      await controller.start(
-        invitationCode: '   ',
-        phone: '+970590000001',
-        locale: 'ar',
-      );
-
-      final state = container.read(onboardingControllerProvider).value!;
-      expect(fake.startCodes, isEmpty);
-      expect(state.stage, OnboardingStage.enteringInvitation);
-      expect(state.errorCode, 'validation_error');
-    });
-
-    test('the sign-up is invitation-only when the switch is off', () async {
+    test('a driver can register without any invitation', () async {
       final fake = _FakeRepository();
       final container = _container(fake, _MemoryStorage());
       addTearDown(container.dispose);
@@ -185,12 +111,70 @@ void main() {
         ..chooseRole(OnboardingRole.driver);
 
       await controller.start(
-        invitationCode: '',
         phone: '+970590000001',
+        email: 'driver@example.com',
         locale: 'ar',
       );
 
-      expect(fake.startCodes, isEmpty);
+      expect(fake.startEmails, ['driver@example.com']);
+      expect(
+        container.read(onboardingControllerProvider).value?.stage,
+        OnboardingStage.otpSent,
+      );
+    });
+
+    test('a shop owner can register without any invitation', () async {
+      final fake = _FakeRepository();
+      final container = _container(fake, _MemoryStorage());
+      addTearDown(container.dispose);
+      await container.read(onboardingControllerProvider.future);
+      final controller = container.read(onboardingControllerProvider.notifier)
+        ..chooseRole(OnboardingRole.merchant);
+
+      await controller.start(
+        phone: '+970590000002',
+        email: 'shop@example.com',
+        locale: 'ar',
+      );
+
+      expect(fake.startEmails, ['shop@example.com']);
+    });
+
+    test('registration needs an email address for the code', () async {
+      final fake = _FakeRepository();
+      final container = _container(fake, _MemoryStorage());
+      addTearDown(container.dispose);
+      await container.read(onboardingControllerProvider.future);
+      final controller = container.read(onboardingControllerProvider.notifier)
+        ..chooseRole(OnboardingRole.driver);
+
+      await controller.start(
+        phone: '+970590000001',
+        email: 'not-an-email',
+        locale: 'ar',
+      );
+
+      final state = container.read(onboardingControllerProvider).value!;
+      expect(fake.startEmails, isEmpty);
+      expect(state.stage, OnboardingStage.enteringContact);
+      expect(state.errorCode, 'validation_error');
+    });
+
+    test('a role the server does not offer cannot be started', () async {
+      final fake = _FakeRepository();
+      final container = _container(fake, _MemoryStorage());
+      addTearDown(container.dispose);
+      await container.read(onboardingControllerProvider.future);
+      final controller = container.read(onboardingControllerProvider.notifier)
+        ..chooseRole(OnboardingRole.passenger);
+
+      await controller.start(
+        phone: '+970590000001',
+        email: 'applicant@example.com',
+        locale: 'ar',
+      );
+
+      expect(fake.startEmails, isEmpty);
     });
 
     test(
@@ -326,14 +310,13 @@ OnboardingBundle _pendingBundle() => OnboardingBundle(
 );
 
 class _FakeRepository extends OnboardingRepository {
-  _FakeRepository({this.openRoles = const []})
+  _FakeRepository()
     : super(
         baseUrl: 'http://api.test',
         client: MockClient((_) async => http.Response('{}', 200)),
       );
 
-  final List<OnboardingRole> openRoles;
-  final List<String> startCodes = [];
+  final List<String> startEmails = [];
   PendingStatusResult? statusResult;
   ApiException? submitError;
   int submitted = 0;
@@ -341,8 +324,7 @@ class _FakeRepository extends OnboardingRepository {
   @override
   Future<OnboardingConfig> config() async => OnboardingConfig(
     enabled: true,
-    registrationRoles: OnboardingRole.values,
-    openRegistrationRoles: openRoles,
+    registrationRoles: const [OnboardingRole.driver, OnboardingRole.merchant],
     supportedLocales: const ['ar', 'en'],
     minimumPasswordCharacters: 15,
     maximumPasswordCharacters: 64,
@@ -353,14 +335,13 @@ class _FakeRepository extends OnboardingRepository {
 
   @override
   Future<StartAttemptResult> start({
-    required String invitationCode,
     required OnboardingRole role,
     required String phone,
-    String email = '',
+    required String email,
     required String locale,
     required String idempotencyKey,
   }) async {
-    startCodes.add(invitationCode);
+    startEmails.add(email);
     return StartAttemptResult(
       attemptId: 'attempt_1',
       status: 'otp_sent',

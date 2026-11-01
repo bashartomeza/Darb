@@ -92,13 +92,16 @@ export function runPreflight(env, options = {}) {
   const core = Object.values(secrets).filter(Boolean);
   add("SECRETS_DISTINCT", new Set(core).size === core.length, "JWT_SECRET, REFRESH_TOKEN_PEPPER and AUTH_ACTION_TOKEN_PEPPER must differ from each other");
 
-  if (bool("INVITATIONS_ENABLED")) {
-    const peppers = PEPPERS.map((n) => [n, val(n)]);
-    for (const [name, v] of peppers) add(name, v.length >= 32 && !isPlaceholder(v), `${name} required (32+ chars) when INVITATIONS_ENABLED=true`);
+  // Self-service registration (PUBLIC_ONBOARDING_ENABLED) needs the onboarding peppers; the invitation-code
+  // pepper is only needed while the optional Admin invitation feature is on.
+  if (bool("INVITATIONS_ENABLED") || bool("PUBLIC_ONBOARDING_ENABLED")) {
+    const invitationsOn = bool("INVITATIONS_ENABLED");
+    const peppers = PEPPERS.filter((n) => invitationsOn || n !== "INVITATION_CODE_PEPPER").map((n) => [n, val(n)]);
+    for (const [name, v] of peppers) add(name, v.length >= 32 && !isPlaceholder(v), `${name} required (32+ chars) when onboarding or invitations are enabled`);
     const all = [...peppers.map(([, v]) => v), ...core].filter(Boolean);
     add("PEPPERS_DISTINCT", new Set(all).size === all.length, "all onboarding peppers must be distinct from each other and from core secrets");
   } else {
-    results.push({ id: "ONBOARDING_PEPPERS", status: "PASS", message: "invitations disabled; onboarding peppers not required" });
+    results.push({ id: "ONBOARDING_PEPPERS", status: "PASS", message: "onboarding and invitations disabled; onboarding peppers not required" });
   }
 
   const origins = val("CORS_ORIGINS").split(",").map((o) => o.trim()).filter(Boolean);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/passenger_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/semantic_colors.dart';
 import 'masari_button.dart';
@@ -40,11 +41,19 @@ class EmptyState extends StatelessWidget {
           Container(
             width: 72,
             height: 72,
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceContainer,
+            decoration: BoxDecoration(
+              color: PassengerTheme.isActive(context)
+                  ? PassengerStyle.panel
+                  : AppTheme.surfaceContainer,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 32, color: AppTheme.primary),
+            child: Icon(
+              icon,
+              size: 32,
+              color: PassengerTheme.isActive(context)
+                  ? PassengerStyle.orange
+                  : AppTheme.primary,
+            ),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
           Text(
@@ -198,8 +207,12 @@ class _LoadingSkeletonState extends State<LoadingSkeleton>
         width: widget.width,
         decoration: BoxDecoration(
           color: Color.lerp(
-            AppTheme.surfaceContainer,
-            AppTheme.surfaceContainerHighest,
+            PassengerTheme.isActive(context)
+                ? PassengerStyle.panel
+                : AppTheme.surfaceContainer,
+            PassengerTheme.isActive(context)
+                ? PassengerStyle.border
+                : AppTheme.surfaceContainerHighest,
             _controller.value,
           ),
           borderRadius: BorderRadius.circular(widget.radius),

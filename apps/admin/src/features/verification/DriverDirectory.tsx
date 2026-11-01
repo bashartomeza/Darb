@@ -108,6 +108,11 @@ export function DriverReviewPanel({ verification, busy, action, reason, profile,
         <ReviewField label={t("vehicleType")}>{driver.vehicle_type}</ReviewField>
         <ReviewField label={t("seatCapacity")}>{number(driver.seats_total)}</ReviewField>
         <ReviewField label={t("parcelCapacity")}>{number(driver.parcel_capacity)}</ReviewField>
+        {driver.vehicle_make_model && <ReviewField label={t("vehicleMakeModel")}>{driver.vehicle_make_model}</ReviewField>}
+        {driver.vehicle_color && <ReviewField label={t("vehicleColor")}>{driver.vehicle_color}</ReviewField>}
+        {driver.plate_number && <ReviewField label={t("plateNumber")}><TechnicalValue>{driver.plate_number}</TechnicalValue></ReviewField>}
+        {driver.national_id_number && <ReviewField label={t("nationalIdNumber")}><TechnicalValue>{driver.national_id_number}</TechnicalValue></ReviewField>}
+        {driver.licence_number && <ReviewField label={t("licenceNumber")}><TechnicalValue>{driver.licence_number}</TechnicalValue></ReviewField>}
         <ReviewField label={t("verificationStoredState")}>{driver.verified ? t("verified") : t("unverified")}</ReviewField>
       </div> : <EmptyState compact icon="directions_car" title={t("noDriverProfileYet")} description={t("profileCreatedOnApproval")} />}
     </Card>

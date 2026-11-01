@@ -1,6 +1,6 @@
 # Puts the disposable masari_demo database back to the clean test starting state:
 # protected demo reset, the three pending/rejected approval accounts, placeholder
-# legal text, and fresh sign-up invitations (written to .staging-data/test-env/invitations.txt).
+# legal text (which opens driver and shop-owner registration; no invitations are needed).
 # The API must be running (scripts/test-env/start.ps1).
 $ErrorActionPreference = "Stop"
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
@@ -24,4 +24,4 @@ Write-Output "Demo data reset."
 npm run demo:seed-approvals 2>&1 | Select-String '"ok":true' | ForEach-Object { Write-Output "Approval accounts seeded." }
 node scripts/test-env/seed-onboarding.mjs
 Remove-Item (Join-Path $root ".staging-data\test-env\otp.txt") -ErrorAction SilentlyContinue
-Write-Output "Ready. Codes: .staging-data/test-env/invitations.txt"
+Write-Output "Ready. Sign-up codes are written to .staging-data/test-env/otp.txt while testing."
