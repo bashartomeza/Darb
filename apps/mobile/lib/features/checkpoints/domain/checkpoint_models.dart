@@ -21,6 +21,9 @@ CheckpointStatus parseCheckpointStatus(String? value) {
     case 'أزمة':
     case 'ازمة':
     case 'أزمة متوسطة':
+    case 'ازمة متوسطة':
+    case 'أزمة خانقة':
+    case 'ازمة خانقة':
       return CheckpointStatus.congested;
     case 'closed':
     case 'blocked':
@@ -35,7 +38,9 @@ CheckpointStatus parseCheckpointStatus(String? value) {
 
 String checkpointStatusLabel(CheckpointStatus status) => switch (status) {
   CheckpointStatus.open => 'سالك',
-  CheckpointStatus.congested => 'أزمة متوسطة',
+  // Covers both "أزمة متوسطة" and "أزمة خانقة"; the provider's own wording is
+  // shown per direction.
+  CheckpointStatus.congested => 'أزمة',
   CheckpointStatus.closed => 'مغلق',
   CheckpointStatus.unknown => 'غير معروف',
 };
@@ -139,6 +144,9 @@ class UnplacedCheckpoint {
     required this.id,
     required this.nameAr,
     this.city = '',
+    this.status = CheckpointStatus.unknown,
+    this.enteringStatus,
+    this.leavingStatus,
     this.enteringLastChangedText,
     this.leavingLastChangedText,
   });
@@ -146,6 +154,9 @@ class UnplacedCheckpoint {
   final String id;
   final String nameAr;
   final String city;
+  final CheckpointStatus status;
+  final String? enteringStatus;
+  final String? leavingStatus;
   final String? enteringLastChangedText;
   final String? leavingLastChangedText;
 
@@ -158,6 +169,9 @@ class UnplacedCheckpoint {
       id: id,
       nameAr: name,
       city: _text(value['city']) ?? '',
+      status: parseCheckpointStatus(_text(value['status'])),
+      enteringStatus: _text(value['entering_status']),
+      leavingStatus: _text(value['leaving_status']),
       enteringLastChangedText: _text(value['entering_status_last_updated']),
       leavingLastChangedText: _text(value['leaving_status_last_updated']),
     );

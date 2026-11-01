@@ -37,10 +37,13 @@ the API serves `GET /checkpoints` from that feed
   same-named places more than 1 km apart are treated as ambiguous.
 - Only a row with exactly one such place gets a pin. Every other row is returned
   in `unplaced` with a reason and listed in the app under **"Checkpoints without
-  a map position"** with its last-changed times.
-- The official status is always `unknown` (grey): a "last changed" time is never
-  read as open or closed. Timestamps are shown as published, without timezone
-  conversion.
+  a map position"** with its status and last-changed times.
+- Status comes from the partner's `entering_status` / `leaving_status`
+  ("سالك" open, "مغلق" closed, "أزمة متوسطة" / "أزمة خانقة" congested). Both
+  directions are passed through as written; the pin takes the worst direction
+  (closed, then congested) and is green only when both are "سالك". A missing or
+  unfamiliar value stays `unknown` (grey); a "last changed" time is never read
+  as a state. Timestamps are shown as published, without timezone conversion.
 - Roles: passengers and drivers (the same rule as the limited directory the rows
   come from). Merchants see the "unavailable" note.
 - Positions are © OpenStreetMap contributors, ODbL 1.0

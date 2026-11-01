@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
+import '../../features/checkpoints/domain/checkpoint_models.dart';
 import '../maps/map_tile_cache.dart';
 import '../maps/service_area.dart';
 import '../theme/app_theme.dart';
@@ -1247,13 +1248,12 @@ class _CalloutDetail extends StatelessWidget {
     final status = text.split(':').length > 1
         ? text.substring(text.indexOf(':') + 1).trim()
         : text;
-    final color = status == 'سالك'
-        ? const Color(0xFF16A34A)
-        : status == 'أزمة'
-        ? const Color(0xFFDC2626)
-        : status == 'أزمة متوسطة'
-        ? const Color(0xFFF59E0B)
-        : const Color(0xFF64748B);
+    final color = switch (parseCheckpointStatus(status)) {
+      CheckpointStatus.open => const Color(0xFF16A34A),
+      CheckpointStatus.congested => const Color(0xFFF59E0B),
+      CheckpointStatus.closed => const Color(0xFFDC2626),
+      CheckpointStatus.unknown => const Color(0xFF64748B),
+    };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
