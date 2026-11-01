@@ -1871,7 +1871,7 @@ abstract class AppLocalizations {
   /// No description provided for @pendingReviewBody.
   ///
   /// In ar, this message translates to:
-  /// **'تم إنشاء حسابك وهو الآن قيد الانتظار. سيراجعه المشرف وغالباً يستغرق ذلك حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.'**
+  /// **'تم إرسال طلبك إلى المشرف وهو بانتظار الموافقة. يستغرق ذلك عادةً حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.'**
   String get pendingReviewBody;
 
   /// No description provided for @merchantDocumentsHint.
