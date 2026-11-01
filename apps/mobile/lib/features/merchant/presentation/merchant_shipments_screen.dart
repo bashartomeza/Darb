@@ -137,6 +137,9 @@ class _OrderCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final material = MaterialLocalizations.of(context);
     final batch = order.latestBatch;
+    final routeName = order.routeName(
+      arabic: Localizations.localeOf(context).languageCode == 'ar',
+    );
 
     // Parcels can fan out to several destinations, so the card names the set
     // rather than pretending there is one.
@@ -153,15 +156,29 @@ class _OrderCard extends StatelessWidget {
       statusTone: statusToneFor(order.status),
       body: Column(
         children: [
-          RouteChip(
-            from: localizedCorridorPlace(context, order.pickupLabel),
-            // A bare count would read as a place name, so the plural case is
-            // spelled out.
-            to: destinations.length == 1
-                ? destinations.first
-                : l10n.destinationCount(destinations.length),
-            compact: true,
-          ),
+          // Route orders are named by their route and the merchant's own
+          // pickup words; older orders keep their corridor places.
+          if (routeName != null) ...[
+            DetailRow(
+              label: l10n.orderRouteLabel,
+              value: routeName,
+              icon: Icons.route_outlined,
+            ),
+            DetailRow(
+              label: l10n.pickup,
+              value: merchantPickupText(context, order),
+              icon: Icons.storefront_outlined,
+            ),
+          ] else
+            RouteChip(
+              from: localizedCorridorPlace(context, order.pickupLabel),
+              // A bare count would read as a place name, so the plural case
+              // is spelled out.
+              to: destinations.length == 1
+                  ? destinations.first
+                  : l10n.destinationCount(destinations.length),
+              compact: true,
+            ),
           const SizedBox(height: AppTokens.spaceSmall),
           DetailRow(
             label: l10n.parcelCount,

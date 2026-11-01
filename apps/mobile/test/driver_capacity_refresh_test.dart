@@ -11,11 +11,11 @@ import 'package:darb_mobile/features/driver/application/driver_controller.dart';
 import 'package:darb_mobile/features/driver/data/driver_models.dart';
 import 'package:darb_mobile/features/driver/data/driver_repository.dart';
 import 'package:darb_mobile/features/driver/presentation/driver_route_screen.dart';
-import 'package:darb_mobile/features/legacy_corridor/data/legacy_corridor_repository.dart';
+import 'package:darb_mobile/features/operating_routes/data/operating_route_repository.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
-import 'support/legacy_corridor_fixture.dart';
+import 'support/operating_routes_fixture.dart';
 
 void main() {
   testWidgets(
@@ -265,7 +265,9 @@ ProviderContainer _container(_Repository repository, {bool bind = true}) {
   final container = ProviderContainer(
     overrides: [
       driverRepositoryProvider.overrideWithValue(repository),
-      legacyCorridorProvider.overrideWith((ref) async => testCorridor()),
+      operatingRoutesProvider.overrideWith(
+        (ref) async => testOperatingRoutes(),
+      ),
     ],
   );
   if (bind) {
@@ -344,13 +346,13 @@ class _Repository extends DriverRepository {
 
 DriverRoute _route({required int seats, int parcels = 4}) => DriverRoute(
   id: 'synthetic-route',
-  originLabel: corridorOriginLabel,
-  originLat: corridorOriginLat,
-  originLng: corridorOriginLng,
-  destinationLabel: corridorDestinationLabel,
-  destinationLat: corridorDestinationLat,
-  destinationLng: corridorDestinationLng,
-  corridorKey: corridorKey,
+  originLabel: 'Hebron',
+  originLat: 31.5326,
+  originLng: 35.0998,
+  destinationLabel: 'Bethlehem',
+  destinationLat: 31.7054,
+  destinationLng: 35.2024,
+  corridorKey: 'hebron-to-bethlehem',
   seatsAvailable: seats,
   parcelCapacityAvailable: parcels,
   status: 'active',

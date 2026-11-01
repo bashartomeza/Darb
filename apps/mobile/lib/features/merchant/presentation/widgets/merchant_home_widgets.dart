@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import '../../../../core/presentation/localized_labels.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/darb_card.dart';
@@ -216,12 +215,10 @@ class OrderTimelineRow extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final tone = statusToneFor(order.status);
-    final destination = order.parcels.isEmpty
-        ? null
-        : merchantDestinationLabel(
-            context,
-            order.parcels.first.destinationLabel,
-          );
+    // The route by name, with the merchant's own pickup words when the order
+    // has them; older orders keep their corridor places.
+    final pickupDetails = order.pickupDetails;
+    final routeLine = merchantOrderRouteLabel(context, order);
 
     return IntrinsicHeight(
       child: Row(
@@ -268,19 +265,23 @@ class OrderTimelineRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            destination == null
-                                ? localizedCorridorPlace(
-                                    context,
-                                    order.pickupLabel,
-                                  )
-                                : '${localizedCorridorPlace(context, order.pickupLabel)}'
-                                      ' ← $destination',
+                            routeLine,
+                            key: ValueKey('merchantOrderRouteLine-${order.id}'),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: AppTheme.onSurfaceVariant,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          if (pickupDetails != null)
+                            Text(
+                              pickupDetails,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppTheme.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),

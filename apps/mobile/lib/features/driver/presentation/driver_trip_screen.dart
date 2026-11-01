@@ -432,7 +432,9 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                             : CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${localizedOrigin(context, trip.mapOriginLabel)}  →  ${trip.mapDestinationLabel}',
+                            trip.route.routeName(arabic: isArabic) ??
+                                '${localizedOrigin(context, trip.mapOriginLabel)}  →  ${trip.mapDestinationLabel}',
+                            key: const ValueKey('driverTripRouteTitle'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: isArabic
@@ -532,6 +534,20 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                 ),
 
                 const SizedBox(height: 10),
+
+                // ==================================================
+                // WHERE TO PICK UP AND DROP OFF
+                // ==================================================
+                // Right under the trip summary, in the customers' own words:
+                // this is how the driver finds each passenger and parcel.
+                if (trip.passengerRequest != null ||
+                    trip.merchantOrder != null) ...[
+                  DriverStopDetailsCard(
+                    passenger: trip.passengerRequest,
+                    merchantOrder: trip.merchantOrder,
+                  ),
+                  const SizedBox(height: 10),
+                ],
 
                 _buildEtaCard(context, state),
 

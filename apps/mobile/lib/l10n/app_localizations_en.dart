@@ -1014,6 +1014,99 @@ class AppLocalizationsEn extends AppLocalizations {
       'No places are open on this route right now.';
 
   @override
+  String get orderRouteLabel => 'Route';
+
+  @override
+  String get orderRouteChoose => 'Choose a route';
+
+  @override
+  String get orderRoutesLoadFailed =>
+      'Couldn\'t load the routes. Check your connection and try again.';
+
+  @override
+  String get orderRoutesEmpty =>
+      'No routes are running right now. Try again later.';
+
+  @override
+  String get orderRouteRequired => 'Choose a route first.';
+
+  @override
+  String get orderRouteUnavailable =>
+      'This route is no longer running. Choose another route.';
+
+  @override
+  String get orderRouteSaved => 'Saved route';
+
+  @override
+  String get orderDetailsTooShort =>
+      'Write at least 3 characters so the driver can find the place.';
+
+  @override
+  String get merchantPickupDetailsLabel => 'Pickup details';
+
+  @override
+  String get merchantPickupDetailsHint => 'e.g. store name and street';
+
+  @override
+  String get merchantDropoffDetailsLabel => 'Drop-off details';
+
+  @override
+  String get merchantDropoffDetailsHint =>
+      'e.g. neighbourhood, street and a nearby landmark';
+
+  @override
+  String get merchantReceiverNameLabel => 'Receiver name (optional)';
+
+  @override
+  String get merchantReceiverPhoneLabel => 'Receiver phone (optional)';
+
+  @override
+  String get merchantReceiverPhoneInvalid =>
+      'Enter a valid phone number, e.g. +970599123456.';
+
+  @override
+  String get merchantReceiverLabel => 'Receiver';
+
+  @override
+  String get merchantPendingOrderTitle => 'Order waiting for confirmation';
+
+  @override
+  String get driverRoutePickTitle => 'Choose your route';
+
+  @override
+  String get driverRoutePickBody =>
+      'You\'ll get passengers and parcels on this route only.';
+
+  @override
+  String get driverRoutePickConfirm => 'Go online';
+
+  @override
+  String get driverRouteNone => 'No route chosen yet';
+
+  @override
+  String get driverPickupDetailsLabel => 'Pickup point';
+
+  @override
+  String get driverDropoffDetailsLabel => 'Drop-off point';
+
+  @override
+  String get driverMerchantPickupLabel => 'Collect parcels from';
+
+  @override
+  String get driverParcelStopsTitle => 'Parcel drop-offs';
+
+  @override
+  String driverParcelStopLabel(int number) {
+    return 'Parcel $number';
+  }
+
+  @override
+  String get driverReceiverLabel => 'Receiver';
+
+  @override
+  String get driverWhereToFindTitle => 'Where to pick up and drop off';
+
+  @override
   String get noPublishedRoutes => 'No eligible published routes are available.';
 
   @override

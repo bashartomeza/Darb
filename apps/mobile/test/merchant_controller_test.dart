@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:darb_mobile/features/matching/data/matching_models.dart';
-import 'package:darb_mobile/features/legacy_corridor/data/legacy_corridor_models.dart';
 import 'package:darb_mobile/features/merchant/application/merchant_controller.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_models.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
 import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 import 'support/auth_test_support.dart';
-import 'support/legacy_corridor_fixture.dart';
 
 void main() {
   test(
@@ -68,47 +66,46 @@ void main() {
     expect(container.read(merchantOrderDraftProvider), hasLength(9));
   });
 
-  test(
-    'parcel destinations are corridor places with their own coordinates',
-    () {
-      final container = _container(_FakeMerchantRepository());
-      addTearDown(container.dispose);
-      final controller = container.read(merchantOrderDraftProvider.notifier);
-      expect(
-        container.read(merchantOrderDraftProvider).single.hasDestination,
-        isFalse,
-      );
-      expect(
-        () => container.read(merchantOrderDraftProvider).single.toJson(),
-        throwsStateError,
-      );
+  test('parcel drop-offs are typed details with an optional receiver', () {
+    final container = _container(_FakeMerchantRepository());
+    addTearDown(container.dispose);
+    final controller = container.read(merchantOrderDraftProvider.notifier);
 
-      controller.addParcel(destination: testDropoff);
-      const other = CorridorPlace(
-        key: 'other',
-        nameAr: 'مكان',
-        nameEn: 'Other place',
-        lat: 31.6,
-        lng: 35.15,
-        parcelDropoff: true,
-      );
-      controller.updateParcel(1, destination: other);
-      controller.fillMissingDestinations(testDropoff);
+    controller.addParcel();
+    controller.addParcel();
+    controller.updateParcel(0, dropoffDetails: ' Manger Street ');
+    controller.updateParcel(
+      1,
+      dropoffDetails: 'Near the university gate',
+      receiverName: 'Sara',
+      receiverPhone: '+970599123456',
+    );
+    final parcels = container.read(merchantOrderDraftProvider);
+    expect(parcels[0].toJson(), {
+      'dropoff_details': 'Manger Street',
+      'size': 'S',
+      'priority': 'normal',
+    });
+    expect(parcels[1].toJson()['receiver_phone'], '+970599123456');
+    // Every parcel keeps its own identity, so its fields follow it when an
+    // earlier parcel is removed.
+    expect(parcels.map((parcel) => parcel.id).toSet(), hasLength(3));
+    final second = parcels[1].id;
+    controller.removeParcel(0);
+    expect(container.read(merchantOrderDraftProvider).first.id, second);
+  });
 
-      final parcels = container.read(merchantOrderDraftProvider);
-      expect(parcels[0].toJson(), {
-        'destination_label': 'Bethlehem Center',
-        'destination_lat': 31.7054,
-        'destination_lng': 35.2024,
-        'size': 'S',
-        'priority': 'normal',
-      });
-      // A chosen destination is not overwritten by the default.
-      expect(parcels[1].destinationLabel, 'Other place');
-      expect(parcels[1].destinationLat, 31.6);
-      expect(parcels[1].destinationLng, 35.15);
-    },
-  );
+  test('details and receiver phone validation', () {
+    expect(routeDetailsValid('ab'), isFalse);
+    expect(routeDetailsValid('  abc  '), isTrue);
+    expect(routeDetailsValid('x' * 300), isTrue);
+    expect(routeDetailsValid('x' * 301), isFalse);
+    expect(receiverPhoneValid(''), isTrue);
+    expect(receiverPhoneValid('+970 599-123456'), isTrue);
+    expect(receiverPhoneValid('0599123456'), isTrue);
+    expect(receiverPhoneValid('call me'), isFalse);
+    expect(receiverPhoneValid('12'), isFalse);
+  });
 
   test(
     'order controller batches, then matches, without driver actions',

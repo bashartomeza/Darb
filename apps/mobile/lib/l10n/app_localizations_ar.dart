@@ -1013,6 +1013,97 @@ class AppLocalizationsAr extends AppLocalizations {
       'لا توجد أماكن متاحة على هذا المسار حالياً.';
 
   @override
+  String get orderRouteLabel => 'المسار';
+
+  @override
+  String get orderRouteChoose => 'اختر المسار';
+
+  @override
+  String get orderRoutesLoadFailed =>
+      'تعذّر تحميل المسارات. تحقّق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String get orderRoutesEmpty => 'لا توجد مسارات تعمل حالياً. حاول لاحقاً.';
+
+  @override
+  String get orderRouteRequired => 'اختر المسار أولاً.';
+
+  @override
+  String get orderRouteUnavailable =>
+      'هذا المسار لم يعد يعمل. اختر مساراً آخر.';
+
+  @override
+  String get orderRouteSaved => 'المسار المحفوظ';
+
+  @override
+  String get orderDetailsTooShort =>
+      'اكتب 3 أحرف على الأقل ليجد السائق المكان.';
+
+  @override
+  String get merchantPickupDetailsLabel => 'تفاصيل مكان الاستلام';
+
+  @override
+  String get merchantPickupDetailsHint => 'مثال: اسم المتجر والشارع';
+
+  @override
+  String get merchantDropoffDetailsLabel => 'تفاصيل مكان التسليم';
+
+  @override
+  String get merchantDropoffDetailsHint => 'مثال: الحي والشارع وأقرب معلم';
+
+  @override
+  String get merchantReceiverNameLabel => 'اسم المستلم (اختياري)';
+
+  @override
+  String get merchantReceiverPhoneLabel => 'هاتف المستلم (اختياري)';
+
+  @override
+  String get merchantReceiverPhoneInvalid =>
+      'أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.';
+
+  @override
+  String get merchantReceiverLabel => 'المستلم';
+
+  @override
+  String get merchantPendingOrderTitle => 'طلب بانتظار التأكيد';
+
+  @override
+  String get driverRoutePickTitle => 'اختر مسارك';
+
+  @override
+  String get driverRoutePickBody =>
+      'ستصلك طلبات الركاب والطرود على هذا المسار فقط.';
+
+  @override
+  String get driverRoutePickConfirm => 'ابدأ العمل';
+
+  @override
+  String get driverRouteNone => 'لم تختر مساراً بعد';
+
+  @override
+  String get driverPickupDetailsLabel => 'مكان الصعود';
+
+  @override
+  String get driverDropoffDetailsLabel => 'مكان النزول';
+
+  @override
+  String get driverMerchantPickupLabel => 'استلم الطرود من';
+
+  @override
+  String get driverParcelStopsTitle => 'أماكن تسليم الطرود';
+
+  @override
+  String driverParcelStopLabel(int number) {
+    return 'الطرد $number';
+  }
+
+  @override
+  String get driverReceiverLabel => 'المستلم';
+
+  @override
+  String get driverWhereToFindTitle => 'أماكن الاستلام والتسليم';
+
+  @override
   String get noPublishedRoutes => 'لا توجد مسارات منشورة ومؤهلة حالياً.';
 
   @override

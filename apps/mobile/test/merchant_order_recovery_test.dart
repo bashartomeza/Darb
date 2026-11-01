@@ -12,7 +12,41 @@ import 'package:darb_mobile/features/merchant/data/merchant_order_operation_stor
 import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
 
 import 'support/auth_test_support.dart';
-import 'support/legacy_corridor_fixture.dart';
+
+const _routeId = 'route-heb-bth';
+const _pickup = 'Al-Amal store, Ein Sarah street';
+const _drafts = [
+  ParcelDraft(
+    dropoffDetails: 'Near Bethlehem University main gate',
+    receiverName: 'Sara',
+    receiverPhone: '+970599123456',
+  ),
+];
+
+extension on MerchantOrderSubmission {
+  Future<MerchantOrder> send([List<ParcelDraft> parcels = _drafts]) => submit(
+    serviceRouteId: _routeId,
+    pickupDetails: _pickup,
+    parcels: parcels,
+  );
+}
+
+/// An order saved by a build before routes existed: corridor places with
+/// their coordinates, in the version-1 envelope.
+Map<String, dynamic> _corridorPayload() => {
+  'pickup_label': 'Bab Al-Zawiya',
+  'pickup_lat': 31.5326,
+  'pickup_lng': 35.0998,
+  'parcels': [
+    {
+      'destination_label': 'Bethlehem Center',
+      'destination_lat': 31.7054,
+      'destination_lng': 35.2024,
+      'size': 'S',
+      'priority': 'normal',
+    },
+  ],
+};
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -35,25 +69,35 @@ void main() {
       apiClient: TestAuthenticatedClient(handler: handler).client,
     ),
   );
-  final drafts = [ParcelDraft.to(testDropoff)];
-  final body = MerchantRepository.createOrderBody(testPickup, drafts);
+  final body = MerchantRepository.createOrderBody(
+    serviceRouteId: _routeId,
+    pickupDetails: _pickup,
+    parcels: _drafts,
+  );
+  // The server fills the city labels and echoes the typed details.
   http.Response saved([int status = 200]) => http.Response(
     jsonEncode({
       'order': {
         'id': 'saved_order',
-        'pickup_label': testPickup.label,
+        'pickup_label': 'Hebron',
+        'service_route_id': _routeId,
+        'route_name_ar': 'الخليل ← بيت لحم',
+        'route_name_en': 'Hebron → Bethlehem',
+        'pickup_details': _pickup,
         'status': 'submitted',
         'created_at': '2026-10-21T00:00:00Z',
         'parcels': [
           {
             'id': 'saved_parcel',
-            ...drafts.single.toJson(),
+            'destination_label': 'Bethlehem',
+            ..._drafts.single.toJson(),
             'status': 'pending',
           },
         ],
       },
     }),
     status,
+    headers: const {'content-type': 'application/json; charset=utf-8'},
   );
   final missing = http.Response(
     '{"error":"merchant_order_operation_not_found"}',
@@ -73,10 +117,7 @@ void main() {
         expect(pending?.payload, body);
         throw http.ClientException('response lost after commit');
       });
-      await expectLater(
-        first.submit(testPickup, drafts),
-        throwsA(isA<ApiException>()),
-      );
+      await expectLater(first.send(), throwsA(isA<ApiException>()));
       final before = await storage.read('merchant_A');
       expect(before, isNotNull);
       final restarted = runner((request) async {
@@ -105,10 +146,7 @@ void main() {
         }
         return saved(201);
       });
-      await expectLater(
-        service.submit(testPickup, drafts),
-        throwsA(isA<ApiException>()),
-      );
+      await expectLater(service.send(), throwsA(isA<ApiException>()));
       expect((await service.resume()).id, 'saved_order');
       expect(requests.map((r) => r.method), ['POST', 'GET', 'POST']);
       expect(
@@ -125,13 +163,12 @@ void main() {
       calls++;
       throw http.ClientException('lost');
     });
-    await expectLater(
-      service.submit(testPickup, drafts),
-      throwsA(isA<ApiException>()),
-    );
+    await expectLater(service.send(), throwsA(isA<ApiException>()));
     final original = await storage.read('merchant_A');
     await expectLater(
-      service.submit(testPickup, [ParcelDraft.to(testDropoff, size: 'L')]),
+      service.send([
+        ParcelDraft(dropoffDetails: _drafts.single.dropoffDetails, size: 'L'),
+      ]),
       throwsA(isA<MerchantOrderRecoveryException>()),
     );
     expect(calls, 1);
@@ -150,10 +187,7 @@ void main() {
         http.Response('{"order":{"id":"bad"}}', 201),
       ]) {
         final service = runner((_) async => response);
-        await expectLater(
-          service.submit(testPickup, drafts),
-          throwsA(anything),
-        );
+        await expectLater(service.send(), throwsA(anything));
         expect(await storage.read('merchant_A'), isNotNull);
         FlutterSecureStorage.setMockInitialValues({});
       }
@@ -165,7 +199,7 @@ void main() {
     () async {
       final invalid = http.Response('{"error":"validation_error"}', 400);
       await expectLater(
-        runner((_) async => invalid).submit(testPickup, drafts),
+        runner((_) async => invalid).send(),
         throwsA(isA<ApiException>()),
       );
       expect(await storage.read('merchant_A'), isNull);
@@ -191,10 +225,10 @@ void main() {
         started.complete();
         return gate.future;
       });
-      final first = service.submit(testPickup, drafts);
+      final first = service.send();
       await started.future;
       await expectLater(
-        service.submit(testPickup, drafts),
+        service.send(),
         throwsA(isA<MerchantOrderRecoveryException>()),
       );
       gate.complete(saved(201));
@@ -212,7 +246,7 @@ void main() {
         started.complete();
         return gate.future;
       });
-      final future = service.submit(testPickup, drafts);
+      final future = service.send();
       await started.future;
       final pending = await storage.read('merchant_A');
       binding.clear();
@@ -235,7 +269,7 @@ void main() {
         runner((_) async {
           sends++;
           return saved();
-        }, store: switching).submit(testPickup, drafts),
+        }, store: switching).send(),
         throwsA(isA<MerchantOrderRecoveryException>()),
       );
       expect(sends, 0);
@@ -308,21 +342,15 @@ void main() {
     () async {
       var sends = 0;
       await expectLater(
-        runner(
-          (_) async {
-            sends++;
-            return saved();
-          },
-          store: _FailingStorage(saveFailure: true),
-        ).submit(testPickup, drafts),
+        runner((_) async {
+          sends++;
+          return saved();
+        }, store: _FailingStorage(saveFailure: true)).send(),
         throwsA(anything),
       );
       expect(sends, 0);
       await expectLater(
-        runner(
-          (_) async => saved(201),
-          store: _FailingStorage(),
-        ).submit(testPickup, drafts),
+        runner((_) async => saved(201), store: _FailingStorage()).send(),
         throwsA(anything),
       );
       expect(await storage.read('merchant_A'), isNotNull);
@@ -339,7 +367,7 @@ void main() {
         (_) async => saved(201),
         store: MerchantOrderOperationStorage(secure),
       );
-      final future = service.submit(testPickup, drafts);
+      final future = service.send();
       await secure.started.future;
       final original = await storage.read('merchant_A');
       binding.clear();
@@ -368,7 +396,7 @@ void main() {
         sends++;
         return saved(201);
       }, store: MerchantOrderOperationStorage(secure));
-      final future = service.submit(testPickup, drafts);
+      final future = service.send();
       await secure.started.future;
       binding.clear();
       binding.bind('merchant_A');
@@ -376,7 +404,7 @@ void main() {
       secure.release.complete();
       await expectLater(future, throwsA(isA<MerchantOrderRecoveryException>()));
       await expectLater(
-        service.submit(testPickup, drafts),
+        service.send(),
         throwsA(isA<MerchantOrderRecoveryException>()),
       );
       expect(sends, 1);
@@ -391,7 +419,7 @@ void main() {
       });
       final service = runner((_) async => saved(201), store: store);
       await expectLater(
-        service.submit(testPickup, drafts),
+        service.send(),
         throwsA(isA<MerchantOrderRecoveryException>()),
       );
       expect(await storage.read('merchant_A'), isNotNull);
@@ -407,13 +435,208 @@ void main() {
         runner((_) async {
           calls++;
           return saved();
-        }).submit(testPickup, drafts),
+        }).send(),
         throwsA(anything),
       );
       expect(calls, 0);
       expect(await const FlutterSecureStorage().read(key: key), '{broken');
     },
   );
+
+  test(
+    'a route order sends the route, the typed details and optional receiver',
+    () async {
+      Map<String, dynamic>? sent;
+      final service = runner((request) async {
+        final value = sent = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'order': {
+              'id': 'saved_order',
+              'pickup_label': 'Hebron',
+              'service_route_id': value['service_route_id'],
+              'pickup_details': value['pickup_details'],
+              'status': 'submitted',
+              'created_at': '2026-10-21T00:00:00Z',
+              'parcels': [
+                for (final (index, parcel)
+                    in (value['parcels'] as List).indexed)
+                  {
+                    'id': 'parcel_$index',
+                    'destination_label': 'Bethlehem',
+                    ...parcel as Map<String, dynamic>,
+                    'status': 'pending',
+                  },
+              ],
+            },
+          }),
+          201,
+        );
+      });
+      await service.submit(
+        serviceRouteId: _routeId,
+        pickupDetails: '  $_pickup  ',
+        parcels: [
+          ..._drafts,
+          const ParcelDraft(
+            dropoffDetails: ' Manger Street ',
+            size: 'M',
+            priority: 'high',
+            receiverName: '  ',
+          ),
+        ],
+      );
+      expect(sent, {
+        'service_route_id': _routeId,
+        'pickup_details': _pickup,
+        'parcels': [
+          {
+            'dropoff_details': 'Near Bethlehem University main gate',
+            'size': 'S',
+            'priority': 'normal',
+            'receiver_name': 'Sara',
+            'receiver_phone': '+970599123456',
+          },
+          // Blank receiver fields are left out.
+          {'dropoff_details': 'Manger Street', 'size': 'M', 'priority': 'high'},
+        ],
+      });
+    },
+  );
+
+  test(
+    'an order saved before routes existed is resent exactly as saved',
+    () async {
+      final old = MerchantPendingOrder.create(
+        actorId: 'merchant_A',
+        payload: _corridorPayload(),
+      );
+      await storage.save(old);
+      // Still readable for display, as corridor places.
+      final preview = PendingOrderPreview.fromPayload(
+        (await storage.read('merchant_A'))!.payload,
+      );
+      expect(preview.legacy, isTrue);
+      expect(preview.pickup, 'Bab Al-Zawiya');
+      expect(preview.parcels.single.dropoff, 'Bethlehem Center');
+
+      final posts = <http.Request>[];
+      final service = runner((request) async {
+        if (request.method == 'GET') return missing;
+        posts.add(request);
+        return http.Response(
+          jsonEncode({
+            'order': {
+              'id': 'old_order',
+              'pickup_label': 'Bab Al-Zawiya',
+              'status': 'submitted',
+              'created_at': '2026-10-21T00:00:00Z',
+              'parcels': [
+                {
+                  'id': 'old_parcel',
+                  ...(_corridorPayload()['parcels'] as List).single
+                      as Map<String, dynamic>,
+                  'status': 'pending',
+                },
+              ],
+            },
+          }),
+          201,
+        );
+      });
+      expect((await service.resume()).id, 'old_order');
+      expect(posts, hasLength(1));
+      expect(jsonDecode(posts.single.body), _corridorPayload());
+      expect(posts.single.headers['idempotency-key'], old.idempotencyKey);
+      expect(await storage.read('merchant_A'), isNull);
+    },
+  );
+
+  test('a saved route order is resent as saved and shown as saved', () async {
+    final pending = MerchantPendingOrder.create(
+      actorId: 'merchant_A',
+      payload: body,
+    );
+    await storage.save(pending);
+    final preview = PendingOrderPreview.fromPayload(
+      (await storage.read('merchant_A'))!.payload,
+    );
+    expect(preview.legacy, isFalse);
+    expect(preview.serviceRouteId, _routeId);
+    expect(preview.pickup, _pickup);
+    expect(preview.parcels.single.receiverName, 'Sara');
+
+    final posts = <http.Request>[];
+    final service = runner((request) async {
+      if (request.method == 'GET') return missing;
+      posts.add(request);
+      return saved(201);
+    });
+    expect((await service.resume()).id, 'saved_order');
+    expect(jsonDecode(posts.single.body), body);
+    expect(posts.single.headers['idempotency-key'], pending.idempotencyKey);
+    expect(await storage.read('merchant_A'), isNull);
+  });
+
+  test(
+    'a reply with different typed details is not taken as this order',
+    () async {
+      final service = runner((_) async {
+        final reply = jsonDecode(saved(201).body) as Map<String, dynamic>;
+        (reply['order'] as Map<String, dynamic>)['pickup_details'] = 'Other';
+        return http.Response(
+          jsonEncode(reply),
+          201,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+      await expectLater(
+        service.send(),
+        throwsA(isA<MerchantOrderRecoveryException>()),
+      );
+      expect(await storage.read('merchant_A'), isNotNull);
+    },
+  );
+
+  test('a route turned off before the first send clears the order', () async {
+    final service = runner(
+      (_) async => http.Response('{"error":"route_unavailable"}', 409),
+    );
+    await expectLater(
+      service.send(),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.message,
+          'message',
+          'route_unavailable',
+        ),
+      ),
+    );
+    expect(await storage.read('merchant_A'), isNull);
+  });
+
+  test('a saved route order with unexpected fields is unreadable', () async {
+    final bad = {
+      ...body,
+      'parcels': [
+        {...(_drafts.single.toJson()), 'destination_lat': 31.7},
+      ],
+    };
+    const key = 'darb_merchant_order_v1:merchant_A';
+    FlutterSecureStorage.setMockInitialValues({
+      key: jsonEncode({
+        'version': 1,
+        'actor_id': 'merchant_A',
+        'idempotency_key': 'pending-key-0001',
+        'payload': bad,
+        'created_at': '2026-10-21T00:00:00Z',
+      }),
+    });
+    await expectLater(
+      storage.read('merchant_A'),
+      throwsA(isA<MerchantOrderRecoveryException>()),
+    );
+  });
 }
 
 class _SwitchingStorage extends MerchantOrderOperationStorage {

@@ -21,12 +21,13 @@ import '../../community_reports/application/community_reports_controller.dart';
 import '../../security/presentation/security_actions.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../driver_renewal/presentation/driver_renewal_banner.dart';
-import '../../legacy_corridor/data/legacy_corridor_repository.dart';
 import '../application/driver_controller.dart';
+import '../data/driver_models.dart';
 import '../data/driver_stats_source.dart';
 import '../domain/driver_home_stats.dart';
 import 'driver_ui.dart';
 import 'widgets/driver_home_widgets.dart';
+import 'widgets/driver_route_picker.dart';
 
 class DriverHomeScreen extends ConsumerStatefulWidget {
   const DriverHomeScreen({super.key});
@@ -54,10 +55,14 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
     final route = dashboard.value?.currentRoute;
     final isOnline = route?.isOperational ?? false;
-    // The driver's own route start, else the start of the server's corridor.
-    final operatingArea =
-        route?.originLabel ??
-        ref.watch(legacyCorridorProvider).value?.driverRoute.originLabel;
+    // The route being driven by name; a route from before routes existed is
+    // named by its start.
+    final routeName = route == null
+        ? null
+        : route.routeName(
+                arabic: Localizations.localeOf(context).languageCode == 'ar',
+              ) ??
+              localizedCorridorPlace(context, route.originLabel);
 
     return ForegroundRefresh(
       refresh: () async {
@@ -89,11 +94,9 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
                     DriverStatusCard(
                       greeting: _greeting(l10n, user?.name),
-                      // Keeps the role visible alongside the operating area.
-                      subtitle: operatingArea == null
-                          ? l10n.driver
-                          : '${l10n.driver} • '
-                                '${localizedCorridorPlace(context, operatingArea)}',
+                      // Keeps the role visible alongside the chosen route.
+                      subtitle:
+                          '${l10n.driver} • ${routeName ?? l10n.driverRouteNone}',
                       isOnline: isOnline,
                       busy: _busy || dashboard.isLoading,
                       onChanged: (value) => _toggleOnline(l10n, value),
@@ -228,15 +231,38 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
     return l10n.greetingEvening(who);
   }
 
+  /// The route of the driver's most recent route that named one.
+  String? _lastRouteId() {
+    for (final route
+        in ref.read(driverDashboardProvider).value?.routes ??
+            const <DriverRoute>[]) {
+      if (route.serviceRouteId != null) return route.serviceRouteId;
+    }
+    return null;
+  }
+
   /// Reconciles an explicit desired state through the response-loss-safe
-  /// legacy operation slot.
+  /// legacy operation slot. Going online without a route asks for one.
   Future<void> _toggleOnline(AppLocalizations l10n, bool value) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await ref.read(legacyDriverOnlineControllerProvider).setOnline(value);
+      final online = ref.read(legacyDriverOnlineControllerProvider);
+      try {
+        await online.setOnline(value);
+      } on DriverRouteRequired {
+        // No route is running for this driver: ask which one they drive,
+        // starting from the route they drove last.
+        if (!mounted) return;
+        final chosen = await showDriverRoutePicker(
+          context,
+          initialRouteId: _lastRouteId(),
+        );
+        if (chosen == null || !mounted) return;
+        await online.setOnline(value, serviceRouteId: chosen);
+      }
     } catch (error) {
       if (mounted) setState(() => _error = driverErrorLabel(l10n, error));
       await ref.read(driverDashboardProvider.notifier).refresh();

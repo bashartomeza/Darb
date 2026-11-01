@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
@@ -104,10 +103,18 @@ class _MerchantOrderDetailScreenState
               : null,
           body: Column(
             children: [
+              if (order.routeName(arabic: _arabic(context)) case final route?)
+                DetailRow(
+                  label: l10n.orderRouteLabel,
+                  value: route,
+                  icon: Icons.route_outlined,
+                  valueKey: const ValueKey('merchantOrderRoute'),
+                ),
               DetailRow(
                 label: l10n.pickup,
-                value: localizedCorridorPlace(context, order.pickupLabel),
+                value: merchantPickupText(context, order),
                 icon: Icons.place_outlined,
+                valueKey: const ValueKey('merchantOrderPickup'),
               ),
               DetailRow(
                 label: l10n.parcelCount,
@@ -405,13 +412,19 @@ class _ParcelRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  merchantDestinationLabel(context, parcel.destinationLabel),
+                  merchantParcelDropoffText(context, parcel),
+                  key: ValueKey('merchantParcelDropoff-$index'),
                   style: theme.textTheme.titleSmall,
-                  maxLines: 1,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${parcel.size} · ${merchantPriorityLabel(l10n, parcel.priority)}',
+                  [
+                    parcel.size,
+                    merchantPriorityLabel(l10n, parcel.priority),
+                    if (parcel.receiverName != null)
+                      '${l10n.merchantReceiverLabel}: ${parcel.receiverName}',
+                  ].join(' · '),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppTheme.onSurfaceVariant,
                   ),
@@ -431,6 +444,9 @@ class _ParcelRow extends StatelessWidget {
     );
   }
 }
+
+bool _arabic(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar';
 
 String _formatDate(BuildContext context, DateTime value) {
   return MaterialLocalizations.of(context).formatMediumDate(value.toLocal());

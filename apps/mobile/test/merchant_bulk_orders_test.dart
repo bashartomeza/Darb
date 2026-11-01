@@ -8,9 +8,11 @@ import 'package:http/http.dart' as http;
 import 'package:darb_mobile/features/merchant/data/merchant_bulk_models.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
 import 'package:darb_mobile/features/merchant/presentation/merchant_bulk_orders_screen.dart';
+import 'package:darb_mobile/features/operating_routes/data/operating_route_repository.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/operating_routes_fixture.dart';
 
 const _previewJson =
     '{"total_rows":2,"valid_order_count":1,"error_count":1,"errors":[{"row":3,"field":"size","code":"row_invalid_size","message_en":"\\"size\\" must be S, M or L.","message_ar":"الحقل \\"الحجم\\" يجب أن يكون S أو M أو L."}],"orders":[],"batch_plan":{"batches":[{"order_rows":[2]}],"unbatchable":[]},"limits":{"max_rows":50}}';
@@ -28,6 +30,51 @@ MerchantRepository _repository(
 ) => MerchantRepository(
   apiClient: TestAuthenticatedClient(handler: handler).client,
 );
+
+const _header = 'route_key,pickup_details,dropoff_details,size,priority';
+const _csv =
+    '$_header\n'
+    'hebron-to-bethlehem,Al-Amal store,Manger Street,S,normal\n'
+    'hebron-to-bethlehem,Al-Amal store,Old market,XL,normal\n';
+
+Future<void> _pumpScreen(
+  WidgetTester tester,
+  MerchantRepository repository,
+) async {
+  // Tall enough that the route-key list and the actions are all built.
+  tester.view.physicalSize = const Size(900, 2200);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        merchantRepositoryProvider.overrideWithValue(repository),
+        operatingRoutesProvider.overrideWith(
+          (ref) async => testOperatingRoutes(),
+        ),
+      ],
+      child: const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MerchantBulkOrdersScreen(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tap(WidgetTester tester, String key) async {
+  await tester.ensureVisible(find.byKey(ValueKey(key)));
+  await tester.tap(find.byKey(ValueKey(key)));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   test(
@@ -75,26 +122,10 @@ void main() {
       if (keys.length == 1) return http.Response('{"error":"x"}', 500);
       return _json(_resultJson, 201);
     });
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [merchantRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(
-          locale: Locale('en'),
-          localizationsDelegates: [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: MerchantBulkOrdersScreen(),
-        ),
-      ),
-    );
+    await _pumpScreen(tester, repository);
 
-    await tester.enterText(find.byKey(const ValueKey('bulkCsvField')), 'x,y');
-    await tester.tap(find.byKey(const ValueKey('bulkPreviewButton')));
-    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('bulkCsvField')), _csv);
+    await _tap(tester, 'bulkPreviewButton');
 
     expect(find.textContaining('must be S, M or L'), findsOneWidget);
     // Submit is blocked until the merchant chooses to skip the invalid row.
@@ -102,24 +133,146 @@ void main() {
       find.byKey(const ValueKey('bulkSubmitButton')),
     );
     expect(submit.onPressed, isNull);
-    await tester.tap(find.byKey(const ValueKey('bulkSkipInvalid')));
-    await tester.pump();
+    await _tap(tester, 'bulkSkipInvalid');
 
-    await tester.tap(find.byKey(const ValueKey('bulkSubmitButton')));
-    await tester.pumpAndSettle();
+    await _tap(tester, 'bulkSubmitButton');
     expect(find.textContaining('will not create duplicates'), findsOneWidget);
 
     submit = tester.widget<FilledButton>(
       find.byKey(const ValueKey('bulkSubmitButton')),
     );
-    await tester.tap(find.byKey(const ValueKey('bulkSubmitButton')));
-    await tester.pumpAndSettle();
+    await _tap(tester, 'bulkSubmitButton');
 
     expect(keys, hasLength(2));
     expect(keys[0], isNotNull);
     expect(keys[1], keys[0]);
     expect(find.text('Upload result'), findsOneWidget);
     expect(find.text('bad size'), findsOneWidget);
+  });
+
+  testWidgets('screen lists the route keys and inserts a route example', (
+    tester,
+  ) async {
+    await _pumpScreen(tester, _repository((_) async => _json('{}', 500)));
+    expect(
+      find.text('hebron-to-bethlehem — Hebron → Bethlehem'),
+      findsOneWidget,
+    );
+    await _tap(tester, 'bulkTemplateButton');
+    final csv = tester
+        .widget<TextField>(find.byKey(const ValueKey('bulkCsvField')))
+        .controller!
+        .text;
+    expect(
+      csv.split('\n').first,
+      'route_key,pickup_details,dropoff_details,size,priority,receiver_name,receiver_phone',
+    );
+    expect(csv.split('\n')[1], startsWith('hebron-to-bethlehem,'));
+    // The example passes the app's own route check.
+    expect(checkBulkCsvRoutes(csv, testOperatingRoutes()).errors, isEmpty);
+  });
+
+  testWidgets(
+    'an unknown route_key is a clear row error naming the running routes',
+    (tester) async {
+      final repository = _repository((request) async {
+        if (request.url.path.endsWith('/bulk/preview')) {
+          // The server's own, less helpful error for the same row.
+          return _json(
+            '{"total_rows":2,"valid_order_count":1,"errors":[{"row":3,"field":"route_key","code":"row_route_unavailable","message_en":"Route unavailable.","message_ar":"المسار غير متاح."}],"batch_plan":{"batches":[]},"limits":{"max_rows":50}}',
+            200,
+          );
+        }
+        return _json(_resultJson, 201);
+      });
+      await _pumpScreen(tester, repository);
+      await tester.enterText(
+        find.byKey(const ValueKey('bulkCsvField')),
+        '$_header\n'
+        'hebron-to-bethlehem,Al-Amal store,Manger Street,S,normal\n'
+        'hebron-to-jerusalem,Al-Amal store,Old city,S,normal\n',
+      );
+      await _tap(tester, 'bulkPreviewButton');
+
+      expect(
+        find.text(
+          'Unknown route_key "hebron-to-jerusalem". Use one of: '
+          'hebron-to-bethlehem, bethlehem-to-hebron.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Route unavailable.'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('bulkError-3-unknown_route_key')),
+        findsOneWidget,
+      );
+      // The preview names the valid rows' route.
+      expect(
+        find.byKey(const ValueKey('bulkRouteCount-hebron-to-bethlehem')),
+        findsOneWidget,
+      );
+      expect(find.text('Hebron → Bethlehem: 1'), findsOneWidget);
+    },
+  );
+
+  testWidgets('missing columns are a whole-file error without a server call', (
+    tester,
+  ) async {
+    var calls = 0;
+    await _pumpScreen(
+      tester,
+      _repository((_) async {
+        calls++;
+        return _json(_previewJson, 200);
+      }),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('bulkCsvField')),
+      'pickup_label,pickup_lat,pickup_lng,destination_label,size,priority\n'
+      'Hebron Depot,31.5,35.1,Bethlehem Center,S,normal\n',
+    );
+    await _tap(tester, 'bulkPreviewButton');
+
+    expect(calls, 0);
+    expect(find.textContaining('Missing columns: route_key'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('bulkSubmitButton')))
+          .onPressed,
+      isNull,
+    );
+  });
+
+  test('CSV records keep quoted commas, quotes and line breaks', () {
+    expect(
+      parseCsvRecords(
+        'a,b\r\n"Store, Ein Sarah","say ""hi""\nthere"\n\n x ,\n',
+      ),
+      [
+        ['a', 'b'],
+        ['Store, Ein Sarah', 'say "hi"\nthere'],
+        [' x ', ''],
+      ],
+    );
+  });
+
+  test('route check counts rows per route and flags empty keys', () {
+    final check = checkBulkCsvRoutes(
+      '$_header\n'
+      'hebron-to-bethlehem,a,b,S,normal\n'
+      ',a,b,S,normal\n'
+      'bethlehem-to-hebron,a,b,S,normal\n'
+      'hebron-to-bethlehem,c,d,M,high\n',
+      testOperatingRoutes(),
+    );
+    expect(check.totalRows, 4);
+    expect(check.rowsByRoute, {
+      'hebron-to-bethlehem': 2,
+      'bethlehem-to-hebron': 1,
+    });
+    expect(check.errors.single.row, 3);
+    expect(check.errors.single.message(true), contains('فارغ'));
+    expect(check.hasFileError, isFalse);
   });
 
   test('BulkRowError falls back to the other language when one is empty', () {
