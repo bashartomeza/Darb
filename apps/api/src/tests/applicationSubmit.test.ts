@@ -80,6 +80,33 @@ describe("submitting an application for review", () => {
     db.merchantApplicationDocument.findMany.mockResolvedValue([]);
   });
 
+  let statusApp: ReturnType<typeof createApp>;
+  beforeAll(() => {
+    statusApp = createApp(
+      createConfig({
+        APP_ENV: "local",
+        DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+        JWT_SECRET: "local-test-jwt-secret-longer-than-thirty-two-characters",
+        REFRESH_TOKEN_PEPPER: "local-test-refresh-pepper-longer-than-thirty-two-characters",
+        CORS_ORIGINS: "http://localhost:5173",
+        TRUST_PROXY: "none",
+        LOG_LEVEL: "silent",
+        PUBLIC_ONBOARDING_ENABLED: "true",
+        OTP_PROVIDER: "fake",
+        DRIVER_DOCUMENTS_ENABLED: "true",
+        DRIVER_DOCUMENTS_DIR: tmpdir(),
+        ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: "true",
+        INVITATION_CODE_PEPPER: "invitation-test-secret-longer-than-thirty-two-characters",
+        PHONE_DIGEST_PEPPER: "phone-test-secret-longer-than-thirty-two-characters",
+        OTP_CODE_PEPPER: "otp-test-secret-longer-than-thirty-two-characters",
+        ONBOARDING_SESSION_PEPPER: "session-test-secret-longer-than-thirty-two-characters",
+        IDEMPOTENCY_KEY_PEPPER: "idempotency-test-secret-longer-than-thirty-two-characters",
+        IDEMPOTENCY_PAYLOAD_PEPPER: "payload-test-secret-longer-than-thirty-two-characters",
+        ABUSE_KEY_PEPPER: "abuse-test-secret-longer-than-thirty-two-characters"
+      })
+    );
+  });
+
   const submit = () => request(app).post("/api/v1/onboarding/application/submit");
 
   it("refuses a shop owner with missing documents and names what is missing", async () => {
@@ -105,21 +132,22 @@ describe("submitting an application for review", () => {
     );
   });
 
-  it("refuses a driver without licence, vehicle registration and national ID", async () => {
+  it("refuses a driver without licence, vehicle registration, vehicle photo and national ID", async () => {
     userRow = { role: "driver", account_status: "pending", review_submitted_at: null };
     onboardingContext.current = context("driver");
     db.driverVerificationDocument.findMany.mockResolvedValue([{ kind: "driver_licence" }, { kind: "insurance" }]);
     const response = await submit().expect(409);
-    expect(response.body.missing_documents).toEqual(["vehicle_registration", "national_id"]);
+    expect(response.body.missing_documents).toEqual(["vehicle_registration", "vehicle_photo", "national_id"]);
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it("submits a driver with all three required documents and stamps the verification", async () => {
+  it("submits a driver with all four required documents and stamps the verification", async () => {
     userRow = { role: "driver", account_status: "pending", review_submitted_at: null };
     onboardingContext.current = context("driver");
     db.driverVerificationDocument.findMany.mockResolvedValue([
       { kind: "driver_licence" },
       { kind: "vehicle_registration" },
+      { kind: "vehicle_photo" },
       { kind: "national_id" }
     ]);
     await submit().expect(200);
@@ -156,5 +184,27 @@ describe("submitting an application for review", () => {
     db.merchantApplicationDocument.count.mockResolvedValue(1);
     await request(app).delete("/api/v1/onboarding/merchant-documents/doc_1").expect(200);
     expect(db.merchantApplicationDocument.delete).toHaveBeenCalled();
+  });
+
+  it("tells a rejected driver the admin's reason, and a pending one only that it awaits approval", async () => {
+    userRow = { role: "driver", account_status: "pending", review_submitted_at: new Date() };
+    onboardingContext.current = context("driver");
+    db.driverVerification.findUnique.mockResolvedValue({ status: "rejected", rejection_reason: "Licence photo is blurry" });
+    const rejected = await request(statusApp).get("/api/v1/onboarding/status").expect(200);
+    expect(rejected.body).toMatchObject({ onboarding_status: "rejected", next_action: "contact_support", rejection_reason: "Licence photo is blurry" });
+
+    db.driverVerification.findUnique.mockResolvedValue({ status: "pending", rejection_reason: null });
+    const pending = await request(statusApp).get("/api/v1/onboarding/status").expect(200);
+    expect(pending.body).toMatchObject({ onboarding_status: "pending_review", next_action: "await_approval" });
+    expect(pending.body.rejection_reason).toBeUndefined();
+  });
+
+  it("refuses a second driver submission without stamping the application again", async () => {
+    userRow = { role: "driver", account_status: "pending", review_submitted_at: new Date("2026-10-28T10:00:00Z") };
+    onboardingContext.current = context("driver");
+    const response = await submit().expect(200);
+    expect(response.body).toMatchObject({ onboarding_status: "pending_review", next_action: "await_approval" });
+    expect(db.user.update).not.toHaveBeenCalled();
+    expect(db.driverVerification.update).not.toHaveBeenCalled();
   });
 });

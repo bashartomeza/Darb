@@ -2,11 +2,11 @@ import { createHash, randomBytes } from "node:crypto";
 import { mkdir, open, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
-export const DOCUMENT_KINDS = ["driver_licence", "vehicle_registration", "national_id", "insurance", "other"] as const;
+export const DOCUMENT_KINDS = ["driver_licence", "vehicle_registration", "vehicle_photo", "national_id", "insurance", "other"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 export const MERCHANT_DOCUMENT_KINDS = ["commercial_register", "national_id", "shop_photo", "other"] as const;
 /** Kinds an applicant must have uploaded before an application can be sent for review. */
-export const DRIVER_REQUIRED_DOCUMENT_KINDS = ["driver_licence", "vehicle_registration", "national_id"] as const;
+export const DRIVER_REQUIRED_DOCUMENT_KINDS = ["driver_licence", "vehicle_registration", "vehicle_photo", "national_id"] as const;
 export const MERCHANT_REQUIRED_DOCUMENT_KINDS = ["commercial_register", "national_id", "shop_photo"] as const;
 
 export const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;

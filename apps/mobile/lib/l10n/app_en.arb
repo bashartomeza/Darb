@@ -302,7 +302,7 @@
   "accountCreated": "Account created",
   "signInToContinue": "Your account was created. Sign in to continue.",
   "applicationUnderReview": "Application under review",
-  "pendingReviewBody": "Your account was created and is now pending. An admin will review it, which usually takes up to 24 hours. You can sign in once it is approved.",
+  "pendingReviewBody": "Your application was sent to the admin and is awaiting approval. This usually takes up to 24 hours. You can sign in once it is approved.",
   "merchantDocumentsHint": "To get approved, upload clear photos or PDFs of your commercial register (or shop licence), your national ID and a photo of your shop. Files are stored on our server and only the review team can open them.",
   "documentKindCommercialRegister": "Commercial register",
   "documentKindShopPhoto": "Shop photo",
@@ -752,6 +752,7 @@
   "documentKind": "Document type",
   "documentKindDriverLicence": "Driving licence",
   "documentKindVehicleRegistration": "Vehicle registration",
+  "documentKindVehiclePhoto": "Vehicle photo",
   "documentKindNationalId": "National ID",
   "documentKindInsurance": "Insurance",
   "documentKindOther": "Other document",
@@ -868,6 +869,16 @@
   "availabilityDocumentsExpired": "Your documents have expired. Send renewed documents to restore access.",
   "applicationDocumentsRequiredTitle": "Upload your documents",
   "applicationDocumentsRequiredBody": "Your account is created but is not under review yet. Upload every required document, then send your application. Review usually takes up to 24 hours.",
+  "applicationRejectedTitle": "Application rejected",
+  "applicationRejectedBody": "Your driver application was reviewed and not approved. You cannot use driver features. Contact support if you think this is a mistake.",
+  "applicationRejectedReason": "Reason: {reason}",
+  "@applicationRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "documentsStillNeeded": "Still needed: {documents}",
   "@documentsStillNeeded": {
     "placeholders": {

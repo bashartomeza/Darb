@@ -928,7 +928,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pendingReviewBody =>
-      'Your account was created and is now pending. An admin will review it, which usually takes up to 24 hours. You can sign in once it is approved.';
+      'Your application was sent to the admin and is awaiting approval. This usually takes up to 24 hours. You can sign in once it is approved.';
 
   @override
   String get merchantDocumentsHint =>
@@ -2198,6 +2198,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get documentKindVehicleRegistration => 'Vehicle registration';
 
   @override
+  String get documentKindVehiclePhoto => 'Vehicle photo';
+
+  @override
   String get documentKindNationalId => 'National ID';
 
   @override
@@ -2434,6 +2437,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get applicationDocumentsRequiredBody =>
       'Your account is created but is not under review yet. Upload every required document, then send your application. Review usually takes up to 24 hours.';
+
+  @override
+  String get applicationRejectedTitle => 'Application rejected';
+
+  @override
+  String get applicationRejectedBody =>
+      'Your driver application was reviewed and not approved. You cannot use driver features. Contact support if you think this is a mistake.';
+
+  @override
+  String applicationRejectedReason(String reason) {
+    return 'Reason: $reason';
+  }
 
   @override
   String documentsStillNeeded(String documents) {
