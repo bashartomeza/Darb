@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/ai_directives/ai_ui_directives.dart';
-import 'package:masari_mobile/features/ai_directives/edge_geofence.dart';
-import 'package:masari_mobile/features/assistant/domain/passenger_assistant_models.dart';
+import 'package:darb_mobile/features/ai_directives/ai_ui_directives.dart';
+import 'package:darb_mobile/features/ai_directives/edge_geofence.dart';
+import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
 
 /// The same JSON file is validated by Python (pytest) and Node (vitest).
 Map<String, dynamic> _fixture() {
@@ -80,26 +80,29 @@ void main() {
   });
 
   group('PassengerAssistantReply integration', () {
-    test('voice reply carries transcript and directives; text reply does not', () {
-      final voice = PassengerAssistantReply.fromJson({
-        'status': 'clarification',
-        'question': 'من وين بدك تطلع؟',
-        'suggestions': <String>[],
-        'conversation_id': 'c1',
-        'transcript': 'بدي سيرفيس',
-        'frontend_ai_ui_directives': _fixture()['emergency'],
-      });
-      expect(voice.transcript, 'بدي سيرفيس');
-      expect(voice.uiDirectives?.isEmergency, isTrue);
+    test(
+      'voice reply carries transcript and directives; text reply does not',
+      () {
+        final voice = PassengerAssistantReply.fromJson({
+          'status': 'clarification',
+          'question': 'من وين بدك تطلع؟',
+          'suggestions': <String>[],
+          'conversation_id': 'c1',
+          'transcript': 'بدي سيرفيس',
+          'frontend_ai_ui_directives': _fixture()['emergency'],
+        });
+        expect(voice.transcript, 'بدي سيرفيس');
+        expect(voice.uiDirectives?.isEmergency, isTrue);
 
-      final text = PassengerAssistantReply.fromJson({
-        'status': 'result',
-        'answer': 'جواب',
-        'suggestions': <String>[],
-      });
-      expect(text.uiDirectives, isNull);
-      expect(text.transcript, isNull);
-    });
+        final text = PassengerAssistantReply.fromJson({
+          'status': 'result',
+          'answer': 'جواب',
+          'suggestions': <String>[],
+        });
+        expect(text.uiDirectives, isNull);
+        expect(text.transcript, isNull);
+      },
+    );
 
     test('malformed directives never break the assistant reply', () {
       final reply = PassengerAssistantReply.fromJson({
@@ -128,26 +131,29 @@ void main() {
       expect(pickup.cloudUpdateAllowed, isTrue);
     });
 
-    test('outside radius holds silently; dispatch/transit ignore the fence', () {
-      final hold = evaluateEdgeGeofence(
-        driverLat: 31.92,
-        driverLon: 35.22,
-        centerLat: centerLat,
-        centerLon: centerLon,
-        milestone: EdgeMilestone.destination,
-      );
-      expect(hold.signal, EdgeSignal.silentHold);
-      expect(hold.cloudUpdateAllowed, isFalse);
-      final transit = evaluateEdgeGeofence(
-        driverLat: 31.92,
-        driverLon: 35.22,
-        centerLat: centerLat,
-        centerLon: centerLon,
-        milestone: EdgeMilestone.transit,
-      );
-      expect(transit.signal, EdgeSignal.transitInProgress);
-      expect(transit.cloudUpdateAllowed, isTrue);
-    });
+    test(
+      'outside radius holds silently; dispatch/transit ignore the fence',
+      () {
+        final hold = evaluateEdgeGeofence(
+          driverLat: 31.92,
+          driverLon: 35.22,
+          centerLat: centerLat,
+          centerLon: centerLon,
+          milestone: EdgeMilestone.destination,
+        );
+        expect(hold.signal, EdgeSignal.silentHold);
+        expect(hold.cloudUpdateAllowed, isFalse);
+        final transit = evaluateEdgeGeofence(
+          driverLat: 31.92,
+          driverLon: 35.22,
+          centerLat: centerLat,
+          centerLon: centerLon,
+          milestone: EdgeMilestone.transit,
+        );
+        expect(transit.signal, EdgeSignal.transitInProgress);
+        expect(transit.cloudUpdateAllowed, isTrue);
+      },
+    );
 
     test('negative, corrupted or out-of-region coordinates are tampering', () {
       for (final bad in [

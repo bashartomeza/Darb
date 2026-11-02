@@ -73,8 +73,12 @@ EdgeGeofenceResult evaluateEdgeGeofence({
     );
   }
   final distance = double.parse(
-    haversineMeters(driverLat, driverLon, centerLat, centerLon)
-        .toStringAsFixed(2),
+    haversineMeters(
+      driverLat,
+      driverLon,
+      centerLat,
+      centerLon,
+    ).toStringAsFixed(2),
   );
   final inside = distance <= geofenceRadiusMeters;
   switch (milestone) {

@@ -1,3 +1,5 @@
+import 'package:darb_mobile/features/ai_directives/ai_ui_directives.dart';
+
 enum PassengerAssistantReplyType { clarification, requestReview, result }
 
 class PassengerAssistantTripDraft {
@@ -176,6 +178,8 @@ class PassengerAssistantReply {
     this.conversationId,
     this.suggestions = const [],
     this.draft,
+    this.transcript,
+    this.uiDirectives,
   });
 
   factory PassengerAssistantReply.fromJson(Map<String, dynamic> json) {
@@ -209,6 +213,7 @@ class PassengerAssistantReply {
         : const <String>[];
     final rawConversationId =
         payload['conversation_id'] ?? json['conversation_id'];
+    final rawTranscript = payload['transcript'];
     final rawDraft = payload['extracted'];
     final draft =
         type == PassengerAssistantReplyType.requestReview && rawDraft is Map
@@ -229,6 +234,12 @@ class PassengerAssistantReply {
           : null,
       suggestions: suggestions,
       draft: draft,
+      transcript: rawTranscript is String && rawTranscript.trim().isNotEmpty
+          ? rawTranscript.trim()
+          : null,
+      uiDirectives: AiUiDirectives.tryParse(
+        payload['frontend_ai_ui_directives'],
+      ),
     );
   }
 
@@ -237,6 +248,12 @@ class PassengerAssistantReply {
   final String? conversationId;
   final List<String> suggestions;
   final PassengerAssistantTripDraft? draft;
+
+  /// Whisper transcript; only present on voice replies.
+  final String? transcript;
+
+  /// Validated UI directives from the AI service; null when absent or invalid.
+  final AiUiDirectives? uiDirectives;
 }
 
 enum PassengerAssistantMessageRole { passenger, assistant }

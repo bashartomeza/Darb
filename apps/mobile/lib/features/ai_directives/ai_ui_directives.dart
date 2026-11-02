@@ -68,7 +68,9 @@ class AiUiDirectives {
       mode: mode,
       theme: AiThemeDirectives(
         primaryColorHex: hex,
-        primaryColor: Color(0xFF000000 | int.parse(hex.substring(1), radix: 16)),
+        primaryColor: Color(
+          0xFF000000 | int.parse(hex.substring(1), radix: 16),
+        ),
         flashing: _bool(theme['flashing']),
         flashIntervalMs: flashInterval,
         respectReduceMotion: _bool(theme['respect_reduce_motion']),
