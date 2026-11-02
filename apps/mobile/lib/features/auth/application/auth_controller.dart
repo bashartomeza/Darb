@@ -147,6 +147,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     required String name,
     required String email,
     required String password,
+    required String phone,
     String locale = 'ar',
   }) {
     _loginFailure = null;
@@ -156,6 +157,7 @@ class AuthController extends AsyncNotifier<AuthState> {
         name: name,
         email: email,
         password: password,
+        phone: phone,
         locale: locale,
       ),
     );
@@ -345,6 +347,23 @@ class AuthController extends AsyncNotifier<AuthState> {
     final user = await _repository.me();
     if (!_isCurrent(attempt)) return;
     _bindAuthenticatedActor(user);
+    state = AsyncData(AuthState.authenticated(user));
+  }
+
+  /// Saves profile edits and publishes the returned user so every screen that
+  /// shows the name (Home's greeting, Settings) updates at once.
+  Future<void> updateProfile({
+    required String name,
+    required String city,
+    String? contactPhone,
+  }) async {
+    final attempt = _authAttempt;
+    final user = await _repository.updateProfile(
+      name: name,
+      city: city,
+      contactPhone: contactPhone,
+    );
+    if (!_isCurrent(attempt)) return;
     state = AsyncData(AuthState.authenticated(user));
   }
 

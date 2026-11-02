@@ -45,6 +45,7 @@ class AuthRepository {
     required String name,
     required String email,
     required String password,
+    required String phone,
     String deviceName = _deviceName,
     String locale = 'ar',
   }) async {
@@ -53,6 +54,7 @@ class AuthRepository {
       body: {
         'name': name,
         'email': email,
+        'phone': phone,
         'password': password,
         'locale': locale,
       },
@@ -168,18 +170,6 @@ class AuthRepository {
     },
   );
 
-  Future<Map<String, dynamic>> startPhone(String phone, String locale) =>
-      authenticatedApiClient.postJson(
-        '/profile/phone/start-verification',
-        body: {'phone': phone, 'locale': locale},
-      );
-  Future<void> confirmPhone(String phone, String token, String code) async {
-    await authenticatedApiClient.postJson(
-      '/profile/phone/confirm-verification',
-      body: {'phone': phone, 'action_token': token, 'code': code},
-    );
-  }
-
   Future<void> emailActionStart(
     String email,
     String locale, {
@@ -263,6 +253,34 @@ class AuthRepository {
     final json = await apiClient.postJson(path, body: body);
     try {
       return LoginResult.fromJson(json);
+    } on FormatException {
+      throw const ApiException(ApiErrorType.validation, 'invalid_response');
+    }
+  }
+
+  /// Saves the editable parts of the signed-in user's profile. An empty [city]
+  /// or [contactPhone] clears it; a null [contactPhone] leaves it unchanged
+  /// (accounts with a verified phone have nothing to edit there).
+  Future<AuthUser> updateProfile({
+    required String name,
+    required String city,
+    String? contactPhone,
+  }) async {
+    final json = await authenticatedApiClient.patchJson(
+      '/me',
+      body: {
+        'name': name,
+        'city': city.isEmpty ? null : city,
+        if (contactPhone != null)
+          'contact_phone': contactPhone.isEmpty ? null : contactPhone,
+      },
+    );
+    final userJson = json['user'];
+    if (userJson is! Map<String, dynamic>) {
+      throw const ApiException(ApiErrorType.validation, 'invalid_response');
+    }
+    try {
+      return AuthUser.fromJson(userJson);
     } on FormatException {
       throw const ApiException(ApiErrorType.validation, 'invalid_response');
     }

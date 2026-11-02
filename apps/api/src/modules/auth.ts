@@ -61,12 +61,14 @@ function publicUser(user: {
   profile_state?: string;
   email_verified_at?: Date | null;
   phone_verified_at?: Date | null;
+  contact_phone?: string | null;
   city?: string | null;
 }) {
   return {
     id: user.id,
     name: user.name,
     phone: user.phone,
+    contact_phone: user.contact_phone ?? null,
     email: user.email,
     role: user.role,
     account_status: user.account_status,
@@ -581,6 +583,33 @@ authRouter.get("/me", requireAuth, async (req: AuthenticatedRequest, res, next) 
       ...(driverProfile ? { driver_profile: driverProfile } : {}),
       ...(merchantProfile ? { merchant_profile: merchantProfile } : {})
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// The owner edits the descriptive parts of their profile. A verified `phone` is an
+// identity and is never touched here; `contact_phone` is the unverified number.
+const profileUpdateSchema = z
+  .strictObject({
+    name: z.string().trim().min(1).max(120).optional(),
+    city: z.string().trim().max(100).nullable().optional(),
+    contact_phone: z.string().trim().min(7).max(32).nullable().optional()
+  })
+  .refine((value) => Object.keys(value).length > 0, { message: "no_changes" });
+
+authRouter.patch("/me", requireAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const input = profileUpdateSchema.parse(req.body);
+    const user = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.city !== undefined ? { city: input.city || null } : {}),
+        ...(input.contact_phone !== undefined ? { contact_phone: input.contact_phone } : {})
+      }
+    });
+    res.json({ user: publicUser(user) });
   } catch (error) {
     next(error);
   }

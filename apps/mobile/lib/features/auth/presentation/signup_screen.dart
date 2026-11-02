@@ -24,6 +24,7 @@ class SignUpScreen extends ConsumerStatefulWidget {
 class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _showPassword = false;
@@ -35,6 +36,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -109,6 +111,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           LengthLimitingTextInputFormatter(191),
                         ],
                         validator: (value) => _validateEmail(l10n, value),
+                      ),
+                      const SizedBox(height: 16),
+                      AuthTextField(
+                        key: const ValueKey('phoneField'),
+                        controller: _phoneController,
+                        hint: authText(context, 'Phone number', 'رقم الهاتف'),
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        autofillHints: const [AutofillHints.telephoneNumber],
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [LengthLimitingTextInputFormatter(32)],
+                        validator: (value) => _validatePhone(context, value),
                       ),
                       const SizedBox(height: 16),
                       AuthTextField(
@@ -216,6 +230,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           name: _nameController.text.trim(),
           email: _emailController.text.trim().toLowerCase(),
           password: _passwordController.text,
+          phone: _phoneController.text.trim(),
           locale: Localizations.localeOf(context).languageCode,
         );
     if (mounted) {
@@ -246,6 +261,18 @@ String? _validateEmail(AppLocalizations l10n, String? value) {
   if (email.isEmpty) return l10n.emailRequired;
   final pattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
   return pattern.hasMatch(email) ? null : l10n.emailInvalid;
+}
+
+/// The phone is an extra contact detail: only its length is checked.
+String? _validatePhone(BuildContext context, String? value) {
+  final length = value?.trim().length ?? 0;
+  return length >= 7 && length <= 32
+      ? null
+      : authText(
+          context,
+          'Enter your phone number (7–32 characters).',
+          'أدخل رقم هاتفك (من 7 إلى 32 حرفاً).',
+        );
 }
 
 String _errorMessage(AppLocalizations l10n, Object error) {

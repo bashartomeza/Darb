@@ -365,6 +365,7 @@ class _PlanTripCard extends StatelessWidget {
 
     return Container(
       height: 210,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: PassengerStyle.panel,
         borderRadius: BorderRadius.circular(PassengerStyle.radiusCard),
@@ -372,16 +373,17 @@ class _PlanTripCard extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // The car runs past the panel to the screen edge, as in the design.
+          // The car is cropped by the panel's edge: only its front half shows,
+          // as in the design. The Container's clip trims the overflow.
           PositionedDirectional(
-            end: -20,
+            end: -57,
             top: 56,
             child: Transform.flip(
               flipX: rtl,
               child: Image.asset(
                 '${PassengerHomeScreen._asset}/car.png',
-                width: 176,
-                height: 64,
+                width: 192,
+                height: 70,
                 fit: BoxFit.fill,
                 excludeFromSemantics: true,
               ),

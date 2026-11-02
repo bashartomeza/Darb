@@ -399,6 +399,9 @@ model User {
   name              String
   phone             String?       @unique @db.VarChar(32)
   phone_verified_at DateTime?
+  // Additional contact number typed at email sign-up: stored as entered, length-checked only, never
+  // verified, and not unique (several accounts may share one). `phone` stays the verified identity.
+  contact_phone     String?       @db.VarChar(32)
   email             String?       @unique @db.VarChar(191)
   email_verified_at DateTime?
   google_sub        String?       @unique

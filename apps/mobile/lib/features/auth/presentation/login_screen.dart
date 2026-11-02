@@ -227,19 +227,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                       ),
-                      TextButton(
-                        key: const ValueKey('emailVerification'),
-                        onPressed: loading
-                            ? null
-                            : () => openCredentialAction(context, 'verify'),
-                        child: Text(
-                          authText(
-                            context,
-                            'Verify email',
-                            'التحقق من البريد الإلكتروني',
-                          ),
-                        ),
-                      ),
                       if (onboardingEnabled)
                         TextButton(
                           key: const ValueKey('checkApplicationStatusButton'),

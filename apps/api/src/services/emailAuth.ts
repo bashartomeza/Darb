@@ -21,7 +21,9 @@ const locale = z.enum(["ar", "en"]);
 const actionToken = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 const registrationToken = z.string().min(1).max(2048);
 const consentInput = z.strictObject({ id: z.string().min(1).max(191), type: z.enum(["terms", "privacy", "adult_self_attestation"]), content_hash: z.string().regex(/^[a-f0-9]{64}$/) });
-export const emailStartSchema = z.strictObject({ name: z.string().trim().min(1).max(120), email: canonicalEmail, password: newPassword, locale });
+// The phone is an extra contact detail, not an identifier: only its length is checked and it is stored as entered.
+export const contactPhone = z.string().trim().min(7).max(32);
+export const emailStartSchema = z.strictObject({ name: z.string().trim().min(1).max(120), email: canonicalEmail, phone: contactPhone.optional(), password: newPassword, locale });
 const emailCode = z.string().regex(/^\d{6}$/);
 // A registration is proven either by the 6-digit code from the email or by the longer token that
 // verify/confirm hands back; at most one of the two. Neither is accepted only for a registration
@@ -36,7 +38,7 @@ export const emailProofConfirmSchema = z.strictObject({ code: emailCode, registr
   .refine((v) => (v.registration_token === undefined) !== (v.email === undefined));
 export const passwordResetSchema = z.strictObject({ email: canonicalEmail, code: emailCode, password: newPassword });
 export const passwordSetSchema = z.strictObject({ password: newPassword, current_password: z.string().min(1).max(200).optional(), reauthentication_code: emailCode.optional() });
-const envelopeSchema = z.strictObject({ name: z.string(), email: canonicalEmail, passwordHash: z.string().regex(/^\$2[aby]\$\d\d\$.{53}$/), expires: z.number(), nonce: z.string(),
+const envelopeSchema = z.strictObject({ name: z.string(), email: canonicalEmail, phone: contactPhone.optional(), passwordHash: z.string().regex(/^\$2[aby]\$\d\d\$.{53}$/), expires: z.number(), nonce: z.string(),
   unverified: z.literal(true).optional() });
 
 // The pre-consent identity remains only in a short-lived authenticated-encrypted
@@ -132,7 +134,7 @@ export class EmailAuthService {
     // Starting a registration never reveals whether the address is taken, so a plain 429 leaks nothing.
     if (!(await this.mayIssueEmailCode(input.email, "email_verification"))) throw new HttpError(429, "rate_limited");
     const expires = Date.now() + 24 * 60 * 60 * 1000;
-    const envelope = seal({ name: input.name, email: input.email, passwordHash: await bcrypt.hash(input.password, 12), expires, nonce: randomBytes(16).toString("hex") }, key);
+    const envelope = seal({ name: input.name, email: input.email, phone: input.phone, passwordHash: await bcrypt.hash(input.password, 12), expires, nonce: randomBytes(16).toString("hex") }, key);
     // The email carries only the short code; the long token stays server-side.
     const proof = await issueAuthAction(this.db, { purpose: "email_verification", key, subject: envelope, withCode: true, payload: { email_digest: this.emailDigest(input.email) } });
     try { await sender.send({ to: input.email, locale: input.locale, purpose: "email_verification", actionToken: proof.code!, expiresAt: proof.expiresAt }); }
@@ -147,7 +149,7 @@ export class EmailAuthService {
   private async startUnverified(input: z.infer<typeof emailStartSchema>) {
     const key = this.key();
     const expires = Date.now() + 24 * 60 * 60 * 1000;
-    const envelope = seal({ name: input.name, email: input.email, passwordHash: await bcrypt.hash(input.password, 12), expires, nonce: randomBytes(16).toString("hex"), unverified: true }, key);
+    const envelope = seal({ name: input.name, email: input.email, phone: input.phone, passwordHash: await bcrypt.hash(input.password, 12), expires, nonce: randomBytes(16).toString("hex"), unverified: true }, key);
     return { registration_token: envelope, expires_at: new Date(expires).toISOString(), next_action: "accept_consents" };
   }
 
@@ -174,7 +176,7 @@ export class EmailAuthService {
       }
       const now = new Date();
       const user = await tx.user.create({ data: { name: payload.name, email: payload.email, password_hash: payload.passwordHash, email_verified_at: unproven ? null : now,
-        phone: null, phone_verified_at: null, profile_state: unproven ? "complete" : "phone_required", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
+        phone: null, phone_verified_at: null, contact_phone: payload.phone ?? null, profile_state: unproven ? "complete" : "phone_required", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
       await tx.userConsent.createMany({ data: documents.map((d) => ({ user_id: user.id, consent_document_id: d.id, accepted_at: now,
         source: "email_registration", request_id: requestId, app_release: this.config.appRelease })) });
       const session = await createSession(tx, user);

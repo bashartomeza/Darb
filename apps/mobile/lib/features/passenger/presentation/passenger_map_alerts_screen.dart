@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
 import 'package:masari_mobile/l10n/app_localizations.dart';
@@ -68,11 +67,7 @@ class PassengerMapAlertsScreen extends ConsumerWidget {
   ) {
     return AppBar(
       toolbarHeight: 64,
-      leading: IconButton(
-        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-        icon: const Icon(Icons.arrow_back_rounded, size: 26),
-        onPressed: () => context.go('/passenger'),
-      ),
+      automaticallyImplyLeading: false,
       title: Text(
         l10n.navMapAlerts,
         style: const TextStyle(
