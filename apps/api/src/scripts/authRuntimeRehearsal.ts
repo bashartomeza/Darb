@@ -29,7 +29,7 @@ async function main() {
   assert.equal(race.filter(r => r.status === "fulfilled").length, 1, "one_concurrent_registration_winner");
   assert.equal(race.filter(r => r.status === "rejected").length, 1);
   const user = await prisma.user.findUniqueOrThrow({ where: { email: identity.email } });
-  assert.equal(user.role, "passenger"); assert.equal(user.profile_state, "phone_required"); assert.equal(user.phone, null);
+  assert.equal(user.role, "passenger"); assert.equal(user.profile_state, "complete"); assert.equal(user.phone, null);
   assert.equal(await prisma.externalIdentity.count({ where: { user_id: user.id } }), 1);
   assert.equal(await prisma.userConsent.count({ where: { user_id: user.id } }), 3);
   assert.equal(await prisma.authSession.count({ where: { user_id: user.id } }), 1);
@@ -38,7 +38,7 @@ async function main() {
   let deliveredCode = "";
   const profile = new IdentityProfileService(prisma, config, undefined, { kind: "test", async send(message) { deliveredCode = message.code; } });
   const proof = await profile.phoneStart(user.id, user.security_version, { phone: "+12025550124", locale: "en" });
-  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).profile_state, "phone_required");
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).phone, null, "phone_saved_only_after_code");
   await profile.phoneConfirm(user.id, user.security_version, { action_token: proof.action_token, phone: "+12025550124", code: deliveredCode });
   const completed = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
   assert.equal(completed.profile_state, "complete"); assert(completed.phone_verified_at); assert.equal(completed.phone, "+12025550124");

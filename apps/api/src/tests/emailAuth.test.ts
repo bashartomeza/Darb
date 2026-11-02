@@ -152,7 +152,7 @@ describe("email authentication lifecycle", () => {
     await request(server).post("/api/v1/auth/mobile/register/complete").send({ ...complete(r.body), consents: [] }).expect(400);
     expect(users).toHaveLength(0);
     const response = await request(server).post("/api/v1/auth/mobile/register/complete").send(complete(r.body)).expect(201);
-    expect(response.body.user).toMatchObject({ role: "passenger", phone: null, profile_state: "phone_required" });
+    expect(response.body.user).toMatchObject({ role: "passenger", phone: null, profile_state: "complete" });
     expect(response.body.access_token).toEqual(expect.any(String)); expect(users[0].email_verified_at).toBeInstanceOf(Date);
     expect(await bcrypt.compare(registration.password, users[0].password_hash)).toBe(true);
     expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });
@@ -265,6 +265,14 @@ describe("email authentication lifecycle", () => {
         expect(response.body.error).not.toBe("email_verification_required");
       } finally { (config as any).emailVerificationDisabled = false; }
     });
+  });
+  it("lets a newly signed-up passenger use product routes without a separate phone step", async () => {
+    const server = app(); const r = await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, phone: "0599123456" }).expect(202);
+    await request(server).post("/api/v1/auth/mobile/register/complete").send(complete(r.body)).expect(201);
+    expect(users[0]).toMatchObject({ profile_state: "complete", contact_phone: "0599123456", phone: null });
+    const response = await request(server).get("/api/v1/trips").set("Authorization", bearer(users[0]));
+    expect(response.body.error).not.toBe("profile_incomplete");
+    expect(response.status).toBe(200);
   });
   it("refuses to enable EMAIL_VERIFICATION_DISABLED in staging or production", () => {
     for (const appEnv of ["staging", "production"]) {
