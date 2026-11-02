@@ -28,6 +28,7 @@ void main() {
       '$method registration requires displayed consent before session creation',
       (tester) async {
         final completions = <Map<String, dynamic>>[];
+        final starts = <Map<String, dynamic>>[];
         final documents = ['terms', 'privacy', 'adult_self_attestation']
             .map(
               (type) => {
@@ -50,6 +51,7 @@ void main() {
             }
             if (request.url.path.endsWith('/register/start') ||
                 request.url.path.endsWith('/mobile/google')) {
+              starts.add(jsonDecode(request.body) as Map<String, dynamic>);
               return http.Response(
                 jsonEncode({
                   'registration_token': 'sealed-grant',
@@ -81,6 +83,7 @@ void main() {
             name: 'Passenger',
             email: 'passenger@example.com',
             password: 'long-valid-password',
+            phone: '+970599123456',
             locale: 'en',
           );
         } else {
@@ -136,15 +139,12 @@ void main() {
           else
             'name': 'Passenger',
         });
+        // The phone typed on the sign-up form travels with the registration, so
+        // no separate phone screen follows.
+        expect(starts.single['phone'], '+970599123456');
         expect(
-          find.byKey(const ValueKey('phoneCompletionScreen')),
-          findsOneWidget,
-        );
-        expect(
-          Directionality.of(
-            tester.element(find.byKey(const ValueKey('phoneCompletionScreen'))),
-          ),
-          TextDirection.ltr,
+          find.byKey(const ValueKey('registrationCompletionScreen')),
+          findsNothing,
         );
         expect(
           (await container.read(tokenStorageProvider).readBundle())
@@ -154,200 +154,24 @@ void main() {
       },
     );
   }
-  testWidgets(
-    'login offers recovery and email verification in both languages',
-    (tester) async {
-      await _pumpApp(
-        tester,
-        localeValues: {DomainLabels.localeStorageKey: 'en'},
-      );
-      expect(find.byKey(const ValueKey('passwordRecovery')), findsOneWidget);
-      expect(find.byKey(const ValueKey('emailVerification')), findsOneWidget);
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('passwordRecovery')),
-      );
-      await tester.tap(find.byKey(const ValueKey('passwordRecovery')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('recoveryEmail')), findsOneWidget);
-      expect(
-        Directionality.of(
-          tester.element(find.byKey(const ValueKey('recoveryEmail'))),
-        ),
-        TextDirection.ltr,
-      );
-    },
-  );
-
-  testWidgets(
-    'incorrect phone proof requires a new code and completion reloads server profile',
-    (tester) async {
-      var complete = false;
-      var starts = 0;
-      final attempts = <Map<String, dynamic>>[];
-      await _pumpApp(
-        tester,
-        localeValues: {DomainLabels.localeStorageKey: 'en'},
-        secureValues: {TokenStorage.tokenKey: 'darb-session'},
-        handler: (request) async {
-          if (request.url.path.endsWith('/me')) {
-            return http.Response(
-              jsonEncode({
-                'user': {
-                  'id': 'u',
-                  'name': 'Passenger',
-                  'phone': complete ? '+14155552671' : null,
-                  'profile_state': complete ? 'complete' : 'phone_required',
-                  'role': 'passenger',
-                  'demo_account': false,
-                },
-              }),
-              200,
-            );
-          }
-          if (request.url.path.endsWith('/profile/phone/start-verification')) {
-            starts++;
-            return http.Response(
-              '{"action_token":"proof-$starts","next_action":"verify_phone"}',
-              202,
-            );
-          }
-          if (request.url.path.endsWith(
-            '/profile/phone/confirm-verification',
-          )) {
-            attempts.add(jsonDecode(request.body) as Map<String, dynamic>);
-            if (attempts.length == 1) {
-              return http.Response('{"error":"auth_action_invalid"}', 400);
-            }
-            complete = true;
-            return http.Response('{"ok":true,"profile_state":"complete"}', 200);
-          }
-          return http.Response('{"error":"not_found"}', 404);
-        },
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('profilePhone')),
-        '+14155552671',
-      );
-      await tester.tap(find.text('Send code'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const ValueKey('authProof')), '000000');
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('completeAuth')));
-      await tester.pumpAndSettle();
-      expect(find.text('Send code'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('phoneCompletionScreen')),
-        findsOneWidget,
-      );
-      await tester.tap(find.text('Send code'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const ValueKey('authProof')), '123456');
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('completeAuth')));
-      await tester.pumpAndSettle();
-      expect(attempts, [
-        {'phone': '+14155552671', 'action_token': 'proof-1', 'code': '000000'},
-        {'phone': '+14155552671', 'action_token': 'proof-2', 'code': '123456'},
-      ]);
-      expect(find.byKey(const ValueKey('phoneCompletionScreen')), findsNothing);
-    },
-  );
-
-  testWidgets('restricted session blocks product deep links until phone proof', (
+  testWidgets('login offers recovery but no email verification link', (
     tester,
   ) async {
-    await _pumpApp(
-      tester,
-      secureValues: {TokenStorage.tokenKey: 'darb-session'},
-      handler: (request) async {
-        if (request.url.path.endsWith('/me')) {
-          return http.Response(
-            '{"user":{"id":"u","name":"Passenger","phone":null,"profile_state":"phone_required","role":"passenger","demo_account":false}}',
-            200,
-          );
-        }
-        return http.Response('{"error":"not_found"}', 404);
-      },
-    );
-    expect(find.byKey(const ValueKey('phoneCompletionScreen')), findsOneWidget);
-    final context = tester.element(
-      find.byKey(const ValueKey('phoneCompletionScreen')),
-    );
-    expect(Directionality.of(context), TextDirection.rtl);
-    GoRouter.of(context).go('/passenger/request/new');
+    await _pumpApp(tester, localeValues: {DomainLabels.localeStorageKey: 'en'});
+    expect(find.byKey(const ValueKey('passwordRecovery')), findsOneWidget);
+    expect(find.byKey(const ValueKey('emailVerification')), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('passwordRecovery')));
+    await tester.tap(find.byKey(const ValueKey('passwordRecovery')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('phoneCompletionScreen')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recoveryEmail')), findsOneWidget);
+    expect(
+      Directionality.of(
+        tester.element(find.byKey(const ValueKey('recoveryEmail'))),
+      ),
+      TextDirection.ltr,
+    );
   });
 
-  testWidgets(
-    'confirmed phone retries only profile reload after network failure',
-    (tester) async {
-      var profileLoads = 0;
-      var confirmations = 0;
-      await _pumpApp(
-        tester,
-        localeValues: {DomainLabels.localeStorageKey: 'en'},
-        secureValues: {TokenStorage.tokenKey: 'darb-session'},
-        handler: (request) async {
-          if (request.url.path.endsWith('/me')) {
-            profileLoads++;
-            if (profileLoads == 2) throw const SocketException('offline');
-            return http.Response(
-              jsonEncode({
-                'user': {
-                  'id': 'u',
-                  'name': 'Passenger',
-                  'phone': profileLoads > 2 ? '+14155552671' : null,
-                  'profile_state': profileLoads > 2
-                      ? 'complete'
-                      : 'phone_required',
-                  'role': 'passenger',
-                  'demo_account': false,
-                },
-              }),
-              200,
-            );
-          }
-          if (request.url.path.endsWith('/profile/phone/start-verification')) {
-            return http.Response(
-              '{"action_token":"one-use-proof","next_action":"verify_phone"}',
-              202,
-            );
-          }
-          if (request.url.path.endsWith(
-            '/profile/phone/confirm-verification',
-          )) {
-            confirmations++;
-            return confirmations == 1
-                ? http.Response('{"ok":true,"profile_state":"complete"}', 200)
-                : http.Response('{"error":"auth_action_invalid"}', 400);
-          }
-          return http.Response('{"error":"not_found"}', 404);
-        },
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('profilePhone')),
-        '+14155552671',
-      );
-      await tester.tap(find.text('Send code'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const ValueKey('authProof')), '123456');
-      await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('completeAuth')));
-      await tester.pumpAndSettle();
-      expect(confirmations, 1);
-      expect(profileLoads, 2);
-      expect(
-        find.byKey(const ValueKey('phoneCompletionScreen')),
-        findsOneWidget,
-      );
-      await tester.tap(find.byKey(const ValueKey('completeAuth')));
-      await tester.pumpAndSettle();
-      expect(confirmations, 1);
-      expect(profileLoads, 3);
-      expect(find.byKey(const ValueKey('phoneCompletionScreen')), findsNothing);
-    },
-  );
   test('Android excludes secure authentication storage from backup', () {
     final manifest = File(
       'android/app/src/main/AndroidManifest.xml',
@@ -669,10 +493,8 @@ void main() {
     // Passenger logout lives on the Settings tab of the redesigned shell.
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('logoutCurrentSession')),
-    );
-    await tester.tap(find.byKey(const ValueKey('logoutCurrentSession')));
+    await tester.ensureVisible(find.byKey(const ValueKey('logoutButton')));
+    await tester.tap(find.byKey(const ValueKey('logoutButton')));
     await tester.pumpAndSettle();
     expect(find.text('Confirm logout'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('confirmSecurityActionButton')));
@@ -692,6 +514,9 @@ void main() {
     );
 
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
+    await tester.pumpAndSettle();
+    // Devices and sessions sit one level below the Settings tab.
+    await tester.tap(find.byKey(const ValueKey('settingsSessions')));
     await tester.pumpAndSettle();
 
     expect(find.text('الأمان والجلسات'), findsWidgets);
@@ -716,6 +541,9 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
+    // Devices and sessions sit one level below the Settings tab.
+    await tester.tap(find.byKey(const ValueKey('settingsSessions')));
+    await tester.pumpAndSettle();
 
     expect(find.text('Security and sessions'), findsWidgets);
     expect(
@@ -733,6 +561,9 @@ void main() {
       handler: _passengerHandler,
     );
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
+    await tester.pumpAndSettle();
+    // Devices and sessions sit one level below the Settings tab.
+    await tester.tap(find.byKey(const ValueKey('settingsSessions')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('revokeCurrentSession')));
@@ -775,6 +606,9 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
+    // Devices and sessions sit one level below the Settings tab.
+    await tester.tap(find.byKey(const ValueKey('settingsSessions')));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('revokeSession')));
     await tester.pumpAndSettle();
@@ -795,6 +629,9 @@ void main() {
       handler: _passengerHandler,
     );
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
+    await tester.pumpAndSettle();
+    // Devices and sessions sit one level below the Settings tab.
+    await tester.tap(find.byKey(const ValueKey('settingsSessions')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('logoutAllSessions')));
@@ -819,6 +656,9 @@ void main() {
       },
     );
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
+    await tester.pumpAndSettle();
+    // Devices and sessions sit one level below the Settings tab.
+    await tester.tap(find.byKey(const ValueKey('settingsSessions')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('logoutAllSessions')));
     await tester.pumpAndSettle();
@@ -850,10 +690,8 @@ void main() {
     // Passenger logout lives on the Settings tab of the redesigned shell.
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('logoutCurrentSession')),
-    );
-    await tester.tap(find.byKey(const ValueKey('logoutCurrentSession')));
+    await tester.ensureVisible(find.byKey(const ValueKey('logoutButton')));
+    await tester.tap(find.byKey(const ValueKey('logoutButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirmSecurityActionButton')));
     await tester.pumpAndSettle();
@@ -863,6 +701,261 @@ void main() {
       await const FlutterSecureStorage().read(key: TokenStorage.bundleKey),
       isNull,
     );
+  });
+
+  group('passenger settings', () {
+    Future<void> openSettings(
+      WidgetTester tester, {
+      Future<http.Response> Function(http.Request request)? handler,
+    }) async {
+      await _pumpApp(
+        tester,
+        localeValues: {DomainLabels.localeStorageKey: 'en'},
+        secureValues: {TokenStorage.tokenKey: 'token'},
+        handler: handler ?? _passengerHandler,
+      );
+      await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> tapRow(WidgetTester tester, String key) async {
+      final row = find.byKey(ValueKey(key));
+      await tester.ensureVisible(row);
+      await tester.pumpAndSettle();
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> enter(WidgetTester tester, String key, String text) async {
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(ValueKey(key)),
+          matching: find.byType(TextField),
+        ),
+        text,
+      );
+      await tester.pump();
+    }
+
+    testWidgets('lists every entry with the signed-in name', (tester) async {
+      await openSettings(tester);
+
+      expect(find.byKey(const ValueKey('passengerSettings')), findsOneWidget);
+      expect(find.text('Demo Passenger'), findsOneWidget);
+      for (final key in [
+        'settingsProfile',
+        'settingsPassword',
+        'settingsLanguage',
+        'settingsRate',
+        'settingsHelp',
+        'logoutButton',
+      ]) {
+        await tester.ensureVisible(find.byKey(ValueKey(key)));
+        expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
+      }
+    });
+
+    testWidgets('profile shows details and saves edits', (tester) async {
+      Map<String, dynamic>? patched;
+      await openSettings(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/me') && request.method == 'PATCH') {
+            patched = jsonDecode(request.body) as Map<String, dynamic>;
+            return http.Response(
+              '{"user":{"id":"user_1","name":"${patched!['name']}","phone":"+970590000001","email":"sara@example.com","city":"${patched!['city']}","role":"passenger","demo_account":true}}',
+              200,
+            );
+          }
+          return _passengerHandler(request);
+        },
+      );
+
+      await tapRow(tester, 'settingsProfile');
+      expect(find.text('Demo Passenger'), findsOneWidget);
+      expect(find.text('+970590000001'), findsOneWidget);
+      expect(find.text('Not added'), findsWidgets);
+
+      await tester.tap(find.byKey(const ValueKey('profileEdit')));
+      await tester.pumpAndSettle();
+      await enter(tester, 'profileCity', 'Hebron');
+      await tester.ensureVisible(find.byKey(const ValueKey('profileSave')));
+      await tester.tap(find.byKey(const ValueKey('profileSave')));
+      await tester.pumpAndSettle();
+
+      expect(patched, {'name': 'Demo Passenger', 'city': 'Hebron'});
+      expect(find.text('Hebron'), findsOneWidget);
+      expect(find.byKey(const ValueKey('profileEdit')), findsOneWidget);
+    });
+
+    testWidgets('profile refuses an empty name', (tester) async {
+      var patches = 0;
+      await openSettings(
+        tester,
+        handler: (request) async {
+          if (request.method == 'PATCH') patches += 1;
+          return _passengerHandler(request);
+        },
+      );
+      await tapRow(tester, 'settingsProfile');
+      await tester.tap(find.byKey(const ValueKey('profileEdit')));
+      await tester.pumpAndSettle();
+      await enter(tester, 'profileName', '');
+      await tester.ensureVisible(find.byKey(const ValueKey('profileSave')));
+      await tester.tap(find.byKey(const ValueKey('profileSave')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter your name.'), findsOneWidget);
+      expect(patches, 0);
+    });
+
+    testWidgets('change password validates before sending', (tester) async {
+      var calls = 0;
+      await openSettings(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/auth/password/set')) calls += 1;
+          return _passengerHandler(request);
+        },
+      );
+      await tapRow(tester, 'settingsPassword');
+
+      await enter(tester, 'passwordCurrent', 'old-password-123');
+      await enter(tester, 'passwordNew', 'short');
+      await enter(tester, 'passwordConfirm', 'different');
+      await tester.tap(find.byKey(const ValueKey('passwordSubmit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Use 12–72 characters.'), findsOneWidget);
+      expect(find.text('Passwords do not match.'), findsOneWidget);
+      expect(calls, 0);
+    });
+
+    testWidgets('change password signs the passenger out afterwards', (
+      tester,
+    ) async {
+      Map<String, dynamic>? sent;
+      await openSettings(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/auth/password/set')) {
+            sent = jsonDecode(request.body) as Map<String, dynamic>;
+            return http.Response('{"ok":true}', 200);
+          }
+          return _passengerHandler(request);
+        },
+      );
+      await tapRow(tester, 'settingsPassword');
+
+      await enter(tester, 'passwordCurrent', 'old-password-123');
+      await enter(tester, 'passwordNew', 'a-brand-new-password');
+      await enter(tester, 'passwordConfirm', 'a-brand-new-password');
+      await tester.tap(find.byKey(const ValueKey('passwordSubmit')));
+      await tester.pumpAndSettle();
+
+      expect(sent, {
+        'password': 'a-brand-new-password',
+        'current_password': 'old-password-123',
+      });
+      expect(find.text('Password changed'), findsOneWidget);
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(find.text('Login'), findsWidgets);
+    });
+
+    testWidgets('a wrong current password is reported', (tester) async {
+      await openSettings(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/auth/password/set')) {
+            return http.Response('{"error":"reauthentication_required"}', 403);
+          }
+          return _passengerHandler(request);
+        },
+      );
+      await tapRow(tester, 'settingsPassword');
+      await enter(tester, 'passwordCurrent', 'not-my-password');
+      await enter(tester, 'passwordNew', 'a-brand-new-password');
+      await enter(tester, 'passwordConfirm', 'a-brand-new-password');
+      await tester.tap(find.byKey(const ValueKey('passwordSubmit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('passwordError')), findsOneWidget);
+      expect(find.text('Password changed'), findsNothing);
+    });
+
+    testWidgets('language row switches to Arabic', (tester) async {
+      await openSettings(tester);
+      await tapRow(tester, 'settingsLanguage');
+      await tester.tap(find.byKey(const ValueKey('language-ar')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('اللغة'), findsOneWidget);
+      expect(
+        Directionality.of(tester.element(find.text('اللغة'))),
+        TextDirection.rtl,
+      );
+    });
+
+    testWidgets('rating needs a star and is remembered', (tester) async {
+      await openSettings(tester);
+      await tapRow(tester, 'settingsRate');
+
+      FilledButton submit() => tester.widget<FilledButton>(
+        find.byKey(const ValueKey('ratingSubmit')),
+      );
+      expect(submit().onPressed, isNull);
+
+      await tester.tap(find.byKey(const ValueKey('ratingStar-4')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('ratingFeedback')),
+        'Works well',
+      );
+      expect(submit().onPressed, isNotNull);
+      await tester.tap(find.byKey(const ValueKey('ratingSubmit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('ratingThanks')), findsOneWidget);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('passenger_app_rating'), 4);
+      expect(prefs.getString('passenger_app_rating_feedback'), 'Works well');
+    });
+
+    testWidgets('help opens with questions and the assistant', (tester) async {
+      await openSettings(tester);
+      await tapRow(tester, 'settingsHelp');
+
+      expect(find.byKey(const ValueKey('helpAssistant')), findsOneWidget);
+      expect(find.text('How do I request a trip?'), findsOneWidget);
+    });
+
+    testWidgets('log out asks first and cancelling keeps the session', (
+      tester,
+    ) async {
+      await openSettings(tester);
+      await tapRow(tester, 'logoutButton');
+
+      expect(find.text('Confirm logout'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('passengerSettings')), findsOneWidget);
+    });
+
+    testWidgets('the Maps tab no longer shows a back arrow', (tester) async {
+      await _pumpApp(
+        tester,
+        localeValues: {DomainLabels.localeStorageKey: 'en'},
+        secureValues: {TokenStorage.tokenKey: 'token'},
+        handler: _passengerHandler,
+      );
+      await tester.tap(find.byKey(const ValueKey('roleNavigation-2')));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+      expect(find.byType(BackButton), findsNothing);
+    });
   });
 }
 

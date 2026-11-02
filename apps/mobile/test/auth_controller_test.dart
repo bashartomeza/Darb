@@ -165,6 +165,7 @@ void main() {
             name: 'Sara',
             email: 'sara@example.com',
             password: 'supersecret1',
+            phone: '+970599123456',
           );
 
       expect(calledPath, endsWith('/auth/mobile/register/start'));
@@ -193,6 +194,7 @@ void main() {
           name: 'Sara',
           email: 'taken@example.com',
           password: 'supersecret1',
+          phone: '+970599123456',
         );
 
     final state = container.read(authControllerProvider);

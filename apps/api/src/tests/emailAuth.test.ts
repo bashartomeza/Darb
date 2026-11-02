@@ -222,6 +222,24 @@ describe("email authentication lifecycle", () => {
       await request(server).post("/api/v1/auth/mobile/register/complete").send(body).expect(409);
       expect(users).toHaveLength(0);
     });
+    it("stores the sign-up phone as entered, only length-checked, and lets accounts share it", async () => {
+      const server = app(dev);
+      const phone = "0599 12-34 (x)";
+      for (const email of ["first@example.com", "second@example.com"]) {
+        const r = await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, email, phone: ` ${phone} ` }).expect(202);
+        const body = { registration_token: r.body.registration_token, locale: "en", consents, adult_self_attestation: true };
+        await request(server).post("/api/v1/auth/mobile/register/complete").send(body).expect(201);
+      }
+      expect(users.map((u) => u.contact_phone)).toEqual([phone, phone]);
+      expect(users.map((u) => u.phone)).toEqual([null, null]);
+    });
+    it("rejects a sign-up phone outside the length limits and nothing else about it", async () => {
+      const server = app(dev);
+      for (const phone of ["123456", "1".repeat(33)]) {
+        await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, phone }).expect(400);
+      }
+      await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, phone: "not a number" }).expect(202);
+    });
     it("lets an unverified email account sign in", async () => {
       users.push(actor({ password_hash: await bcrypt.hash(registration.password, 4), email_verified_at: null }));
       await request(app(dev)).post("/api/v1/auth/mobile/login").send({ email: registration.email, password: registration.password }).expect(200);

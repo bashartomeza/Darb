@@ -74,23 +74,18 @@ String authFailure(BuildContext context, Object? error) {
 }
 
 class AuthCompletionScreen extends ConsumerStatefulWidget {
-  const AuthCompletionScreen({super.key, required this.phone});
-  final bool phone;
+  const AuthCompletionScreen({super.key});
   @override
   ConsumerState<AuthCompletionScreen> createState() =>
       _AuthCompletionScreenState();
 }
 
 class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
-  final _phone = TextEditingController();
   final _code = TextEditingController();
   final _name = TextEditingController();
   final _codeFocus = FocusNode();
   List<Map<String, dynamic>>? _documents;
   String? _locale;
-  String? _phoneToken;
-  String? _verifiedPhone;
-  bool _phoneConfirmed = false;
   final Set<String> _accepted = {};
   bool _busy = false;
   Object? _error;
@@ -99,11 +94,7 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final locale = Localizations.localeOf(context).languageCode;
-    if (widget.phone && _locale == null) {
-      _locale = locale;
-      _phone.text = ref.read(authControllerProvider).value?.user?.phone ?? '';
-    }
-    if (!widget.phone && locale != _locale) {
+    if (locale != _locale) {
       _locale = locale;
       _documents = null;
       _accepted.clear();
@@ -127,7 +118,6 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
 
   @override
   void dispose() {
-    _phone.dispose();
     _code.dispose();
     _name.dispose();
     _codeFocus.dispose();
@@ -143,273 +133,135 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
     try {
       await action();
     } catch (error) {
-      if (mounted) {
-        setState(() {
-          _error = error;
-          if (widget.phone &&
-              error is ApiException &&
-              error.message == 'auth_action_invalid') {
-            _phoneToken = null;
-            _verifiedPhone = null;
-            _code.clear();
-          }
-        });
-      }
+      if (mounted) setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _sendPhone() => _run(() async {
-    if (_phoneConfirmed) return;
-    final value = _phone.text.trim();
-    if (!RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(value)) {
-      throw const ApiException(ApiErrorType.validation, 'invalid_phone');
-    }
-    final response = await ref
-        .read(authRepositoryProvider)
-        .startPhone(value, Localizations.localeOf(context).languageCode);
-    // The API saves the number straight away when phone verification is off
-    // (local development), so there is no code to enter.
-    if (response['next_action'] == 'phone_saved') {
-      _phoneConfirmed = true;
-      await ref.read(authControllerProvider.notifier).reloadProfile();
-      return;
-    }
-    if (response['action_token'] is! String) {
-      throw const ApiException(ApiErrorType.validation, 'invalid_response');
-    }
-    _phoneToken = response['action_token'] as String;
-    _verifiedPhone = value;
-    _code.clear();
-    _codeFocus.requestFocus();
-  });
   Future<void> _confirm() => _run(() async {
-    if (widget.phone
-        ? !_phoneConfirmed &&
-              (_phoneToken == null ||
-                  !RegExp(r'^\d{6}$').hasMatch(_code.text.trim()))
-        : _documents == null || _accepted.length != 3) {
-      return;
-    }
-    if (widget.phone) {
-      if (!_phoneConfirmed) {
-        await ref
-            .read(authRepositoryProvider)
-            .confirmPhone(_verifiedPhone!, _phoneToken!, _code.text.trim());
-        // The server consumed the challenge. A failed profile reload must
-        // retry only the read, never submit the same proof a second time.
-        _phoneConfirmed = true;
-        _phoneToken = null;
-        _code.clear();
-      }
-      await ref.read(authControllerProvider.notifier).reloadProfile();
-    } else {
-      await ref
-          .read(authControllerProvider.notifier)
-          .completeRegistration(
-            locale: _locale!,
-            documents: _documents!,
-            emailToken: _code.text.trim(),
-            name: _name.text.trim(),
-          );
-      if (ref.read(authControllerProvider).value?.error?.message ==
-          'consent_version_changed') {
-        _accepted.clear();
-        await _loadConsents(_locale!);
-      }
+    if (_documents == null || _accepted.length != 3) return;
+    await ref
+        .read(authControllerProvider.notifier)
+        .completeRegistration(
+          locale: _locale!,
+          documents: _documents!,
+          emailToken: _code.text.trim(),
+          name: _name.text.trim(),
+        );
+    if (ref.read(authControllerProvider).value?.error?.message ==
+        'consent_version_changed') {
+      _accepted.clear();
+      await _loadConsents(_locale!);
     }
   });
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider).value;
-    // Local development: the API saves the phone without a code.
-    final phoneOff =
-        ref
-            .watch(authCapabilitiesProvider)
-            .value?['phone_verification_disabled'] ==
-        true;
     final nextAction = state?.registrationGrant?['next_action'];
     final email =
         nextAction == 'verify_email' || nextAction == 'accept_consents';
     // No emailed code when the API skips verification (local development).
     final needsCode = nextAction == 'verify_email';
     final error = _error ?? state?.error;
-    final title = widget.phone
-        ? authText(context, 'Verify your phone', 'تحقق من رقم هاتفك')
-        : authText(context, 'Complete registration', 'إكمال التسجيل');
+    final title = authText(context, 'Complete registration', 'إكمال التسجيل');
     return Scaffold(
-      key: ValueKey(
-        widget.phone ? 'phoneCompletionScreen' : 'registrationCompletionScreen',
-      ),
+      key: const ValueKey('registrationCompletionScreen'),
       appBar: AppBar(
         title: Text(title),
         automaticallyImplyLeading: false,
         actions: const [LanguageSwitch()],
       ),
       body: DarbFormPage(
-        icon: widget.phone
-            ? Icons.phone_iphone_rounded
-            : Icons.verified_user_outlined,
+        icon: Icons.verified_user_outlined,
         title: title,
-        subtitle: widget.phone
-            ? authText(
-                context,
-                phoneOff
-                    ? 'Add a real contact number before using Darb services.'
-                    : 'Add a real contact number before using Darb services. We email the verification code to the email address on your account.',
-                phoneOff
-                    ? 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب.'
-                    : 'أضف رقم تواصل حقيقياً قبل استخدام خدمات درب. نرسل رمز التحقق إلى البريد الإلكتروني المسجل في حسابك.',
-              )
-            : authText(
-                context,
-                'Read and accept all required documents to create your passenger account.',
-                'اقرأ ووافق على المستندات المطلوبة لإنشاء حساب الراكب.',
-              ),
+        subtitle: authText(
+          context,
+          'Read and accept all required documents to create your passenger account.',
+          'اقرأ ووافق على المستندات المطلوبة لإنشاء حساب الراكب.',
+        ),
         children: [
-          if (widget.phone) ...[
-            DarbFormCard(
-              children: [
-                TextField(
-                  key: const ValueKey('profilePhone'),
-                  controller: _phone,
-                  enabled: !_busy && !_phoneConfirmed && _phoneToken == null,
-                  textDirection: TextDirection.ltr,
-                  keyboardType: TextInputType.phone,
-                  autofillHints: const [AutofillHints.telephoneNumber],
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.phone_outlined),
-                    labelText: authText(context, 'Phone number', 'رقم الهاتف'),
-                    hintText: '+[country code][number]',
-                    helperText: authText(
-                      context,
-                      'International format, starting with +',
-                      'بالصيغة الدولية، يبدأ بـ +',
-                    ),
-                    helperMaxLines: 2,
-                  ),
-                ),
-                if (_phoneToken != null) _codeField(context),
-              ],
+          if (!email) ...[
+            TextField(
+              controller: _name,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: authText(context, 'Full name', 'الاسم الكامل'),
+              ),
+              onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: AppTokens.spaceMedium),
-            FilledButton(
-              onPressed: _busy || _phoneConfirmed ? null : _sendPhone,
-              child: Text(
-                authText(
-                  context,
-                  phoneOff
-                      ? 'Continue'
-                      : _phoneToken == null
-                      ? 'Send code'
-                      : 'Resend code',
-                  phoneOff
-                      ? 'متابعة'
-                      : _phoneToken == null
-                      ? 'إرسال الرمز'
-                      : 'إعادة إرسال الرمز',
+          ],
+          if (_documents == null && _error == null)
+            const Center(child: CircularProgressIndicator()),
+          for (final document in _documents ?? <Map<String, dynamic>>[]) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
+              child: Material(
+                color: AppTheme.surfaceContainerLow,
+                clipBehavior: Clip.antiAlias,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+                  side: const BorderSide(color: AppTheme.outlineVariant),
+                ),
+                child: Column(
+                  children: [
+                    ExpansionTile(
+                      shape: const Border(),
+                      collapsedShape: const Border(),
+                      title: Text(
+                        authText(
+                          context,
+                          switch (document['type']) {
+                            'terms' => 'Terms of service',
+                            'privacy' => 'Privacy policy',
+                            _ => 'Adult self-attestation',
+                          },
+                          switch (document['type']) {
+                            'terms' => 'شروط الخدمة',
+                            'privacy' => 'سياسة الخصوصية',
+                            _ => 'الإقرار ببلوغ السن القانوني',
+                          },
+                        ),
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: SelectableText(document['content'] as String),
+                        ),
+                      ],
+                    ),
+                    CheckboxListTile(
+                      value: _accepted.contains(document['id']),
+                      onChanged: _busy
+                          ? null
+                          : (checked) => setState(() {
+                              checked == true
+                                  ? _accepted.add(document['id'] as String)
+                                  : _accepted.remove(document['id']);
+                            }),
+                      title: Text(
+                        authText(
+                          context,
+                          'I have read and accept this document',
+                          'قرأت هذا المستند وأوافق عليه',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            if (_phoneToken != null)
-              TextButton(
-                onPressed: _busy
-                    ? null
-                    : () => setState(() {
-                        _phoneToken = null;
-                        _verifiedPhone = null;
-                        _code.clear();
-                      }),
-                child: Text(
-                  authText(context, 'Change phone number', 'تغيير رقم الهاتف'),
-                ),
-              ),
-          ] else ...[
-            if (!email) ...[
-              TextField(
-                controller: _name,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: authText(context, 'Full name', 'الاسم الكامل'),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: AppTokens.spaceMedium),
-            ],
-            if (_documents == null && _error == null)
-              const Center(child: CircularProgressIndicator()),
-            for (final document in _documents ?? <Map<String, dynamic>>[]) ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
-                child: Material(
-                  color: AppTheme.surfaceContainerLow,
-                  clipBehavior: Clip.antiAlias,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
-                    side: const BorderSide(color: AppTheme.outlineVariant),
-                  ),
-                  child: Column(
-                    children: [
-                      ExpansionTile(
-                        shape: const Border(),
-                        collapsedShape: const Border(),
-                        title: Text(
-                          authText(
-                            context,
-                            switch (document['type']) {
-                              'terms' => 'Terms of service',
-                              'privacy' => 'Privacy policy',
-                              _ => 'Adult self-attestation',
-                            },
-                            switch (document['type']) {
-                              'terms' => 'شروط الخدمة',
-                              'privacy' => 'سياسة الخصوصية',
-                              _ => 'الإقرار ببلوغ السن القانوني',
-                            },
-                          ),
-                        ),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: SelectableText(
-                              document['content'] as String,
-                            ),
-                          ),
-                        ],
-                      ),
-                      CheckboxListTile(
-                        value: _accepted.contains(document['id']),
-                        onChanged: _busy
-                            ? null
-                            : (checked) => setState(() {
-                                checked == true
-                                    ? _accepted.add(document['id'] as String)
-                                    : _accepted.remove(document['id']);
-                              }),
-                        title: Text(
-                          authText(
-                            context,
-                            'I have read and accept this document',
-                            'قرأت هذا المستند وأوافق عليه',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-            if (_error != null && _documents == null)
-              TextButton(
-                onPressed: () => _loadConsents(_locale!),
-                child: Text(authText(context, 'Retry', 'إعادة المحاولة')),
-              ),
-            if (needsCode) ...[
-              const SizedBox(height: AppTokens.spaceSmall),
-              _codeField(context),
-            ],
+          ],
+          if (_error != null && _documents == null)
+            TextButton(
+              onPressed: () => _loadConsents(_locale!),
+              child: Text(authText(context, 'Retry', 'إعادة المحاولة')),
+            ),
+          if (needsCode) ...[
+            const SizedBox(height: AppTokens.spaceSmall),
+            _codeField(context),
           ],
           if (error != null) ...[
             const SizedBox(height: AppTokens.spaceMedium),
@@ -422,48 +274,32 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
             ),
           ],
           const SizedBox(height: AppTokens.spaceMedium),
-          // With phone verification off, the button above already saves the number.
-          if (!(phoneOff && widget.phone && !_phoneConfirmed))
-            FilledButton(
-              key: const ValueKey('completeAuth'),
-              onPressed:
-                  _busy ||
-                      (widget.phone
-                          ? !_phoneConfirmed &&
-                                (_phoneToken == null ||
-                                    !RegExp(
-                                      r'^\d{6}$',
-                                    ).hasMatch(_code.text.trim()))
-                          : _documents == null ||
-                                _accepted.length != 3 ||
-                                (needsCode
-                                    ? !RegExp(
-                                        r'^\d{6}$',
-                                      ).hasMatch(_code.text.trim())
-                                    : !email && _name.text.trim().isEmpty))
-                  ? null
-                  : _confirm,
-              child: _busy
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(authText(context, 'Continue', 'متابعة')),
-            ),
+          FilledButton(
+            key: const ValueKey('completeAuth'),
+            onPressed:
+                _busy ||
+                    _documents == null ||
+                    _accepted.length != 3 ||
+                    (needsCode
+                        ? !RegExp(r'^\d{6}$').hasMatch(_code.text.trim())
+                        : !email && _name.text.trim().isEmpty)
+                ? null
+                : _confirm,
+            child: _busy
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(authText(context, 'Continue', 'متابعة')),
+          ),
           TextButton(
             onPressed: _busy
                 ? null
-                : () => widget.phone
-                      ? ref.read(authControllerProvider.notifier).logout()
-                      : ref
-                            .read(authControllerProvider.notifier)
-                            .cancelRegistration(),
+                : () => ref
+                      .read(authControllerProvider.notifier)
+                      .cancelRegistration(),
             child: Text(
-              authText(
-                context,
-                widget.phone ? 'Sign out' : 'Cancel registration',
-                widget.phone ? 'تسجيل الخروج' : 'إلغاء التسجيل',
-              ),
+              authText(context, 'Cancel registration', 'إلغاء التسجيل'),
             ),
           ),
         ],

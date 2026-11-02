@@ -28,6 +28,8 @@ class AuthUser {
     required this.demoAccount,
     this.phone,
     this.email,
+    this.contactPhone,
+    this.city,
     this.profileState = 'complete',
   });
 
@@ -35,8 +37,11 @@ class AuthUser {
   final String name;
   final String? phone;
   final String? email;
+
+  /// An unverified number the account holder gave; [phone] is the verified one.
+  final String? contactPhone;
+  final String? city;
   final String profileState;
-  bool get requiresPhone => profileState != 'complete' || phone == null;
   final UserRole role;
   final bool demoAccount;
 
@@ -49,6 +54,8 @@ class AuthUser {
       name: _readString(json, 'name'),
       phone: _optionalString(json, 'phone'),
       email: _optionalString(json, 'email'),
+      contactPhone: _optionalString(json, 'contact_phone'),
+      city: _optionalString(json, 'city'),
       profileState: json['profile_state'] == 'complete'
           ? 'complete'
           : json['profile_state'] == null && json['phone'] != null

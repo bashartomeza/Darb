@@ -47,6 +47,10 @@ import '../../features/passenger/presentation/passenger_home_screen.dart';
 import '../../features/passenger/presentation/passenger_map_alerts_screen.dart';
 import '../../features/passenger/presentation/passenger_trips_screen.dart';
 import '../../features/passenger/presentation/request_detail_screen.dart';
+import '../../features/passenger/presentation/settings/passenger_change_password_screen.dart';
+import '../../features/passenger/presentation/settings/passenger_help_screen.dart';
+import '../../features/passenger/presentation/settings/passenger_profile_screen.dart';
+import '../../features/passenger/presentation/settings/passenger_settings_screen.dart';
 import '../../features/security/presentation/session_management_screen.dart';
 import '../../features/shared_trips/presentation/shared_trip_screens.dart';
 import '../../features/trips/presentation/passenger_trip_screen.dart';
@@ -59,6 +63,10 @@ import '../widgets/role_nav_scaffold.dart';
 /// `/security/sessions` link still works — [_accountRedirect] maps it onto the
 /// signed-in role's tab.
 const passengerAccountPath = '/passenger/account';
+const passengerProfilePath = '$passengerAccountPath/profile';
+const passengerPasswordPath = '$passengerAccountPath/password';
+const passengerHelpPath = '$passengerAccountPath/help';
+const passengerSessionsPath = '$passengerAccountPath/sessions';
 const driverAccountPath = '/driver/account';
 const merchantAccountPath = '/merchant/account';
 
@@ -139,12 +147,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   ) ==
                   'consent_required'
               ? const GoogleOnboardingScreen()
-              : const AuthCompletionScreen(phone: false),
+              : const AuthCompletionScreen(),
         ),
-      ),
-      GoRoute(
-        path: '/profile/phone',
-        builder: (context, state) => const AuthCompletionScreen(phone: true),
       ),
       GoRoute(
         path: '/register',
@@ -323,7 +327,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: passengerAccountPath,
-                builder: (context, state) => const SessionManagementScreen(),
+                builder: (context, state) => const PassengerSettingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'profile',
+                    builder: (context, state) => const PassengerProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: 'password',
+                    builder: (context, state) =>
+                        const PassengerChangePasswordScreen(),
+                  ),
+                  GoRoute(
+                    path: 'help',
+                    builder: (context, state) => const PassengerHelpScreen(),
+                  ),
+                  GoRoute(
+                    path: 'sessions',
+                    builder: (context, state) =>
+                        const SessionManagementScreen(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -595,11 +619,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       final role = auth.user!.role;
-      if (auth.user!.requiresPhone &&
-          role != UserRole.admin &&
-          role != UserRole.unsupported) {
-        return path == '/profile/phone' ? null : '/profile/phone';
-      }
       final target = routeForRole(role);
 
       // Send the shared security link to the signed-in role's account tab, so
