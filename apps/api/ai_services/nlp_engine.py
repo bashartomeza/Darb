@@ -223,4 +223,155 @@ def check_confidence_fallback(state: dict) -> dict:
 # =============================================================================
 WHISPER_URL = "https://api.openai.com/v1/audio/transcriptions"
 WHISPER_MODEL = "whisper-1"
-WHISPER
+WHISPER_LANGUAGE = "ar"
+MAX_AUDIO_BYTES = 25 * 1024 * 1024            # Whisper API limit
+ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3"}
+
+
+class VoiceInputError(ValueError):
+    """Bad audio input (type, size, empty). Safe to show to the caller."""
+
+
+class VoiceUnavailable(RuntimeError):
+    """No Whisper key available or every key exhausted."""
+
+
+def _sniff_audio(data: bytes) -> str | None:
+    if data[:4] == b"RIFF" and data[8:12] == b"WAVE":
+        return ".wav"
+    if data[:3] == b"ID3" or (len(data) > 1 and data[0] == 0xFF and (data[1] & 0xE0) == 0xE0):
+        return ".mp3"
+    return None
+
+
+def _multipart(fields: dict[str, str], filename: str, content_type: str, data: bytes) -> tuple[bytes, str]:
+    boundary = f"----masari{uuid.uuid4().hex}"
+    parts: list[bytes] = []
+    for name, value in fields.items():
+        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode())
+    parts.append((f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+                  f"Content-Type: {content_type}\r\n\r\n").encode() + data + b"\r\n")
+    parts.append(f"--{boundary}--\r\n".encode())
+    return b"".join(parts), boundary
+
+
+def transcribe_audio_bytes(data: bytes, filename: str = "audio.wav") -> str:
+    """Raw audio bytes (.wav/.mp3) -> Arabic transcript. Audio is never written to disk."""
+    if not data:
+        raise VoiceInputError("empty audio payload")
+    if len(data) > MAX_AUDIO_BYTES:
+        raise VoiceInputError("audio payload exceeds 25 MB")
+    kind = _sniff_audio(data)
+    declared = Path(filename).suffix.lower()
+    if kind is None or declared not in ALLOWED_AUDIO_EXTENSIONS:
+        raise VoiceInputError("only .wav and .mp3 audio is accepted")
+    content_type = "audio/wav" if kind == ".wav" else "audio/mpeg"
+    safe_name = f"audio{kind}"
+
+    body, boundary = _multipart({"model": WHISPER_MODEL, "language": WHISPER_LANGUAGE, "response_format": "json",
+                                 "temperature": "0"}, safe_name, content_type, data)
+
+    def call(_provider: str, key: str) -> str:
+        status, raw = http_post(WHISPER_URL, {"Authorization": f"Bearer {key}",
+                                              "Content-Type": f"multipart/form-data; boundary={boundary}"},
+                                body, timeout=60.0)
+        classify_status(status, raw)
+        try:
+            text = json.loads(raw.decode("utf-8"))["text"]
+        except (KeyError, ValueError, UnicodeDecodeError):
+            raise ProviderError("unexpected_whisper_shape") from None
+        if not isinstance(text, str):
+            raise ProviderError("unexpected_whisper_shape")
+        return text.strip()
+
+    pool = load_pool("openai")
+    if not len(pool):
+        raise VoiceUnavailable("voice transcription is not configured")
+    try:
+        transcript, _provider, _index = run_with_failover([pool], call)
+    except AllProvidersExhausted:
+        raise VoiceUnavailable("voice transcription is temporarily unavailable") from None
+    return transcript
+
+
+def process_voice_intent_to_text(audio_file_path: str) -> str:
+    path = Path(audio_file_path)
+    if path.suffix.lower() not in ALLOWED_AUDIO_EXTENSIONS:
+        raise VoiceInputError("only .wav and .mp3 audio is accepted")
+    try:
+        size = path.stat().st_size
+        if size > MAX_AUDIO_BYTES:
+            raise VoiceInputError("audio payload exceeds 25 MB")
+        data = path.read_bytes()
+    except OSError:
+        raise VoiceInputError("audio file could not be read") from None
+    return transcribe_audio_bytes(data, path.name)
+
+
+# =============================================================================
+# Contextual UI directives (contract v1; mirrored in TypeScript and Dart)
+# =============================================================================
+UI_DIRECTIVES_SCHEMA_VERSION = 1
+EMERGENCY_HEX = "#DC2626"
+LOGISTICS_HEX = "#0F766E"
+STANDARD_HEX = "#1D4ED8"
+_DEFAULT_EMERGENCY_NUMBERS = (
+    # Verify against the official Palestinian emergency numbers before launch;
+    # override per deployment with AI_SERVICES_EMERGENCY_NUMBERS="101,100,102".
+    ("101", "الإسعاف", "Ambulance"),
+    ("100", "الشرطة", "Police"),
+    ("102", "الدفاع المدني", "Civil Defense"),
+)
+
+
+def _emergency_actions() -> list[dict]:
+    override = os.environ.get("AI_SERVICES_EMERGENCY_NUMBERS", "").strip()
+    numbers = [n.strip() for n in override.split(",") if re.fullmatch(r"\+?\d{2,15}", n.strip())] if override else []
+    table = {n: (ar, en) for n, ar, en in _DEFAULT_EMERGENCY_NUMBERS}
+    entries = ([(n, *table.get(n, ("اتصال طوارئ", "Emergency call"))) for n in numbers]
+               if numbers else list(_DEFAULT_EMERGENCY_NUMBERS))
+    return [{"id": f"dial_{number}", "label_ar": ar, "label_en": en, "dial_uri": f"tel:{number}"}
+            for number, ar, en in entries]
+
+
+def _logistics_progress(payload: dict) -> dict:
+    parcels = max(int(payload.get("capacity_requirements") or 1), 1)
+    savings = simulated_savings_percentage(parcels, max(parcels, 10))
+    series = [{"step": i, "trips_without_batching": i, "trips_with_batching": 1} for i in range(1, parcels + 1)][:20]
+    return {
+        "parcels_total": parcels,
+        "trips_saved": max(parcels - 1, 0),
+        "fuel_savings_index": round(savings / 100.0, 4),
+        "fuel_savings_percentage": savings,
+        "series": series,
+        "is_simulation": True,
+    }
+
+
+def generate_dynamic_ai_ui_payload(extracted_payload: dict) -> dict:
+    """Return a copy of the payload with `frontend_ai_ui_directives` added."""
+    payload = dict(extracted_payload)
+    urgency = payload.get("urgency_profile")
+    vehicle = payload.get("vehicle_class")
+    emergency = urgency == "Emergency"
+    logistics = vehicle == "Logistics"
+
+    directives = {
+        "schema_version": UI_DIRECTIVES_SCHEMA_VERSION,
+        "mode": "emergency" if emergency else ("logistics" if logistics else "standard"),
+        "theme": {
+            "primary_color_hex": EMERGENCY_HEX if emergency else (LOGISTICS_HEX if logistics else STANDARD_HEX),
+            "flashing": emergency,
+            "flash_interval_ms": 800 if emergency else 0,
+            "respect_reduce_motion": True,
+        },
+        "haptics": {
+            "vibrate": emergency,
+            "pattern_ms": [0, 500, 200, 500, 200, 800] if emergency else [],
+        },
+        "emergency_actions": _emergency_actions() if emergency else [],
+        "logistics_progress": _logistics_progress(payload) if logistics else None,
+        "requires_human_confirmation": bool(emergency or payload.get("needs_review")),
+    }
+    payload["frontend_ai_ui_directives"] = directives
+    return payload
