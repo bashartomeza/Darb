@@ -18,8 +18,8 @@ class PassengerHelpScreen extends StatelessWidget {
         authText(context, 'How do I request a trip?', 'كيف أطلب رحلة؟'),
         authText(
           context,
-          'Open Home, tap the search card, choose your pickup and destination, then send the request. Drivers on that route will see it.',
-          'افتح الرئيسية واضغط على بطاقة البحث، اختر نقطة الانطلاق والوجهة ثم أرسل الطلب. سيراه السائقون على هذا المسار.',
+          'Open Home, tap the search card, choose your route (for example Hebron to Bethlehem), type your exact pickup and drop-off places, then send the request. Drivers on that route will see it.',
+          'افتح الرئيسية واضغط على بطاقة البحث، اختر خط الرحلة (مثل الخليل إلى بيت لحم)، واكتب مكان الانطلاق والوصول بالتفصيل ثم أرسل الطلب. سيراه السائقون على هذا الخط.',
         ),
       ),
       (
@@ -54,11 +54,7 @@ class PassengerHelpScreen extends StatelessWidget {
         SettingsRow(
           key: const ValueKey('helpAssistant'),
           icon: Icons.support_agent_rounded,
-          label: authText(
-            context,
-            'Ask the Masari assistant',
-            'اسأل مساعد مسار',
-          ),
+          label: authText(context, 'Ask the Darb assistant', 'اسأل مساعد درب'),
           onTap: () => context.go('/passenger/assistant'),
         ),
         const SizedBox(height: 24),

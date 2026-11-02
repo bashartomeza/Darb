@@ -458,6 +458,7 @@ model User {
   community_report_flags           CommunityReportFlag[]
   trip_ratings                     TripRating[]
   assistant_conversations          PassengerAssistantConversation[]
+  app_rating                       AppRating?
 
   @@map("users")
 }
@@ -1946,4 +1947,19 @@ model PassengerAssistantMessage {
 enum PassengerAssistantMessageRole {
   user
   assistant
+}
+
+/// The app rating a user gave from Settings: one per account, replaced when they rate again.
+model AppRating {
+  user_id    String   @id
+  /// 1 to 5 stars.
+  stars      Int      @db.TinyInt
+  feedback   String?  @db.VarChar(500)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([updated_at])
+  @@map("app_ratings")
 }

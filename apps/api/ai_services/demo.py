@@ -15,7 +15,7 @@ SAMPLE_INPUTS = [
 def main() -> None:
     has_keys = any(os.environ.get(k) for k in ("GEMINI_API_KEY", "GEMINI_API_KEYS", "GROQ_API_KEY", "GROQ_API_KEYS"))
     notice = "" if has_keys else " (offline heuristic mode: no GEMINI/GROQ keys set)"
-    print(f"Masari dispatch NLP engine -- demo run{notice}\n")
+    print(f"Darb dispatch NLP engine -- demo run{notice}\n")
     for text in SAMPLE_INPUTS:
         print(f"INPUT: {text}")
         print(json.dumps(process_and_verify_request(text), ensure_ascii=False, indent=2))
