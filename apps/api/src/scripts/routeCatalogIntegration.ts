@@ -68,9 +68,11 @@ async function main() {
   await resetDemoData();
   const secondReset = await demoCounts();
   assert(JSON.stringify(firstReset) === JSON.stringify(secondReset), "Demo route seed is not idempotent");
+  // The demo corridor (1 route, 3 stops) plus the 20 predefined city routes
+  // over 10 city stops; both demo driver routes sit on predefined routes.
   assert(
-    firstReset.routes === 1 && firstReset.versions === 1 && firstReset.stops === 3 &&
-      firstReset.driverRoutes === 2 && firstReset.linkedDriverRoutes === 1,
+    firstReset.routes === 21 && firstReset.versions === 21 && firstReset.stops === 13 &&
+      firstReset.driverRoutes === 2 && firstReset.linkedDriverRoutes === 2,
     "Demo canonical route counts are not deterministic"
   );
   const demoRoute = await prisma.serviceRoute.findUniqueOrThrow({
@@ -91,7 +93,10 @@ async function main() {
       demo_account: true
     }
   });
-  const service = createRouteManagementService(prisma);
+  // The demo seed already holds the predefined operating routes, so the cap is
+  // set four routes above what is active now to exercise it deterministically.
+  const activeBaseline = await prisma.serviceRoute.count({ where: { status: "active" } });
+  const service = createRouteManagementService(prisma, { activeRouteLimit: activeBaseline + 4 });
   const identity = {
     routeKey: "integration-hebron-bethlehem",
     routeGroupKey: "integration-hebron-bethlehem-group",
@@ -111,7 +116,7 @@ async function main() {
       actor(admin.id, `route-cap-seed-${index}`)
     ));
   }
-  assert(await prisma.serviceRoute.count({ where: { status: "active" } }) === 4, "Route cap setup was not deterministic");
+  assert(await prisma.serviceRoute.count({ where: { status: "active" } }) === activeBaseline + 3, "Route cap setup was not deterministic");
   const capSlot = await service.createRoute(
     {
       routeKey: "integration-cap-slot",
@@ -121,7 +126,7 @@ async function main() {
     },
     actor(admin.id, "route-cap-slot")
   );
-  assert(await prisma.serviceRoute.count({ where: { status: "active" } }) === 5, "Route cap did not admit the fifth active route");
+  assert(await prisma.serviceRoute.count({ where: { status: "active" } }) === activeBaseline + 4, "Route cap did not admit the last active route");
   await expectFailure(
     () => service.createRoute(
       {
@@ -134,7 +139,7 @@ async function main() {
     ),
     "beta_route_limit_reached"
   );
-  assert(await prisma.serviceRoute.count({ where: { status: "active" } }) === 5, "Route cap overflow wrote a sixth active route");
+  assert(await prisma.serviceRoute.count({ where: { status: "active" } }) === activeBaseline + 4, "Route cap overflow wrote an extra active route");
   await service.retireRoute(capSlot.resource.id, { reason: "integration_cleanup", expectedCurrentVersionId: null }, actor(admin.id, "retire-route-cap-slot"));
   const capRace = await Promise.allSettled(Array.from({ length: 8 }, (_, index) =>
     service.createRoute(
@@ -148,7 +153,7 @@ async function main() {
     )
   ));
   assert(capRace.filter((result) => result.status === "fulfilled").length === 1, "Concurrent route cap admitted more than one final slot");
-  assert(await prisma.serviceRoute.count({ where: { status: "active" } }) === 5, "Concurrent route cap exceeded five active routes");
+  assert(await prisma.serviceRoute.count({ where: { status: "active" } }) === activeBaseline + 4, "Concurrent route cap exceeded the cap");
   const capRoutes = await prisma.serviceRoute.findMany({ where: { route_key: { startsWith: "integration-cap-" } } });
   for (const route of capRoutes) {
     if (route.status !== "retired") {

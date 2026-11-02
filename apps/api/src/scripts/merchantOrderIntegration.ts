@@ -6,6 +6,7 @@ import type { AddressInfo } from "node:net";
 import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { signAuthToken } from "../middleware/auth.js";
+import { ensureIntegrationRoutes } from "./integrationRoutes.js";
 
 const database = new URL(process.env.DATABASE_URL!);
 if (!["127.0.0.1", "localhost"].includes(database.hostname) ||
@@ -13,6 +14,8 @@ if (!["127.0.0.1", "localhost"].includes(database.hostname) ||
   throw new Error("merchant_order_integration_requires_explicit_disposable_local_database");
 }
 const ddl = await mysql.createConnection(database.toString());
+// Older request bodies map to the predefined Hebron → Bethlehem route, which must exist.
+await ensureIntegrationRoutes(prisma);
 const operation = "legacy_merchant_order_create_v1";
 const prefix = `task9_${randomUUID()}`;
 const merchant = `${prefix}_merchant`;

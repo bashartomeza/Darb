@@ -41,7 +41,7 @@ void main() {
     expect(reply.suggestions, ['بعد ساعة']);
   });
 
-  test('searches with the matched stops, not the legacy corridor', () async {
+  test('searches by the confirmed route, not by places', () async {
     http.Request? search;
     final auth = TestAuthenticatedClient(
       handler: (request) async {
@@ -62,17 +62,39 @@ void main() {
         pickupLng: 35.1,
         destinationLat: 31.55,
         destinationLng: 35.1,
+        serviceRouteId: 'route-heb-bth',
+        pickupDetails: 'Hebron Center',
+        dropoffDetails: 'PPU main gate',
       ),
     );
-    final body = jsonDecode(search!.body) as Map<String, dynamic>;
-    expect(body['pickup_label'], 'Hebron Center');
-    expect(body['pickup_lat'], 31.53);
-    expect(body['destination_label'], 'PPU Main Gate');
-    expect(body['destination_lat'], 31.55);
-    expect(body['passenger_count'], 2);
+    expect(search!.url.path, '/api/v1/matches/search');
+    expect(jsonDecode(search!.body), {
+      'service_route_id': 'route-heb-bth',
+      'preferred_time': '2030-01-02T12:00:00.000Z',
+      'passenger_count': 2,
+    });
   });
 
-  test('rejects a stop draft that carries no coordinates', () async {
+  test('a draft restored from a pending booking keeps its route', () {
+    final draft = PassengerAssistantTripDraft.fromJson(
+      PassengerAssistantTripDraft(
+        pickupKey: 'hebron-center',
+        pickupLabel: 'Hebron Center',
+        destinationKey: 'bethlehem-center',
+        destinationLabel: 'Bethlehem Center',
+        preferredTime: DateTime.utc(2030, 1, 2, 12),
+        passengerCount: 1,
+        serviceRouteId: 'route-heb-bth',
+        pickupDetails: 'Near the PPU main gate',
+        dropoffDetails: 'Bethlehem bus station',
+      ).toJson(),
+    );
+    expect(draft.serviceRouteId, 'route-heb-bth');
+    expect(draft.pickupDetails, 'Near the PPU main gate');
+    expect(draft.dropoffDetails, 'Bethlehem bus station');
+  });
+
+  test('rejects a draft without a confirmed route', () async {
     final auth = TestAuthenticatedClient(
       handler: (request) async => http.Response('{"results":[]}', 200),
     );

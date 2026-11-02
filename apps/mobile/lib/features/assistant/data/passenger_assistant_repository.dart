@@ -4,7 +4,9 @@ import '../../../core/api/api_error.dart';
 
 import '../../auth/data/authenticated_api_client.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../operating_routes/data/operating_route_models.dart';
 import '../../passenger/application/legacy_passenger_request_mutation.dart';
+import '../../passenger/data/passenger_models.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../domain/passenger_assistant_models.dart';
 
@@ -182,9 +184,15 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
     PassengerAssistantTripDraft draft,
   ) async {
     _validateDraft(draft);
+    // Driver routes on the same predefined route; the exact places only
+    // matter to the request itself.
     final json = await apiClient.postJson(
       '/matches/search',
-      body: _requestBody(draft),
+      body: {
+        'service_route_id': draft.serviceRouteId,
+        'preferred_time': draft.preferredTime.toUtc().toIso8601String(),
+        'passenger_count': draft.passengerCount,
+      },
     );
     final rawResults = json['results'];
     if (rawResults is! List) {
@@ -207,7 +215,7 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
     required PassengerAssistantTripDraft draft,
     required PassengerAssistantTripOption option,
   }) async {
-    _validateDraft(draft);
+    _validateBooking(draft);
     final body = _requestBody(draft);
     final recovery = mutation;
     if (recovery == null) {
@@ -347,20 +355,9 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
     return mutation!.create(
       payload: body,
       recoveryContext: {
-        // The places keep their own coordinates, so a restored draft is still
-        // bookable without the app knowing any place itself.
-        'draft': {
-          'pickup_key': draft.pickupKey,
-          'pickup_label': draft.pickupLabel,
-          'pickup_lat': draft.pickupLat,
-          'pickup_lng': draft.pickupLng,
-          'destination_key': draft.destinationKey,
-          'destination_label': draft.destinationLabel,
-          'destination_lat': draft.destinationLat,
-          'destination_lng': draft.destinationLng,
-          'preferred_time': draft.preferredTime.toUtc().toIso8601String(),
-          'passenger_count': draft.passengerCount,
-        },
+        // The route and the typed places travel with the pending booking, so
+        // a restored chat shows and replays exactly what was confirmed.
+        'draft': draft.toJson(),
         'option': {
           'id': option.id,
           'origin_label': option.fromLabel,
@@ -399,33 +396,68 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
     );
   }
 
-  /// A draft is bookable when each end is a server place carrying its own
-  /// coordinates: the stop the assistant matched, or a corridor stop the
-  /// passenger picked instead.
+  /// A draft is searchable once the passenger confirmed a route and typed
+  /// both places (3–300 characters, as the API checks).
   void _validateDraft(PassengerAssistantTripDraft draft) {
-    final pickupKnown = draft.pickupLat != null && draft.pickupLng != null;
-    final destinationKnown =
-        draft.destinationLat != null && draft.destinationLng != null;
-    if (!pickupKnown || !destinationKnown) {
-      throw const FormatException('Unsupported extracted trip data');
+    final routeId = draft.serviceRouteId;
+    if (routeId == null || routeId.isEmpty) {
+      throw const FormatException('Missing route');
+    }
+    if (!_detailsValid(draft.pickupDetails) ||
+        !_detailsValid(draft.dropoffDetails)) {
+      throw const FormatException('Invalid pickup or drop-off details');
     }
     if (draft.passengerCount < 1 || draft.passengerCount > 4) {
       throw const FormatException('Invalid passenger count');
     }
   }
 
-  Map<String, dynamic> _requestBody(PassengerAssistantTripDraft draft) {
-    return {
-      'pickup_label': draft.pickupLabel,
-      'pickup_lat': draft.pickupLat,
-      'pickup_lng': draft.pickupLng,
-      'destination_label': draft.destinationLabel,
-      'destination_lat': draft.destinationLat,
-      'destination_lng': draft.destinationLng,
-      'preferred_time': draft.preferredTime.toUtc().toIso8601String(),
-      'passenger_count': draft.passengerCount,
-    };
+  /// Booking also accepts a draft restored from a booking an older build left
+  /// pending: it names places with coordinates instead of a route, and is
+  /// replayed exactly as it was first sent (the server still accepts it).
+  void _validateBooking(PassengerAssistantTripDraft draft) {
+    if (draft.serviceRouteId == null && _legacyPlaces(draft)) {
+      if (draft.passengerCount < 1 || draft.passengerCount > 4) {
+        throw const FormatException('Invalid passenger count');
+      }
+      return;
+    }
+    _validateDraft(draft);
   }
+
+  Map<String, dynamic> _requestBody(PassengerAssistantTripDraft draft) {
+    final routeId = draft.serviceRouteId;
+    if (routeId == null) {
+      return {
+        'pickup_label': draft.pickupLabel,
+        'pickup_lat': draft.pickupLat,
+        'pickup_lng': draft.pickupLng,
+        'destination_label': draft.destinationLabel,
+        'destination_lat': draft.destinationLat,
+        'destination_lng': draft.destinationLng,
+        'preferred_time': draft.preferredTime.toUtc().toIso8601String(),
+        'passenger_count': draft.passengerCount,
+      };
+    }
+    return passengerRouteRequestBody(
+      serviceRouteId: routeId,
+      pickupDetails: draft.pickupDetails!,
+      dropoffDetails: draft.dropoffDetails!,
+      preferredTime: draft.preferredTime,
+      passengerCount: draft.passengerCount,
+    );
+  }
+}
+
+bool _legacyPlaces(PassengerAssistantTripDraft draft) =>
+    draft.pickupLat != null &&
+    draft.pickupLng != null &&
+    draft.destinationLat != null &&
+    draft.destinationLng != null;
+
+bool _detailsValid(String? value) {
+  final length = value?.trim().length ?? 0;
+  return length >= 3 && length <= routeDetailsMaxLength;
 }
 
 bool _definitiveMatchingRejection(Object error) =>

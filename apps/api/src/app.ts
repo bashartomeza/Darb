@@ -9,6 +9,7 @@ import { passengerRouter } from "./modules/passenger.js";
 import { createDriverRouter } from "./modules/driver.js";
 import { merchantRouter } from "./modules/merchant.js";
 import { legacyCorridorRouter } from "./modules/legacyCorridor.js";
+import { createAdminOperatingRoutesRouter, createOperatingRoutesRouter } from "./modules/operatingRoutes.js";
 import { merchantBulkRouter } from "./modules/merchantBulk.js";
 import { parcelHandoverRouter } from "./modules/parcelHandover.js";
 import { adminRouter } from "./modules/admin.js";
@@ -67,7 +68,7 @@ import type { PassengerAssistantHistoryStore } from "./services/passengerAssista
 import { createAdminConsentRouter } from "./modules/adminConsents.js";
 import type { ConsentReleaseService } from "./services/consentReleases.js";
 import { adminTripsRouter } from "./modules/adminTrips.js";
-import { adminPassengerParcelsRouter, createPassengerParcelRouter } from "./modules/passengerParcels.js";
+import { adminPassengerParcelsRouter, createPassengerParcelRouter, type PassengerParcelMatcher } from "./modules/passengerParcels.js";
 import type { PassengerParcelService } from "./services/passengerParcels.js";
 import { notificationsRouter } from "./modules/notifications.js";
 import { reportsRouter } from "./modules/reports.js";
@@ -94,6 +95,7 @@ type AppDependencies = {
   driverAvailabilityService?: DriverAvailabilityService;
   canonicalDemandService?: CanonicalDemandService;
   passengerParcelService?: PassengerParcelService;
+  passengerParcelMatcher?: PassengerParcelMatcher;
   canonicalMatchingService?: CanonicalMatchingService;
   canonicalSharedMatchingService?: CanonicalSharedMatchingService;
   checkpointService?: CheckpointService;
@@ -163,6 +165,8 @@ export function createApp(
       appConfig.limitedCheckpointDirectory, new MysqlPartnerBudget(prisma, appConfig.limitedCheckpointDirectory.apiKey))
     : undefined;
   app.use("/api/v1", createCapabilitiesRouter(appConfig, directory));
+  // Public (no sign-in): the predefined routes every order names.
+  app.use("/api/v1", createOperatingRoutesRouter());
   app.use("/api/v1", createLimitedCheckpointDirectoryRouter(appConfig, limitedDirectory));
   app.use("/api/v1", createCheckpointDirectoryRouter(appConfig, directory));
   app.use(
@@ -182,7 +186,7 @@ export function createApp(
   );
   app.use(
     "/api/v1",
-    createPassengerParcelRouter(appConfig, dependencies.passengerParcelService),
+    createPassengerParcelRouter(appConfig, dependencies.passengerParcelService, dependencies.passengerParcelMatcher),
   );
   app.use(
     "/api/v1",
@@ -251,6 +255,7 @@ export function createApp(
     ),
   );
   app.use("/api/v1", createAdminRouteFaresRouter(appConfig));
+  app.use("/api/v1", createAdminOperatingRoutesRouter());
   const routePreviewService = dependencies.routePreviewService ?? createRoutePreviewService({
     provider: createRouteProvider(appConfig),
     cacheTtlMs: appConfig.routeMaps.cacheTtlSeconds * 1_000

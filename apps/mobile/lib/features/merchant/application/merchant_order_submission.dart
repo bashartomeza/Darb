@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../auth/application/auth_actor_binding.dart';
-import '../../legacy_corridor/data/legacy_corridor_models.dart';
 import '../data/merchant_models.dart';
 import '../data/merchant_order_operation_storage.dart';
 import '../data/merchant_repository.dart';
@@ -86,11 +85,16 @@ class MerchantOrderSubmission {
     }
     return _resume(pending, actor);
   });
-  Future<MerchantOrder> submit(
-    CorridorPlace pickup,
-    List<ParcelDraft> parcels,
-  ) => _run((actor) async {
-    final payload = MerchantRepository.createOrderBody(pickup, parcels);
+  Future<MerchantOrder> submit({
+    required String serviceRouteId,
+    required String pickupDetails,
+    required List<ParcelDraft> parcels,
+  }) => _run((actor) async {
+    final payload = MerchantRepository.createOrderBody(
+      serviceRouteId: serviceRouteId,
+      pickupDetails: pickupDetails,
+      parcels: parcels,
+    );
     final previous = await storage.read(actor.id);
     _require(actor);
     if (previous != null) {
@@ -111,8 +115,10 @@ class MerchantOrderSubmission {
     } on ApiException catch (error) {
       // Only a definitive rejection of this first send proves it never committed.
       // Reconciliation failures, malformed success, transport loss and 5xx retain identity.
-      if (const {400, 422}.contains(error.statusCode) &&
-          error.message != 'invalid_response') {
+      // A route turned off before the first send is such a rejection too.
+      if ((const {400, 422}.contains(error.statusCode) &&
+              error.message != 'invalid_response') ||
+          (error.statusCode == 409 && error.message == 'route_unavailable')) {
         _require(actor);
         await storage.clear(pending, guard: () => _require(actor));
       }
@@ -183,20 +189,32 @@ class MerchantOrderSubmission {
     MerchantOrder order,
   ) async {
     _require(actor);
+    final payload = pending.payload;
+    // Orders saved by builds before routes existed name corridor places; the
+    // server echoes those labels. Route orders are checked by their own text.
+    final routeShape = payload.containsKey('service_route_id');
+    final placeKey = routeShape ? 'dropoff_details' : 'destination_label';
     final expected =
-        (pending.payload['parcels'] as List)
-            .map(
-              (p) => '${p['destination_label']}|${p['size']}|${p['priority']}',
-            )
+        (payload['parcels'] as List)
+            .map((p) => '${p[placeKey]}|${p['size']}|${p['priority']}')
             .toList()
           ..sort();
     final actual =
         order.parcels
-            .map((p) => '${p.destinationLabel}|${p.size}|${p.priority}')
+            .map(
+              (p) =>
+                  '${routeShape ? p.dropoffDetails : p.destinationLabel}'
+                  '|${p.size}|${p.priority}',
+            )
             .toList()
           ..sort();
+    final samePickup = routeShape
+        ? order.pickupDetails == payload['pickup_details'] &&
+              (order.serviceRouteId == null ||
+                  order.serviceRouteId == payload['service_route_id'])
+        : order.pickupLabel == payload['pickup_label'];
     if (order.id.isEmpty ||
-        order.pickupLabel != pending.payload['pickup_label'] ||
+        !samePickup ||
         order.parcels.any((p) => p.id.isEmpty) ||
         order.parcels.map((p) => p.id).toSet().length != order.parcels.length ||
         jsonEncode(expected) != jsonEncode(actual)) {

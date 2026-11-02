@@ -21,6 +21,11 @@ final legacyPassengerRequestMutationProvider =
 /// A single durable create operation shared by the ordinary and assistant flows.
 /// Its internal sentinel exists only for storage compatibility, never on the wire.
 ///
+/// The payload is replayed exactly as stored, whatever its shape: the route
+/// body (`service_route_id` + `pickup_details`/`dropoff_details`) written by
+/// this build, or the coordinate body an older build left pending, which the
+/// server still accepts.
+///
 /// A driver route picked in the assistant travels in the create body as
 /// `selected_driver_route_id`, so the server saves it on the request together
 /// with the request itself. The pending bundle only holds it until that write
@@ -134,13 +139,14 @@ class LegacyPassengerRequestMutation {
       );
     } on ApiException catch (error) {
       // A 400 from the create handler is a confirmed validation rejection, and
-      // so is an unavailable picked route: the server rolls the whole create
-      // back. Auth, transport, provider and malformed-response failures stay
-      // unresolved.
+      // so is an unavailable picked driver route or a route that was turned
+      // off: the server rolls the whole create back. Auth, transport, provider
+      // and malformed-response failures stay unresolved.
       final rejected =
           (error.statusCode == 400 && error.message != 'invalid_response') ||
           (error.statusCode == 409 &&
-              error.message == 'selected_driver_route_unavailable');
+              (error.message == 'selected_driver_route_unavailable' ||
+                  error.message == 'route_unavailable'));
       if (rejected && currentActor() == actor) {
         final bundle = attempted;
         if (bundle != null) {

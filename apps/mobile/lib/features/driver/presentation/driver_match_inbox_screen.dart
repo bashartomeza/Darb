@@ -123,11 +123,38 @@ class _MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final routeName = match.route.routeName(
+      arabic: Localizations.localeOf(context).languageCode == 'ar',
+    );
+    final passenger = match.passengerRequest;
+    final order = match.merchantOrder;
 
     // Only the load figures that apply to this match type are listed. The old
     // card printed every field with an empty value where it did not apply,
     // which made a passenger ride and a parcel run look identical at a glance.
+    // Route matches lead with the route and where to collect the load: the
+    // typed details are how the driver finds people now.
     final details = <({String label, String value, IconData icon})>[
+      if (routeName != null)
+        (label: l10n.orderRouteLabel, value: routeName, icon: Icons.route),
+      if (passenger?.pickupDetails != null)
+        (
+          label: l10n.driverPickupDetailsLabel,
+          value: passenger!.pickupDetails!,
+          icon: Icons.person_pin_circle_outlined,
+        ),
+      if (passenger?.dropoffDetails != null)
+        (
+          label: l10n.driverDropoffDetailsLabel,
+          value: passenger!.dropoffDetails!,
+          icon: Icons.flag_outlined,
+        ),
+      if (order?.pickupDetails != null)
+        (
+          label: l10n.driverMerchantPickupLabel,
+          value: order!.pickupDetails!,
+          icon: Icons.storefront_outlined,
+        ),
       if (match.passengerRequest != null)
         (
           label: l10n.passengerCount,
@@ -156,8 +183,9 @@ class _MatchCard extends StatelessWidget {
       statusTone: statusToneFor(match.status),
       score: match.score,
       scoreLabel: l10n.matchScore,
-      from: match.pickupLabel,
-      to: match.destinationLabel,
+      // The route row names a route match; older matches keep their places.
+      from: routeName == null ? match.pickupLabel : null,
+      to: routeName == null ? match.destinationLabel : null,
       details: details,
       actionKey: ValueKey('openMatch-${match.id}'),
       actionLabel: l10n.viewDetails,

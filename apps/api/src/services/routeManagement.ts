@@ -11,6 +11,12 @@ type Actor = { id: string; requestId?: string; idempotencyKey?: string };
 
 export const ADMIN_ROUTE_VERSION_HISTORY_LIMIT = 50;
 const ADMIN_ROUTE_VERSION_STOP_LIMIT = 100;
+/**
+ * Active service routes the catalogue accepts. It was 5 during the closed
+ * beta; the 20 predefined city routes and admin-created operating routes now
+ * count too, so the cap only guards against runaway creation.
+ */
+export const ACTIVE_SERVICE_ROUTE_LIMIT = 200;
 
 export type RouteIdentityInput = {
   routeKey: string;
@@ -284,7 +290,11 @@ async function replayResource<T>(
   return resource;
 }
 
-export function createRouteManagementService(db: PrismaClient = prisma) {
+export function createRouteManagementService(
+  db: PrismaClient = prisma,
+  options: { activeRouteLimit?: number } = {}
+) {
+  const activeRouteLimit = options.activeRouteLimit ?? ACTIVE_SERVICE_ROUTE_LIMIT;
   return {
     async listAdminRoutes(input: RouteListInput) {
       const where: Prisma.ServiceRouteWhereInput = {
@@ -331,7 +341,7 @@ export function createRouteManagementService(db: PrismaClient = prisma) {
         );
         if (replay) return { resource: replay, replayed: true };
         const activeCount = await tx.serviceRoute.count({ where: { status: "active" } });
-        if (activeCount >= 5) throw new HttpError(409, "beta_route_limit_reached");
+        if (activeCount >= activeRouteLimit) throw new HttpError(409, "beta_route_limit_reached");
         const route = await tx.serviceRoute.create({
           data: {
             route_key: input.routeKey,

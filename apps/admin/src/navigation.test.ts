@@ -6,6 +6,7 @@ import {
   hashForModule,
   isModuleAvailable,
   moduleFromHash,
+  navItemForModule,
   resolveActiveModule,
   visibleNavItems
 } from "./navigation";
@@ -70,8 +71,9 @@ describe("admin navigation", () => {
   });
 
   it("uses honest unavailable states for gated and unimplemented modules", () => {
+    // The simple Routes page is API-backed and no longer behind VITE_ROUTE_MANAGEMENT_ENABLED.
     expect(isModuleAvailable("routes", allOn)).toBe(true);
-    expect(isModuleAvailable("routes", allOff)).toBe(false);
+    expect(isModuleAvailable("routes", allOff)).toBe(true);
     expect(isModuleAvailable("matchingBatching", allOn)).toBe(true);
     expect(isModuleAvailable("matchingBatching", allOff)).toBe(true);
     expect(isModuleAvailable("incidentsSafety", allOn)).toBe(true);
@@ -102,5 +104,16 @@ describe("admin navigation", () => {
   it("keeps a valid destination active regardless of feature availability", () => {
     expect(resolveActiveModule("routes", allOff)).toBe("routes");
     expect(resolveActiveModule("matchingBatching", allOff)).toBe("matchingBatching");
+  });
+
+  it("keeps the old route workspace out of the sidebar and behind the route-management flag", () => {
+    expect(NAV_ITEMS.map((item) => item.id)).not.toContain("routeWorkspace");
+    expect(hashForModule("routeWorkspace")).toBe("#/routes/advanced");
+    expect(moduleFromHash("#/routes/advanced")).toBe("routeWorkspace");
+    expect(resolveActiveModule("routeWorkspace", allOn)).toBe("routeWorkspace");
+    expect(resolveActiveModule("routeWorkspace", allOff)).toBe("routes");
+    expect(navItemForModule("routeWorkspace")).toBe("routes");
+    expect(navItemForModule("profile")).toBeNull();
+    expect(navItemForModule("trips")).toBe("trips");
   });
 });

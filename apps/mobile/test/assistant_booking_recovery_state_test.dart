@@ -28,6 +28,10 @@ final _draft = PassengerAssistantTripDraft(
   destinationLabel: 'Bethlehem Center',
   preferredTime: DateTime.utc(2030, 1, 2, 12),
   passengerCount: 1,
+  // Confirmed in the review card: the route and the exact places.
+  serviceRouteId: 'route-heb-bth',
+  pickupDetails: 'Bab Al-Zawiya, next to the pharmacy',
+  dropoffDetails: 'Bethlehem Center bus stop',
 );
 const _option = PassengerAssistantTripOption(
   id: 'route',
@@ -121,6 +125,7 @@ void main() {
         draft: _draft,
       );
       final keys = <String>[];
+      final bodies = <Map<String, dynamic>>[];
       var messageCalls = 0;
       final saved = <String>{};
       final auth = TestAuthenticatedClient(
@@ -149,6 +154,7 @@ void main() {
           if (request.url.path.endsWith('/passenger/requests')) {
             final key = request.headers['idempotency-key']!;
             keys.add(key);
+            bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
             saved.add(key);
             if (keys.length == 1) {
               throw http.ClientException('saved response lost');
@@ -199,6 +205,14 @@ void main() {
           .read(passengerAssistantControllerProvider.notifier)
           .submit('A different new trip', locale: 'en');
       expect(messageCalls, 0);
+      // The restored draft is the confirmed one: same route, same places.
+      final restored = reopened
+          .read(passengerAssistantControllerProvider)
+          .value!
+          .draft!;
+      expect(restored.serviceRouteId, 'route-heb-bth');
+      expect(restored.pickupDetails, 'Bab Al-Zawiya, next to the pharmacy');
+      expect(restored.dropoffDetails, 'Bethlehem Center bus stop');
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -234,6 +248,17 @@ void main() {
       expect(find.text('Matched recovered'), findsOneWidget);
       expect(keys, [keys.first, keys.first]);
       expect(saved.length, 1);
+      // The replay sends the very same route body, never coordinates.
+      expect(bodies, hasLength(2));
+      expect(jsonEncode(bodies.last), jsonEncode(bodies.first));
+      expect(bodies.first, {
+        'service_route_id': 'route-heb-bth',
+        'pickup_details': 'Bab Al-Zawiya, next to the pharmacy',
+        'dropoff_details': 'Bethlehem Center bus stop',
+        'preferred_time': '2030-01-02T12:00:00.000Z',
+        'passenger_count': 1,
+        'selected_driver_route_id': 'route',
+      });
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

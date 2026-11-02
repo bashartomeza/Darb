@@ -440,7 +440,8 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                             : CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${_displayOrigin(context, data)}  →  ${_displayDestination(context, data)}',
+                            data.trip.routeName(arabic: isArabic) ??
+                                '${_displayOrigin(context, data)}  →  ${_displayDestination(context, data)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: isArabic
@@ -528,6 +529,31 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                   ],
                 ),
 
+                // ==================================================
+                // EXACT PLACES (requests booked on a route)
+                // ==================================================
+                if (data.trip.pickupDetails != null ||
+                    data.trip.dropoffDetails != null) ...[
+                  const SizedBox(height: 10),
+                  _placeDetails(
+                    key: const ValueKey('tripPlaceDetails'),
+                    rows: [
+                      if (data.trip.pickupDetails != null)
+                        (
+                          icon: Icons.trip_origin_rounded,
+                          label: l10n.passengerPickupPoint,
+                          value: data.trip.pickupDetails!,
+                        ),
+                      if (data.trip.dropoffDetails != null)
+                        (
+                          icon: Icons.location_on_rounded,
+                          label: l10n.passengerDropoffPoint,
+                          value: data.trip.dropoffDetails!,
+                        ),
+                    ],
+                  ),
+                ],
+
                 const SizedBox(height: 10),
 
                 // ==================================================
@@ -558,6 +584,64 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
           ),
         );
       },
+    );
+  }
+
+  // ============================================================
+  // PLACE DETAILS
+  // ============================================================
+
+  Widget _placeDetails({
+    required Key key,
+    required List<({IconData icon, String label, String value})> rows,
+  }) {
+    return Container(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: _background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (index, row) in rows.indexed) ...[
+            if (index > 0) const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(row.icon, size: 18, color: _orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        row.label,
+                        style: const TextStyle(
+                          color: _secondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        row.value,
+                        style: const TextStyle(
+                          color: _text,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 

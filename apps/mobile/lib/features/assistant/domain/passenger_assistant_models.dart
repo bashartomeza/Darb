@@ -12,6 +12,9 @@ class PassengerAssistantTripDraft {
     this.pickupLng,
     this.destinationLat,
     this.destinationLng,
+    this.serviceRouteId,
+    this.pickupDetails,
+    this.dropoffDetails,
   });
 
   factory PassengerAssistantTripDraft.fromJson(Map<String, dynamic> json) {
@@ -31,6 +34,9 @@ class PassengerAssistantTripDraft {
       pickupLng: _optionalDouble(json['pickup_lng']),
       destinationLat: _optionalDouble(json['destination_lat']),
       destinationLng: _optionalDouble(json['destination_lng']),
+      serviceRouteId: _optionalString(json['service_route_id']),
+      pickupDetails: _optionalString(json['pickup_details']),
+      dropoffDetails: _optionalString(json['dropoff_details']),
     );
   }
 
@@ -47,6 +53,31 @@ class PassengerAssistantTripDraft {
   final double? destinationLat;
   final double? destinationLng;
 
+  /// The predefined route and the exact places the passenger confirmed in the
+  /// review card. Set before searching; the assistant itself only extracts
+  /// places, which preselect the route and prefill the details.
+  final String? serviceRouteId;
+  final String? pickupDetails;
+  final String? dropoffDetails;
+
+  /// What a booking from this chat sends, also kept with a pending booking so
+  /// a restored chat carries the same route and details.
+  Map<String, dynamic> toJson() => {
+    'pickup_key': pickupKey,
+    'pickup_label': pickupLabel,
+    'pickup_lat': pickupLat,
+    'pickup_lng': pickupLng,
+    'destination_key': destinationKey,
+    'destination_label': destinationLabel,
+    'destination_lat': destinationLat,
+    'destination_lng': destinationLng,
+    'preferred_time': preferredTime.toUtc().toIso8601String(),
+    'passenger_count': passengerCount,
+    'service_route_id': ?serviceRouteId,
+    'pickup_details': ?pickupDetails,
+    'dropoff_details': ?dropoffDetails,
+  };
+
   PassengerAssistantTripDraft copyWith({
     String? pickupKey,
     String? pickupLabel,
@@ -58,6 +89,9 @@ class PassengerAssistantTripDraft {
     double? pickupLng,
     double? destinationLat,
     double? destinationLng,
+    String? serviceRouteId,
+    String? pickupDetails,
+    String? dropoffDetails,
   }) => PassengerAssistantTripDraft(
     pickupKey: pickupKey ?? this.pickupKey,
     pickupLabel: pickupLabel ?? this.pickupLabel,
@@ -69,6 +103,9 @@ class PassengerAssistantTripDraft {
     pickupLng: pickupLng ?? this.pickupLng,
     destinationLat: destinationLat ?? this.destinationLat,
     destinationLng: destinationLng ?? this.destinationLng,
+    serviceRouteId: serviceRouteId ?? this.serviceRouteId,
+    pickupDetails: pickupDetails ?? this.pickupDetails,
+    dropoffDetails: dropoffDetails ?? this.dropoffDetails,
   );
 }
 
@@ -272,6 +309,9 @@ class PassengerAssistantState {
   /// Saved request resolved by this selection attempt, never a previous search.
   final String? selectionRequestId;
 }
+
+String? _optionalString(Object? value) =>
+    value is String && value.trim().isNotEmpty ? value.trim() : null;
 
 double? _optionalDouble(Object? value) =>
     value is num ? value.toDouble() : null;

@@ -206,22 +206,21 @@ describe("demo reset", () => {
       serviceRoute: {
         updateMany: vi.fn(),
         deleteMany: vi.fn(),
-        create: vi.fn().mockResolvedValue({ id: "service_route_1" }),
-        update: vi.fn()
+        // The demo corridor first, then the predefined city routes.
+        create: vi.fn().mockImplementation(async ({ data }) => ({ id: `service_route_${data.route_key}`, ...data })),
+        update: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([])
       },
       serviceRouteVersion: {
         deleteMany: vi.fn(),
-        create: vi.fn().mockResolvedValue({ id: "route_version_1" })
+        create: vi.fn().mockImplementation(async ({ data }) => ({ id: `version_of_${data.service_route_id}`, ...data }))
       },
       routeFare: { deleteMany: vi.fn() },
       routeVersionStop: { deleteMany: vi.fn(), createMany: vi.fn() },
       stop: {
         deleteMany: vi.fn(),
-        create: vi
-          .fn()
-          .mockResolvedValueOnce({ id: "origin_stop" })
-          .mockResolvedValueOnce({ id: "pickup_stop" })
-          .mockResolvedValueOnce({ id: "destination_stop" })
+        findMany: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockImplementation(async ({ data }) => ({ id: `stop_${data.stop_key}`, ...data }))
       },
       user: { findFirst: vi.fn().mockResolvedValue(null), deleteMany: vi.fn(), create: userCreate }
     };
@@ -276,6 +275,32 @@ describe("demo reset", () => {
     });
     for (const call of userCreate.mock.calls) {
       expect(call[0].data).toEqual(expect.objectContaining({ account_status: "active", security_version: 1 }));
+    }
+    // The predefined city routes are seeded too: 10 city stops, 20 published routes.
+    const cityStops = tx.stop.create.mock.calls.filter(([args]) => String(args.data.stop_key).startsWith("city-"));
+    expect(cityStops).toHaveLength(10);
+    const cityRoutes = tx.serviceRoute.create.mock.calls.filter(([args]) => /^[a-z]+-to-[a-z]+$/.test(String(args.data.route_key)));
+    expect(cityRoutes).toHaveLength(20);
+    // Demo supply and demand sit on Hebron → Bethlehem, with the exact places as text.
+    const forwardVersion = "version_of_service_route_hebron-to-bethlehem";
+    expect(tx.driverRoute.create.mock.calls[0][0].data).toMatchObject({
+      corridor_key: "hebron-to-bethlehem",
+      route_version_id: forwardVersion,
+      origin_label: "Hebron",
+      destination_label: "Bethlehem"
+    });
+    expect(tx.driverRoute.create.mock.calls[1][0].data).toMatchObject({
+      corridor_key: "bethlehem-to-hebron",
+      route_version_id: "version_of_service_route_bethlehem-to-hebron"
+    });
+    expect(tx.passengerRequest.create.mock.calls[0][0].data).toMatchObject({
+      route_version_id: forwardVersion,
+      pickup_details: expect.any(String),
+      dropoff_details: expect.any(String)
+    });
+    expect(tx.merchantOrder.create.mock.calls[0][0].data).toMatchObject({ route_version_id: forwardVersion, pickup_details: expect.any(String) });
+    for (const [args] of tx.parcel.create.mock.calls) {
+      expect(args.data).toMatchObject({ route_version_id: forwardVersion, dropoff_details: expect.any(String) });
     }
   });
 });

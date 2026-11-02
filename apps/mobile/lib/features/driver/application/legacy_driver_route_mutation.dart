@@ -57,7 +57,10 @@ class LegacyDriverRouteMutation {
     return bundle;
   }
 
+  /// [serviceRouteId] is null only for a route saved by a build before routes
+  /// existed; the saved payload is then matched and replayed as saved.
   Future<CanonicalMutationReceipt<DriverRoute>> create({
+    required String? serviceRouteId,
     required int seats,
     required int parcels,
     required Future<DriverRoute> Function(
@@ -73,6 +76,7 @@ class LegacyDriverRouteMutation {
       actorId: actor,
       payload: {
         'route_version_id': sentinel,
+        'service_route_id': ?serviceRouteId,
         'seats_available': seats,
         'parcel_capacity_available': parcels,
       },

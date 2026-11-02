@@ -11,6 +11,10 @@ class PassengerTrip {
     this.originLng,
     this.destinationLat,
     this.destinationLng,
+    this.routeNameAr,
+    this.routeNameEn,
+    this.pickupDetails,
+    this.dropoffDetails,
   });
 
   final String id;
@@ -48,6 +52,21 @@ class PassengerTrip {
   final double? destinationLat;
   final double? destinationLng;
 
+  /// The predefined route and the exact places the passenger typed, read
+  /// from the trip's passenger request. Null for trips of older requests.
+  final String? routeNameAr;
+  final String? routeNameEn;
+  final String? pickupDetails;
+  final String? dropoffDetails;
+
+  /// The route's name in the reading language, or null for older trips.
+  String? routeName({required bool arabic}) {
+    final ar = routeNameAr;
+    final en = routeNameEn;
+    if (arabic && ar != null) return ar;
+    return en ?? ar;
+  }
+
   bool get hasRouteCoordinates =>
       originLat != null &&
       originLng != null &&
@@ -64,6 +83,13 @@ class PassengerTrip {
         ? null
         : route['destination_label'] as String? ?? '';
     final routeLabel = route == null ? '' : '$originLabel -> $destinationLabel';
+    final rawRequest = json['passenger_request'];
+    final request = rawRequest is Map<String, dynamic>
+        ? rawRequest
+        : const <String, dynamic>{};
+    String? named(String key) =>
+        _optionalString(request, key) ??
+        (route == null ? null : _optionalString(route, key));
 
     return PassengerTrip(
       id: _string(json, 'id'),
@@ -81,6 +107,10 @@ class PassengerTrip {
       destinationLng: route == null
           ? null
           : _nullableDouble(route['destination_lng']),
+      routeNameAr: named('route_name_ar'),
+      routeNameEn: named('route_name_en'),
+      pickupDetails: _optionalString(request, 'pickup_details'),
+      dropoffDetails: _optionalString(request, 'dropoff_details'),
     );
   }
 }
@@ -133,6 +163,11 @@ double _double(Map<String, dynamic> json, String key) {
   }
 
   throw FormatException('Missing $key');
+}
+
+String? _optionalString(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  return value is String && value.trim().isNotEmpty ? value.trim() : null;
 }
 
 double? _nullableDouble(dynamic value) {

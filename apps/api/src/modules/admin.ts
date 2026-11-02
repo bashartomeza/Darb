@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { auditEvent } from "../lib/audit.js";
+import { routeSummarySelect, withRouteFields } from "../services/operatingRoutes.js";
 import { revokeAllUserSessions } from "../lib/refreshTokens.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
@@ -1148,9 +1149,9 @@ adminRouter.get("/admin/drivers", async (_req, res, next) => {
 adminRouter.get("/admin/requests", async (_req, res, next) => {
   try {
     const requests = await prisma.passengerRequest.findMany({
-      include: { passenger: { select: safeUserSelect } }
+      include: { passenger: { select: safeUserSelect }, route_version: routeSummarySelect }
     });
-    res.json({ requests: requests.map((request) => ({ ...request, passenger: serializeSafeUser(request.passenger) })) });
+    res.json({ requests: requests.map((request) => ({ ...withRouteFields(request), passenger: serializeSafeUser(request.passenger) })) });
   } catch (error) {
     next(error);
   }
@@ -1160,9 +1161,9 @@ adminRouter.get("/admin/orders", async (_req, res, next) => {
   try {
     const orders = await prisma.merchantOrder.findMany({
       where: { passenger_parcel: null },
-      include: { merchant: { select: safeUserSelect }, parcels: true }
+      include: { merchant: { select: safeUserSelect }, parcels: true, route_version: routeSummarySelect }
     });
-    res.json({ orders: orders.map((order) => ({ ...order, merchant: serializeSafeUser(order.merchant) })) });
+    res.json({ orders: orders.map((order) => ({ ...withRouteFields(order), merchant: serializeSafeUser(order.merchant) })) });
   } catch (error) {
     next(error);
   }

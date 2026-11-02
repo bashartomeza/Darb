@@ -14,7 +14,7 @@ import 'package:darb_mobile/core/i18n/domain_labels.dart';
 import 'package:darb_mobile/features/auth/data/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'support/legacy_corridor_fixture.dart';
+import 'support/operating_routes_fixture.dart';
 import 'test_app_config.dart';
 
 void main() {
@@ -48,7 +48,7 @@ void main() {
     expect(preferences.getString(DomainLabels.localeStorageKey), 'en');
   });
 
-  testWidgets('locked order form has parcels but no editable coordinates', (
+  testWidgets('order form sends the route, pickup details and each drop-off', (
     tester,
   ) async {
     final handler = _MerchantHandler(hasOrder: false);
@@ -58,33 +58,94 @@ void main() {
     ).go('/merchant/order/new');
     await tester.pumpAndSettle();
 
-    expect(find.text('نقطة الاستلام الثابتة'), findsOneWidget);
-    // The pickup and the corridor are the server's, in Arabic.
-    expect(find.text('باب الزاوية'), findsOneWidget);
-    expect(find.text(corridorNameAr), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('addParcelButton')));
+    // The helpful Arabic hint and the route list from the server.
+    expect(find.text('مثال: اسم المتجر والشارع'), findsOneWidget);
+    expect(find.byKey(const ValueKey('merchantRouteField')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('addParcelButton')));
     await tester.pump();
-    expect(find.textContaining('(3/10)'), findsOneWidget);
+    expect(find.textContaining('(2/10)'), findsOneWidget);
 
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('submitMerchantOrder')),
+    await _fillOrder(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('parcelDropoff-1')),
+      'شارع المهد قرب الصيدلية',
     );
-    await tester.tap(find.byKey(const ValueKey('submitMerchantOrder')));
-    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('parcelReceiverName-1')),
+      'سارة',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('parcelReceiverPhone-1')),
+      '+970599123456',
+    );
+    await _submit(tester);
+
     expect(handler.createKey, matches(RegExp(r'^[A-Za-z0-9._:-]{8,128}$')));
-    expect(handler.createBody?['pickup_label'], 'Bab Al-Zawiya');
-    expect(handler.createBody?['pickup_lat'], 31.5326);
-    expect(handler.createBody?['pickup_lng'], 35.0998);
-    expect(handler.createBody?['parcels'], hasLength(3));
-    // Every parcel goes to the corridor's drop-off stop, at its coordinates.
-    for (final parcel in handler.createBody?['parcels'] as List) {
-      expect(parcel['destination_label'], 'Bethlehem Center');
-      expect(parcel['destination_lat'], 31.7054);
-      expect(parcel['destination_lng'], 35.2024);
-    }
+    expect(handler.createBody, {
+      'service_route_id': 'route-heb-bth',
+      'pickup_details': 'متجر الأمل، شارع عين سارة',
+      'parcels': [
+        {
+          'dropoff_details': 'قرب بوابة جامعة بيت لحم',
+          'size': 'S',
+          'priority': 'normal',
+        },
+        {
+          'dropoff_details': 'شارع المهد قرب الصيدلية',
+          'size': 'S',
+          'priority': 'normal',
+          'receiver_name': 'سارة',
+          'receiver_phone': '+970599123456',
+        },
+      ],
+    });
+    expect(handler.paths.where((path) => path.contains('corridor')), isEmpty);
+    // The new order shows its route and the merchant's own words.
     expect(find.byKey(const ValueKey('merchantOrderId')), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('merchantOrderRoute')))
+          .data,
+      'الخليل ← بيت لحم',
+    );
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('merchantOrderPickup')))
+          .data,
+      'متجر الأمل، شارع عين سارة',
+    );
+    expect(find.text('شارع المهد قرب الصيدلية'), findsOneWidget);
+  });
+
+  testWidgets('order form asks for a route and real details before sending', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(hasOrder: false);
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/new');
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('merchantPickupDetailsField')),
+      'ab',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('parcelReceiverPhone-0')),
+      'call me',
+    );
+    await _submit(tester);
+    expect(handler.createCalls, 0);
+    expect(find.text('اختر المسار أولاً.'), findsOneWidget);
+    expect(
+      find.text('اكتب 3 أحرف على الأقل ليجد السائق المكان.'),
+      findsNWidgets(2),
+    );
+    expect(
+      find.text('أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -97,23 +158,24 @@ void main() {
         tester.element(find.byKey(const ValueKey('merchantHome'))),
       ).go('/merchant/order/new');
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('addParcelButton')));
-      await tester.pump();
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('submitMerchantOrder')),
-      );
-      await tester.tap(find.byKey(const ValueKey('submitMerchantOrder')));
-      await tester.pumpAndSettle();
+      await _fillOrder(tester);
+      await _submit(tester);
       expect(handler.createCalls, 1);
       final persisted = await const FlutterSecureStorage().readAll();
       expect(
         persisted.values.any(
           (value) =>
               value.contains('idempotency_key') &&
-              value.contains('Bethlehem Center'),
+              value.contains('route-heb-bth'),
         ),
         isTrue,
       );
+      // The saved order is shown exactly as it will be resent.
+      expect(
+        find.byKey(const ValueKey('merchantPendingOrder')),
+        findsOneWidget,
+      );
+      expect(find.text('متجر الأمل، شارع عين سارة'), findsOneWidget);
       final originalKey = handler.createKey;
       GoRouter.of(
         tester.element(find.byKey(const ValueKey('merchantCreateOrder'))),
@@ -145,10 +207,49 @@ void main() {
     },
   );
 
-  testWidgets('order form waits for the server places and can retry them', (
+  testWidgets('an order saved before routes existed is resent as saved', (
     tester,
   ) async {
-    final handler = _MerchantHandler(hasOrder: false)..corridorFails = true;
+    final handler = _MerchantHandler(hasOrder: false);
+    await _pumpMerchant(
+      tester,
+      handler,
+      secure: {
+        'darb_merchant_order_v1:merchant_1': jsonEncode({
+          'version': 1,
+          'actor_id': 'merchant_1',
+          'idempotency_key': 'old-order-key-0001',
+          'payload': _corridorPayload,
+          'created_at': DateTime.now().toUtc().toIso8601String(),
+        }),
+      },
+    );
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/new');
+    await tester.pumpAndSettle();
+
+    // Shown as saved, with its corridor places, and not editable.
+    expect(find.byKey(const ValueKey('merchantPendingOrder')), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('merchantPickupLabel')))
+          .data,
+      'باب الزاوية',
+    );
+    expect(find.byKey(const ValueKey('merchantRouteField')), findsNothing);
+
+    await _submit(tester);
+    expect(handler.createCalls, 1);
+    expect(handler.createKey, 'old-order-key-0001');
+    expect(handler.createBody, _corridorPayload);
+    expect(find.byKey(const ValueKey('merchantOrderId')), findsOneWidget);
+  });
+
+  testWidgets('order form waits for the routes and can retry them', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(hasOrder: false)..routesFail = true;
     await _pumpMerchant(tester, handler);
     GoRouter.of(
       tester.element(find.byKey(const ValueKey('merchantHome'))),
@@ -158,31 +259,28 @@ void main() {
     VoidCallback? submit() => tester
         .widget<FilledButton>(find.byKey(const ValueKey('submitMerchantOrder')))
         .onPressed;
-    expect(find.byKey(const ValueKey('merchantPlacesError')), findsOneWidget);
+    expect(find.byKey(const ValueKey('merchantRoutesError')), findsOneWidget);
     expect(submit(), isNull);
 
-    handler.corridorFails = false;
-    await tester.tap(find.byKey(const ValueKey('merchantPlacesRetry')));
+    handler.routesFail = false;
+    await tester.tap(find.byKey(const ValueKey('merchantRoutesRetry')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('merchantPlacesError')), findsNothing);
-    expect(find.text('باب الزاوية'), findsOneWidget);
+    expect(find.byKey(const ValueKey('merchantRoutesError')), findsNothing);
+    expect(find.byKey(const ValueKey('merchantRouteField')), findsOneWidget);
     expect(submit(), isNotNull);
   });
 
-  testWidgets('order form cannot be sent while the corridor has no places', (
+  testWidgets('order form cannot be sent while no route is running', (
     tester,
   ) async {
-    final handler = _MerchantHandler(hasOrder: false)..corridorStops = false;
+    final handler = _MerchantHandler(hasOrder: false)..routesEmpty = true;
     await _pumpMerchant(tester, handler);
     GoRouter.of(
       tester.element(find.byKey(const ValueKey('merchantHome'))),
     ).go('/merchant/order/new');
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const ValueKey('merchantPlacesUnavailable')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('merchantRoutesEmpty')), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(
@@ -317,11 +415,51 @@ void main() {
   });
 }
 
+/// Chooses the first route and types the pickup and the first drop-off.
+Future<void> _fillOrder(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('merchantRouteField')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('الخليل ← بيت لحم').last);
+  await tester.pumpAndSettle();
+  await tester.enterText(
+    find.byKey(const ValueKey('merchantPickupDetailsField')),
+    'متجر الأمل، شارع عين سارة',
+  );
+  await tester.enterText(
+    find.byKey(const ValueKey('parcelDropoff-0')),
+    'قرب بوابة جامعة بيت لحم',
+  );
+  await tester.pump();
+}
+
+Future<void> _submit(WidgetTester tester) async {
+  await tester.ensureVisible(find.byKey(const ValueKey('submitMerchantOrder')));
+  await tester.tap(find.byKey(const ValueKey('submitMerchantOrder')));
+  await tester.pumpAndSettle();
+}
+
+/// An order saved by a build before routes existed.
+const _corridorPayload = {
+  'pickup_label': 'Bab Al-Zawiya',
+  'pickup_lat': 31.5326,
+  'pickup_lng': 35.0998,
+  'parcels': [
+    {
+      'destination_label': 'Bethlehem Center',
+      'destination_lat': 31.7054,
+      'destination_lng': 35.2024,
+      'size': 'S',
+      'priority': 'normal',
+    },
+  ],
+};
+
 Future<void> _pumpMerchant(
   WidgetTester tester,
   _MerchantHandler handler, {
   bool authenticated = true,
   bool resetStorage = true,
+  Map<String, String> secure = const {},
 }) async {
   tester.view.physicalSize = const Size(900, 2200);
   tester.view.devicePixelRatio = 1;
@@ -329,9 +467,10 @@ Future<void> _pumpMerchant(
   addTearDown(tester.view.resetDevicePixelRatio);
   if (resetStorage) {
     SharedPreferences.setMockInitialValues({});
-    FlutterSecureStorage.setMockInitialValues(
-      authenticated ? {TokenStorage.tokenKey: 'merchant-token'} : {},
-    );
+    FlutterSecureStorage.setMockInitialValues({
+      if (authenticated) TokenStorage.tokenKey: 'merchant-token',
+      ...secure,
+    });
   }
   await tester.pumpWidget(
     ProviderScope(
@@ -363,37 +502,62 @@ class _MerchantHandler {
   Map<String, dynamic>? createBody;
   String? createKey;
   bool loseNextResponse = false;
-  bool corridorFails = false;
-  bool corridorStops = true;
+  bool routesFail = false;
+  bool routesEmpty = false;
   int createCalls = 0;
   final lookupKeys = <String?>[];
+  final paths = <String>[];
 
-  String _createdOrderJson() => jsonEncode({
-    ...jsonDecode(_orderJson(false)) as Map<String, dynamic>,
-    'pickup_label': createBody!['pickup_label'],
-    'parcels': [
-      for (final entry in (createBody!['parcels'] as List).indexed)
-        {
-          'id': 'parcel_${entry.$1}',
-          ...entry.$2 as Map<String, dynamic>,
-          'status': 'pending',
-        },
-    ],
-  });
+  /// The created order as the server returns it: a route order gets the
+  /// route's city labels and echoes its typed details; an older corridor
+  /// order echoes its places.
+  String _createdOrderJson() {
+    final body = createBody!;
+    final route = body['service_route_id'] != null;
+    return jsonEncode({
+      ...jsonDecode(_orderJson(false)) as Map<String, dynamic>,
+      'pickup_label': body['pickup_label'] ?? 'Hebron',
+      if (route) ...{
+        'service_route_id': body['service_route_id'],
+        'route_name_ar': 'الخليل ← بيت لحم',
+        'route_name_en': 'Hebron → Bethlehem',
+        'pickup_details': body['pickup_details'],
+      },
+      'parcels': [
+        for (final entry in (body['parcels'] as List).indexed)
+          {
+            'id': 'parcel_${entry.$1}',
+            if (route) 'destination_label': 'Bethlehem',
+            ...entry.$2 as Map<String, dynamic>,
+            'status': 'pending',
+          },
+      ],
+    });
+  }
+
+  http.Response _utf8(String body, int status) => http.Response(
+    body,
+    status,
+    headers: const {'content-type': 'application/json; charset=utf-8'},
+  );
 
   Future<http.Response> call(http.Request request) async {
     final path = request.url.path;
+    paths.add(path);
     if (path.endsWith('/me')) return http.Response(_meJson, 200);
-    if (path.endsWith('/legacy-corridor')) {
-      if (corridorFails) {
+    if (path.endsWith('/operating-routes')) {
+      if (routesFail) {
         return http.Response('{"error":"internal_error"}', 500);
       }
-      return corridorStops ? corridorResponse() : _corridorWithoutStops();
+      return _utf8(
+        routesEmpty ? '{"routes":[]}' : jsonEncode(operatingRoutesJson()),
+        200,
+      );
     }
     if (path.endsWith('/merchant/order-operation')) {
       lookupKeys.add(request.headers['idempotency-key']);
       return hasOrder
-          ? http.Response('{"order":${_createdOrderJson()}}', 200)
+          ? _utf8('{"order":${_createdOrderJson()}}', 200)
           : http.Response(
               '{"error":"merchant_order_operation_not_found"}',
               404,
@@ -408,11 +572,15 @@ class _MerchantHandler {
         loseNextResponse = false;
         throw http.ClientException('synthetic response loss after commit');
       }
-      return http.Response('{"order":${_createdOrderJson()}}', 201);
+      return _utf8('{"order":${_createdOrderJson()}}', 201);
     }
     if (path.endsWith('/merchant/orders')) {
-      return http.Response(
-        hasOrder ? '{"orders":[${_orderJson(batched)}]}' : '{"orders":[]}',
+      return _utf8(
+        !hasOrder
+            ? '{"orders":[]}'
+            : createBody == null
+            ? '{"orders":[${_orderJson(batched)}]}'
+            : '{"orders":[${_createdOrderJson()}]}',
         200,
       );
     }
@@ -422,7 +590,7 @@ class _MerchantHandler {
       return http.Response('{"batch":$_batchJson}', 201);
     }
     if (path.endsWith('/merchant/orders/order_1')) {
-      return http.Response(
+      return _utf8(
         '{"order":${createBody == null ? _orderJson(batched) : _createdOrderJson()}}',
         200,
       );
@@ -463,17 +631,6 @@ class _MerchantHandler {
     }
     return http.Response('{"error":"not_found"}', 404);
   }
-}
-
-/// The corridor while it has no published route version: no places at all.
-http.Response _corridorWithoutStops() {
-  final body = jsonDecode(corridorJson) as Map<String, dynamic>;
-  (body['corridor'] as Map<String, dynamic>)['stops'] = <Object>[];
-  return http.Response(
-    jsonEncode(body),
-    200,
-    headers: {'content-type': 'application/json; charset=utf-8'},
-  );
 }
 
 const _meJson =

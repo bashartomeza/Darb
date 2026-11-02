@@ -20,6 +20,7 @@ import {
   unconfirmedOrderIds
 } from "../services/deliveryHandover.js";
 import { isLegacyRouteTimely, legacyRouteTimingWhere, legacyParcelUnits, reserveLegacyCapacity, releaseLegacyCapacity, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
+import { routeSummarySelect, withRouteFields, type RouteSummary } from "../services/operatingRoutes.js";
 
 export const tripsRouter = Router();
 export const trackingSimulationRouter = Router();
@@ -33,13 +34,29 @@ function routeParam(value: string | string[] | undefined) {
   return value;
 }
 
+type WithRoute = { route_version?: RouteSummary } | null;
+
+/**
+ * A trip as the API returns it: the embedded request, order and driver route
+ * carry `service_route_id`, `route_name_ar` and `route_name_en`; their
+ * pickup / drop-off details are plain columns of those rows.
+ */
+function serializeTrip<T extends { driver_route: WithRoute; passenger_request: WithRoute; merchant_order: WithRoute }>(trip: T) {
+  return {
+    ...trip,
+    driver_route: trip.driver_route ? withRouteFields(trip.driver_route) : null,
+    passenger_request: trip.passenger_request ? withRouteFields(trip.passenger_request) : null,
+    merchant_order: trip.merchant_order ? withRouteFields(trip.merchant_order) : null
+  };
+}
+
 async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
   const trip = await prisma.trip.findUnique({
     where: { id },
     include: {
-      driver_route: { include: { driver: true } },
-      passenger_request: true,
-      merchant_order: { include: { parcels: true } },
+      driver_route: { include: { driver: true, route_version: routeSummarySelect } },
+      passenger_request: { include: { route_version: routeSummarySelect } },
+      merchant_order: { include: { parcels: true, route_version: routeSummarySelect } },
       parcel_batch: true
     }
   });
@@ -53,6 +70,8 @@ async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
   if (req.user!.role === "driver" && trip.driver_route.driver.user_id === req.user!.id) return trip;
   if (req.user!.role === "passenger" && trip.passenger_request?.passenger_id === req.user!.id) return trip;
   if (req.user!.role === "merchant" && trip.merchant_order?.merchant_id === req.user!.id) return trip;
+  // A passenger parcel's order belongs to the passenger who sent it.
+  if (req.user!.role === "passenger" && trip.merchant_order && trip.merchant_order.merchant_id === req.user!.id) return trip;
 
   throw new HttpError(403, "forbidden");
 }
@@ -377,10 +396,15 @@ tripsRouter.get("/trips", requireAuth, async (req: AuthenticatedRequest, res, ne
   try {
     const trips = await prisma.trip.findMany({
       where: tripWhereForUser(req),
-      include: { driver_route: true, passenger_request: true, merchant_order: true, parcel_batch: true },
+      include: {
+        driver_route: { include: { route_version: routeSummarySelect } },
+        passenger_request: { include: { route_version: routeSummarySelect } },
+        merchant_order: { include: { route_version: routeSummarySelect } },
+        parcel_batch: true
+      },
       orderBy: { created_at: "desc" }
     });
-    res.json({ trips });
+    res.json({ trips: trips.map(serializeTrip) });
   } catch (error) {
     next(error);
   }
@@ -389,7 +413,7 @@ tripsRouter.get("/trips", requireAuth, async (req: AuthenticatedRequest, res, ne
 tripsRouter.get("/trips/:id", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const trip = await getVisibleTrip(routeParam(req.params.id), req);
-    res.json({ trip, delivery_confirmation: await tripDeliverySummary(prisma, trip) });
+    res.json({ trip: serializeTrip(trip), delivery_confirmation: await tripDeliverySummary(prisma, trip) });
   } catch (error) {
     next(error);
   }

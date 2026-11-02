@@ -17,7 +17,12 @@ export const MODULE_IDS = [
 ] as const;
 
 export type ModuleId = (typeof MODULE_IDS)[number];
-export type AdminRouteId = ModuleId | "profile";
+/**
+ * `routeWorkspace` is the older versioned route editor (stops, fares,
+ * versions). It is not in the sidebar: it opens only from a link on the Routes
+ * page, and only when the build enables route management.
+ */
+export type AdminRouteId = ModuleId | "profile" | "routeWorkspace";
 
 export const NAV_GROUP_IDS = ["main", "people", "operations", "safety", "insights", "system"] as const;
 export type NavGroupId = (typeof NAV_GROUP_IDS)[number];
@@ -52,7 +57,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "drivers", icon: "verified_user", labelKey: "navDrivers", group: "people", backing: "api" },
   { id: "invitations", icon: "person_pin_circle", labelKey: "navInvitations", group: "people", backing: "api" },
   { id: "trips", icon: "local_shipping", labelKey: "navTrips", group: "operations", backing: "api" },
-  { id: "routes", icon: "edit_road", labelKey: "navRoutes", group: "operations", backing: "flag" },
+  { id: "routes", icon: "edit_road", labelKey: "navRoutes", group: "operations", backing: "api" },
   { id: "deliveries", icon: "inventory_2", labelKey: "navDeliveries", group: "operations", backing: "api" },
   {
     id: "matchingBatching",
@@ -87,8 +92,16 @@ export function isModuleAvailable(id: ModuleId, flags: ModuleFlags): boolean {
   return item.backing === "api";
 }
 
-export function resolveActiveModule(active: AdminRouteId, _flags: ModuleFlags): AdminRouteId {
-  return active === "profile" || MODULE_IDS.includes(active) ? active : "overview";
+export function resolveActiveModule(active: AdminRouteId, flags: ModuleFlags): AdminRouteId {
+  if (active === "routeWorkspace") return flags.routeManagementEnabled ? "routeWorkspace" : "routes";
+  return active === "profile" || (MODULE_IDS as readonly string[]).includes(active) ? active : "overview";
+}
+
+/** The sidebar entry to highlight; the hidden route workspace belongs under Routes. */
+export function navItemForModule(active: AdminRouteId): ModuleId | null {
+  if (active === "profile") return null;
+  if (active === "routeWorkspace") return "routes";
+  return active;
 }
 
 const HASH_BY_MODULE: Record<AdminRouteId, string> = {
@@ -98,6 +111,7 @@ const HASH_BY_MODULE: Record<AdminRouteId, string> = {
   invitations: "#/invitations",
   trips: "#/trips",
   routes: "#/routes",
+  routeWorkspace: "#/routes/advanced",
   deliveries: "#/deliveries-orders",
   matchingBatching: "#/matching-batching",
   incidentsSafety: "#/incidents-safety",

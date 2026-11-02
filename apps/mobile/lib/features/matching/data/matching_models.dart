@@ -9,6 +9,10 @@ class MatchResult {
     required this.seatsAvailable,
     required this.breakdown,
     required this.passengerRequestId,
+    this.routeNameAr,
+    this.routeNameEn,
+    this.pickupDetails,
+    this.dropoffDetails,
   });
 
   final String id;
@@ -21,12 +25,34 @@ class MatchResult {
   final ScoringBreakdown breakdown;
   final String? passengerRequestId;
 
+  /// The predefined route and the exact places the passenger typed, when the
+  /// request was booked on a route (null for older requests).
+  final String? routeNameAr;
+  final String? routeNameEn;
+  final String? pickupDetails;
+  final String? dropoffDetails;
+
+  /// The route's name in the reading language, falling back to the driver
+  /// route's "origin -> destination" label.
+  String routeName({required bool arabic}) {
+    final ar = routeNameAr;
+    final en = routeNameEn;
+    if (arabic && ar != null) return ar;
+    return en ?? ar ?? routeLabel;
+  }
+
   factory MatchResult.fromJson(
     Map<String, dynamic> json,
     Map<String, dynamic> scoring,
   ) {
     final route = json['driver_route'] as Map<String, dynamic>;
     final driver = route['driver'] as Map<String, dynamic>?;
+    final request = json['passenger_request'];
+    final passengerRequest = request is Map<String, dynamic>
+        ? request
+        : const <String, dynamic>{};
+    String? named(String key) =>
+        _optionalString(passengerRequest, key) ?? _optionalString(route, key);
     return MatchResult(
       id: _string(json, 'id'),
       status: _string(json, 'status'),
@@ -38,6 +64,10 @@ class MatchResult {
       seatsAvailable: _intOrZero(route['seats_available']),
       breakdown: ScoringBreakdown.fromJson(scoring),
       passengerRequestId: _nestedIdOrNull(json['passenger_request']),
+      routeNameAr: named('route_name_ar'),
+      routeNameEn: named('route_name_en'),
+      pickupDetails: _optionalString(passengerRequest, 'pickup_details'),
+      dropoffDetails: _optionalString(passengerRequest, 'dropoff_details'),
     );
   }
 }
@@ -82,6 +112,11 @@ double _double(Map<String, dynamic> json, String key) {
   if (value is num) return value.toDouble();
   if (value is String) return double.parse(value);
   throw FormatException('Missing $key');
+}
+
+String? _optionalString(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  return value is String && value.trim().isNotEmpty ? value.trim() : null;
 }
 
 String? _nestedIdOrNull(Object? value) {

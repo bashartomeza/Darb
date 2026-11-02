@@ -249,6 +249,114 @@
   font-size: var(--label-md-size);
 }
 
+/* ------------------------------------------------ operating routes -- */
+
+.operating-routes__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-base);
+  flex-wrap: wrap;
+}
+
+.operating-routes__notice,
+.operating-routes__footer {
+  padding: var(--space-sm) var(--space-md) 0;
+}
+
+.operating-routes__footer {
+  padding-block-end: var(--space-sm);
+}
+
+.operating-routes__filters {
+  display: flex;
+  align-items: end;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.operating-routes__filters .field {
+  flex: 0 1 14rem;
+}
+
+.operating-routes__form-wide {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-base);
+  justify-items: start;
+}
+
+.operating-routes__check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-base);
+  font-size: var(--body-sm-size);
+  color: var(--on-surface);
+}
+
+.operating-routes__check input {
+  inline-size: 18px;
+  block-size: 18px;
+  accent-color: var(--primary);
+}
+
+.operating-routes__preview ul {
+  margin: 0;
+  padding-inline-start: var(--space-md);
+}
+
+.operating-routes__switch {
+  position: relative;
+  display: inline-block;
+  inline-size: 44px;
+  block-size: 24px;
+  padding: 0;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-full);
+  background: var(--surface-container-highest);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.operating-routes__switch.is-on {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.operating-routes__switch:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.operating-routes__switch:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.operating-routes__switch-thumb {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-lowest);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: inset-inline-start 120ms ease;
+}
+
+.operating-routes__switch.is-on .operating-routes__switch-thumb {
+  inset-inline-start: 22px;
+}
+
+.order-route-details {
+  margin-block-start: var(--space-xs);
+}
+
+.order-route-details__label {
+  font-weight: 600;
+}
+
 @media (max-width: 880px) {
   .trip-detail-grid {
     grid-template-columns: 1fr;

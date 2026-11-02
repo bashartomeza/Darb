@@ -104,9 +104,28 @@ class _MatchDetailScreenState extends ConsumerState<MatchDetailScreen> {
                               children: [
                                 DetailRow(
                                   label: l10n.selectedRoute,
-                                  value: match.routeLabel,
+                                  value: match.routeName(
+                                    arabic:
+                                        Localizations.localeOf(
+                                          context,
+                                        ).languageCode ==
+                                        'ar',
+                                  ),
                                   icon: Icons.route_outlined,
+                                  valueKey: const ValueKey('matchRouteName'),
                                 ),
+                                if (match.pickupDetails != null)
+                                  DetailRow(
+                                    label: l10n.passengerPickupPoint,
+                                    value: match.pickupDetails!,
+                                    icon: Icons.trip_origin_rounded,
+                                  ),
+                                if (match.dropoffDetails != null)
+                                  DetailRow(
+                                    label: l10n.passengerDropoffPoint,
+                                    value: match.dropoffDetails!,
+                                    icon: Icons.location_on_outlined,
+                                  ),
                                 DetailRow(
                                   label: l10n.seatsAvailable,
                                   value: '${match.seatsAvailable}',

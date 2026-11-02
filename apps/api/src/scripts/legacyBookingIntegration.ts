@@ -20,6 +20,9 @@ const { createLegacyPassengerCreationService } = await import("../services/legac
 const { reserveLegacyCapacity } = await import("../services/legacyCapacity.js");
 const { createCanonicalDemandService } = await import("../services/canonicalDemand.js");
 const { createDriverAvailabilityService } = await import("../services/driverAvailability.js");
+const { ensureIntegrationRoutes } = await import("./integrationRoutes.js");
+// Legacy demand rides the predefined Hebron → Bethlehem route; supply must be on it to match.
+const HEBRON_TO_BETHLEHEM = await ensureIntegrationRoutes(prisma);
 
 const prefix = `booking_${randomUUID()}`;
 const phonePrefix = `+97059${randomInt(10000, 99999)}`;
@@ -117,7 +120,7 @@ try {
   const driverToken = signAuthToken({ id: driver.id, role: "driver", sessionId: driverSession.id, securityVersion: 1 });
   const createRoute = (seats = 2) => request(server).post("/api/v1/driver/routes")
     .set("Authorization", `Bearer ${driverToken}`).set("Idempotency-Key", `${prefix}_driver_route`)
-    .send({ seats_available: seats, parcel_capacity_available: 5 });
+    .send({ service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: seats, parcel_capacity_available: 5 });
   const routeRetries = await Promise.all(Array.from({ length: 10 }, () => createRoute()));
   check(routeRetries.every(response => response.status === 201), "concurrent driver form retries succeed");
   const routeId = routeRetries[0]!.body.route.id;
@@ -187,6 +190,7 @@ try {
     origin_label: "Hebron / PPU / Bab Al-Zawiya", origin_lat: body.pickup_lat, origin_lng: body.pickup_lng,
     destination_label: "Bethlehem", destination_lat: body.destination_lat, destination_lng: body.destination_lng,
     corridor_key: "hebron-ppu-bab-al-zawiya-to-bethlehem", status: "active", seats_available: 2, parcel_capacity_available: 5,
+    route_version_id: HEBRON_TO_BETHLEHEM.current_version_id,
   } });
   const creationBarriers: Array<{ probe: string; passed: boolean }> = [];
   for (const scenario of [
@@ -303,7 +307,7 @@ try {
   check(creationBarriers.every(result => result.passed), `creation deadline lock barriers: ${JSON.stringify(creationBarriers)}`);
 
   const barrierRouteResponse = await request(server).post("/api/v1/driver/routes").set("Authorization", `Bearer ${driverToken}`)
-    .set("Idempotency-Key", `${prefix}_barrier_route`).send({ seats_available: 2, parcel_capacity_available: 0 });
+    .set("Idempotency-Key", `${prefix}_barrier_route`).send({ service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: 2, parcel_capacity_available: 0 });
   check(barrierRouteResponse.status === 201, "deadline barrier has undated driver supply");
   const barrierRouteId = barrierRouteResponse.body.route.id as string;
   let deadline = new Date(Date.now() + 10_000);

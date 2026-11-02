@@ -4,6 +4,7 @@ import { useLocale } from "../../i18n/LocaleContext";
 import type { TranslationKey } from "../../i18n/translations";
 import { BentoGrid, Card, CardHeader, Column, DataTable, EmptyState, RouteChip, Skeleton, StatusBadge } from "../../ui";
 import type { Tone } from "../../ui/StatusBadge";
+import { OrderRouteDetails, orderRouteSearchValues } from "../operatingRoutes/OrderRouteDetails";
 
 type PassengerParcelsApi = {
   passengerParcels: (token: string) => Promise<{ parcels: PassengerParcelRow[] }>;
@@ -55,7 +56,7 @@ export function PassengerParcelsPanel({ api, token, search = "" }: { api: Passen
   const rows = (parcels ?? []).filter(
     (parcel) =>
       !needle ||
-      [parcel.id, parcel.sender.name, parcel.pickup_label, parcel.dropoff_label ?? "", parcel.tracking_state].some((value) =>
+      [parcel.id, parcel.sender.name, parcel.pickup_label, parcel.dropoff_label ?? "", parcel.tracking_state, ...orderRouteSearchValues(parcel)].some((value) =>
         value.toLowerCase().includes(needle)
       )
   );
@@ -65,7 +66,12 @@ export function PassengerParcelsPanel({ api, token, search = "" }: { api: Passen
     {
       key: "route",
       header: t("columnRoute"),
-      cell: (parcel) => <RouteChip from={parcel.pickup_label} to={parcel.dropoff_label ?? t("noData")} />
+      cell: (parcel) => (
+        <div>
+          <RouteChip from={parcel.pickup_label} to={parcel.dropoff_label ?? t("noData")} />
+          <OrderRouteDetails order={parcel} />
+        </div>
+      )
     },
     { key: "size", header: t("passengerParcelColumnSize"), cell: (parcel) => parcel.size },
     {

@@ -17,7 +17,22 @@ import {
   legacyDriverOnlineStateService,
   type LegacyDriverOnlineStateService,
 } from "../services/legacyDriverOnlineState.js";
+import {
+  LEGACY_DEFAULT_ROUTE_KEY,
+  driverRoutePlaces,
+  resolveOperatingRoute,
+  resolveOperatingRouteByKey,
+  routeFields,
+  routeSummarySelect,
+  serviceRouteIdSchema,
+  type RouteSummary,
+} from "../services/operatingRoutes.js";
 
+/**
+ * The single corridor every driver route used before routes existed. New
+ * driver routes name a predefined route instead; this stays for the
+ * read-only GET /legacy-corridor that older app builds still call.
+ */
 export const LOCKED_ROUTE = {
   origin_label: "Hebron / PPU / Bab Al-Zawiya",
   origin_lat: 31.5326,
@@ -32,7 +47,11 @@ function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+// Older builds also sent the corridor's labels and key; they are accepted and
+// ignored, because the route's own cities now name both ends.
 const routeSchema = z.object({
+  // Optional for older builds, which name no route: they drive Hebron → Bethlehem.
+  service_route_id: serviceRouteIdSchema.optional(),
   origin_label: z.string().optional(),
   destination_label: z.string().optional(),
   corridor_key: z.string().optional(),
@@ -40,24 +59,10 @@ const routeSchema = z.object({
   parcel_capacity_available: z.coerce.number().int().min(0).max(20).default(0),
 });
 
-function assertLockedRoute(input: z.infer<typeof routeSchema>) {
-  if (input.corridor_key && input.corridor_key !== LOCKED_ROUTE.corridor_key) {
-    throw new HttpError(400, "route_outside_locked_corridor");
-  }
-  if (input.origin_label && input.origin_label !== LOCKED_ROUTE.origin_label) {
-    throw new HttpError(400, "route_outside_locked_corridor");
-  }
-  if (
-    input.destination_label &&
-    input.destination_label !== LOCKED_ROUTE.destination_label
-  ) {
-    throw new HttpError(400, "route_outside_locked_corridor");
-  }
-}
-
 const onlineStateSchema = z.strictObject({
   online: z.boolean(),
   expected_route_id: z.string().min(1).max(191).nullable().optional(),
+  service_route_id: serviceRouteIdSchema.optional(),
 });
 const idempotencyKeySchema = z
   .string()
@@ -80,6 +85,7 @@ function serializeLegacyDriverRoute(value: Record<string, unknown>) {
     parcel_capacity_available: value.parcel_capacity_available,
     status: value.status,
     route_version_id: value.route_version_id,
+    ...routeFields(value.route_version as RouteSummary),
     departure_at: value.departure_at,
     availability_window_end: value.availability_window_end,
     total_seats: value.total_seats,
@@ -125,7 +131,11 @@ export function createDriverRouter(
           throw new HttpError(400, "invalid_or_missing_idempotency_key");
         const input = onlineStateSchema.parse(req.body);
         const result = await onlineStateService.setState(
-          { online: input.online, expectedRouteId: input.expected_route_id },
+          {
+            online: input.online,
+            expectedRouteId: input.expected_route_id,
+            ...(input.service_route_id ? { serviceRouteId: input.service_route_id } : {}),
+          },
           {
             id: req.user!.id,
             requestId: req.requestId,
@@ -149,7 +159,15 @@ export function createDriverRouter(
     async (req: AuthenticatedRequest, res, next) => {
       try {
         const input = routeSchema.parse(req.body);
-        assertLockedRoute(input);
+        // An older body only ever named the old corridor; any other place is
+        // refused as before rather than moved onto Hebron → Bethlehem.
+        if (!input.service_route_id && (
+          (input.origin_label !== undefined && input.origin_label !== LOCKED_ROUTE.origin_label) ||
+          (input.destination_label !== undefined && input.destination_label !== LOCKED_ROUTE.destination_label) ||
+          (input.corridor_key !== undefined && input.corridor_key !== LOCKED_ROUTE.corridor_key)
+        )) {
+          throw new HttpError(400, "route_outside_locked_corridor");
+        }
         const idempotencyKey = idempotencyKeySchema.optional().parse(req.header("idempotency-key"));
 
         const route = await prisma.$transaction(async (tx) => {
@@ -158,7 +176,7 @@ export function createDriverRouter(
             scopeDigest: digest(`${CREATE_ROUTE_OPERATION}:${req.user!.id}`),
             keyDigest: digest(idempotencyKey),
             keyVersion: 1,
-            requestDigest: digest(JSON.stringify({ actor_id: req.user!.id, ...LOCKED_ROUTE,
+            requestDigest: digest(JSON.stringify({ actor_id: req.user!.id, service_route_id: input.service_route_id,
               seats_available: input.seats_available, parcel_capacity_available: input.parcel_capacity_available })),
             expiresAt: new Date(Date.now() + 86_400_000),
             retainCompleted: true,
@@ -171,7 +189,8 @@ export function createDriverRouter(
               throw new HttpError(409, "idempotency_replay_unavailable");
             }
             const original = await tx.driverRoute.findFirst({ where: { id: claim.record.resource_id,
-              driver: { user_id: req.user!.id }, operational_mode: "legacy", canonical_availability_version: null } });
+              driver: { user_id: req.user!.id }, operational_mode: "legacy", canonical_availability_version: null },
+              include: { route_version: routeSummarySelect } });
             if (!original) throw new HttpError(409, "idempotency_replay_unavailable");
             return original;
           }
@@ -188,14 +207,19 @@ export function createDriverRouter(
           }
 
           await tx.$queryRaw`SELECT id FROM driver_profiles WHERE id = ${profile.id} FOR UPDATE`;
+          const operatingRoute = input.service_route_id
+            ? await resolveOperatingRoute(tx, input.service_route_id)
+            : await resolveOperatingRouteByKey(tx, LEGACY_DEFAULT_ROUTE_KEY);
           const current = await tx.driverRoute.findFirst({
             where: { driver_id: profile.id, operational_mode: "legacy", canonical_availability_version: null,
               status: { in: ["active", "assigned", "on_trip"] } },
+            include: { route_version: routeSummarySelect },
             orderBy: [{ activated_at: "desc" }, { id: "asc" }],
           });
           if (current) {
             if (current.status === "active" && current.seats_available === input.seats_available &&
-              current.parcel_capacity_available === input.parcel_capacity_available) {
+              current.parcel_capacity_available === input.parcel_capacity_available &&
+              current.route_version?.service_route_id === operatingRoute.serviceRouteId) {
               await rememberRoute(current.id);
               return current;
             }
@@ -204,18 +228,13 @@ export function createDriverRouter(
           const created = await tx.driverRoute.create({
             data: {
               driver_id: profile.id,
-              origin_label: LOCKED_ROUTE.origin_label,
-              origin_lat: LOCKED_ROUTE.origin_lat.toFixed(6),
-              origin_lng: LOCKED_ROUTE.origin_lng.toFixed(6),
-              destination_label: LOCKED_ROUTE.destination_label,
-              destination_lat: LOCKED_ROUTE.destination_lat.toFixed(6),
-              destination_lng: LOCKED_ROUTE.destination_lng.toFixed(6),
-              corridor_key: LOCKED_ROUTE.corridor_key,
+              ...driverRoutePlaces(operatingRoute),
               seats_available: input.seats_available,
               parcel_capacity_available: input.parcel_capacity_available,
               status: "active",
               activated_at: new Date(),
             },
+            include: { route_version: routeSummarySelect },
           });
 
           await auditEvent(tx, {
@@ -223,7 +242,7 @@ export function createDriverRouter(
             action: AuditAction.driver_route_created,
             entityType: "DriverRoute",
             entityId: created.id,
-            metadata: { corridor_key: LOCKED_ROUTE.corridor_key },
+            metadata: { corridor_key: operatingRoute.routeKey, service_route_id: operatingRoute.serviceRouteId },
           });
           await rememberRoute(created.id);
           return created;
@@ -278,6 +297,7 @@ export function createDriverRouter(
             canonical_availability_version: null,
             operational_mode: "legacy",
           },
+          include: { route_version: routeSummarySelect },
           orderBy: { activated_at: "desc" },
         });
         res.json({
@@ -304,6 +324,7 @@ export function createDriverRouter(
             canonical_availability_version: null,
             operational_mode: "legacy",
           },
+          include: { route_version: routeSummarySelect },
           orderBy: { activated_at: "desc" },
         });
         res.json({
@@ -342,6 +363,7 @@ export function createDriverRouter(
         const route = await prisma.driverRoute.update({
           where: { id: existing.id },
           data: { status: "inactive", completed_at: new Date() },
+          include: { route_version: routeSummarySelect },
         });
 
         await auditEvent(prisma, {

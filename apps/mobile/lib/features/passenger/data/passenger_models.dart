@@ -14,6 +14,11 @@ class PassengerRequest {
     required this.status,
     required this.createdAt,
     this.selectedDriverRouteId,
+    this.serviceRouteId,
+    this.routeNameAr,
+    this.routeNameEn,
+    this.pickupDetails,
+    this.dropoffDetails,
   });
 
   final String id;
@@ -34,6 +39,23 @@ class PassengerRequest {
   /// The driver route the passenger picked when booking, saved on the request
   /// by the server. Null when matching may choose the best compatible route.
   final String? selectedDriverRouteId;
+
+  /// The predefined route ("Hebron → Bethlehem") the request was booked on and
+  /// the exact pickup and drop-off the passenger typed. All null for requests
+  /// saved before routes existed; screens then fall back to the place labels.
+  final String? serviceRouteId;
+  final String? routeNameAr;
+  final String? routeNameEn;
+  final String? pickupDetails;
+  final String? dropoffDetails;
+
+  /// The route's name in the reading language, or null for older requests.
+  String? routeName({required bool arabic}) {
+    final ar = routeNameAr;
+    final en = routeNameEn;
+    if (arabic && ar != null) return ar;
+    return en ?? ar;
+  }
 
   bool get canCancel =>
       status == 'pending' || status == 'matched' || status == 'accepted';
@@ -60,28 +82,35 @@ class PassengerRequest {
 
       createdAt: DateTime.parse(_string(json, 'created_at')).toLocal(),
 
-      selectedDriverRouteId: switch (json['selected_driver_route_id']) {
-        final String id when id.isNotEmpty => id,
-        _ => null,
-      },
+      selectedDriverRouteId: _optionalString(json, 'selected_driver_route_id'),
+      serviceRouteId: _optionalString(json, 'service_route_id'),
+      routeNameAr: _optionalString(json, 'route_name_ar'),
+      routeNameEn: _optionalString(json, 'route_name_en'),
+      pickupDetails: _optionalString(json, 'pickup_details'),
+      dropoffDetails: _optionalString(json, 'dropoff_details'),
     );
   }
 }
 
-/// A location selected by the passenger on the map.
-///
-/// It is not restricted to predefined locations.
-class PassengerLocation {
-  const PassengerLocation({
-    required this.label,
-    required this.latitude,
-    required this.longitude,
-  });
-
-  final String label;
-  final double latitude;
-  final double longitude;
-}
+/// The body of `POST /passenger/requests` (and, without the details and the
+/// driver route, of `POST /matches/search`): a predefined route plus the exact
+/// pickup and drop-off typed by the passenger. The server fills the place
+/// labels and coordinates from the route's cities.
+Map<String, dynamic> passengerRouteRequestBody({
+  required String serviceRouteId,
+  required String pickupDetails,
+  required String dropoffDetails,
+  required DateTime preferredTime,
+  required int passengerCount,
+  String? selectedDriverRouteId,
+}) => {
+  'service_route_id': serviceRouteId,
+  'pickup_details': pickupDetails.trim(),
+  'dropoff_details': dropoffDetails.trim(),
+  'preferred_time': preferredTime.toUtc().toIso8601String(),
+  'passenger_count': passengerCount,
+  'selected_driver_route_id': ?selectedDriverRouteId,
+};
 
 /// An active driver availability a passenger could still book.
 ///
@@ -182,6 +211,11 @@ double _double(Map<String, dynamic> json, String key) {
   }
 
   throw FormatException('Missing $key');
+}
+
+String? _optionalString(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  return value is String && value.trim().isNotEmpty ? value.trim() : null;
 }
 
 int _int(Map<String, dynamic> json, String key) {
