@@ -18,8 +18,10 @@ import {
   type LegacyDriverOnlineStateService,
 } from "../services/legacyDriverOnlineState.js";
 import {
+  LEGACY_DEFAULT_ROUTE_KEY,
   driverRoutePlaces,
   resolveOperatingRoute,
+  resolveOperatingRouteByKey,
   routeFields,
   routeSummarySelect,
   serviceRouteIdSchema,
@@ -48,7 +50,8 @@ function digest(value: string) {
 // Older builds also sent the corridor's labels and key; they are accepted and
 // ignored, because the route's own cities now name both ends.
 const routeSchema = z.object({
-  service_route_id: serviceRouteIdSchema,
+  // Optional for older builds, which name no route: they drive Hebron → Bethlehem.
+  service_route_id: serviceRouteIdSchema.optional(),
   origin_label: z.string().optional(),
   destination_label: z.string().optional(),
   corridor_key: z.string().optional(),
@@ -156,6 +159,15 @@ export function createDriverRouter(
     async (req: AuthenticatedRequest, res, next) => {
       try {
         const input = routeSchema.parse(req.body);
+        // An older body only ever named the old corridor; any other place is
+        // refused as before rather than moved onto Hebron → Bethlehem.
+        if (!input.service_route_id && (
+          (input.origin_label !== undefined && input.origin_label !== LOCKED_ROUTE.origin_label) ||
+          (input.destination_label !== undefined && input.destination_label !== LOCKED_ROUTE.destination_label) ||
+          (input.corridor_key !== undefined && input.corridor_key !== LOCKED_ROUTE.corridor_key)
+        )) {
+          throw new HttpError(400, "route_outside_locked_corridor");
+        }
         const idempotencyKey = idempotencyKeySchema.optional().parse(req.header("idempotency-key"));
 
         const route = await prisma.$transaction(async (tx) => {
@@ -195,7 +207,9 @@ export function createDriverRouter(
           }
 
           await tx.$queryRaw`SELECT id FROM driver_profiles WHERE id = ${profile.id} FOR UPDATE`;
-          const operatingRoute = await resolveOperatingRoute(tx, input.service_route_id);
+          const operatingRoute = input.service_route_id
+            ? await resolveOperatingRoute(tx, input.service_route_id)
+            : await resolveOperatingRouteByKey(tx, LEGACY_DEFAULT_ROUTE_KEY);
           const current = await tx.driverRoute.findFirst({
             where: { driver_id: profile.id, operational_mode: "legacy", canonical_availability_version: null,
               status: { in: ["active", "assigned", "on_trip"] } },

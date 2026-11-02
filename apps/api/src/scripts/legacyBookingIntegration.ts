@@ -20,10 +20,9 @@ const { createLegacyPassengerCreationService } = await import("../services/legac
 const { reserveLegacyCapacity } = await import("../services/legacyCapacity.js");
 const { createCanonicalDemandService } = await import("../services/canonicalDemand.js");
 const { createDriverAvailabilityService } = await import("../services/driverAvailability.js");
-const { ensurePredefinedRoutes } = await import("../services/operatingRoutes.js");
+const { ensureIntegrationRoutes } = await import("./integrationRoutes.js");
 // Legacy demand rides the predefined Hebron → Bethlehem route; supply must be on it to match.
-await ensurePredefinedRoutes(prisma);
-const HEBRON_TO_BETHLEHEM = await prisma.serviceRoute.findUniqueOrThrow({ where: { route_key: "hebron-to-bethlehem" } });
+const HEBRON_TO_BETHLEHEM = await ensureIntegrationRoutes(prisma);
 
 const prefix = `booking_${randomUUID()}`;
 const phonePrefix = `+97059${randomInt(10000, 99999)}`;

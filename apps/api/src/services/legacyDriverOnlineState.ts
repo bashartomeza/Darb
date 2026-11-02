@@ -5,7 +5,12 @@ import { auditEvent } from "../lib/audit.js";
 import { claimIdempotency, completeIdempotency } from "../lib/idempotency.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../middleware/error.js";
-import { driverRoutePlaces, resolveOperatingRoute } from "./operatingRoutes.js";
+import {
+  LEGACY_DEFAULT_ROUTE_KEY,
+  driverRoutePlaces,
+  resolveOperatingRoute,
+  resolveOperatingRouteByKey,
+} from "./operatingRoutes.js";
 
 const OPERATION = "legacy_driver_online_state_v1";
 const IDEMPOTENCY_TTL_MS = 86_400_000;
@@ -141,8 +146,11 @@ export function createLegacyDriverOnlineStateService(
               }
               routeId = current.id;
             } else {
-              if (!input.serviceRouteId) throw new HttpError(400, "service_route_id_required");
-              const operatingRoute = await resolveOperatingRoute(tx, input.serviceRouteId);
+              // Older app builds name no route: they drive the Hebron → Bethlehem
+              // route, like their passenger and merchant bodies.
+              const operatingRoute = input.serviceRouteId
+                ? await resolveOperatingRoute(tx, input.serviceRouteId)
+                : await resolveOperatingRouteByKey(tx, LEGACY_DEFAULT_ROUTE_KEY);
               const route = await tx.driverRoute.create({
                 data: {
                   driver_id: profile.id,

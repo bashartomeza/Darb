@@ -8,7 +8,7 @@ import { prisma } from "../lib/prisma.js";
 import { signAuthToken } from "../middleware/auth.js";
 import { LOCKED_CORRIDOR_KEY } from "../modules/demoReset.js";
 import { expireLegacyDispatches } from "../services/legacyDispatch.js";
-import { ensurePredefinedRoutes } from "../services/operatingRoutes.js";
+import { ensureIntegrationRoutes } from "./integrationRoutes.js";
 
 const db = new URL(process.env.DATABASE_URL!);
 assert(["localhost", "127.0.0.1"].includes(db.hostname) && db.pathname.endsWith("_ci") && process.env.MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE === "true", "explicit_owned_disposable_database_required");
@@ -42,8 +42,7 @@ async function call(actor: Actor | null, method: string, url: string, body?: unk
   return { status: r.status, body: await r.json() as any };
 }
 // Legacy demand rides the predefined Hebron → Bethlehem route; supply must be on it to match.
-await ensurePredefinedRoutes(prisma);
-const HEBRON_TO_BETHLEHEM = await prisma.serviceRoute.findUniqueOrThrow({ where: { route_key: "hebron-to-bethlehem" } });
+const HEBRON_TO_BETHLEHEM = await ensureIntegrationRoutes(prisma);
 let profileId: string;
 const originals = await prisma.driverRoute.findMany({ where: { operational_mode: "legacy" }, select: { id: true, status: true } });
 async function route(seats = 1, parcels = 1) {

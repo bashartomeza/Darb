@@ -307,7 +307,7 @@ async function createPublishedRoute(
     action: AuditAction.route_version_published,
     entityType: "ServiceRouteVersion",
     entityId: version.id,
-    metadata: { route_id: route.id, route_key: routeKey, transition: "created_published", source: input.source }
+    metadata: { route_id: route.id, transition: "created_published", reason_code: input.source === "admin" ? "admin_operating_route" : "predefined_route" }
   });
   return { id: route.id, route_key: routeKey, current_version_id: version.id };
 }
@@ -507,7 +507,7 @@ export async function createOperatingRoutes(
         action: AuditAction.route_created,
         entityType: "ServiceRoute",
         entityId: id,
-        metadata: { request_id: actor.requestId ?? null, source: "operating_routes" }
+        metadata: { request_id: actor.requestId ?? null, reason_code: "operating_routes" }
       });
     }
     return ids;
@@ -542,7 +542,7 @@ export async function setOperatingRouteActive(db: PrismaClient, routeId: string,
         action: AuditAction.route_version_resumed,
         entityType: "ServiceRouteVersion",
         entityId: version.id,
-        metadata: { request_id: actor.requestId ?? null, transition: "paused_to_published", source: "operating_routes" }
+        metadata: { request_id: actor.requestId ?? null, transition: "paused_to_published", reason_code: "operating_routes" }
       });
     } else if (!active && version.status === "published") {
       await tx.serviceRouteVersion.update({
@@ -554,7 +554,7 @@ export async function setOperatingRouteActive(db: PrismaClient, routeId: string,
         action: AuditAction.route_version_paused,
         entityType: "ServiceRouteVersion",
         entityId: version.id,
-        metadata: { request_id: actor.requestId ?? null, transition: "published_to_paused", source: "operating_routes" }
+        metadata: { request_id: actor.requestId ?? null, transition: "published_to_paused", reason_code: "operating_routes" }
       });
     }
   });
@@ -624,7 +624,7 @@ export async function createCity(
         action: AuditAction.stop_created,
         entityType: "Stop",
         entityId: created.id,
-        metadata: { request_id: actor.requestId ?? null, source: "operating_routes" }
+        metadata: { request_id: actor.requestId ?? null, reason_code: "operating_routes" }
       });
       return created;
     });

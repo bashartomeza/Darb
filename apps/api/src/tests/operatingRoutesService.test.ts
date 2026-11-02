@@ -178,9 +178,11 @@ describe("driver online state on a route", () => {
     });
   });
 
-  it("needs a route to go online without an active driver route, and a live one", async () => {
-    await expect(createLegacyDriverOnlineStateService(onlineDb()).setState({ online: true }, actor))
-      .rejects.toMatchObject({ statusCode: 400, message: "service_route_id_required" });
+  it("puts an older build that names no route on Hebron → Bethlehem, and needs a live route", async () => {
+    const db = onlineDb();
+    await expect(createLegacyDriverOnlineStateService(db).setState({ online: true }, actor))
+      .resolves.toMatchObject({ online: true, routeId: "route_new" });
+    expect(db.driverRoute.create.mock.calls[0][0].data).toMatchObject({ corridor_key: "hebron-to-bethlehem" });
     await expect(createLegacyDriverOnlineStateService(onlineDb()).setState({ online: true, serviceRouteId: "gone" }, actor))
       .rejects.toMatchObject({ statusCode: 409, message: "route_unavailable" });
   });

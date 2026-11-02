@@ -431,8 +431,12 @@ describe("drivers on a route", () => {
     expect(response.body.route).toMatchObject({ service_route_id: RAMALLAH_NABLUS.id, route_name_ar: "رام الله ← نابلس", route_name_en: "Ramallah → Nablus" });
   });
 
-  it("requires a route and refuses a turned-off one", async () => {
-    await request(createApp()).post("/api/v1/driver/routes").set(auth("d1", "driver")).send({ seats_available: 2 }).expect(400);
+  it("puts an older build that names no route on Hebron → Bethlehem", async () => {
+    await request(createApp()).post("/api/v1/driver/routes").set(auth("d1", "driver")).send({ seats_available: 2 }).expect(201);
+    expect(prismaMock.driverRoute.create.mock.calls[0][0].data).toMatchObject({ corridor_key: "hebron-to-bethlehem", seats_available: 2 });
+  });
+
+  it("refuses a turned-off route", async () => {
     const paused = await request(createApp()).post("/api/v1/driver/routes").set(auth("d1", "driver")).send({ service_route_id: PAUSED.id }).expect(409);
     expect(paused.body.error).toBe("route_unavailable");
     expect(prismaMock.driverRoute.create).not.toHaveBeenCalled();
