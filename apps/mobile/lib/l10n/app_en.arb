@@ -15,7 +15,6 @@
   "configuredApiBaseUrl": "Configured API base URL",
   "androidOnly": "Android target only",
   "businessFlowsPending": "Passenger, driver, and merchant flows will be added in later milestones.",
-  "lockedCorridor": "Hebron / PPU / Bab Al-Zawiya -> Bethlehem",
   "diagnostics": "Technical diagnostics",
   "loadingSession": "Restoring your session...",
   "sessionRestoreFailed": "We could not restore your session. Please retry.",
@@ -121,7 +120,7 @@
   "trustScore": "Trust score",
   "capacityFit": "Capacity fit",
   "matchExplanation": "Match explanation",
-  "routeMatchExplanation": "Darb selected this driver because the route matches the active corridor, pickup is near the route, capacity is available, and trust score is high.",
+  "routeMatchExplanation": "Darb selected this driver because they drive the same route you chose, there is room for you, and their trust score is high.",
   "passengerTrip": "Passenger trip",
   "tripTimeline": "Trip timeline",
   "latestLocation": "Latest location",
@@ -325,6 +324,41 @@
   "canonicalRoutesBody": "Choose from current routes and approved stops.",
   "featureUnavailable": "This service is not available in this environment.",
   "routeCatalogUnavailable": "Routes are temporarily unavailable. Refresh before submitting.",
+  "orderRouteLabel": "Route",
+  "orderRouteChoose": "Choose a route",
+  "orderRoutesLoadFailed": "Couldn't load the routes. Check your connection and try again.",
+  "orderRoutesEmpty": "No routes are running right now. Try again later.",
+  "orderRouteRequired": "Choose a route first.",
+  "orderRouteUnavailable": "This route is no longer running. Choose another route.",
+  "orderRouteSaved": "Saved route",
+  "orderDetailsTooShort": "Write at least 3 characters so the driver can find the place.",
+  "merchantPickupDetailsLabel": "Pickup details",
+  "merchantPickupDetailsHint": "e.g. store name and street",
+  "merchantDropoffDetailsLabel": "Drop-off details",
+  "merchantDropoffDetailsHint": "e.g. neighbourhood, street and a nearby landmark",
+  "merchantReceiverNameLabel": "Receiver name (optional)",
+  "merchantReceiverPhoneLabel": "Receiver phone (optional)",
+  "merchantReceiverPhoneInvalid": "Enter a valid phone number, e.g. +970599123456.",
+  "merchantReceiverLabel": "Receiver",
+  "merchantPendingOrderTitle": "Order waiting for confirmation",
+  "driverRoutePickTitle": "Choose your route",
+  "driverRoutePickBody": "You'll get passengers and parcels on this route only.",
+  "driverRoutePickConfirm": "Go online",
+  "driverRouteNone": "No route chosen yet",
+  "driverPickupDetailsLabel": "Pickup point",
+  "driverDropoffDetailsLabel": "Drop-off point",
+  "driverMerchantPickupLabel": "Collect parcels from",
+  "driverParcelStopsTitle": "Parcel drop-offs",
+  "driverParcelStopLabel": "Parcel {number}",
+  "@driverParcelStopLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "driverReceiverLabel": "Receiver",
+  "driverWhereToFindTitle": "Where to pick up and drop off",
   "noPublishedRoutes": "No eligible published routes are available.",
   "selectRoute": "Select route",
   "routeDirection": "Direction",
@@ -398,6 +432,7 @@
   "statusFilled": "Filled",
   "statusDeparted": "Departed",
   "returnToDashboard": "Return to dashboard",
+  "viewRouteRequests": "View my route requests",
   "canonicalDriverOffers": "Route offers",
   "canonicalDriverOffersBody": "Review current passenger and parcel assignments for your route availability.",
   "noCanonicalOffers": "No route offers are available.",
@@ -442,7 +477,6 @@
   "greetingMorning": "Good morning, {name}",
   "greetingAfternoon": "Good afternoon, {name}",
   "greetingEvening": "Good evening, {name}",
-  "whereToGo": "Where do you want to go?",
   "smartSearch": "Smart search",
   "destinationSearchHint": "e.g. from PPU to Bethlehem",
   "quickDestinations": "Quick destinations",
@@ -591,6 +625,44 @@
   "assistantErrorTitle": "Couldn’t complete the request",
   "assistantErrorBody": "The assistant couldn’t complete your request. Try again.",
   "assistantUnavailable": "The assistant service is not available in this build. No result was created.",
+  "assistantHistoryErrorTitle": "Couldn’t load your chat",
+  "assistantHistoryErrorBody": "Your chat with the assistant is saved to your account. Check your connection and try again.",
+  "assistantNewChat": "New chat",
+  "assistantNewChatTitle": "Start a new chat?",
+  "assistantNewChatBody": "This chat will be deleted from your account. Trips you already booked are not affected.",
+  "assistantNewChatFailed": "Couldn't start a new chat. Check your connection and try again.",
+  "passengerRouteLabel": "Route",
+  "passengerRouteHint": "Choose your route",
+  "passengerRoutesLoading": "Loading routes…",
+  "passengerRoutesLoadFailed": "Couldn't load the routes. Check your connection and try again.",
+  "passengerRoutesEmpty": "No routes are running right now. Please check again later.",
+  "passengerRouteRequired": "Choose a route to continue.",
+  "passengerRouteUnavailable": "This route is no longer available. Choose another route.",
+  "passengerPickupDetailsLabel": "Exact pickup point",
+  "passengerPickupDetailsHint": "e.g. In front of the main gate of Palestine Polytechnic University",
+  "passengerDropoffDetailsLabel": "Exact drop-off point",
+  "passengerDropoffDetailsHint": "e.g. Bethlehem bus station, next to the pharmacy",
+  "passengerDetailsHelper": "Describe the place so the driver finds it easily.",
+  "passengerDetailsTooShort": "Write at least 3 characters.",
+  "passengerPickupPoint": "Pickup point",
+  "passengerDropoffPoint": "Drop-off point",
+  "assistantRouteChoose": "Choose the route that matches your trip, then check the pickup and drop-off points.",
+  "passengerParcelRouteIntro": "Choose the route, describe where the driver collects the parcel and where it goes, then tell us who receives it.",
+  "passengerParcelPickupDetailsLabel": "Where the driver collects the parcel",
+  "passengerParcelPickupDetailsHint": "e.g. The shop next to Ibn Rushd roundabout, Hebron",
+  "passengerParcelDropoffDetailsLabel": "Where the parcel is delivered",
+  "passengerParcelDropoffDetailsHint": "e.g. The receiver's house, near the Church of the Nativity",
+  "passengerParcelPreferredTime": "Preferred pickup time",
+  "welcomeRoutesTitle": "Routes we serve",
+  "welcomeRoutesMore": "+{count} more",
+  "@welcomeRoutesMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeRoutesOffline": "The routes will appear once you're connected.",
   "assistantClarificationLabel": "Darb assistant needs clarification",
   "assistantResultLabel": "Darb assistant reply",
   "assistantPassengerMessage": "Your message",
@@ -744,6 +816,12 @@
   "incidentCategoryParcelDamage": "Damaged parcel",
   "incidentCategoryBehavior": "Behavior",
   "incidentCategoryOther": "Other",
+  "myIncidentReports": "My reports",
+  "myIncidentReportsEmpty": "You have not sent any reports yet.",
+  "myIncidentReportsFailed": "Could not load your reports.",
+  "incidentStatusOpen": "Open",
+  "incidentStatusReviewing": "Under review",
+  "incidentStatusResolved": "Resolved",
   "notifIncidentUpdatedTitle": "Update on your report",
   "notifIncidentReviewingBody": "Your report is under review.",
   "notifIncidentResolvedBody": "Your report has been resolved.",
@@ -1028,5 +1106,49 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mapStraightLineNote": "Road route unavailable: showing a straight line",
+  "mapCheckpointsUnavailable": "Checkpoint data unavailable",
+  "mapCheckpointsLoadFailed": "Checkpoints could not be loaded",
+  "checkpointOfficialUnknown": "Official status: not published",
+  "checkpointEnteringChanged": "Entering: last changed {time}",
+  "@checkpointEnteringChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLeavingChanged": "Leaving: last changed {time}",
+  "@checkpointLeavingChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointCommunitySays": "Community says: {status} (unverified)",
+  "@checkpointCommunitySays": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "communityStatusOpen": "open",
+  "communityStatusClosed": "closed",
+  "communityStatusOutdated": "status may be outdated",
+  "checkpointPositionOsm": "Position: © OpenStreetMap contributors (ODbL)",
+  "checkpointsUnplacedTitle": "Checkpoints without a map position",
+  "checkpointsUnplacedBody": "Listed by the provider, but no reliable position is known, so they are not pinned.",
+  "communityPickLocation": "Tap the map to set where this is",
+  "communityUseMyLocation": "Use my current location",
+  "communityLocationRequired": "Choose the place on the map for this kind of report.",
+  "communityLocationOptional": "Location (optional)",
+  "communityLocationOutside": "That place is outside Darb's service area.",
+  "communityLocationUnavailable": "Your current location is not available.",
+  "communityLocationSet": "Place set on the map",
+  "communityClearLocation": "Remove place",
+  "mapRouteLabel": "Route",
+  "merchantOrderMapTitle": "Order route"
 }

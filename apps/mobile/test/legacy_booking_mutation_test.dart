@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/canonical_routes/application/canonical_route_controller.dart';
-import 'package:masari_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
-import 'package:masari_mobile/features/passenger/application/legacy_passenger_request_mutation.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_repository.dart';
-import 'package:masari_mobile/features/assistant/data/passenger_assistant_repository.dart';
-import 'package:masari_mobile/features/assistant/domain/passenger_assistant_models.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/canonical_routes/application/canonical_route_controller.dart';
+import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
+import 'package:darb_mobile/features/passenger/application/legacy_passenger_request_mutation.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_repository.dart';
+import 'package:darb_mobile/features/assistant/data/passenger_assistant_repository.dart';
+import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
 import 'support/auth_test_support.dart';
 import 'support/booking_recovery_test_support.dart';
 
@@ -52,6 +52,10 @@ void main() {
       );
       final draft = PassengerAssistantTripDraft(
         pickupKey: 'bab_al_zawiya',
+        pickupLat: 31.5326,
+        pickupLng: 35.0998,
+        destinationLat: 31.7054,
+        destinationLng: 35.2024,
         pickupLabel: 'Bab Al-Zawiya',
         destinationKey: 'bethlehem',
         destinationLabel: 'Bethlehem Center',
@@ -303,6 +307,10 @@ void main() {
       );
       final draft = PassengerAssistantTripDraft(
         pickupKey: 'bab_al_zawiya',
+        pickupLat: 31.5326,
+        pickupLng: 35.0998,
+        destinationLat: 31.7054,
+        destinationLng: 35.2024,
         pickupLabel: 'Bab Al-Zawiya',
         destinationKey: 'bethlehem',
         destinationLabel: 'Bethlehem Center',

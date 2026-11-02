@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { auditEvent } from "../lib/audit.js";
-import { lockedCorridorDistanceKm, round, toNumber } from "../lib/geo.js";
+import { haversineKm, lockedCorridorDistanceKm, round, toNumber } from "../lib/geo.js";
 import { BATCHING_LIMITS, type ParcelSize } from "../lib/batchingConfig.js";
 import { planBatches } from "../services/batchPlanner.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
-import { LOCKED_CORRIDOR_KEY, LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
+import { LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 
 export const batchingRouter = Router();
@@ -21,6 +21,7 @@ export async function createParcelBatch(req: AuthenticatedRequest, orderId: stri
     const order = await tx.merchantOrder.findUnique({
       where: { id: orderId },
       include: {
+        route_version: { select: { service_route_id: true, name_en: true } },
         parcels: true,
         parcel_batches: { select: { id: true, status: true }, orderBy: { created_at: "desc" }, take: 20 },
         batch_members: { select: { parcel_batch_id: true, active: true }, orderBy: { created_at: "desc" }, take: 20 }
@@ -38,14 +39,17 @@ export async function createParcelBatch(req: AuthenticatedRequest, orderId: stri
     if (order.status !== "submitted") throw new HttpError(409, "order_not_batchable");
 
     // A compatible batch keeps one merchant's pickup point and groups real,
-    // still-submitted orders whose dropoffs lie close together along the route
-    // and fit one driver's capacity. Further orders form separate batches.
-    // No synthetic orders are ever created.
+    // still-submitted orders on the same service route whose dropoffs lie close
+    // together and fit one driver's capacity. Further orders form separate
+    // batches. No synthetic orders are ever created. Orders from before routes
+    // existed only group with each other.
+    const serviceRouteId = order.route_version?.service_route_id ?? null;
     const pool = await tx.merchantOrder.findMany({
       where: {
         merchant_id: order.merchant_id,
         status: "submitted",
         canonical_entry_version: null,
+        ...(serviceRouteId ? { route_version: { is: { service_route_id: serviceRouteId } } } : { route_version_id: null }),
         parcel_batches: { none: { status: { notIn: ["cancelled", "failed", "expired"] } } },
         batch_members: { none: { active: true } },
         parcels: { some: {} }
@@ -75,12 +79,19 @@ export async function createParcelBatch(req: AuthenticatedRequest, orderId: stri
     const parcelCount = planned.parcel_count;
     if (selectedOrders.length < 1 || parcelCount < 1) throw new HttpError(400, "invalid_batch_contents");
 
-    const corridorKm = lockedCorridorDistanceKm();
+    // The trip length is the route's own origin-to-destination distance.
+    const corridorKm = serviceRouteId
+      ? haversineKm(
+          { lat: toNumber(order.pickup_lat), lng: toNumber(order.pickup_lng) },
+          { lat: toNumber(order.parcels[0]!.destination_lat), lng: toNumber(order.parcels[0]!.destination_lng) }
+        )
+      : lockedCorridorDistanceKm();
     const estimatedDistanceSaved = round(Math.max(0, parcelCount * corridorKm - corridorKm), 2);
     const orderWord = selectedOrders.length === 1 ? "order" : "orders";
+    const corridorName = order.route_version ? `${order.route_version.name_en} route` : `${LOCKED_CORRIDOR_LABEL} pickup corridor`;
     const explanation =
       `${selectedOrders.length} compatible merchant ${orderWord} with ${parcelCount} parcels share the ` +
-      `${LOCKED_CORRIDOR_LABEL} pickup corridor and can be assigned together to one driver capacity allocation.`;
+      `${corridorName} and can be assigned together to one driver capacity allocation.`;
 
     const orderIds = selectedOrders.map((candidate) => candidate.id);
     const claimed = await tx.merchantOrder.updateMany({

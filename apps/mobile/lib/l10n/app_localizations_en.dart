@@ -57,9 +57,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Passenger, driver, and merchant flows will be added in later milestones.';
 
   @override
-  String get lockedCorridor => 'Hebron / PPU / Bab Al-Zawiya -> Bethlehem';
-
-  @override
   String get diagnostics => 'Technical diagnostics';
 
   @override
@@ -388,7 +385,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routeMatchExplanation =>
-      'Darb selected this driver because the route matches the active corridor, pickup is near the route, capacity is available, and trust score is high.';
+      'Darb selected this driver because they drive the same route you chose, there is room for you, and their trust score is high.';
 
   @override
   String get passengerTrip => 'Passenger trip';
@@ -1006,6 +1003,99 @@ class AppLocalizationsEn extends AppLocalizations {
       'Routes are temporarily unavailable. Refresh before submitting.';
 
   @override
+  String get orderRouteLabel => 'Route';
+
+  @override
+  String get orderRouteChoose => 'Choose a route';
+
+  @override
+  String get orderRoutesLoadFailed =>
+      'Couldn\'t load the routes. Check your connection and try again.';
+
+  @override
+  String get orderRoutesEmpty =>
+      'No routes are running right now. Try again later.';
+
+  @override
+  String get orderRouteRequired => 'Choose a route first.';
+
+  @override
+  String get orderRouteUnavailable =>
+      'This route is no longer running. Choose another route.';
+
+  @override
+  String get orderRouteSaved => 'Saved route';
+
+  @override
+  String get orderDetailsTooShort =>
+      'Write at least 3 characters so the driver can find the place.';
+
+  @override
+  String get merchantPickupDetailsLabel => 'Pickup details';
+
+  @override
+  String get merchantPickupDetailsHint => 'e.g. store name and street';
+
+  @override
+  String get merchantDropoffDetailsLabel => 'Drop-off details';
+
+  @override
+  String get merchantDropoffDetailsHint =>
+      'e.g. neighbourhood, street and a nearby landmark';
+
+  @override
+  String get merchantReceiverNameLabel => 'Receiver name (optional)';
+
+  @override
+  String get merchantReceiverPhoneLabel => 'Receiver phone (optional)';
+
+  @override
+  String get merchantReceiverPhoneInvalid =>
+      'Enter a valid phone number, e.g. +970599123456.';
+
+  @override
+  String get merchantReceiverLabel => 'Receiver';
+
+  @override
+  String get merchantPendingOrderTitle => 'Order waiting for confirmation';
+
+  @override
+  String get driverRoutePickTitle => 'Choose your route';
+
+  @override
+  String get driverRoutePickBody =>
+      'You\'ll get passengers and parcels on this route only.';
+
+  @override
+  String get driverRoutePickConfirm => 'Go online';
+
+  @override
+  String get driverRouteNone => 'No route chosen yet';
+
+  @override
+  String get driverPickupDetailsLabel => 'Pickup point';
+
+  @override
+  String get driverDropoffDetailsLabel => 'Drop-off point';
+
+  @override
+  String get driverMerchantPickupLabel => 'Collect parcels from';
+
+  @override
+  String get driverParcelStopsTitle => 'Parcel drop-offs';
+
+  @override
+  String driverParcelStopLabel(int number) {
+    return 'Parcel $number';
+  }
+
+  @override
+  String get driverReceiverLabel => 'Receiver';
+
+  @override
+  String get driverWhereToFindTitle => 'Where to pick up and drop off';
+
+  @override
   String get noPublishedRoutes => 'No eligible published routes are available.';
 
   @override
@@ -1191,6 +1281,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get returnToDashboard => 'Return to dashboard';
+
+  @override
+  String get viewRouteRequests => 'View my route requests';
 
   @override
   String get canonicalDriverOffers => 'Route offers';
@@ -1837,6 +1930,117 @@ class AppLocalizationsEn extends AppLocalizations {
       'The assistant service is not available in this build. No result was created.';
 
   @override
+  String get assistantHistoryErrorTitle => 'Couldn’t load your chat';
+
+  @override
+  String get assistantHistoryErrorBody =>
+      'Your chat with the assistant is saved to your account. Check your connection and try again.';
+
+  @override
+  String get assistantNewChat => 'New chat';
+
+  @override
+  String get assistantNewChatTitle => 'Start a new chat?';
+
+  @override
+  String get assistantNewChatBody =>
+      'This chat will be deleted from your account. Trips you already booked are not affected.';
+
+  @override
+  String get assistantNewChatFailed =>
+      'Couldn\'t start a new chat. Check your connection and try again.';
+
+  @override
+  String get passengerRouteLabel => 'Route';
+
+  @override
+  String get passengerRouteHint => 'Choose your route';
+
+  @override
+  String get passengerRoutesLoading => 'Loading routes…';
+
+  @override
+  String get passengerRoutesLoadFailed =>
+      'Couldn\'t load the routes. Check your connection and try again.';
+
+  @override
+  String get passengerRoutesEmpty =>
+      'No routes are running right now. Please check again later.';
+
+  @override
+  String get passengerRouteRequired => 'Choose a route to continue.';
+
+  @override
+  String get passengerRouteUnavailable =>
+      'This route is no longer available. Choose another route.';
+
+  @override
+  String get passengerPickupDetailsLabel => 'Exact pickup point';
+
+  @override
+  String get passengerPickupDetailsHint =>
+      'e.g. In front of the main gate of Palestine Polytechnic University';
+
+  @override
+  String get passengerDropoffDetailsLabel => 'Exact drop-off point';
+
+  @override
+  String get passengerDropoffDetailsHint =>
+      'e.g. Bethlehem bus station, next to the pharmacy';
+
+  @override
+  String get passengerDetailsHelper =>
+      'Describe the place so the driver finds it easily.';
+
+  @override
+  String get passengerDetailsTooShort => 'Write at least 3 characters.';
+
+  @override
+  String get passengerPickupPoint => 'Pickup point';
+
+  @override
+  String get passengerDropoffPoint => 'Drop-off point';
+
+  @override
+  String get assistantRouteChoose =>
+      'Choose the route that matches your trip, then check the pickup and drop-off points.';
+
+  @override
+  String get passengerParcelRouteIntro =>
+      'Choose the route, describe where the driver collects the parcel and where it goes, then tell us who receives it.';
+
+  @override
+  String get passengerParcelPickupDetailsLabel =>
+      'Where the driver collects the parcel';
+
+  @override
+  String get passengerParcelPickupDetailsHint =>
+      'e.g. The shop next to Ibn Rushd roundabout, Hebron';
+
+  @override
+  String get passengerParcelDropoffDetailsLabel =>
+      'Where the parcel is delivered';
+
+  @override
+  String get passengerParcelDropoffDetailsHint =>
+      'e.g. The receiver\'s house, near the Church of the Nativity';
+
+  @override
+  String get passengerParcelPreferredTime => 'Preferred pickup time';
+
+  @override
+  String get welcomeRoutesTitle => 'Routes we serve';
+
+  @override
+  String welcomeRoutesMore(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get welcomeRoutesOffline =>
+      'The routes will appear once you\'re connected.';
+
+  @override
   String get assistantClarificationLabel =>
       'Darb assistant needs clarification';
 
@@ -2171,6 +2375,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get incidentCategoryOther => 'Other';
+
+  @override
+  String get myIncidentReports => 'My reports';
+
+  @override
+  String get myIncidentReportsEmpty => 'You have not sent any reports yet.';
+
+  @override
+  String get myIncidentReportsFailed => 'Could not load your reports.';
+
+  @override
+  String get incidentStatusOpen => 'Open';
+
+  @override
+  String get incidentStatusReviewing => 'Under review';
+
+  @override
+  String get incidentStatusResolved => 'Resolved';
 
   @override
   String get notifIncidentUpdatedTitle => 'Update on your report';
@@ -2817,4 +3039,85 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityVoteCounts(int up, int down) {
     return '$up support, $down dispute';
   }
+
+  @override
+  String get mapStraightLineNote =>
+      'Road route unavailable: showing a straight line';
+
+  @override
+  String get mapCheckpointsUnavailable => 'Checkpoint data unavailable';
+
+  @override
+  String get mapCheckpointsLoadFailed => 'Checkpoints could not be loaded';
+
+  @override
+  String get checkpointOfficialUnknown => 'Official status: not published';
+
+  @override
+  String checkpointEnteringChanged(String time) {
+    return 'Entering: last changed $time';
+  }
+
+  @override
+  String checkpointLeavingChanged(String time) {
+    return 'Leaving: last changed $time';
+  }
+
+  @override
+  String checkpointCommunitySays(String status) {
+    return 'Community says: $status (unverified)';
+  }
+
+  @override
+  String get communityStatusOpen => 'open';
+
+  @override
+  String get communityStatusClosed => 'closed';
+
+  @override
+  String get communityStatusOutdated => 'status may be outdated';
+
+  @override
+  String get checkpointPositionOsm =>
+      'Position: © OpenStreetMap contributors (ODbL)';
+
+  @override
+  String get checkpointsUnplacedTitle => 'Checkpoints without a map position';
+
+  @override
+  String get checkpointsUnplacedBody =>
+      'Listed by the provider, but no reliable position is known, so they are not pinned.';
+
+  @override
+  String get communityPickLocation => 'Tap the map to set where this is';
+
+  @override
+  String get communityUseMyLocation => 'Use my current location';
+
+  @override
+  String get communityLocationRequired =>
+      'Choose the place on the map for this kind of report.';
+
+  @override
+  String get communityLocationOptional => 'Location (optional)';
+
+  @override
+  String get communityLocationOutside =>
+      'That place is outside Darb\'s service area.';
+
+  @override
+  String get communityLocationUnavailable =>
+      'Your current location is not available.';
+
+  @override
+  String get communityLocationSet => 'Place set on the map';
+
+  @override
+  String get communityClearLocation => 'Remove place';
+
+  @override
+  String get mapRouteLabel => 'Route';
+
+  @override
+  String get merchantOrderMapTitle => 'Order route';
 }

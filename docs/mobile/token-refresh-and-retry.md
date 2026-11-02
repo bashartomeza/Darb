@@ -4,7 +4,7 @@ M6C1B makes the Flutter app consume the server-managed mobile session contract i
 
 ## Secure token bundle
 
-`TokenStorage` stores one JSON document under `masari_auth_bundle_v1` in `flutter_secure_storage`. Version 1 contains:
+`TokenStorage` stores one JSON document under `darb_auth_bundle_v1` in `flutter_secure_storage`. Version 1 contains:
 
 - `access_token`
 - optional `refresh_token`
@@ -14,7 +14,7 @@ M6C1B makes the Flutter app consume the server-managed mobile session contract i
 
 The client does not decode JWT claims to determine expiry or identity. The API response is authoritative. A malformed, incomplete, or unsupported bundle is deleted and treated as signed out.
 
-The former `masari_jwt` value is read only when the versioned bundle is absent. It is restored as an access-only legacy bundle, verified through `/auth/me`, and then serialized under the versioned key. Saving the new bundle precedes deleting the legacy key, so an interrupted migration retains at least one recoverable credential. Explicit logout clears both auth keys but does not clear locale storage.
+The former `darb_jwt` value is read only when the versioned bundle is absent. It is restored as an access-only legacy bundle, verified through `/auth/me`, and then serialized under the versioned key. Saving the new bundle precedes deleting the legacy key, so an interrupted migration retains at least one recoverable credential. Explicit logout clears both auth keys but does not clear locale storage.
 
 ## Canonical refresh coordinator
 

@@ -44,11 +44,11 @@ const envelopeSchema = z.strictObject({ name: z.string(), email: canonicalEmail,
 // The pre-consent identity remains only in a short-lived authenticated-encrypted
 // client envelope. Database actions hold only keyed digests, never this payload.
 function envelopeKey(key: VersionedKey) {
-  return createHmac("sha256", key.secret).update(`masari:email-registration-envelope:v${key.version}`).digest();
+  return createHmac("sha256", key.secret).update(`darb:email-registration-envelope:v${key.version}`).digest();
 }
 function seal(payload: z.infer<typeof envelopeSchema>, key: VersionedKey) {
   const iv = randomBytes(12); const cipher = createCipheriv("aes-256-gcm", envelopeKey(key), iv);
-  cipher.setAAD(Buffer.from("masari:email-registration:v1"));
+  cipher.setAAD(Buffer.from("darb:email-registration:v1"));
   const ciphertext = Buffer.concat([cipher.update(JSON.stringify(payload), "utf8"), cipher.final()]);
   return Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString("base64url");
 }
@@ -58,14 +58,14 @@ function open(raw: string, key: VersionedKey) {
     const bytes = Buffer.from(raw, "base64url");
     if (bytes.toString("base64url") !== raw || bytes.length < 29) throw new Error();
     const cipher = createDecipheriv("aes-256-gcm", envelopeKey(key), bytes.subarray(0, 12));
-    cipher.setAAD(Buffer.from("masari:email-registration:v1")); cipher.setAuthTag(bytes.subarray(12, 28));
+    cipher.setAAD(Buffer.from("darb:email-registration:v1")); cipher.setAuthTag(bytes.subarray(12, 28));
     const payload = envelopeSchema.parse(JSON.parse(Buffer.concat([cipher.update(bytes.subarray(28)), cipher.final()]).toString("utf8")));
     if (payload.expires <= Date.now()) throw new Error();
     return payload;
   } catch { throw new HttpError(400, "auth_action_invalid"); }
 }
 function subjectMatches(digest: string | null, subject: string, key: VersionedKey) {
-  return digest !== null && hexDigestMatches(digest, keyedDigest("masari:auth-action-subject", subject, key));
+  return digest !== null && hexDigestMatches(digest, keyedDigest("darb:auth-action-subject", subject, key));
 }
 function userSubject(user: { id: string; email: string | null; security_version: number }) {
   return `${user.id}:${user.security_version}:${user.email}`;

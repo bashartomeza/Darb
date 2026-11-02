@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../driver/presentation/driver_ui.dart';
 import '../../driver_renewal/presentation/driver_renewal_banner.dart';
@@ -151,7 +151,7 @@ class _NotificationTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
-        child: MasariCard(
+        child: DarbCard(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

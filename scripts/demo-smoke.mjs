@@ -17,17 +17,17 @@ function assertResetSafeDatabase() {
   const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
   let name = "";
   try { name = new URL(databaseUrl).pathname.replace(/^\//, ""); } catch {}
-  if (name.toLowerCase() === "masari" || !/^[A-Za-z0-9_]+$/.test(name) || !allowed.includes(name)) {
+  if (name.toLowerCase() === "darb" || !/^[A-Za-z0-9_]+$/.test(name) || !allowed.includes(name)) {
     throw new Error("Demo smoke refuses a database that is not explicitly reset-safe");
   }
 }
 
 const accounts = {
-  passenger: ["demo.passenger@masari.app", process.env.DEMO_PASSENGER_PASSWORD],
-  driver1: ["demo.driver@masari.app", process.env.DEMO_DRIVER_PASSWORD],
-  driver2: ["demo.driver2@masari.app", process.env.DEMO_DRIVER_PASSWORD],
-  merchant: ["demo.merchant@masari.app", process.env.DEMO_MERCHANT_PASSWORD],
-  admin: ["demo.admin@masari.app", process.env.DEMO_ADMIN_PASSWORD]
+  passenger: ["demo.passenger@darb.app", process.env.DEMO_PASSENGER_PASSWORD],
+  driver1: ["demo.driver@darb.app", process.env.DEMO_DRIVER_PASSWORD],
+  driver2: ["demo.driver2@darb.app", process.env.DEMO_DRIVER_PASSWORD],
+  merchant: ["demo.merchant@darb.app", process.env.DEMO_MERCHANT_PASSWORD],
+  admin: ["demo.admin@darb.app", process.env.DEMO_ADMIN_PASSWORD]
 };
 
 function argument(name) {
@@ -246,15 +246,15 @@ async function primaryStory() {
       token: tokens.admin,
       method: "POST",
       body: {
-        scenarioKey: "masari_batch_wins",
+        scenarioKey: "darb_batch_wins",
         passengerRequestId: passengerRequest.id,
         merchantOrderId: merchantOrder.id
       },
       expected: 201
     })
   ).comparison;
-  assert(comparison.winner === "masari", "comparison winner changed");
-  assert(comparison.masari_trips === 1 && comparison.nearest_driver_trips === 6, "comparison trip counts changed");
+  assert(comparison.winner === "darb", "comparison winner changed");
+  assert(comparison.darb_trips === 1 && comparison.nearest_driver_trips === 6, "comparison trip counts changed");
 
   const finalOrder = (await request(`/merchant/orders/${merchantOrder.id}`, { token: tokens.merchant })).order;
   const finalTrip = (await request(`/trips/${trip.id}`, { token: tokens.admin })).trip;
@@ -277,11 +277,11 @@ async function primaryStory() {
     latestSequence: locations.at(-1).sequence,
     comparison: {
       winner: comparison.winner,
-      masariTrips: comparison.masari_trips,
+      darbTrips: comparison.darb_trips,
       nearestDriverTrips: comparison.nearest_driver_trips,
-      masariDistance: comparison.masari_estimated_distance,
+      darbDistance: comparison.darb_estimated_distance,
       nearestDriverDistance: comparison.nearest_estimated_distance,
-      masariCost: comparison.masari_estimated_cost,
+      darbCost: comparison.darb_estimated_cost,
       nearestDriverCost: comparison.nearest_estimated_cost
     }
   };

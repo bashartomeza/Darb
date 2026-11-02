@@ -6,6 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../auth/data/token_storage.dart';
 import '../../canonical_routes/data/canonical_operation_storage.dart'
     show newCanonicalIdempotencyKey;
+import '../../operating_routes/data/operating_route_models.dart'
+    show routeDetailsMaxLength;
 
 final merchantOrderOperationStorageProvider =
     Provider<MerchantOrderOperationStorage>(
@@ -93,7 +95,53 @@ class MerchantPendingOrder {
   }
 }
 
-bool _validPayload(Map<String, dynamic> value) {
+/// A saved order is either the route shape this build sends, or the corridor
+/// shape saved by builds before routes existed; both are resent as saved.
+bool _validPayload(Map<String, dynamic> value) =>
+    value.containsKey('service_route_id')
+    ? _validRoutePayload(value)
+    : _validCorridorPayload(value);
+
+bool _validRoutePayload(Map<String, dynamic> value) {
+  bool details(Object? text) =>
+      text is String &&
+      text.trim().length >= 3 &&
+      text.trim().length <= routeDetailsMaxLength;
+  bool optionalText(Map<String, dynamic> map, String key, int max) =>
+      !map.containsKey(key) ||
+      (map[key] is String &&
+          (map[key] as String).isNotEmpty &&
+          (map[key] as String).length <= max);
+  const parcelKeys = {
+    'dropoff_details',
+    'size',
+    'priority',
+    'receiver_name',
+    'receiver_phone',
+  };
+  final route = value['service_route_id'];
+  final parcels = value['parcels'];
+  return value.length == 3 &&
+      route is String &&
+      route.isNotEmpty &&
+      route.length <= 191 &&
+      details(value['pickup_details']) &&
+      parcels is List &&
+      parcels.isNotEmpty &&
+      parcels.length <= 10 &&
+      parcels.every(
+        (p) =>
+            p is Map<String, dynamic> &&
+            parcelKeys.containsAll(p.keys) &&
+            details(p['dropoff_details']) &&
+            const {'S', 'M', 'L'}.contains(p['size']) &&
+            const {'low', 'normal', 'high'}.contains(p['priority']) &&
+            optionalText(p, 'receiver_name', 100) &&
+            optionalText(p, 'receiver_phone', 32),
+      );
+}
+
+bool _validCorridorPayload(Map<String, dynamic> value) {
   bool point(Map<String, dynamic> map, String label, String lat, String lng) =>
       map[label] is String &&
       (map[label] as String).isNotEmpty &&
@@ -130,7 +178,7 @@ class MerchantOrderOperationStorage {
   const MerchantOrderOperationStorage(this._storage);
   final FlutterSecureStorage _storage;
   String _key(String actor) =>
-      'masari_merchant_order_v1:${Uri.encodeComponent(actor)}';
+      'darb_merchant_order_v1:${Uri.encodeComponent(actor)}';
   Future<MerchantPendingOrder?> read(String actorId) async {
     final encoded = await _storage.read(key: _key(actorId));
     if (encoded == null) return null;

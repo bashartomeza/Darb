@@ -3,6 +3,7 @@ import type { MerchantOrder, PassengerRequest } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
 import { BentoGrid, Card, CardHeader, Column, DataTable, EmptyState, RouteChip, StatusBadge, TechnicalValue } from "../../ui";
 import { matchesSearch } from "../search";
+import { OrderRouteDetails, orderRouteSearchValues } from "../operatingRoutes/OrderRouteDetails";
 
 /** Passenger requests and merchant orders, both from the production admin API. */
 export function RequestsBoard({
@@ -19,13 +20,26 @@ export function RequestsBoard({
   const visibleRequests = useMemo(
     () =>
       requests.filter((request) =>
-        matchesSearch([request.id, request.status, request.pickup_label, request.destination_label, request.passenger?.name], search)
+        matchesSearch([request.id, request.status, request.pickup_label, request.destination_label, request.passenger?.name, ...orderRouteSearchValues(request)], search)
       ),
     [requests, search]
   );
 
   const visibleOrders = useMemo(
-    () => orders.filter((order) => matchesSearch([order.id, order.status, order.pickup_label, order.merchant?.name], search)),
+    () =>
+      orders.filter((order) =>
+        matchesSearch(
+          [
+            order.id,
+            order.status,
+            order.pickup_label,
+            order.merchant?.name,
+            ...orderRouteSearchValues(order),
+            ...(order.parcels ?? []).map((parcel) => parcel.dropoff_details ?? undefined)
+          ],
+          search
+        )
+      ),
     [orders, search]
   );
 
@@ -43,7 +57,12 @@ export function RequestsBoard({
     {
       key: "route",
       header: t("columnRoute"),
-      cell: (request) => <RouteChip from={request.pickup_label} to={request.destination_label} />
+      cell: (request) => (
+        <div>
+          <RouteChip from={request.pickup_label} to={request.destination_label} />
+          <OrderRouteDetails order={request} />
+        </div>
+      )
     },
     { key: "seats", header: t("columnSeats"), cell: (request) => number(request.passenger_count) },
     {
@@ -64,6 +83,17 @@ export function RequestsBoard({
           <p className="cell-stack__sub">{order.pickup_label}</p>
         </div>
       )
+    },
+    {
+      key: "route",
+      header: t("columnRoute"),
+      cell: (order) => {
+        const dropoffs = (order.parcels ?? []).map((parcel) => parcel.dropoff_details?.trim()).filter(Boolean);
+        const details = { ...order, dropoff_details: dropoffs.length ? dropoffs.join(" · ") : null };
+        return orderRouteSearchValues(details).length > 0
+          ? <OrderRouteDetails order={details} />
+          : <span className="muted">{t("noData")}</span>;
+      }
     },
     { key: "parcels", header: t("parcels"), cell: (order) => number(order.parcels?.length ?? 0) },
     {

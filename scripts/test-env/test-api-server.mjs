@@ -1,8 +1,9 @@
 // Test-environment API: the real app, with one difference. The fake one-time-code
 // provider also appends each code to a file (and emails it when a Gmail App Password is stored), so a tester can
 // finish onboarding on a phone, and the email sender writes the email verification token to a second file
-// so a normal user can finish sign-up without a real inbox. It refuses to run unless the database is an explicitly reset-safe,
-// disposable one, so it cannot be pointed at real data by accident.
+// so a normal user can finish sign-up without a real inbox. It runs on the permanent `darb` database (which the
+// demo reset always refuses, lib/demoResetSafety.ts) or on an explicitly allow-listed disposable one, and never
+// in staging/production or on any other database.
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -13,8 +14,11 @@ const dist = (path) => pathToFileURL(resolve(root, "apps/api/dist", path)).href;
 const { config } = await import(dist("config.js"));
 const databaseName = new URL(process.env.DATABASE_URL ?? "mysql://invalid/").pathname.slice(1);
 const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
-if (config.isProduction || config.isStaging || databaseName.toLowerCase() === "masari" || !allowed.includes(databaseName)) {
-  throw new Error("The test API only runs outside staging/production on an allow-listed disposable database.");
+const permanent = databaseName === "darb";
+const { evaluateDemoResetSafety } = await import(dist("lib/demoResetSafety.js"));
+const resettable = evaluateDemoResetSafety(config).allowed;
+if (config.isProduction || config.isStaging || (permanent ? resettable || allowed.length > 0 : !allowed.includes(databaseName))) {
+  throw new Error("The local API runs outside staging/production, on the permanent darb database (never resettable) or an allow-listed disposable one.");
 }
 
 const otpFile = process.env.TEST_OTP_FILE;
@@ -91,3 +95,13 @@ const app = createApp(config, {
   phoneVerificationProvider: loggingPhoneProvider
 });
 app.listen(config.port, "0.0.0.0", () => console.log(`Darb test API on ${config.port} (database ${databaseName})`));
+
+// Same start-up step as src/server.ts: create any missing predefined routes (never edits existing ones).
+const { ensurePredefinedRoutes } = await import(dist("services/operatingRoutes.js"));
+const { prisma } = await import(dist("lib/prisma.js"));
+try {
+  const result = await ensurePredefinedRoutes(prisma);
+  console.log(`predefined routes checked: ${result.createdRoutes} routes and ${result.createdStops} cities created${result.skipped ? ` (skipped: ${result.skipped})` : ""}`);
+} catch (error) {
+  console.error(`predefined routes could not be checked: ${error instanceof Error ? error.message : "unknown"}`);
+}

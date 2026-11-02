@@ -270,7 +270,7 @@ export async function verifyOtpChallenge(
     challenge.code_key_version !== input.key.version
   ) return { verified: false as const, reason: "unavailable" as const };
 
-  const matches = keyedDigestMatches(challenge.code_digest, `masari:otp:${challenge.id}`, input.code, input.key);
+  const matches = keyedDigestMatches(challenge.code_digest, `darb:otp:${challenge.id}`, input.code, input.key);
   if (!matches) {
     try {
       await db.$transaction(async (tx) => {

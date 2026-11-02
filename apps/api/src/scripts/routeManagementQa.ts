@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import type { RouteManagementService, VersionStopInput } from "../services/routeManagement.js";
 
-const ROUTE_QA_DATABASE = "masari_routes_qa";
+const ROUTE_QA_DATABASE = "darb_routes_qa";
 const ROUTE_QA_HOSTS = new Set(["localhost", "127.0.0.1"]);
 const FIXTURE_PREFIX = "qa-card6-";
 const QA_ACTOR_ID = `${FIXTURE_PREFIX}admin`;

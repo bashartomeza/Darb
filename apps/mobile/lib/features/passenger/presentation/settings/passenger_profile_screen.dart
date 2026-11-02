@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/passenger_theme.dart';
-import '../../../../core/widgets/masari_text_field.dart';
+import '../../../../core/widgets/darb_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/domain/auth_models.dart';
 import '../../../auth/presentation/auth_completion_screen.dart'
@@ -160,7 +160,7 @@ class _PassengerProfileScreenState
   List<Widget> _editForm(BuildContext context) {
     final email = _user?.email;
     return [
-      MasariTextField(
+      DarbTextField(
         key: const ValueKey('profileName'),
         controller: _name,
         label: authText(context, 'Name', 'الاسم'),
@@ -179,7 +179,7 @@ class _PassengerProfileScreenState
         ),
         const SizedBox(height: 4),
       ],
-      MasariTextField(
+      DarbTextField(
         key: const ValueKey('profilePhone'),
         controller: _phone,
         label: authText(context, 'Phone number', 'رقم الهاتف'),
@@ -198,7 +198,7 @@ class _PassengerProfileScreenState
         onChanged: (_) => setState(() {}),
       ),
       const SizedBox(height: 16),
-      MasariTextField(
+      DarbTextField(
         key: const ValueKey('profileCity'),
         controller: _city,
         label: authText(context, 'City', 'المدينة'),

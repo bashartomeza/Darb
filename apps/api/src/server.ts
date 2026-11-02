@@ -8,6 +8,7 @@ import { startCanonicalDispatchWorker } from "./lib/canonicalDispatchWorker.js";
 import { startLegacyDispatchWorker } from "./lib/legacyDispatchWorker.js";
 import { createOperationalLogger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
+import { ensurePredefinedRoutes } from "./services/operatingRoutes.js";
 import { createSmtpEmailDelivery } from "./services/smtpEmailDelivery.js";
 
 const logger = createOperationalLogger(config);
@@ -26,7 +27,33 @@ let shuttingDown = false;
 
 const server = app.listen(config.port, () => {
   logger.info({ event: "api_started", port: config.port }, "Darb API started");
+  void ensureOperatingRoutesAtStartup();
 });
+
+/**
+ * Creates the predefined city routes that are missing. A database that is not
+ * reachable yet, or has no admin to attribute the rows to, only logs: the API
+ * keeps serving, and the first admin to open the route list completes the set.
+ */
+async function ensureOperatingRoutesAtStartup() {
+  try {
+    const result = await ensurePredefinedRoutes(prisma);
+    logger.info(
+      {
+        event: "predefined_routes_checked",
+        created_stops: result.createdStops,
+        created_routes: result.createdRoutes,
+        skipped: result.skipped ?? null
+      },
+      "Predefined operating routes checked"
+    );
+  } catch (error) {
+    logger.error(
+      { event: "predefined_routes_failed", error_type: error instanceof Error ? error.name : "UnknownError" },
+      "Predefined operating routes could not be checked"
+    );
+  }
+}
 
 async function shutdown(signal: NodeJS.Signals) {
   if (shuttingDown) return;

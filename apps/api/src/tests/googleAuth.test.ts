@@ -51,7 +51,7 @@ describe("Google passenger authentication", () => {
     const auth = service(); const grant = await auth.start("raw-google-token");
     expect(grant).toMatchObject({ kind: "registration", next_action: "consent_required" }); expect(users).toHaveLength(0);
     expect(JSON.stringify(actions)).not.toMatch(/owner@example|google-sub|raw-google-token/);
-    const session = vi.fn().mockResolvedValue({ token: "masari-session" });
+    const session = vi.fn().mockResolvedValue({ token: "darb-session" });
     const result = await auth.complete(completion(grant), session);
     expect(result.user).toMatchObject({ role: "passenger", phone: null, password_hash: null, profile_state: "phone_required", account_status: "active" });
     expect(identities[0]).toMatchObject({ provider: "google", provider_subject: identity.sub }); expect(consents).toHaveLength(3);

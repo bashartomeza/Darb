@@ -26,13 +26,16 @@ Generation and directional change timestamps remain verbatim. Offset-free
 timestamps carry `timezone_specified: false`; the UI labels their timezone
 unspecified. They never become UTC dates, freshness guarantees or traffic
 conditions. The directory always reports null coordinates, unverified
-coordinates, no map readiness and unavailable traffic. No pins or navigation
-destinations are created. The fetched-at timestamp is local retrieval metadata,
+coordinates, no map readiness and unavailable traffic. This endpoint creates no
+pins or navigation destinations; map pins come only from the separate, opt-in
+`PARTNER_CHECKPOINT_MAP_ENABLED` placement (OpenStreetMap name matches, see
+`docs/checkpoints/map-sources.md`). The fetched-at timestamp is local retrieval metadata,
 not an observation timestamp or proof of present conditions.
 
 ## Backend configuration and coordination
 
-- `AWEENRAYEH_LIMITED_DIRECTORY_ENABLED` defaults false.
+- `AWEENRAYEH_LIMITED_DIRECTORY_ENABLED` defaults false. It may now run beside
+  demo reset: the reset keeps the `checkpoint_partner_budget` rows.
 - `AWEENRAYEH_PARTNER_API_KEY` is dedicated backend secret configuration, required
   only when enabling this gate. Never substitute the historical or legacy key.
 - `AWEENRAYEH_PARTNER_TIMEOUT_MS` defaults 6000, bounded 500–15000 milliseconds.

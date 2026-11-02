@@ -1,7 +1,7 @@
 export const DEMO_RESET_DATABASE_NOT_ALLOWED = "demo_reset_database_not_allowed";
 
 const allowedResetEnvironments = new Set(["local", "test", "demo"]);
-const permanentlyProtectedDatabases = new Set(["masari"]);
+const permanentlyProtectedDatabases = new Set(["darb"]);
 
 export type DemoResetSafetyConfig = {
   appEnv: string;

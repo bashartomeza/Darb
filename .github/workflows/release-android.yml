@@ -13,7 +13,7 @@ on:
       api_base_url:
         description: API origin (the app appends /api/v1)
         required: true
-        default: https://masari.aynur.ps
+        default: https://darb.aynur.ps
       build_number:
         description: Android versionCode (must increase for every Play upload)
         required: true
@@ -53,13 +53,13 @@ jobs:
         run: |
           test -n "$KEYSTORE_B64" || { echo "Secret ANDROID_KEYSTORE_BASE64 is not set"; exit 1; }
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
-          echo "MASARI_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          echo "DARB_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
       - name: Build signed app bundle
         working-directory: apps/mobile
         env:
-          MASARI_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          MASARI_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          MASARI_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          DARB_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          DARB_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          DARB_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           API_BASE_URL: ${{ inputs.api_base_url }}
           BUILD_NUMBER: ${{ inputs.build_number }}
         run: >-
@@ -73,7 +73,7 @@ jobs:
         run: rm -f "$RUNNER_TEMP/upload.jks"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: masari-release-aab
+          name: darb-release-aab
           path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 7

@@ -640,13 +640,16 @@ async function main() {
   ), "persisted operational audit metadata uses the approved allowlist");
   check(!/(latitude|longitude|pickup_lat|destination_lat|phone|password|token|idempotency)/i.test(JSON.stringify(operationalAudits)), "persisted operational audit metadata excludes private payload values");
 
+  // Seeded legacy rows sit on the predefined Hebron → Bethlehem route: they
+  // carry its version but stay legacy (no canonical version, stops or window).
   const legacyRequest = await prisma.passengerRequest.findFirstOrThrow({ where: { source: "seed" } });
-  check(legacyRequest.route_version_id === null && legacyRequest.canonical_entry_version === null, "legacy passenger remains valid");
+  check(legacyRequest.route_version_id !== null && legacyRequest.canonical_entry_version === null &&
+    legacyRequest.pickup_stop_id === null && legacyRequest.operational_mode === "legacy", "legacy passenger remains valid");
   const legacyOrder = await prisma.merchantOrder.findFirstOrThrow({ where: { canonical_entry_version: null } });
-  check(legacyOrder.route_version_id === null, "legacy merchant order remains valid");
-  check(await prisma.parcel.count({ where: { order_id: legacyOrder.id, route_version_id: null } }) === 5, "legacy parcels remain valid");
-  const legacyRoute = await prisma.driverRoute.findFirstOrThrow({ where: { route_version_id: null } });
-  check(legacyRoute.corridor_key === DEMO_SERVICE_ROUTE_KEY, "legacy DriverRoute remains valid");
+  check(legacyOrder.route_version_id === legacyRequest.route_version_id && legacyOrder.pickup_stop_id === null, "legacy merchant order remains valid");
+  check(await prisma.parcel.count({ where: { order_id: legacyOrder.id, route_version_id: legacyOrder.route_version_id, destination_stop_id: null } }) === 5, "legacy parcels remain valid");
+  const legacyRoute = await prisma.driverRoute.findFirstOrThrow({ where: { canonical_availability_version: null, corridor_key: "hebron-to-bethlehem" } });
+  check(legacyRoute.route_version_id === legacyRequest.route_version_id, "legacy DriverRoute remains valid");
 
   const linkedLegacyRoute = await prisma.driverRoute.findFirstOrThrow({
     where: { route_version_id: { not: null }, canonical_availability_version: null }
@@ -678,7 +681,7 @@ async function main() {
     prisma.stop.count(), prisma.passengerRequest.count(), prisma.merchantOrder.count(), prisma.parcel.count()
   ]);
   check(counts[0] === 0, "demo reset removes reservation history before availability");
-  check(counts.slice(1).join(",") === "1,1,3,1,1,5", "demo reset restores deterministic aggregate counts");
+  check(counts.slice(1).join(",") === "21,21,13,1,1,5", "demo reset restores deterministic aggregate counts");
   await resetDemoData(prisma);
   check(await prisma.capacityReservation.count() === 0 && await prisma.driverRoute.count() === 2, "demo reset is idempotent");
   check(await prisma.auditEvent.count({ where: { action: "demo_reset" } }) === 1, "reset leaves only bounded deterministic audit state");

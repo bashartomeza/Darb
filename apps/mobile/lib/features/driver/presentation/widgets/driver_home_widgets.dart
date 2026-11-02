@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../notifications/presentation/notification_bell.dart';
 
@@ -7,7 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/semantic_colors.dart';
 import '../../../../core/widgets/entity_cards.dart';
-import '../../../../core/widgets/masari_card.dart';
+import '../../../../core/widgets/darb_card.dart';
 import '../../../../core/widgets/trust_score_ring.dart';
 import '../../domain/driver_home_stats.dart';
 
@@ -71,7 +71,7 @@ class DriverStatusCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return MasariCard(
+    return DarbCard(
       padding: EdgeInsets.zero,
       // IntrinsicHeight gives the row a bounded height from its content, so
       // the status stripe can stretch to match it. Without it, `stretch`
@@ -169,7 +169,7 @@ class TrustScoreCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final score = stats.trustOutOfFive;
 
-    return MasariCard(
+    return DarbCard(
       child: SizedBox(
         height: 150,
         child: Center(

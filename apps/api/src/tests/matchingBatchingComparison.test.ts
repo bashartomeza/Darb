@@ -16,7 +16,8 @@ const prismaMock = vi.hoisted(() => ({
   parcelBatch: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   parcelBatchOrder: { findMany: vi.fn(), updateMany: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
-  comparisonRun: { create: vi.fn(), findUnique: vi.fn() }
+  comparisonRun: { create: vi.fn(), findUnique: vi.fn() },
+  serviceRoute: { findUnique: vi.fn() }
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -24,6 +25,7 @@ vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
 const jwtSecret = "test-only-jwt-secret-with-at-least-thirty-two-characters";
 
 const { createApp } = await import("../app.js");
+const { findOperatingRoute } = await import("./operatingRouteFixture.js");
 
 type Role = "passenger" | "driver" | "merchant" | "admin";
 
@@ -153,7 +155,8 @@ describe("matching, batching, comparison", () => {
     prismaMock.passengerRequest.update.mockResolvedValue({});
     prismaMock.passengerRequest.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.$transaction.mockImplementation((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
-
+    // Coordinate searches ride the predefined Hebron → Bethlehem route.
+    prismaMock.serviceRoute.findUnique.mockImplementation(findOperatingRoute());
   });
 
   it("route-compatible driver scores higher than nearest wrong-direction driver", () => {
@@ -500,6 +503,62 @@ describe("matching, batching, comparison", () => {
     expect(prismaMock.match.create).not.toHaveBeenCalled();
   });
 
+  describe("route pinned on the saved request", () => {
+    const pinnedRoute = {
+      ...compatibleRoute,
+      id: "route_pinned",
+      driver: { ...compatibleRoute.driver, id: "driver_profile_pinned", trust_score: 60, user: { name: "Pinned Driver" } }
+    };
+    const pinnedRequest = { ...passengerRequest, selected_driver_route_id: "route_pinned" };
+
+    beforeEach(() => {
+      prismaMock.passengerRequest.findUnique.mockResolvedValue(pinnedRequest);
+      prismaMock.merchantOrder.findUnique.mockResolvedValue(null);
+      prismaMock.match.create.mockImplementation(({ data }) => ({ id: "match_pinned", ...data, driver_route: pinnedRoute }));
+    });
+
+    it("matches the saved route even when the caller sends no route", async () => {
+      // The higher-scoring candidate must not replace the passenger's own pick.
+      prismaMock.driverRoute.findMany.mockResolvedValue([compatibleRoute, pinnedRoute]);
+
+      await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("passenger_1"))
+        .send({ passengerRequestId: "req_1" })
+        .expect(201);
+
+      expect(prismaMock.match.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ driver_route_id: "route_pinned" }) })
+      );
+    });
+
+    it("refuses a different route than the one saved on the request", async () => {
+      prismaMock.driverRoute.findMany.mockResolvedValue([compatibleRoute, pinnedRoute]);
+
+      const response = await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("passenger_1"))
+        .send({ passengerRequestId: "req_1", driverRouteId: "route_compatible" })
+        .expect(409);
+
+      expect(response.body.error).toBe("selected_driver_route_unavailable");
+      expect(prismaMock.match.create).not.toHaveBeenCalled();
+    });
+
+    it("never substitutes another candidate when the saved route is gone", async () => {
+      prismaMock.driverRoute.findMany.mockResolvedValue([compatibleRoute]);
+
+      const response = await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("passenger_1"))
+        .send({ passengerRequestId: "req_1" })
+        .expect(409);
+
+      expect(response.body.error).toBe("selected_driver_route_unavailable");
+      expect(prismaMock.match.create).not.toHaveBeenCalled();
+    });
+  });
+
   it("combined matching links the merchant's persisted parcel batch", async () => {
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }]);
     prismaMock.parcel.count.mockResolvedValue(5);
@@ -658,11 +717,11 @@ describe("matching, batching, comparison", () => {
     const response = await request(createApp())
       .post("/api/v1/compare/run")
       .set(auth("admin_1"))
-      .send({ scenarioKey: "masari_batch_wins" })
+      .send({ scenarioKey: "darb_batch_wins" })
       .expect(201);
 
-    expect(response.body.comparison.winner).toBe("masari");
-    expect(response.body.comparison.masari_trips).toBe(1);
+    expect(response.body.comparison.winner).toBe("darb");
+    expect(response.body.comparison.darb_trips).toBe(1);
     expect(response.body.comparison.nearest_driver_trips).toBeGreaterThan(1);
     expect(prismaMock.merchantOrder.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { canonical_entry_version: null } })
@@ -693,10 +752,10 @@ describe("matching, batching, comparison", () => {
   });
 
   it("GET comparison run returns saved result", async () => {
-    prismaMock.comparisonRun.findUnique.mockResolvedValue({ id: "comparison_1", winner: "masari" });
+    prismaMock.comparisonRun.findUnique.mockResolvedValue({ id: "comparison_1", winner: "darb" });
 
     const response = await request(createApp()).get("/api/v1/compare/runs/comparison_1").set(auth("admin_1")).expect(200);
-    expect(response.body.comparison.winner).toBe("masari");
+    expect(response.body.comparison.winner).toBe("darb");
   });
   it("rejects departed merchant candidates before reserving capacity", async () => {
     prismaMock.merchantOrder.findUnique.mockResolvedValue(merchantOrder);

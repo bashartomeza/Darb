@@ -29,7 +29,7 @@ pricing, or M7C3C aggregate controls.
 
 Legacy demo preflight must remain `22/22`, and smoke metrics must remain score
 `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`,
-cost `43.06` versus `258.38`, and winner `masari`.
+cost `43.06` versus `258.38`, and winner `darb`.
 
 ## Branch validation record
 

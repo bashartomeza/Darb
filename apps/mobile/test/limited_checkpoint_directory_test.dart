@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/checkpoint_directory/presentation/checkpoint_directory_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/checkpoint_directory/presentation/checkpoint_directory_screen.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import 'support/checkpoint_test_harness.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/checkpoint_directory/application/checkpoint_directory_controller.dart';
-import 'package:masari_mobile/features/checkpoint_directory/application/limited_checkpoint_directory_controller.dart';
-import 'package:masari_mobile/features/checkpoint_directory/domain/limited_checkpoint_directory.dart';
-import 'package:masari_mobile/features/checkpoint_directory/domain/checkpoint_directory.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/checkpoint_directory/application/checkpoint_directory_controller.dart';
+import 'package:darb_mobile/features/checkpoint_directory/application/limited_checkpoint_directory_controller.dart';
+import 'package:darb_mobile/features/checkpoint_directory/domain/limited_checkpoint_directory.dart';
+import 'package:darb_mobile/features/checkpoint_directory/domain/checkpoint_directory.dart';
 
 Map<String, dynamic> limitedDirectory() => {
   'schema_version': 1,

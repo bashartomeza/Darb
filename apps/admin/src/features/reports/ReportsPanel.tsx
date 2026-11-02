@@ -79,7 +79,7 @@ export function ReportsPanel({ api, token }: { api: ReportsApi; token: string })
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `masari-${dataset}.csv`;
+      link.download = `darb-${dataset}.csv`;
       document.body.appendChild(link);
       link.click();
       link.remove();

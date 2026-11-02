@@ -160,6 +160,27 @@ describe("Admin Trips Management", () => {
     expect(render("en", <TripsManagementView {...props({ data: { ...page, trips: [], total: 0 }, query: "missing", selectedId: null, detail: null })} />)).toContain("Nothing matches your search");
   });
 
+  it("shows the route name and free-text pickup and drop-off when the trip has them", () => {
+    const routedRequest = {
+      ...legacy.passenger_request,
+      route_name_ar: "الخليل ← بيت لحم",
+      route_name_en: "Hebron → Bethlehem",
+      pickup_details: "near the PPU main gate",
+      dropoff_details: "Bethlehem bus station",
+    };
+    const routedTrip = { ...legacy, passenger_request: routedRequest };
+    const routedDetail: AdminTripDetail = { ...detail, passenger_request: routedRequest };
+    const english = render("en", <TripsManagementView {...props({ data: { ...page, trips: [routedTrip] }, detail: routedDetail })} />);
+    expect(english).toContain("Hebron → Bethlehem");
+    expect(english).toContain("near the PPU main gate");
+    expect(english).toContain("Bethlehem bus station");
+    expect(render("ar", <TripsManagementView {...props({ data: { ...page, trips: [routedTrip] }, detail: routedDetail })} />)).toContain("الخليل ← بيت لحم");
+
+    const older = render("en", <TripsManagementView {...props()} />);
+    expect(older).not.toContain("Pickup details");
+    expect(older).toContain("Hebron → Bethlehem");
+  });
+
   it("labels persisted location evidence honestly and never claims live GPS", () => {
     const markup = render("en", <TripsManagementView {...props()} />);
     expect(markup).toContain("Latest stored location");

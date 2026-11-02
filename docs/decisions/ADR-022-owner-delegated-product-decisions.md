@@ -4,13 +4,13 @@ Status: accepted by the repository owner's delegation. Reversible by the owner a
 
 ## Context
 
-On 2026-10-26 the repository owner set the production domain to `masari.aynur.ps`, chose Injazat as the host with server storage, and said that for the remaining open product choices the assistant may "choose the best". This record lists what was chosen so the choices are visible and can be changed. It does not cover decisions that depend on facts or authority outside the repository (below).
+On 2026-10-26 the repository owner set the production domain to `darb.aynur.ps`, chose Injazat as the host with server storage, and said that for the remaining open product choices the assistant may "choose the best". This record lists what was chosen so the choices are visible and can be changed. It does not cover decisions that depend on facts or authority outside the repository (below).
 
 ## Decisions
 
 | Register item | Decision | Why |
 | --- | --- | --- |
-| Hosting origin | One origin, `https://masari.aynur.ps`: Admin at `/`, API at `/api/v1`, TLS at a reverse proxy. | One certificate, no cross-origin surface, simplest to operate. See `docs/operations/masari-aynur-ps-deployment.md`. |
+| Hosting origin | One origin, `https://darb.aynur.ps`: Admin at `/`, API at `/api/v1`, TLS at a reverse proxy. | One certificate, no cross-origin surface, simplest to operate. See `docs/operations/darb-aynur-ps-deployment.md`. |
 | EDIT-17 document storage | Server disk under a configured directory, random file names, metadata only in the database; JPEG, PNG, PDF; 5 MB; 6 per revision. | The owner chose server storage. Content sniffing and per-revision caps limit abuse and disk use. |
 | EDIT-17 document retention | 90 days after the application is decided, then deleted; pending applications are never purged. Configurable by `DRIVER_DOCUMENT_RETENTION_DAYS`. | Long enough to answer a dispute after a decision, short enough to limit how long identity documents are held. |
 | EDIT-17 re-review | Stays Admin-initiated; a rejected applicant cannot sign in and no applicant-side resubmission is added. | Adding it would need a new sign-in path for rejected accounts, which is a larger security change than the current need justifies. |

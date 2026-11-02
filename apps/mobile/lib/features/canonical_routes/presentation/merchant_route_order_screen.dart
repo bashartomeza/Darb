@@ -1,9 +1,11 @@
 import '../../canonical_assignments/application/canonical_assignment_controller.dart';
-import '../../../core/widgets/masari_back_button.dart';
+import '../../../core/widgets/darb_back_button.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/maps/darb_route_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -91,7 +93,7 @@ class _MerchantRouteOrderScreenState
       return Scaffold(
         appBar: AppBar(
           title: Text(l10n.canonicalMerchantOrder),
-          leading: const MasariBackButton(fallback: '/merchant'),
+          leading: const DarbBackButton(fallback: '/merchant'),
         ),
         body: SafeArea(
           child: ListView(
@@ -116,7 +118,7 @@ class _MerchantRouteOrderScreenState
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.canonicalMerchantOrder),
-          leading: const MasariBackButton(fallback: '/merchant'),
+          leading: const DarbBackButton(fallback: '/merchant'),
         ),
         body: SafeArea(
           child: ref
@@ -174,6 +176,17 @@ class _MerchantRouteOrderScreenState
                                 }),
                         ),
                       if (route != null) ...[
+                        CanonicalRouteMap(
+                          key: const ValueKey('canonicalRouteMap'),
+                          route: route,
+                          highlightIds: {
+                            _pickupId,
+                            ..._parcels.map(
+                              (parcel) => parcel.destinationStopId,
+                            ),
+                          }.whereType<String>().toSet(),
+                        ),
+                        const SizedBox(height: AppTokens.spaceMedium),
                         OrderedStopTimeline(
                           stops: route.stops,
                           selectedIds: {

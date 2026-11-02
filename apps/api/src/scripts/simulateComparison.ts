@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { METHOD_KEYS, runComparisonSimulation, type MethodMetrics, type SimParams } from "../services/matchingComparison.js";
 
-// Usage: npm run simulate:compare -w @masari/api -- [--seed=N] [--delay=MIN] [--out=path.json]
+// Usage: npm run simulate:compare -w @darb/api -- [--seed=N] [--delay=MIN] [--out=path.json]
 const args = new Map(
   process.argv.slice(2).map((argument) => {
     const [key, value = "true"] = argument.replace(/^--/, "").split("=", 2);
@@ -28,7 +28,7 @@ mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, `${JSON.stringify(result, null, 2)}
 `);
 
-const labels: Record<string, string> = { manual: "Manual (WhatsApp)", nearest: "Nearest driver", masari: "Darb" };
+const labels: Record<string, string> = { manual: "Manual (WhatsApp)", nearest: "Nearest driver", darb: "Darb" };
 const columns: Array<[string, (m: MethodMetrics) => string]> = [
   ["wait avg", (m) => m.waitingMin.avg.toFixed(1)],
   ["wait p50", (m) => m.waitingMin.median.toFixed(1)],

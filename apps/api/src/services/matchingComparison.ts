@@ -7,8 +7,8 @@ import { compareRankedRoutes, scoreDriverRoute } from "../lib/routeScoring.js";
  * trip is created. See docs/engineering/matching-comparison-simulation.md.
  */
 
-export type MethodKey = "manual" | "nearest" | "masari";
-export const METHOD_KEYS: readonly MethodKey[] = ["manual", "nearest", "masari"];
+export type MethodKey = "manual" | "nearest" | "darb";
+export const METHOD_KEYS: readonly MethodKey[] = ["manual", "nearest", "darb"];
 
 export type SimDriver = {
   id: string;
@@ -51,9 +51,9 @@ export type SimParams = {
   /** Fixed processing delay of the nearest-driver method. */
   nearestMatchDelayMin: number;
   /** Delay between a Darb match run and the driver accepting the offer. */
-  masariOfferDelayMin: number;
+  darbOfferDelayMin: number;
   /** Orders from one merchant submitted within this many minutes of the first one share a batch. */
-  masariBatchWindowMin: number;
+  darbBatchWindowMin: number;
   driverSpeedKmh: number;
 };
 
@@ -64,8 +64,8 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   manualAcceptProbability: 0.6,
   manualWrongDirectionAcceptProbability: 0.15,
   nearestMatchDelayMin: 0.5,
-  masariOfferDelayMin: 1.5,
-  masariBatchWindowMin: 6,
+  darbOfferDelayMin: 1.5,
+  darbBatchWindowMin: 6,
   driverSpeedKmh: 40
 };
 
@@ -419,12 +419,12 @@ export function batchParcelOrders(requests: SimRequest[], windowMin: number): Un
   return units.sort((a, b) => a.readyAt - b.readyAt || a.members[0]!.id.localeCompare(b.members[0]!.id));
 }
 
-function runMasari(scenario: SimScenario, params: SimParams): RawMetrics {
+function runDarb(scenario: SimScenario, params: SimParams): RawMetrics {
   const states = freshStates(scenario);
   const raw = emptyRaw();
   raw.total = scenario.requests.length;
-  for (const unit of batchParcelOrders(scenario.requests, params.masariBatchWindowMin)) {
-    const matchDone = unit.readyAt + params.masariOfferDelayMin;
+  for (const unit of batchParcelOrders(scenario.requests, params.darbBatchWindowMin)) {
+    const matchDone = unit.readyAt + params.darbOfferDelayMin;
     const lead = unit.members[0]!;
     const ranked = [...states.values()]
       .filter((state) => fits(state, unit, matchDone))
@@ -545,7 +545,7 @@ export type ComparisonSimulation = {
 };
 
 export function runScenario(scenario: SimScenario, params: SimParams): Record<MethodKey, RawMetrics> {
-  return { manual: runManual(scenario, params), nearest: runNearest(scenario, params), masari: runMasari(scenario, params) };
+  return { manual: runManual(scenario, params), nearest: runNearest(scenario, params), darb: runDarb(scenario, params) };
 }
 
 export function runComparisonSimulation(
@@ -554,7 +554,7 @@ export function runComparisonSimulation(
 ): ComparisonSimulation {
   const params = { ...DEFAULT_SIM_PARAMS, ...overrides };
   const set = scenarios ?? buildScenarioSet(params.seed);
-  const pooled: Record<MethodKey, RawMetrics> = { manual: emptyRaw(), nearest: emptyRaw(), masari: emptyRaw() };
+  const pooled: Record<MethodKey, RawMetrics> = { manual: emptyRaw(), nearest: emptyRaw(), darb: emptyRaw() };
   const rows = set.map((scenario) => {
     const raw = runScenario(scenario, params);
     for (const key of METHOD_KEYS) merge(pooled[key], raw[key]);
@@ -566,14 +566,14 @@ export function runComparisonSimulation(
       passengerRequests: scenario.requests.filter((request) => request.kind === "passenger").length,
       parcelOrders: scenario.requests.filter((request) => request.kind === "parcel").length,
       drivers: scenario.drivers.length,
-      methods: { manual: summarise(raw.manual), nearest: summarise(raw.nearest), masari: summarise(raw.masari) }
+      methods: { manual: summarise(raw.manual), nearest: summarise(raw.nearest), darb: summarise(raw.darb) }
     };
   });
   return {
     simulated: true,
     version: "matching_comparison_sim_v1",
     params,
-    aggregate: { manual: summarise(pooled.manual), nearest: summarise(pooled.nearest), masari: summarise(pooled.masari) },
+    aggregate: { manual: summarise(pooled.manual), nearest: summarise(pooled.nearest), darb: summarise(pooled.darb) },
     scenarios: rows
   };
 }

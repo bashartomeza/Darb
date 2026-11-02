@@ -3,18 +3,28 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import '../../../core/api/api_error.dart';
+import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_back_button.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_back_button.dart';
+import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/darb_section.dart';
+import '../../operating_routes/data/operating_route_models.dart';
+import '../../operating_routes/data/operating_route_repository.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
 import '../application/merchant_order_submission.dart';
 import '../data/merchant_order_operation_storage.dart';
 import 'merchant_ui.dart';
 
+/// A new order: one predefined route, the pickup in the merchant's own words,
+/// and up to ten parcels, each with where it goes in the merchant's words.
+///
+/// An order whose response was lost is kept and shown exactly as it will be
+/// resent, until the server confirms it.
 class CreateMerchantOrderScreen extends ConsumerStatefulWidget {
   const CreateMerchantOrderScreen({super.key});
 
@@ -30,6 +40,19 @@ class _CreateMerchantOrderScreenState
   Animation<double>? _navigationAnimation;
   AnimationStatusListener? _navigationListener;
   Completer<bool>? _navigationReady;
+  final _formKey = GlobalKey<FormState>();
+  final _pickupDetails = TextEditingController();
+  String? _routeId;
+  String? _error;
+
+  /// The saved order being recovered, as it will be resent.
+  PendingOrderPreview? _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_restorePending);
+  }
 
   @override
   void dispose() {
@@ -38,6 +61,7 @@ class _CreateMerchantOrderScreenState
     if (_navigationReady?.isCompleted == false) {
       _navigationReady!.complete(false);
     }
+    _pickupDetails.dispose();
     super.dispose();
   }
 
@@ -68,10 +92,17 @@ class _CreateMerchantOrderScreenState
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(_restorePending);
+  /// Reads a saved order for display. The payload is resent exactly as saved
+  /// (including orders saved by builds before routes existed), so it is shown
+  /// as saved even if the routes have changed since.
+  static PendingOrderPreview _preview(MerchantPendingOrder pending) {
+    try {
+      return PendingOrderPreview.fromPayload(pending.payload);
+    } on FormatException {
+      throw const MerchantOrderRecoveryException(
+        'merchant_order_recovery_unreadable',
+      );
+    }
   }
 
   Future<void> _restorePending() async {
@@ -83,19 +114,7 @@ class _CreateMerchantOrderScreenState
         _locked = false;
         return;
       }
-      final parcels = (pending.payload['parcels'] as List).map((value) {
-        if (!merchantDestinations.contains(value['destination_label'])) {
-          throw const MerchantOrderRecoveryException(
-            'merchant_order_recovery_unreadable',
-          );
-        }
-        return ParcelDraft(
-          destinationLabel: value['destination_label'] as String,
-          size: value['size'] as String,
-          priority: value['priority'] as String,
-        );
-      }).toList();
-      ref.read(merchantOrderDraftProvider.notifier).restorePending(parcels);
+      _pending = _preview(pending);
       final order = await service.recover();
       if (!mounted) return;
       if (order != null) {
@@ -118,13 +137,23 @@ class _CreateMerchantOrderScreenState
         : l10n.merchantOrderUncertain;
   }
 
-  String? _error;
+  /// The chosen route while it is still offered; a single route is chosen
+  /// for the merchant.
+  String? _selectedRoute(List<OperatingRoute> routes) {
+    if (routes.any((route) => route.id == _routeId)) return _routeId;
+    return routes.length == 1 ? routes.single.id : null;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final parcels = ref.watch(merchantOrderDraftProvider);
     final draft = ref.read(merchantOrderDraftProvider.notifier);
+    final routes = ref.watch(operatingRoutesProvider);
+    final routeList = routes.value ?? const <OperatingRoute>[];
+    final routesReady = routeList.isNotEmpty;
+    final editable = !_busy && !_locked;
+    final pending = _pending;
     return Scaffold(
       // Keyed like the other merchant screens so route-guard tests can assert
       // on the screen itself. Its title reuses `createOrder`, which is the same
@@ -133,83 +162,193 @@ class _CreateMerchantOrderScreenState
       key: const ValueKey('merchantCreateOrder'),
       appBar: AppBar(
         title: Text(l10n.createOrder),
-        leading: const MasariBackButton(fallback: '/merchant'),
+        leading: const DarbBackButton(fallback: '/merchant'),
         actions: const [LanguageSwitch()],
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppTokens.spaceLarge),
-          children: [
-            const SizedBox(height: AppTokens.spaceLarge),
-            MasariCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.fixedPickup,
-                    style: Theme.of(context).textTheme.titleLarge,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(AppTokens.spaceLarge),
+            children: [
+              const SizedBox(height: AppTokens.spaceLarge),
+              if (_locked && pending != null)
+                _pendingCard(l10n, pending, routeList)
+              else ...[
+                _routeCard(l10n, routes, routeList, editable),
+                const SizedBox(height: AppTokens.spaceMedium),
+                ...parcels.indexed.map(
+                  (entry) => KeyedSubtree(
+                    key: ValueKey('parcelCard-${entry.$2.id}'),
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: AppTokens.spaceMedium,
+                      ),
+                      child: _parcelCard(l10n, entry.$1, entry.$2, editable),
+                    ),
                   ),
-                  Text(l10n.lockedCorridor),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppTokens.spaceMedium),
-            ...parcels.indexed.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: AppTokens.spaceMedium),
-                child: _parcelCard(l10n, entry.$1, entry.$2),
-              ),
-            ),
-            OutlinedButton.icon(
-              key: const ValueKey('addParcelButton'),
-              onPressed: !_busy && !_locked && draft.canAdd
-                  ? draft.addParcel
-                  : null,
-              icon: const Icon(Icons.add),
-              label: Text('${l10n.addParcel} (${parcels.length}/10)'),
-            ),
-            Text(l10n.parcelLimit),
-            if (_error != null)
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            const SizedBox(height: AppTokens.spaceLarge),
-            TextButton.icon(
-              key: const ValueKey('openBulkOrders'),
-              onPressed: _busy
-                  ? null
-                  : () => context.push('/merchant/order/bulk'),
-              icon: const Icon(Icons.upload_file_outlined),
-              label: Text(
-                Localizations.localeOf(context).languageCode == 'ar'
-                    ? 'رفع طلبات بالجملة (CSV)'
-                    : 'Bulk upload (CSV)',
-              ),
-            ),
-            FilledButton(
-              key: const ValueKey('submitMerchantOrder'),
-              onPressed: _busy ? null : _submit,
-              style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.tertiary,
-                foregroundColor: Theme.of(context).colorScheme.onTertiary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTokens.radiusAction),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('addParcelButton'),
+                  onPressed: editable && draft.canAdd ? draft.addParcel : null,
+                  icon: const Icon(Icons.add),
+                  label: Text('${l10n.addParcel} (${parcels.length}/10)'),
+                ),
+                Text(l10n.parcelLimit),
+              ],
+              if (_error != null)
+                Text(
+                  _error!,
+                  key: const ValueKey('merchantOrderError'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              const SizedBox(height: AppTokens.spaceLarge),
+              TextButton.icon(
+                key: const ValueKey('openBulkOrders'),
+                onPressed: _busy
+                    ? null
+                    : () => context.push('/merchant/order/bulk'),
+                icon: const Icon(Icons.upload_file_outlined),
+                label: Text(
+                  Localizations.localeOf(context).languageCode == 'ar'
+                      ? 'رفع طلبات بالجملة (CSV)'
+                      : 'Bulk upload (CSV)',
                 ),
               ),
-              child: Text(
-                _locked ? l10n.recoverMerchantOrder : l10n.submitOrder,
+              FilledButton(
+                key: const ValueKey('submitMerchantOrder'),
+                // A pending order resends its saved payload; a new one needs
+                // the routes first.
+                onPressed: _busy
+                    ? null
+                    : _locked
+                    ? _submit
+                    : routesReady
+                    ? _submit
+                    : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.tertiary,
+                  foregroundColor: Theme.of(context).colorScheme.onTertiary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTokens.radiusAction),
+                  ),
+                ),
+                child: Text(
+                  _locked ? l10n.recoverMerchantOrder : l10n.submitOrder,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _parcelCard(AppLocalizations l10n, int index, ParcelDraft parcel) {
+  /// The route and the pickup, written once for the whole order.
+  Widget _routeCard(
+    AppLocalizations l10n,
+    AsyncValue<List<OperatingRoute>> routes,
+    List<OperatingRoute> routeList,
+    bool editable,
+  ) {
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    return DarbCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: AppTokens.spaceMedium,
+        children: [
+          Text(
+            l10n.orderRouteLabel,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          routes.when(
+            skipLoadingOnRefresh: false,
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppTokens.spaceSmall),
+              child: LinearProgressIndicator(
+                key: ValueKey('merchantRoutesLoading'),
+              ),
+            ),
+            error: (_, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.orderRoutesLoadFailed,
+                  key: const ValueKey('merchantRoutesError'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                TextButton(
+                  key: const ValueKey('merchantRoutesRetry'),
+                  onPressed: () => ref.invalidate(operatingRoutesProvider),
+                  child: Text(l10n.retry),
+                ),
+              ],
+            ),
+            data: (_) => routeList.isEmpty
+                ? Text(
+                    l10n.orderRoutesEmpty,
+                    key: const ValueKey('merchantRoutesEmpty'),
+                  )
+                // A reloaded list starts a fresh field, so a route that was
+                // turned off is never kept as the chosen value.
+                : KeyedSubtree(
+                    key: ObjectKey(routeList),
+                    child: DropdownButtonFormField<String>(
+                      key: const ValueKey('merchantRouteField'),
+                      initialValue: _selectedRoute(routeList),
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.orderRouteLabel,
+                      ),
+                      hint: Text(l10n.orderRouteChoose),
+                      items: [
+                        for (final route in routeList)
+                          DropdownMenuItem(
+                            value: route.id,
+                            child: Text(
+                              route.displayName(arabic: arabic),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      validator: (value) =>
+                          value == null ? l10n.orderRouteRequired : null,
+                      onChanged: editable
+                          ? (id) => setState(() => _routeId = id)
+                          : null,
+                    ),
+                  ),
+          ),
+          TextFormField(
+            key: const ValueKey('merchantPickupDetailsField'),
+            controller: _pickupDetails,
+            enabled: editable,
+            maxLength: routeDetailsMaxLength,
+            minLines: 1,
+            maxLines: 3,
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: l10n.merchantPickupDetailsLabel,
+              hintText: l10n.merchantPickupDetailsHint,
+              prefixIcon: const Icon(Icons.storefront_outlined),
+            ),
+            validator: (value) => routeDetailsValid(value ?? '')
+                ? null
+                : l10n.orderDetailsTooShort,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _parcelCard(
+    AppLocalizations l10n,
+    int index,
+    ParcelDraft parcel,
+    bool editable,
+  ) {
     final controller = ref.read(merchantOrderDraftProvider.notifier);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppTokens.spaceMedium,
@@ -218,22 +357,23 @@ class _CreateMerchantOrderScreenState
             '${l10n.parcel} ${index + 1}',
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          DropdownButtonFormField<String>(
-            key: ValueKey('parcelDestination-$index'),
-            initialValue: parcel.destinationLabel,
-            decoration: InputDecoration(labelText: l10n.destination),
-            items: merchantDestinations
-                .map(
-                  (value) => DropdownMenuItem(
-                    value: value,
-                    child: Text(merchantDestinationLabel(context, value)),
-                  ),
-                )
-                .toList(),
-            onChanged: _busy || _locked
+          TextFormField(
+            key: ValueKey('parcelDropoff-$index'),
+            initialValue: parcel.dropoffDetails,
+            enabled: editable,
+            maxLength: routeDetailsMaxLength,
+            minLines: 1,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: l10n.merchantDropoffDetailsLabel,
+              hintText: l10n.merchantDropoffDetailsHint,
+              prefixIcon: const Icon(Icons.place_outlined),
+            ),
+            validator: (value) => routeDetailsValid(value ?? '')
                 ? null
-                : (value) =>
-                      controller.updateParcel(index, destinationLabel: value),
+                : l10n.orderDetailsTooShort,
+            onChanged: (value) =>
+                controller.updateParcel(index, dropoffDetails: value),
           ),
           DropdownButtonFormField<String>(
             key: ValueKey('parcelSize-$index'),
@@ -244,9 +384,9 @@ class _CreateMerchantOrderScreenState
                   (value) => DropdownMenuItem(value: value, child: Text(value)),
                 )
                 .toList(),
-            onChanged: _busy || _locked
-                ? null
-                : (value) => controller.updateParcel(index, size: value),
+            onChanged: editable
+                ? (value) => controller.updateParcel(index, size: value)
+                : null,
           ),
           DropdownButtonFormField<String>(
             key: ValueKey('parcelPriority-$index'),
@@ -260,16 +400,45 @@ class _CreateMerchantOrderScreenState
                   ),
                 )
                 .toList(),
-            onChanged: _busy || _locked
+            onChanged: editable
+                ? (value) => controller.updateParcel(index, priority: value)
+                : null,
+          ),
+          TextFormField(
+            key: ValueKey('parcelReceiverName-$index'),
+            initialValue: parcel.receiverName,
+            enabled: editable,
+            maxLength: receiverNameMaxLength,
+            decoration: InputDecoration(
+              labelText: l10n.merchantReceiverNameLabel,
+              prefixIcon: const Icon(Icons.person_outline),
+              counterText: '',
+            ),
+            onChanged: (value) =>
+                controller.updateParcel(index, receiverName: value),
+          ),
+          TextFormField(
+            key: ValueKey('parcelReceiverPhone-$index'),
+            initialValue: parcel.receiverPhone,
+            enabled: editable,
+            keyboardType: TextInputType.phone,
+            textDirection: TextDirection.ltr,
+            maxLength: 32,
+            decoration: InputDecoration(
+              labelText: l10n.merchantReceiverPhoneLabel,
+              prefixIcon: const Icon(Icons.phone_outlined),
+              counterText: '',
+            ),
+            validator: (value) => receiverPhoneValid(value ?? '')
                 ? null
-                : (value) => controller.updateParcel(index, priority: value),
+                : l10n.merchantReceiverPhoneInvalid,
+            onChanged: (value) =>
+                controller.updateParcel(index, receiverPhone: value),
           ),
           if (controller.canRemove)
             TextButton.icon(
               key: ValueKey('removeParcel-$index'),
-              onPressed: _busy || _locked
-                  ? null
-                  : () => controller.removeParcel(index),
+              onPressed: editable ? () => controller.removeParcel(index) : null,
               icon: const Icon(Icons.remove_circle_outline),
               label: Text(l10n.removeParcel),
             ),
@@ -278,7 +447,58 @@ class _CreateMerchantOrderScreenState
     );
   }
 
+  /// The saved order, read-only, exactly as it will be resent.
+  Widget _pendingCard(
+    AppLocalizations l10n,
+    PendingOrderPreview pending,
+    List<OperatingRoute> routes,
+  ) {
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    final route = routes
+        .where((value) => value.id == pending.serviceRouteId)
+        .firstOrNull;
+    return DarbCard(
+      key: const ValueKey('merchantPendingOrder'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.merchantPendingOrderTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: AppTokens.spaceSmall),
+          if (!pending.legacy)
+            DetailRow(
+              label: l10n.orderRouteLabel,
+              value: route?.displayName(arabic: arabic) ?? l10n.orderRouteSaved,
+              icon: Icons.route_outlined,
+            ),
+          DetailRow(
+            label: l10n.pickup,
+            value: pending.legacy
+                ? localizedCorridorPlace(context, pending.pickup)
+                : pending.pickup,
+            icon: Icons.storefront_outlined,
+            valueKey: const ValueKey('merchantPickupLabel'),
+          ),
+          for (final (index, parcel) in pending.parcels.indexed)
+            DetailRow(
+              label: '${l10n.parcel} ${index + 1}',
+              value:
+                  '${pending.legacy ? merchantDestinationLabel(context, parcel.dropoff) : parcel.dropoff}'
+                  ' · ${parcel.size} · ${merchantPriorityLabel(l10n, parcel.priority)}',
+              icon: Icons.place_outlined,
+            ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _submit() async {
+    if (!_locked && !(_formKey.currentState?.validate() ?? false)) return;
+    final routes = ref.read(operatingRoutesProvider).value ?? const [];
+    final routeId = _selectedRoute(routes);
+    if (!_locked && routeId == null) return;
     final service = ref.read(merchantOrderSubmissionProvider);
     setState(() {
       _busy = true;
@@ -287,13 +507,23 @@ class _CreateMerchantOrderScreenState
     try {
       final order = _locked
           ? await service.resume()
-          : await service.submit(ref.read(merchantOrderDraftProvider));
+          : await service.submit(
+              serviceRouteId: routeId!,
+              pickupDetails: _pickupDetails.text,
+              parcels: ref.read(merchantOrderDraftProvider),
+            );
       ref.invalidate(merchantDashboardProvider);
       if (mounted) await _openOrder(order.id);
     } catch (error) {
       if (!mounted) return;
+      if (error is ApiException && error.message == 'route_unavailable') {
+        // The route was turned off; offer the current list again.
+        ref.invalidate(operatingRoutesProvider);
+      }
       try {
-        _locked = await service.pending() != null;
+        final pending = await service.pending();
+        _locked = pending != null;
+        _pending = pending == null ? null : _preview(pending);
       } catch (_) {
         _locked = true;
       }

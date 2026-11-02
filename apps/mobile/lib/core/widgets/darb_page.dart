@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
-import 'masari_card.dart';
+import 'darb_card.dart';
 
 /// Scrollable single-column page body used by the simple Darb form screens
 /// (verify, recovery, status): a centred icon header, then the content with
@@ -110,7 +110,7 @@ class DarbFormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MasariCard(
+    return DarbCard(
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -4,10 +4,10 @@
 
 Set-StrictMode -Version Latest
 
-$script:Target = "Masari/AweenRayehPartnerKey"
+$script:Target = "Darb/AweenRayehPartnerKey"
 
-if (-not ("Masari.CredentialStore" -as [type])) {
-  Add-Type -Namespace Masari -Name CredentialStore -MemberDefinition @'
+if (-not ("Darb.CredentialStore" -as [type])) {
+  Add-Type -Namespace Darb -Name CredentialStore -MemberDefinition @'
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 public struct CREDENTIAL {
   public uint Flags; public uint Type; public string TargetName; public string Comment;
@@ -36,14 +36,14 @@ function Save-PartnerKey {
     $blob = [Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
     try {
       [Runtime.InteropServices.Marshal]::Copy($bytes, 0, $blob, $bytes.Length)
-      $credential = New-Object Masari.CredentialStore+CREDENTIAL
+      $credential = New-Object Darb.CredentialStore+CREDENTIAL
       $credential.Type = 1          # CRED_TYPE_GENERIC
       $credential.TargetName = $script:Target
       $credential.CredentialBlobSize = $bytes.Length
       $credential.CredentialBlob = $blob
       $credential.Persist = 2       # CRED_PERSIST_LOCAL_MACHINE
-      $credential.UserName = "masari-partner-key"
-      if (-not [Masari.CredentialStore]::CredWrite([ref]$credential, 0)) {
+      $credential.UserName = "darb-partner-key"
+      if (-not [Darb.CredentialStore]::CredWrite([ref]$credential, 0)) {
         throw "Windows refused to store the credential (error $([Runtime.InteropServices.Marshal]::GetLastWin32Error()))."
       }
     } finally {
@@ -57,8 +57,8 @@ function Save-PartnerKey {
 
 function Test-PartnerKey {
   $pointer = [IntPtr]::Zero
-  if ([Masari.CredentialStore]::CredRead($script:Target, 1, 0, [ref]$pointer)) {
-    [Masari.CredentialStore]::CredFree($pointer)
+  if ([Darb.CredentialStore]::CredRead($script:Target, 1, 0, [ref]$pointer)) {
+    [Darb.CredentialStore]::CredFree($pointer)
     return $true
   }
   return $false
@@ -68,19 +68,19 @@ function Test-PartnerKey {
 # environment and never print or log it.
 function Get-PartnerKey {
   $pointer = [IntPtr]::Zero
-  if (-not [Masari.CredentialStore]::CredRead($script:Target, 1, 0, [ref]$pointer)) {
+  if (-not [Darb.CredentialStore]::CredRead($script:Target, 1, 0, [ref]$pointer)) {
     throw "No partner key is stored. Run scripts/provider-key/set-partner-key.ps1 first."
   }
   try {
-    $credential = [Runtime.InteropServices.Marshal]::PtrToStructure($pointer, [type][Masari.CredentialStore+CREDENTIAL])
+    $credential = [Runtime.InteropServices.Marshal]::PtrToStructure($pointer, [type][Darb.CredentialStore+CREDENTIAL])
     return [Runtime.InteropServices.Marshal]::PtrToStringUni($credential.CredentialBlob, [int]($credential.CredentialBlobSize / 2))
   } finally {
-    [Masari.CredentialStore]::CredFree($pointer)
+    [Darb.CredentialStore]::CredFree($pointer)
   }
 }
 
 function Remove-PartnerKey {
-  [void][Masari.CredentialStore]::CredDelete($script:Target, 1, 0)
+  [void][Darb.CredentialStore]::CredDelete($script:Target, 1, 0)
 }
 
 Export-ModuleMember -Function Save-PartnerKey, Test-PartnerKey, Get-PartnerKey, Remove-PartnerKey

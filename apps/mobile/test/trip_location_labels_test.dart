@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/features/checkpoints/application/checkpoint_controller.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
-import 'package:masari_mobile/features/trips/application/passenger_trip_controller.dart';
-import 'package:masari_mobile/features/trips/data/trip_models.dart';
-import 'package:masari_mobile/features/trips/presentation/passenger_trip_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/features/checkpoints/application/checkpoint_controller.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/features/trips/application/passenger_trip_controller.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
+import 'package:darb_mobile/features/trips/presentation/passenger_trip_screen.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 // These tests catch destructive endpoint parsing in the actual screen/model.
 // Only data loading is replaced; headers, details and map configuration are real.
@@ -201,7 +201,7 @@ Future<void> _verifyScreen(
   expect(find.text('$headerOrigin  →  $headerDestination'), findsOneWidget);
   expect(find.text(displayedOrigin ?? origin), findsWidgets);
   expect(find.text(displayedDestination ?? destination), findsWidgets);
-  final map = tester.widget<MasariMap>(find.byType(MasariMap));
+  final map = tester.widget<DarbMap>(find.byType(DarbMap));
   if (hasCoordinates) {
     final start = map.markers.singleWhere(
       (m) => m.icon == Icons.trip_origin_rounded,

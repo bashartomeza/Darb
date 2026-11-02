@@ -1,8 +1,11 @@
 // Automated checks of the test plan's API-level items, run against the live test
-// API on the disposable masari_demo database. It resets the data, exercises
+// API on the disposable darb_demo database. It resets the data, exercises
 // sign-in, role boundaries, approvals, sign-up with documents and the safety
 // rules, then runs the existing demo smoke suites for the main story. Prints one
 // line per check and a summary; exits non-zero if anything failed.
+//
+// Start the API with `start.ps1 -Disposable` first: the default permanent `darb`
+// database refuses the reset these checks begin with.
 //
 //   node scripts/test-env/run-checks.mjs
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -27,11 +30,11 @@ powershellReset();
 const login = async (email, password, path = "/auth/login") => http(path, { method: "POST", body: { email, password } });
 const loginByPhone = async (phone, password) => http("/auth/mobile/login", { method: "POST", body: { phone, password } });
 const E = {
-  admin: ["demo.admin@masari.app", env.DEMO_ADMIN_PASSWORD],
-  passenger: ["demo.passenger@masari.app", env.DEMO_PASSENGER_PASSWORD],
-  driver: ["demo.driver@masari.app", env.DEMO_DRIVER_PASSWORD],
-  driver2: ["demo.driver2@masari.app", env.DEMO_DRIVER_PASSWORD],
-  merchant: ["demo.merchant@masari.app", env.DEMO_MERCHANT_PASSWORD],
+  admin: ["demo.admin@darb.app", env.DEMO_ADMIN_PASSWORD],
+  passenger: ["demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD],
+  driver: ["demo.driver@darb.app", env.DEMO_DRIVER_PASSWORD],
+  driver2: ["demo.driver2@darb.app", env.DEMO_DRIVER_PASSWORD],
+  merchant: ["demo.merchant@darb.app", env.DEMO_MERCHANT_PASSWORD],
 };
 const tokens = {};
 
@@ -111,9 +114,9 @@ await check("A08", "suspend needs a reason, blocks sign-in, reactivate restores 
 
 // --- Approvals on the seeded accounts
 const seededLogin = (email, password) => login(email, password);
-const pendingMerchantEmail = "demo.pending.merchant@masari.app";
-const pendingDriverEmail = "demo.pending.driver@masari.app";
-const rejectedDriverEmail = "demo.rejected.driver@masari.app";
+const pendingMerchantEmail = "demo.pending.merchant@darb.app";
+const pendingDriverEmail = "demo.pending.driver@darb.app";
+const rejectedDriverEmail = "demo.rejected.driver@darb.app";
 await check("F02", "pending merchant and pending driver cannot sign in", async () => {
   must([401, 403].includes((await seededLogin(pendingMerchantEmail, env.DEMO_MERCHANT_PASSWORD)).status), "pending merchant got in");
   must([401, 403].includes((await seededLogin(pendingDriverEmail, env.DEMO_DRIVER_PASSWORD)).status), "pending driver got in");

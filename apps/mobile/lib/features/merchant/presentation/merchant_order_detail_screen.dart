@@ -2,18 +2,19 @@ import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
+import 'merchant_order_route_map.dart';
 import 'merchant_ui.dart';
 
 class MerchantOrderDetailScreen extends ConsumerStatefulWidget {
@@ -87,7 +88,7 @@ class _MerchantOrderDetailScreenState
         // ------------------------------------------------------------------
         // Summary: what this order is and where it stands.
         // ------------------------------------------------------------------
-        MasariInfoCard(
+        DarbInfoCard(
           title: l10n.orderDetails,
           icon: Icons.inventory_2_outlined,
           statusLabel: merchantStatusLabel(l10n, order.status),
@@ -102,10 +103,18 @@ class _MerchantOrderDetailScreenState
               : null,
           body: Column(
             children: [
+              if (order.routeName(arabic: _arabic(context)) case final route?)
+                DetailRow(
+                  label: l10n.orderRouteLabel,
+                  value: route,
+                  icon: Icons.route_outlined,
+                  valueKey: const ValueKey('merchantOrderRoute'),
+                ),
               DetailRow(
                 label: l10n.pickup,
-                value: l10n.lockedCorridor,
+                value: merchantPickupText(context, order),
                 icon: Icons.place_outlined,
+                valueKey: const ValueKey('merchantOrderPickup'),
               ),
               DetailRow(
                 label: l10n.parcelCount,
@@ -123,6 +132,20 @@ class _MerchantOrderDetailScreenState
         const SizedBox(height: AppTokens.spaceLarge),
 
         // ------------------------------------------------------------------
+        // Route: the order's own pickup and parcel drop-offs on the map.
+        // ------------------------------------------------------------------
+        if (order.routeWaypoints.length >= 2) ...[
+          DarbSection(
+            title: l10n.merchantOrderMapTitle,
+            child: MerchantOrderRouteMap(
+              key: const ValueKey('merchantOrderMap'),
+              order: order,
+            ),
+          ),
+          const SizedBox(height: AppTokens.spaceLarge),
+        ],
+
+        // ------------------------------------------------------------------
         // Receiver hand-over code: what the receiver tells the driver at delivery.
         // ------------------------------------------------------------------
         if (order.status != 'cancelled' &&
@@ -135,7 +158,7 @@ class _MerchantOrderDetailScreenState
         // ------------------------------------------------------------------
         // Batch: consolidating parcels into one corridor trip.
         // ------------------------------------------------------------------
-        MasariSection(
+        DarbSection(
           title: l10n.parcelBatch,
           child: _BatchCard(
             order: order,
@@ -148,7 +171,7 @@ class _MerchantOrderDetailScreenState
         // ------------------------------------------------------------------
         // Matching: finding a driver route for the batch.
         // ------------------------------------------------------------------
-        MasariSection(
+        DarbSection(
           title: l10n.matchResult,
           child: _MatchCard(state: state, busy: _busy, onRunMatch: _runMatch),
         ),
@@ -163,7 +186,7 @@ class _MerchantOrderDetailScreenState
         // rather than something the merchant acts on here.
         // ------------------------------------------------------------------
         const SizedBox(height: AppTokens.spaceLarge),
-        MasariSection(
+        DarbSection(
           title: '${l10n.parcel} (${order.parcels.length})',
           child: Column(
             children: [
@@ -251,7 +274,7 @@ class _BatchCard extends StatelessWidget {
     final batch = order.latestBatch;
 
     if (batch == null) {
-      return MasariInfoCard(
+      return DarbInfoCard(
         title: l10n.createBatch,
         subtitle: l10n.parcelBatchExplanationDemo(order.parcels.length),
         icon: Icons.layers_outlined,
@@ -264,7 +287,7 @@ class _BatchCard extends StatelessWidget {
       );
     }
 
-    return MasariInfoCard(
+    return DarbInfoCard(
       title: l10n.parcelBatch,
       icon: Icons.layers_outlined,
       statusLabel: merchantStatusLabel(l10n, batch.status),
@@ -306,7 +329,7 @@ class _MatchCard extends StatelessWidget {
     final match = state.latestMatch;
 
     if (match == null || state.canRunMatch) {
-      return MasariInfoCard(
+      return DarbInfoCard(
         title: l10n.runMatching,
         subtitle: state.canRunMatch ? null : l10n.matchingUnavailable,
         icon: Icons.travel_explore_outlined,
@@ -321,7 +344,7 @@ class _MatchCard extends StatelessWidget {
       );
     }
 
-    return MasariInfoCard(
+    return DarbInfoCard(
       title: l10n.matchResult,
       icon: Icons.travel_explore_outlined,
       statusLabel: merchantStatusLabel(l10n, match.status),
@@ -389,13 +412,19 @@ class _ParcelRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  merchantDestinationLabel(context, parcel.destinationLabel),
+                  merchantParcelDropoffText(context, parcel),
+                  key: ValueKey('merchantParcelDropoff-$index'),
                   style: theme.textTheme.titleSmall,
-                  maxLines: 1,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${parcel.size} · ${merchantPriorityLabel(l10n, parcel.priority)}',
+                  [
+                    parcel.size,
+                    merchantPriorityLabel(l10n, parcel.priority),
+                    if (parcel.receiverName != null)
+                      '${l10n.merchantReceiverLabel}: ${parcel.receiverName}',
+                  ].join(' · '),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppTheme.onSurfaceVariant,
                   ),
@@ -415,6 +444,9 @@ class _ParcelRow extends StatelessWidget {
     );
   }
 }
+
+bool _arabic(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar';
 
 String _formatDate(BuildContext context, DateTime value) {
   return MaterialLocalizations.of(context).formatMediumDate(value.toLocal());

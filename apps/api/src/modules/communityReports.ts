@@ -26,6 +26,22 @@ export const ADMIN_VERIFIED_CATEGORIES: readonly string[] = [
   "checkpoint_closed_marked_open",
   "checkpoint_outdated"
 ];
+/**
+ * Categories that describe a place on the map. A report in one of them needs a
+ * position, otherwise it can never be shown where it applies.
+ */
+export const LOCATED_CATEGORIES: readonly string[] = [
+  "road_closure",
+  "road_reopened",
+  "road_congestion",
+  "checkpoint_open_marked_closed",
+  "checkpoint_closed_marked_open",
+  "checkpoint_outdated",
+  "safety_alert",
+  "incorrect_map_info"
+];
+/** Darb's service area (same box as the app's map, apps/mobile/lib/core/maps/service_area.dart). */
+export const SERVICE_AREA = { minLat: 29.4, maxLat: 33.4, minLng: 34.2, maxLng: 35.95 } as const;
 export const MAX_REPORTS_PER_USER_PER_HOUR = 10;
 /** Distinct user flags after which a report is queued for Admin review. */
 export const FLAGS_BEFORE_ADMIN_REVIEW = 3;
@@ -49,7 +65,21 @@ const createSchema = z
   .refine((value) => (value.latitude === undefined) === (value.longitude === undefined), {
     message: "coordinates_incomplete",
     path: ["latitude"]
-  });
+  })
+  .refine((value) => value.latitude !== undefined || !LOCATED_CATEGORIES.includes(value.category), {
+    message: "location_required",
+    path: ["latitude"]
+  })
+  .refine(
+    (value) =>
+      value.latitude === undefined ||
+      value.longitude === undefined ||
+      (value.latitude >= SERVICE_AREA.minLat &&
+        value.latitude <= SERVICE_AREA.maxLat &&
+        value.longitude >= SERVICE_AREA.minLng &&
+        value.longitude <= SERVICE_AREA.maxLng),
+    { message: "location_outside_service_area", path: ["latitude"] }
+  );
 
 const listSchema = z.object({
   category: z.enum(COMMUNITY_REPORT_CATEGORIES).optional(),

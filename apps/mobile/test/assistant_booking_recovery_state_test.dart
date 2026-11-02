@@ -2,30 +2,36 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
-import 'package:masari_mobile/features/assistant/application/passenger_assistant_controller.dart';
-import 'package:masari_mobile/features/assistant/data/passenger_assistant_repository.dart';
-import 'package:masari_mobile/features/assistant/data/assistant_conversation_storage.dart';
-import 'package:masari_mobile/features/assistant/domain/passenger_assistant_models.dart';
-import 'package:masari_mobile/features/assistant/presentation/passenger_assistant_screen.dart';
-import 'package:masari_mobile/features/passenger/application/legacy_passenger_request_mutation.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/assistant/application/passenger_assistant_controller.dart';
+import 'package:darb_mobile/features/assistant/data/passenger_assistant_repository.dart';
+import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
+import 'package:darb_mobile/features/assistant/presentation/passenger_assistant_screen.dart';
+import 'package:darb_mobile/features/passenger/application/legacy_passenger_request_mutation.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import 'support/auth_test_support.dart';
 import 'support/booking_recovery_test_support.dart';
 
 final _draft = PassengerAssistantTripDraft(
   pickupKey: 'bab_al_zawiya',
+  pickupLat: 31.5326,
+  pickupLng: 35.0998,
+  destinationLat: 31.7054,
+  destinationLng: 35.2024,
   pickupLabel: 'Bab Al-Zawiya',
   destinationKey: 'bethlehem',
   destinationLabel: 'Bethlehem Center',
   preferredTime: DateTime.utc(2030, 1, 2, 12),
   passengerCount: 1,
+  // Confirmed in the review card: the route and the exact places.
+  serviceRouteId: 'route-heb-bth',
+  pickupDetails: 'Bab Al-Zawiya, next to the pharmacy',
+  dropoffDetails: 'Bethlehem Center bus stop',
 );
 const _option = PassengerAssistantTripOption(
   id: 'route',
@@ -42,7 +48,8 @@ void main() {
       'late actor A $operation completion cannot publish or persist into actor B',
       () async {
         final delayed = Completer<dynamic>();
-        final storage = _Conversations(
+        final repo = _Delayed(
+          delayed,
           PassengerAssistantState(
             phase: operation == 'selection'
                 ? PassengerAssistantPhase.result
@@ -50,15 +57,14 @@ void main() {
             messages: const [
               PassengerAssistantMessage.passenger('Actor A private message'),
             ],
+            conversationId: 'conversation-A',
             draft: _draft,
             tripOptions: const [_option],
           ),
         );
-        final repo = _Delayed(delayed);
         final container = ProviderContainer(
           overrides: [
             authControllerProvider.overrideWith(_Auth.new),
-            assistantConversationStorageProvider.overrideWithValue(storage),
             passengerAssistantRepositoryProvider.overrideWithValue(repo),
             legacyPassengerRequestMutationProvider.overrideWithValue(
               testBookingMutation(),
@@ -77,6 +83,8 @@ void main() {
             ? controller.selectTrip(_option)
             : controller.submit('A followup', locale: 'en');
         await Future<void>.delayed(Duration.zero);
+        // Actor B's account has no saved chat.
+        repo.conversation = const PassengerAssistantState();
         container.read(authControllerProvider.notifier).state = const AsyncData(
           AuthState.authenticated(
             AuthUser(
@@ -102,7 +110,8 @@ void main() {
             .value!;
         expect(state.messages, isEmpty);
         expect(state.draft, isNull);
-        expect(storage.saved['B']?.messages ?? [], isEmpty);
+        expect(state.conversationId, isNull);
+        expect(repo.links, isEmpty);
       },
     );
   }
@@ -111,13 +120,12 @@ void main() {
     'assistant restart exposes the unresolved selection without supplying its previous draft',
     (tester) async {
       final pending = MemoryBookingStorage();
-      final conversations = _Conversations(
-        PassengerAssistantState(
-          phase: PassengerAssistantPhase.requestReview,
-          draft: _draft,
-        ),
+      var conversation = PassengerAssistantState(
+        phase: PassengerAssistantPhase.requestReview,
+        draft: _draft,
       );
       final keys = <String>[];
+      final bodies = <Map<String, dynamic>>[];
       var messageCalls = 0;
       final saved = <String>{};
       final auth = TestAuthenticatedClient(
@@ -146,6 +154,7 @@ void main() {
           if (request.url.path.endsWith('/passenger/requests')) {
             final key = request.headers['idempotency-key']!;
             keys.add(key);
+            bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
             saved.add(key);
             if (keys.length == 1) {
               throw http.ClientException('saved response lost');
@@ -158,14 +167,14 @@ void main() {
       ProviderContainer create() => ProviderContainer(
         overrides: [
           authControllerProvider.overrideWith(_Auth.new),
-          assistantConversationStorageProvider.overrideWithValue(conversations),
           legacyPassengerRequestMutationProvider.overrideWithValue(
             testBookingMutation(storage: pending, actor: () => 'A'),
           ),
           passengerAssistantRepositoryProvider.overrideWith(
-            (ref) => ApiPassengerAssistantRepository(
+            (ref) => _Seeded(
               apiClient: auth.client,
               mutation: ref.watch(legacyPassengerRequestMutationProvider),
+              conversation: () => conversation,
             ),
           ),
         ],
@@ -185,9 +194,9 @@ void main() {
             .single,
       );
       first.dispose();
-      // Only persisted messages survive the ordinary conversation storage. The
-      // original draft and selected option must come from the durable mutation.
-      conversations.initial = const PassengerAssistantState();
+      // Only messages survive in the saved chat. The original draft and
+      // selected option must come from the durable mutation.
+      conversation = const PassengerAssistantState();
       final reopened = create();
       addTearDown(reopened.dispose);
       await reopened.read(authControllerProvider.future);
@@ -196,6 +205,14 @@ void main() {
           .read(passengerAssistantControllerProvider.notifier)
           .submit('A different new trip', locale: 'en');
       expect(messageCalls, 0);
+      // The restored draft is the confirmed one: same route, same places.
+      final restored = reopened
+          .read(passengerAssistantControllerProvider)
+          .value!
+          .draft!;
+      expect(restored.serviceRouteId, 'route-heb-bth');
+      expect(restored.pickupDetails, 'Bab Al-Zawiya, next to the pharmacy');
+      expect(restored.dropoffDetails, 'Bethlehem Center bus stop');
       final router = GoRouter(
         routes: [
           GoRoute(
@@ -231,6 +248,17 @@ void main() {
       expect(find.text('Matched recovered'), findsOneWidget);
       expect(keys, [keys.first, keys.first]);
       expect(saved.length, 1);
+      // The replay sends the very same route body, never coordinates.
+      expect(bodies, hasLength(2));
+      expect(jsonEncode(bodies.last), jsonEncode(bodies.first));
+      expect(bodies.first, {
+        'service_route_id': 'route-heb-bth',
+        'pickup_details': 'Bab Al-Zawiya, next to the pharmacy',
+        'dropoff_details': 'Bethlehem Center bus stop',
+        'preferred_time': '2030-01-02T12:00:00.000Z',
+        'passenger_count': 1,
+        'selected_driver_route_id': 'route',
+      });
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
@@ -297,22 +325,32 @@ class _Auth extends AuthController {
   );
 }
 
-class _Conversations extends AssistantConversationStorage {
-  _Conversations(this.initial) : super(const FlutterSecureStorage());
-  PassengerAssistantState initial;
-  final saved = <String, PassengerAssistantState>{};
+/// Real API repository whose saved chat is supplied by the test.
+class _Seeded extends ApiPassengerAssistantRepository {
+  _Seeded({
+    required super.apiClient,
+    super.mutation,
+    required this.conversation,
+  });
+  final PassengerAssistantState Function() conversation;
   @override
-  Future<PassengerAssistantState> read(String userId) async =>
-      userId == 'A' ? initial : const PassengerAssistantState();
-  @override
-  Future<void> save(String userId, PassengerAssistantState state) async {
-    saved[userId] = state;
-  }
+  Future<PassengerAssistantState> loadConversation() async => conversation();
 }
 
 class _Delayed implements PassengerAssistantRepository {
-  _Delayed(this.response);
+  _Delayed(this.response, this.conversation);
   final Completer<dynamic> response;
+  PassengerAssistantState conversation;
+  final links = <String>[];
+  @override
+  Future<PassengerAssistantState> loadConversation() async => conversation;
+  @override
+  Future<void> clearConversation() async {}
+  @override
+  Future<void> linkSavedRequest({
+    required String conversationId,
+    required String requestId,
+  }) async => links.add('$conversationId:$requestId');
   @override
   Future<List<PassengerAssistantTripOption>> searchTrips(
     PassengerAssistantTripDraft draft,

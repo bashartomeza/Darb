@@ -2,11 +2,11 @@ import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/merchant_controller.dart';
@@ -94,9 +94,9 @@ class MerchantShipmentsScreen extends ConsumerWidget {
                 ),
 
                 const SizedBox(height: AppTokens.spaceLarge),
-                MasariSection(
+                DarbSection(
                   title: l10n.merchantMatchInbox,
-                  child: MasariInfoCard(
+                  child: DarbInfoCard(
                     title: l10n.matchInbox,
                     icon: Icons.inbox_outlined,
                     body: StatStrip(
@@ -137,6 +137,9 @@ class _OrderCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final material = MaterialLocalizations.of(context);
     final batch = order.latestBatch;
+    final routeName = order.routeName(
+      arabic: Localizations.localeOf(context).languageCode == 'ar',
+    );
 
     // Parcels can fan out to several destinations, so the card names the set
     // rather than pretending there is one.
@@ -145,7 +148,7 @@ class _OrderCard extends StatelessWidget {
         merchantDestinationLabel(context, parcel.destinationLabel),
     };
 
-    return MasariInfoCard(
+    return DarbInfoCard(
       key: ValueKey('merchantShipment-${order.id}'),
       title: l10n.orderReference(order.id.substring(0, 6)),
       icon: Icons.inventory_2_outlined,
@@ -153,15 +156,29 @@ class _OrderCard extends StatelessWidget {
       statusTone: statusToneFor(order.status),
       body: Column(
         children: [
-          RouteChip(
-            from: localizedCorridorPlace(context, order.pickupLabel),
-            // A bare count would read as a place name, so the plural case is
-            // spelled out.
-            to: destinations.length == 1
-                ? destinations.first
-                : l10n.destinationCount(destinations.length),
-            compact: true,
-          ),
+          // Route orders are named by their route and the merchant's own
+          // pickup words; older orders keep their corridor places.
+          if (routeName != null) ...[
+            DetailRow(
+              label: l10n.orderRouteLabel,
+              value: routeName,
+              icon: Icons.route_outlined,
+            ),
+            DetailRow(
+              label: l10n.pickup,
+              value: merchantPickupText(context, order),
+              icon: Icons.storefront_outlined,
+            ),
+          ] else
+            RouteChip(
+              from: localizedCorridorPlace(context, order.pickupLabel),
+              // A bare count would read as a place name, so the plural case
+              // is spelled out.
+              to: destinations.length == 1
+                  ? destinations.first
+                  : l10n.destinationCount(destinations.length),
+              compact: true,
+            ),
           const SizedBox(height: AppTokens.spaceSmall),
           DetailRow(
             label: l10n.parcelCount,

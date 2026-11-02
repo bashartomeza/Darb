@@ -3,20 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/location/location_service.dart';
-import 'package:masari_mobile/core/widgets/masari_map.dart';
-import 'package:masari_mobile/features/auth/application/auth_controller.dart';
-import 'package:masari_mobile/features/auth/data/session_coordinator.dart';
-import 'package:masari_mobile/features/checkpoints/presentation/checkpoint_sheet.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/community_reports/application/community_reports_controller.dart';
-import 'package:masari_mobile/features/community_reports/data/community_report_models.dart';
-import 'package:masari_mobile/features/driver/application/driver_controller.dart';
-import 'package:masari_mobile/features/driver/data/driver_models.dart';
-import 'package:masari_mobile/features/driver/presentation/driver_trip_screen.dart';
-import 'package:masari_mobile/features/passenger/application/passenger_map_controller.dart';
-import 'package:masari_mobile/features/passenger/presentation/passenger_map_alerts_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/location/location_service.dart';
+import 'package:darb_mobile/core/widgets/darb_map.dart';
+import 'package:darb_mobile/features/auth/application/auth_controller.dart';
+import 'package:darb_mobile/features/auth/data/session_coordinator.dart';
+import 'package:darb_mobile/features/checkpoints/presentation/checkpoint_sheet.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/community_reports/application/community_reports_controller.dart';
+import 'package:darb_mobile/features/community_reports/data/community_report_models.dart';
+import 'package:darb_mobile/features/driver/application/driver_controller.dart';
+import 'package:darb_mobile/features/driver/data/driver_models.dart';
+import 'package:darb_mobile/features/driver/presentation/driver_trip_screen.dart';
+import 'package:darb_mobile/features/passenger/application/passenger_map_controller.dart';
+import 'package:darb_mobile/features/passenger/presentation/passenger_map_alerts_screen.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/checkpoint_test_harness.dart';
 
@@ -90,13 +90,13 @@ void main() {
                 Directionality.of(tester.element(screen)),
                 locale == 'ar' ? TextDirection.rtl : TextDirection.ltr,
               );
-              final mapFinder = find.byType(MasariMap);
+              final mapFinder = find.byType(DarbMap);
               expect(mapFinder, findsOneWidget);
               final marker = tester
-                  .widget<MasariMap>(mapFinder)
+                  .widget<DarbMap>(mapFinder)
                   .markers
                   .singleWhere(
-                    (marker) => marker.type == MasariMapMarkerType.checkpoint,
+                    (marker) => marker.type == DarbMapMarkerType.checkpoint,
                   );
               if (!card) {
                 expect(
@@ -118,14 +118,13 @@ void main() {
                       .logout(),
                 );
                 await tester.pumpAndSettle();
-                expect(find.byType(MasariMap), findsOneWidget);
+                expect(find.byType(DarbMap), findsOneWidget);
                 expect(
                   tester
-                      .widget<MasariMap>(mapFinder)
+                      .widget<DarbMap>(mapFinder)
                       .markers
                       .where(
-                        (marker) =>
-                            marker.type == MasariMapMarkerType.checkpoint,
+                        (marker) => marker.type == DarbMapMarkerType.checkpoint,
                       ),
                   isEmpty,
                 );

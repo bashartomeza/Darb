@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/onboarding/data/onboarding_repository.dart';
-import 'package:masari_mobile/features/onboarding/domain/onboarding_models.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/onboarding/data/onboarding_repository.dart';
+import 'package:darb_mobile/features/onboarding/domain/onboarding_models.dart';
 
 void main() {
   test('disabled config parses and exposes no registration roles', () async {

@@ -28,7 +28,7 @@ jobs:
       - name: Generate Prisma client for configuration tests
         run: npm run prisma:generate
         env:
-          DATABASE_URL: mysql://127.0.0.1:3306/masari_ci
+          DATABASE_URL: mysql://127.0.0.1:3306/darb_ci
       - name: Production configuration isolation tests
         run: npm run test -- --run src/tests/config.test.ts src/tests/environmentRoutes.test.ts src/tests/httpSecurity.test.ts
       - name: Lockfile remains reproducible

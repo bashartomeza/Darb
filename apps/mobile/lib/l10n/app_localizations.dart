@@ -188,12 +188,6 @@ abstract class AppLocalizations {
   /// **'تدفقات المسافر والسائق والتاجر ستضاف في مراحل لاحقة.'**
   String get businessFlowsPending;
 
-  /// No description provided for @lockedCorridor.
-  ///
-  /// In ar, this message translates to:
-  /// **'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم'**
-  String get lockedCorridor;
-
   /// No description provided for @diagnostics.
   ///
   /// In ar, this message translates to:
@@ -827,7 +821,7 @@ abstract class AppLocalizations {
   /// No description provided for @routeMatchExplanation.
   ///
   /// In ar, this message translates to:
-  /// **'اختار درب هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.'**
+  /// **'اختار درب هذا السائق لأنه يسلك نفس المسار الذي اخترته، ولديه مقعد متاح لك، ودرجة الثقة لديه مرتفعة.'**
   String get routeMatchExplanation;
 
   /// No description provided for @passengerTrip.
@@ -2006,6 +2000,174 @@ abstract class AppLocalizations {
   /// **'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.'**
   String get routeCatalogUnavailable;
 
+  /// No description provided for @orderRouteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار'**
+  String get orderRouteLabel;
+
+  /// No description provided for @orderRouteChoose.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار'**
+  String get orderRouteChoose;
+
+  /// No description provided for @orderRoutesLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل المسارات. تحقّق من الاتصال وحاول مرة أخرى.'**
+  String get orderRoutesLoadFailed;
+
+  /// No description provided for @orderRoutesEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد مسارات تعمل حالياً. حاول لاحقاً.'**
+  String get orderRoutesEmpty;
+
+  /// No description provided for @orderRouteRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار أولاً.'**
+  String get orderRouteRequired;
+
+  /// No description provided for @orderRouteUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المسار لم يعد يعمل. اختر مساراً آخر.'**
+  String get orderRouteUnavailable;
+
+  /// No description provided for @orderRouteSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار المحفوظ'**
+  String get orderRouteSaved;
+
+  /// No description provided for @orderDetailsTooShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب 3 أحرف على الأقل ليجد السائق المكان.'**
+  String get orderDetailsTooShort;
+
+  /// No description provided for @merchantPickupDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل مكان الاستلام'**
+  String get merchantPickupDetailsLabel;
+
+  /// No description provided for @merchantPickupDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: اسم المتجر والشارع'**
+  String get merchantPickupDetailsHint;
+
+  /// No description provided for @merchantDropoffDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل مكان التسليم'**
+  String get merchantDropoffDetailsLabel;
+
+  /// No description provided for @merchantDropoffDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: الحي والشارع وأقرب معلم'**
+  String get merchantDropoffDetailsHint;
+
+  /// No description provided for @merchantReceiverNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المستلم (اختياري)'**
+  String get merchantReceiverNameLabel;
+
+  /// No description provided for @merchantReceiverPhoneLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'هاتف المستلم (اختياري)'**
+  String get merchantReceiverPhoneLabel;
+
+  /// No description provided for @merchantReceiverPhoneInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.'**
+  String get merchantReceiverPhoneInvalid;
+
+  /// No description provided for @merchantReceiverLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستلم'**
+  String get merchantReceiverLabel;
+
+  /// No description provided for @merchantPendingOrderTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب بانتظار التأكيد'**
+  String get merchantPendingOrderTitle;
+
+  /// No description provided for @driverRoutePickTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر مسارك'**
+  String get driverRoutePickTitle;
+
+  /// No description provided for @driverRoutePickBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ستصلك طلبات الركاب والطرود على هذا المسار فقط.'**
+  String get driverRoutePickBody;
+
+  /// No description provided for @driverRoutePickConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ العمل'**
+  String get driverRoutePickConfirm;
+
+  /// No description provided for @driverRouteNone.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تختر مساراً بعد'**
+  String get driverRouteNone;
+
+  /// No description provided for @driverPickupDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان الصعود'**
+  String get driverPickupDetailsLabel;
+
+  /// No description provided for @driverDropoffDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان النزول'**
+  String get driverDropoffDetailsLabel;
+
+  /// No description provided for @driverMerchantPickupLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'استلم الطرود من'**
+  String get driverMerchantPickupLabel;
+
+  /// No description provided for @driverParcelStopsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أماكن تسليم الطرود'**
+  String get driverParcelStopsTitle;
+
+  /// No description provided for @driverParcelStopLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطرد {number}'**
+  String driverParcelStopLabel(int number);
+
+  /// No description provided for @driverReceiverLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستلم'**
+  String get driverReceiverLabel;
+
+  /// No description provided for @driverWhereToFindTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أماكن الاستلام والتسليم'**
+  String get driverWhereToFindTitle;
+
   /// No description provided for @noPublishedRoutes.
   ///
   /// In ar, this message translates to:
@@ -2341,6 +2503,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'العودة إلى لوحة التحكم'**
   String get returnToDashboard;
+
+  /// No description provided for @viewRouteRequests.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض طلبات المسار الخاصة بي'**
+  String get viewRouteRequests;
 
   /// No description provided for @canonicalDriverOffers.
   ///
@@ -3494,6 +3662,192 @@ abstract class AppLocalizations {
   /// **'خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.'**
   String get assistantUnavailable;
 
+  /// No description provided for @assistantHistoryErrorTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل المحادثة'**
+  String get assistantHistoryErrorTitle;
+
+  /// No description provided for @assistantHistoryErrorBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.'**
+  String get assistantHistoryErrorBody;
+
+  /// No description provided for @assistantNewChat.
+  ///
+  /// In ar, this message translates to:
+  /// **'محادثة جديدة'**
+  String get assistantNewChat;
+
+  /// No description provided for @assistantNewChatTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدء محادثة جديدة؟'**
+  String get assistantNewChatTitle;
+
+  /// No description provided for @assistantNewChatBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.'**
+  String get assistantNewChatBody;
+
+  /// No description provided for @assistantNewChatFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.'**
+  String get assistantNewChatFailed;
+
+  /// No description provided for @passengerRouteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار'**
+  String get passengerRouteLabel;
+
+  /// No description provided for @passengerRouteHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار'**
+  String get passengerRouteHint;
+
+  /// No description provided for @passengerRoutesLoading.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحميل المسارات…'**
+  String get passengerRoutesLoading;
+
+  /// No description provided for @passengerRoutesLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل المسارات. تحقّق من اتصالك وحاول مرة أخرى.'**
+  String get passengerRoutesLoadFailed;
+
+  /// No description provided for @passengerRoutesEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد مسارات متاحة حاليًا. يُرجى المحاولة لاحقًا.'**
+  String get passengerRoutesEmpty;
+
+  /// No description provided for @passengerRouteRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار للمتابعة.'**
+  String get passengerRouteRequired;
+
+  /// No description provided for @passengerRouteUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المسار لم يعد متاحًا. اختر مسارًا آخر.'**
+  String get passengerRouteUnavailable;
+
+  /// No description provided for @passengerPickupDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان الصعود بالتحديد'**
+  String get passengerPickupDetailsLabel;
+
+  /// No description provided for @passengerPickupDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: أمام البوابة الرئيسية لجامعة بوليتكنك فلسطين'**
+  String get passengerPickupDetailsHint;
+
+  /// No description provided for @passengerDropoffDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان النزول بالتحديد'**
+  String get passengerDropoffDetailsLabel;
+
+  /// No description provided for @passengerDropoffDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: مجمّع سيارات بيت لحم، بجانب الصيدلية'**
+  String get passengerDropoffDetailsHint;
+
+  /// No description provided for @passengerDetailsHelper.
+  ///
+  /// In ar, this message translates to:
+  /// **'صِف المكان بوضوح ليصل إليه السائق بسهولة.'**
+  String get passengerDetailsHelper;
+
+  /// No description provided for @passengerDetailsTooShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب 3 أحرف على الأقل.'**
+  String get passengerDetailsTooShort;
+
+  /// No description provided for @passengerPickupPoint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان الصعود'**
+  String get passengerPickupPoint;
+
+  /// No description provided for @passengerDropoffPoint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان النزول'**
+  String get passengerDropoffPoint;
+
+  /// No description provided for @assistantRouteChoose.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار المناسب لرحلتك، ثم تأكّد من مكانَي الصعود والنزول.'**
+  String get assistantRouteChoose;
+
+  /// No description provided for @passengerParcelRouteIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار، وصِف مكان استلام الطرد ومكان تسليمه، ثم أخبرنا من سيستلمه.'**
+  String get passengerParcelRouteIntro;
+
+  /// No description provided for @passengerParcelPickupDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان استلام الطرد منك'**
+  String get passengerParcelPickupDetailsLabel;
+
+  /// No description provided for @passengerParcelPickupDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: المحل المجاور لدوار ابن رشد في الخليل'**
+  String get passengerParcelPickupDetailsHint;
+
+  /// No description provided for @passengerParcelDropoffDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان تسليم الطرد'**
+  String get passengerParcelDropoffDetailsLabel;
+
+  /// No description provided for @passengerParcelDropoffDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: بيت المستلم، قرب كنيسة المهد'**
+  String get passengerParcelDropoffDetailsHint;
+
+  /// No description provided for @passengerParcelPreferredTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت المفضّل للاستلام'**
+  String get passengerParcelPreferredTime;
+
+  /// No description provided for @welcomeRoutesTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسارات التي نخدمها'**
+  String get welcomeRoutesTitle;
+
+  /// No description provided for @welcomeRoutesMore.
+  ///
+  /// In ar, this message translates to:
+  /// **'و{count} أخرى'**
+  String welcomeRoutesMore(int count);
+
+  /// No description provided for @welcomeRoutesOffline.
+  ///
+  /// In ar, this message translates to:
+  /// **'ستظهر المسارات عند الاتصال بالإنترنت.'**
+  String get welcomeRoutesOffline;
+
   /// No description provided for @assistantClarificationLabel.
   ///
   /// In ar, this message translates to:
@@ -4057,6 +4411,42 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'أخرى'**
   String get incidentCategoryOther;
+
+  /// No description provided for @myIncidentReports.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلاغاتي'**
+  String get myIncidentReports;
+
+  /// No description provided for @myIncidentReportsEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم ترسل أي بلاغ بعد.'**
+  String get myIncidentReportsEmpty;
+
+  /// No description provided for @myIncidentReportsFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل بلاغاتك.'**
+  String get myIncidentReportsFailed;
+
+  /// No description provided for @incidentStatusOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوح'**
+  String get incidentStatusOpen;
+
+  /// No description provided for @incidentStatusReviewing.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المراجعة'**
+  String get incidentStatusReviewing;
+
+  /// No description provided for @incidentStatusResolved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت المعالجة'**
+  String get incidentStatusResolved;
 
   /// No description provided for @notifIncidentUpdatedTitle.
   ///
@@ -5173,6 +5563,144 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'{up} تأييد، {down} اعتراض'**
   String communityVoteCounts(int up, int down);
+
+  /// No description provided for @mapStraightLineNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر حساب الطريق: يظهر خط مستقيم'**
+  String get mapStraightLineNote;
+
+  /// No description provided for @mapCheckpointsUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات الحواجز غير متوفرة'**
+  String get mapCheckpointsUnavailable;
+
+  /// No description provided for @mapCheckpointsLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل الحواجز'**
+  String get mapCheckpointsLoadFailed;
+
+  /// No description provided for @checkpointOfficialUnknown.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة الرسمية: غير منشورة'**
+  String get checkpointOfficialUnknown;
+
+  /// No description provided for @checkpointEnteringChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'دخول: آخر تغيير {time}'**
+  String checkpointEnteringChanged(String time);
+
+  /// No description provided for @checkpointLeavingChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'خروج: آخر تغيير {time}'**
+  String checkpointLeavingChanged(String time);
+
+  /// No description provided for @checkpointCommunitySays.
+  ///
+  /// In ar, this message translates to:
+  /// **'المجتمع يقول: {status} (غير مؤكد)'**
+  String checkpointCommunitySays(String status);
+
+  /// No description provided for @communityStatusOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوح'**
+  String get communityStatusOpen;
+
+  /// No description provided for @communityStatusClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلق'**
+  String get communityStatusClosed;
+
+  /// No description provided for @communityStatusOutdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'قد تكون الحالة قديمة'**
+  String get communityStatusOutdated;
+
+  /// No description provided for @checkpointPositionOsm.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع: © مساهمو OpenStreetMap (ODbL)'**
+  String get checkpointPositionOsm;
+
+  /// No description provided for @checkpointsUnplacedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'حواجز بلا موقع على الخريطة'**
+  String get checkpointsUnplacedTitle;
+
+  /// No description provided for @checkpointsUnplacedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.'**
+  String get checkpointsUnplacedBody;
+
+  /// No description provided for @communityPickLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط على الخريطة لتحديد المكان'**
+  String get communityPickLocation;
+
+  /// No description provided for @communityUseMyLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدام موقعي الحالي'**
+  String get communityUseMyLocation;
+
+  /// No description provided for @communityLocationRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدد المكان على الخريطة لهذا النوع من البلاغات.'**
+  String get communityLocationRequired;
+
+  /// No description provided for @communityLocationOptional.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع (اختياري)'**
+  String get communityLocationOptional;
+
+  /// No description provided for @communityLocationOutside.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا المكان خارج منطقة خدمة درب.'**
+  String get communityLocationOutside;
+
+  /// No description provided for @communityLocationUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعك الحالي غير متاح.'**
+  String get communityLocationUnavailable;
+
+  /// No description provided for @communityLocationSet.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديد المكان على الخريطة'**
+  String get communityLocationSet;
+
+  /// No description provided for @communityClearLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة المكان'**
+  String get communityClearLocation;
+
+  /// No description provided for @mapRouteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار'**
+  String get mapRouteLabel;
+
+  /// No description provided for @merchantOrderMapTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسار الطلب'**
+  String get merchantOrderMapTitle;
 }
 
 class _AppLocalizationsDelegate

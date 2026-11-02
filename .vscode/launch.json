@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "masari_mobile (demo)",
+      "name": "darb_mobile (demo)",
       "request": "launch",
       "type": "dart",
       "cwd": "apps/mobile",
@@ -10,7 +10,7 @@
       "toolArgs": ["--dart-define-from-file=config/demo.local.json"]
     },
     {
-      "name": "masari_mobile (web/chrome)",
+      "name": "darb_mobile (web/chrome)",
       "request": "launch",
       "type": "dart",
       "cwd": "apps/mobile",
@@ -20,7 +20,7 @@
       "toolArgs": ["--dart-define-from-file=config/demo.web.json"]
     },
     {
-      "name": "masari_mobile (local)",
+      "name": "darb_mobile (local)",
       "request": "launch",
       "type": "dart",
       "cwd": "apps/mobile",

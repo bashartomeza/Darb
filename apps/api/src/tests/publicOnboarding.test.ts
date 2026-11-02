@@ -7,7 +7,7 @@ import { idempotencyPayloadDigest, keyedDigest } from "../lib/keyedDigest.js";
 function disabledConfig() {
   return createConfig({
     APP_ENV: "local",
-    DATABASE_URL: "mysql://local:local@localhost:3306/masari",
+    DATABASE_URL: "mysql://local:local@localhost:3306/darb",
     JWT_SECRET: "public-onboarding-test-jwt-secret-longer-than-thirty-two",
     REFRESH_TOKEN_PEPPER: "public-onboarding-test-refresh-secret-longer-than-thirty-two",
     CORS_ORIGINS: "http://localhost:5173",
@@ -37,10 +37,10 @@ describe("public onboarding boundary", () => {
   it("rejects every production-like attempt to enable public onboarding or fake delivery", () => {
     const base = {
       APP_ENV: "production",
-      DATABASE_URL: "mysql://production:secret@db.internal:3306/masari",
+      DATABASE_URL: "mysql://production:secret@db.internal:3306/darb",
       JWT_SECRET: "production-jwt-secret-longer-than-thirty-two-characters",
       REFRESH_TOKEN_PEPPER: "production-refresh-secret-longer-than-thirty-two-characters",
-      CORS_ORIGINS: "https://admin.masari.example",
+      CORS_ORIGINS: "https://admin.darb.example",
       APP_RELEASE: "test",
       TRUST_PROXY: "none"
     };

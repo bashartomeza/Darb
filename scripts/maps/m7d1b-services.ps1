@@ -1,7 +1,7 @@
 param(
   [ValidateSet("prepare", "valhalla-build", "valhalla-serve", "nominatim-import", "status", "cleanup")]
   [string]$Action = "status",
-  [string]$EvidenceDirectory = (Join-Path ([System.IO.Path]::GetTempPath()) "masari-m7d1b-evidence"),
+  [string]$EvidenceDirectory = (Join-Path ([System.IO.Path]::GetTempPath()) "darb-m7d1b-evidence"),
   [switch]$ConfirmCleanup
 )
 
@@ -11,11 +11,11 @@ $PbfUrl = "https://download.geofabrik.de/asia/$PbfName"
 $ExpectedSha256 = "36e45cb73d7fa584fbdf58836b615174122c32f22bf1871ec691161826af79aa"
 $ValhallaImage = "ghcr.io/valhalla/valhalla-scripted@sha256:24ef7955899dececb94e26c6dfb89d64fabfae875f980432694b0261eb6c251b"
 $NominatimImage = "mediagis/nominatim@sha256:7923a8e67197fc6d4f4ecb7c0e8bbedffeddcfdf4519596fe946e46a28f5a9f8"
-$ValhallaBuildContainer = "masari-m7d1b-evidence-valhalla-build"
-$ValhallaServeContainer = "masari-m7d1b-evidence-valhalla-serve"
-$NominatimContainer = "masari-m7d1b-evidence-nominatim"
-$NominatimPbfVolume = "masari-m7d1b-evidence-nominatim-pbf"
-$NominatimDbVolume = "masari-m7d1b-evidence-nominatim-db"
+$ValhallaBuildContainer = "darb-m7d1b-evidence-valhalla-build"
+$ValhallaServeContainer = "darb-m7d1b-evidence-valhalla-serve"
+$NominatimContainer = "darb-m7d1b-evidence-nominatim"
+$NominatimPbfVolume = "darb-m7d1b-evidence-nominatim-pbf"
+$NominatimDbVolume = "darb-m7d1b-evidence-nominatim-db"
 $PbfPath = Join-Path $EvidenceDirectory $PbfName
 
 function Invoke-Docker {
@@ -91,7 +91,7 @@ switch ($Action) {
     Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:18080/status.php" | Select-Object StatusCode, Content
   }
   "status" {
-    Invoke-Docker ps -a --filter "name=masari-m7d1b-evidence" --format "{{.Names}} {{.Status}}"
+    Invoke-Docker ps -a --filter "name=darb-m7d1b-evidence" --format "{{.Names}} {{.Status}}"
   }
   "cleanup" {
     if (-not $ConfirmCleanup) { throw "cleanup requires -ConfirmCleanup" }

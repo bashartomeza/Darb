@@ -20,7 +20,7 @@ async function requestJson(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, { signal: controller.signal, headers: { "user-agent": "Masari-M7D1B-geocoder-evidence/1.0" } });
+    const response = await fetch(url, { signal: controller.signal, headers: { "user-agent": "Darb-M7D1B-geocoder-evidence/1.0" } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   } finally { clearTimeout(timer); }

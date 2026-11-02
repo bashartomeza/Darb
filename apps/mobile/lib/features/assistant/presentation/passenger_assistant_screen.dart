@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
-import '../../../core/widgets/masari_button.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_button.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/route_summary_card.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_back_button.dart';
+import '../../../core/widgets/darb_back_button.dart';
 import '../application/passenger_assistant_controller.dart';
 import '../data/speech_service.dart';
+import '../domain/assistant_route_match.dart';
 import '../domain/passenger_assistant_models.dart';
-import '../../passenger/data/passenger_models.dart';
+import '../../passenger/application/passenger_controller.dart';
+import '../../operating_routes/data/operating_route_models.dart';
+import '../../operating_routes/data/operating_route_repository.dart';
+import '../../operating_routes/presentation/operating_route_inputs.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../passenger/domain/trip_offer.dart';
 import '../../passenger/presentation/widgets/trip_offer_card.dart';
@@ -193,6 +197,8 @@ class _PassengerAssistantScreenState
     if (!mounted || actor != ref.read(authControllerProvider).value?.user?.id) {
       return;
     }
+    // A booking may have saved a request (and a match) whatever the outcome.
+    invalidatePassengerLists(ref.invalidate);
     if (mounted && matchId != null) {
       context.go('/passenger/match/$matchId');
     } else if (mounted) {
@@ -217,6 +223,40 @@ class _PassengerAssistantScreenState
         );
         context.go('/passenger/request/$requestId');
       }
+    }
+  }
+
+  Future<void> _startNewChat() async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.assistantNewChatTitle),
+        content: Text(l10n.assistantNewChatBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('assistantNewChatConfirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.assistantNewChat),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    _inputController.clear();
+    try {
+      await ref
+          .read(passengerAssistantControllerProvider.notifier)
+          .startNewChat();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.assistantNewChatFailed)));
     }
   }
 
@@ -245,16 +285,31 @@ class _PassengerAssistantScreenState
           ? null
           : AppBar(
               title: Text(l10n.assistantTitle),
-              leading: const MasariBackButton(fallback: '/passenger'),
+              leading: const DarbBackButton(fallback: '/passenger'),
             ),
       body: Column(
         children: [
+          if ((assistant.value?.messages.isNotEmpty ?? false) &&
+              !busy &&
+              !recoveryPending)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(top: 4, end: 8),
+                child: TextButton.icon(
+                  key: const ValueKey('assistantNewChat'),
+                  onPressed: _startNewChat,
+                  icon: const Icon(Icons.add_comment_outlined, size: 18),
+                  label: Text(l10n.assistantNewChat),
+                ),
+              ),
+            ),
           Expanded(
             child: assistant.when(
               loading: () => const _AssistantLoadingView(),
               error: (_, _) => ErrorStateView(
-                title: l10n.assistantErrorTitle,
-                message: l10n.assistantErrorBody,
+                title: l10n.assistantHistoryErrorTitle,
+                message: l10n.assistantHistoryErrorBody,
                 retryLabel: l10n.retry,
                 onRetry: () =>
                     ref.invalidate(passengerAssistantControllerProvider),
@@ -402,7 +457,7 @@ class _AssistantWelcome extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    return MasariCard(
+    return DarbCard(
       key: const ValueKey('assistantReadyState'),
       padding: const EdgeInsets.all(AppTokens.spaceLarge),
       child: Column(
@@ -585,7 +640,7 @@ class _TripSearchResults extends StatelessWidget {
   );
 }
 
-class _TripReviewCard extends StatefulWidget {
+class _TripReviewCard extends ConsumerStatefulWidget {
   const _TripReviewCard({
     required this.draft,
     required this.searching,
@@ -599,18 +654,64 @@ class _TripReviewCard extends StatefulWidget {
   final ValueChanged<PassengerAssistantTripDraft> onConfirm;
 
   @override
-  State<_TripReviewCard> createState() => _TripReviewCardState();
+  ConsumerState<_TripReviewCard> createState() => _TripReviewCardState();
 }
 
-class _TripReviewCardState extends State<_TripReviewCard> {
+class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
   late PassengerAssistantTripDraft _draft = widget.draft;
+  late final _pickupDetails = TextEditingController(
+    text: _initialPickup(widget.draft),
+  );
+  late final _dropoffDetails = TextEditingController(
+    text: _initialDropoff(widget.draft),
+  );
+
+  /// The route the passenger picked; until they do, the one the extracted
+  /// places point to (or the route a restored draft already carries).
+  String? _routeId;
+  bool _routeTouched = false;
+  bool _showErrors = false;
+
+  static String _initialPickup(PassengerAssistantTripDraft draft) =>
+      draft.pickupDetails ?? draft.pickupLabel;
+
+  static String _initialDropoff(PassengerAssistantTripDraft draft) =>
+      draft.dropoffDetails ?? draft.destinationLabel;
 
   @override
   void didUpdateWidget(covariant _TripReviewCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.draft != widget.draft && !widget.searching) {
+      final sameTrip =
+          oldWidget.draft.pickupKey == widget.draft.pickupKey &&
+          oldWidget.draft.destinationKey == widget.draft.destinationKey;
       _draft = widget.draft;
+      if (!sameTrip) {
+        // A new reply from the assistant: start over from its places.
+        _routeTouched = false;
+        _routeId = null;
+        _showErrors = false;
+        _pickupDetails.text = _initialPickup(widget.draft);
+        _dropoffDetails.text = _initialDropoff(widget.draft);
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _pickupDetails.dispose();
+    _dropoffDetails.dispose();
+    super.dispose();
+  }
+
+  String? _selectedRoute(List<OperatingRoute>? routes) {
+    if (_routeTouched) return _routeId;
+    if (routes == null) return null;
+    final saved = _draft.serviceRouteId;
+    if (saved != null && routes.any((route) => route.id == saved)) {
+      return saved;
+    }
+    return routeForAssistantDraft(routes, _draft)?.id;
   }
 
   @override
@@ -618,8 +719,13 @@ class _TripReviewCardState extends State<_TripReviewCard> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final timeValid = _draft.preferredTime.isAfter(DateTime.now());
+    final routeId = _selectedRoute(ref.watch(operatingRoutesProvider).value);
+    final complete =
+        routeId != null &&
+        routeDetailsValid(_pickupDetails.text) &&
+        routeDetailsValid(_dropoffDetails.text);
 
-    return MasariCard(
+    return DarbCard(
       key: const ValueKey('assistantExtractedData'),
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       child: Column(
@@ -639,97 +745,53 @@ class _TripReviewCardState extends State<_TripReviewCard> {
           ),
           const SizedBox(height: AppTokens.spaceExtraSmall),
           Text(
-            l10n.assistantReviewBody,
+            routeId == null
+                ? l10n.assistantRouteChoose
+                : l10n.assistantReviewBody,
             style: theme.textTheme.bodySmall?.copyWith(
               color: AppTheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
-          DropdownButtonFormField<String>(
-            key: const ValueKey('assistantPickupField'),
-            initialValue: _draft.pickupKey,
-            decoration: InputDecoration(labelText: l10n.pickup),
-            items: [
-              for (final pickup in lockedPickupPresets)
-                DropdownMenuItem(
-                  value: pickup.key,
-                  child: Text(localizedCorridorPlace(context, pickup.label)),
-                ),
-              // The stop the assistant matched, when it is not a preset place.
-              if (!lockedPickupPresets.any(
-                (value) => value.key == widget.draft.pickupKey,
-              ))
-                DropdownMenuItem(
-                  value: widget.draft.pickupKey,
-                  child: Text(widget.draft.pickupLabel),
-                ),
-            ],
-            onChanged: widget.searching
-                ? null
-                : (key) {
-                    final pickup = lockedPickupPresets
-                        .where((value) => value.key == key)
-                        .firstOrNull;
-                    setState(() {
-                      if (pickup != null) {
-                        _draft = _draft.copyWith(
-                          pickupKey: pickup.key,
-                          pickupLabel: pickup.label,
-                          pickupLat: pickup.lat,
-                          pickupLng: pickup.lng,
-                        );
-                      } else if (key == widget.draft.pickupKey) {
-                        _draft = _draft.copyWith(
-                          pickupKey: widget.draft.pickupKey,
-                          pickupLabel: widget.draft.pickupLabel,
-                          pickupLat: widget.draft.pickupLat,
-                          pickupLng: widget.draft.pickupLng,
-                        );
-                      }
-                    });
-                  },
+          OperatingRouteDropdown(
+            fieldKey: const ValueKey('assistantRouteField'),
+            value: routeId,
+            enabled: !widget.searching,
+            errorText: _showErrors && routeId == null
+                ? l10n.passengerRouteRequired
+                : null,
+            onChanged: (route) => setState(() {
+              _routeTouched = true;
+              _routeId = route.id;
+            }),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
-          DropdownButtonFormField<String>(
-            key: const ValueKey('assistantDestinationField'),
-            initialValue: _draft.destinationKey,
-            decoration: InputDecoration(labelText: l10n.destination),
-            items: [
-              DropdownMenuItem(
-                value: 'bethlehem',
-                child: Text(
-                  localizedCorridorPlace(context, lockedDestinationLabel),
-                ),
-              ),
-              // The stop the assistant matched, when it is not the preset one.
-              if (widget.draft.destinationKey != 'bethlehem')
-                DropdownMenuItem(
-                  value: widget.draft.destinationKey,
-                  child: Text(widget.draft.destinationLabel),
-                ),
-            ],
-            onChanged: widget.searching
-                ? null
-                : (key) {
-                    if (key == null) return;
-                    setState(() {
-                      _draft = key == 'bethlehem'
-                          ? _draft.copyWith(
-                              destinationKey: key,
-                              destinationLabel: lockedDestinationLabel,
-                              destinationLat: lockedDestinationLat,
-                              destinationLng: lockedDestinationLng,
-                            )
-                          : _draft.copyWith(
-                              destinationKey: widget.draft.destinationKey,
-                              destinationLabel: widget.draft.destinationLabel,
-                              destinationLat: widget.draft.destinationLat,
-                              destinationLng: widget.draft.destinationLng,
-                            );
-                    });
-                  },
+          RouteDetailsField(
+            key: const ValueKey('assistantPickupDetailsField'),
+            controller: _pickupDetails,
+            enabled: !widget.searching,
+            icon: Icons.trip_origin_rounded,
+            label: l10n.passengerPickupDetailsLabel,
+            hint: l10n.passengerPickupDetailsHint,
+            errorText: _showErrors
+                ? routeDetailsError(l10n, _pickupDetails.text)
+                : null,
+            onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: AppTokens.spaceMedium),
+          const SizedBox(height: AppTokens.spaceSmall),
+          RouteDetailsField(
+            key: const ValueKey('assistantDropoffDetailsField'),
+            controller: _dropoffDetails,
+            enabled: !widget.searching,
+            icon: Icons.location_on_outlined,
+            label: l10n.passengerDropoffDetailsLabel,
+            hint: l10n.passengerDropoffDetailsHint,
+            errorText: _showErrors
+                ? routeDetailsError(l10n, _dropoffDetails.text)
+                : null,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: AppTokens.spaceSmall),
           OutlinedButton.icon(
             key: const ValueKey('assistantTimeField'),
             onPressed: widget.searching ? null : _pickTime,
@@ -773,7 +835,7 @@ class _TripReviewCardState extends State<_TripReviewCard> {
             ),
           ],
           const SizedBox(height: AppTokens.spaceLarge),
-          MasariButton(
+          DarbButton(
             key: const ValueKey('assistantConfirmSearch'),
             label: widget.searching
                 ? l10n.assistantSearching
@@ -781,7 +843,19 @@ class _TripReviewCardState extends State<_TripReviewCard> {
             icon: widget.searching ? null : Icons.search,
             busy: widget.searching,
             onPressed: !widget.searching && timeValid
-                ? () => widget.onConfirm(_draft)
+                ? () {
+                    if (!complete) {
+                      setState(() => _showErrors = true);
+                      return;
+                    }
+                    widget.onConfirm(
+                      _draft.copyWith(
+                        serviceRouteId: routeId,
+                        pickupDetails: _pickupDetails.text.trim(),
+                        dropoffDetails: _dropoffDetails.text.trim(),
+                      ),
+                    );
+                  }
                 : null,
           ),
         ],
@@ -898,7 +972,7 @@ class _ProcessingBubble extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Align(
       alignment: AlignmentDirectional.centerStart,
-      child: MasariCard(
+      child: DarbCard(
         key: const ValueKey('assistantProcessingState'),
         padding: const EdgeInsets.symmetric(
           horizontal: AppTokens.spaceMedium,
@@ -936,7 +1010,7 @@ class _AssistantErrorCard extends StatelessWidget {
       _ => l10n.assistantErrorBody,
     };
 
-    return MasariCard(
+    return DarbCard(
       key: const ValueKey('assistantErrorState'),
       background: SemanticColors.errorContainer,
       border: BorderSide.none,
@@ -968,7 +1042,7 @@ class _AssistantErrorCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
-          MasariButton.outline(
+          DarbButton.outline(
             key: const ValueKey('assistantRetryButton'),
             label: l10n.retry,
             icon: Icons.refresh,

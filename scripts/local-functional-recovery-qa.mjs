@@ -38,7 +38,7 @@ let redact;
 let evidenceRuntime;
 try {
 console.log(`Private runtime: ${runtime}`);
-evidenceRuntime = await mkdtemp(join(tmpdir(), "masari-functional-evidence-"));
+evidenceRuntime = await mkdtemp(join(tmpdir(), "darb-functional-evidence-"));
 console.log(`Evidence directory: ${evidenceRuntime}`);
 if (process.platform === "win32") {
   const acl = lifecycle.spawn(join(process.env.SYSTEMROOT ?? "C:\\Windows", "System32/icacls.exe"), [runtime, "/inheritance:r", "/grant:r", `${userInfo().username}:(OI)(CI)F`, "*S-1-5-18:(OI)(CI)F"], { env: systemEnv, stdio: "ignore" });
@@ -121,8 +121,8 @@ async function waitFor(url, timeoutMs = 180_000) {
 }
 const prisma = "node_modules/prisma/build/index.js";
 async function database(label) {
-  const name = `masari_functional_${label}_${randomBytes(5).toString("hex")}_ci`;
-  assert(/^masari_functional_[a-z_]+_[0-9a-f]{10}_ci$/.test(name));
+  const name = `darb_functional_${label}_${randomBytes(5).toString("hex")}_ci`;
+  assert(/^darb_functional_[a-z_]+_[0-9a-f]{10}_ci$/.test(name));
   await connection.query(`CREATE DATABASE \`${name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   const url = new URL(`mysql://127.0.0.1:${port}/${name}`);
   url.username = "root"; url.password = password;
@@ -192,7 +192,7 @@ async function database(label) {
     const reset = await fetch(`${env.API_BASE_URL}/api/v1/demo/reset`, { method: "POST", headers: { "content-type": "application/json", "x-demo-reset-key": env.DEMO_RESET_KEY }, body: "{}", signal: AbortSignal.any([lifecycle.signal, AbortSignal.timeout(10_000)]) });
     assert.equal(reset.status, 200, "local_qa_seed_failed");
     const urls = { api: env.API_BASE_URL, admin: `http://127.0.0.1:${adminPort}`, mobile: `http://127.0.0.1:${mobilePort}` };
-    const logins = Object.fromEntries(["admin", "passenger", "driver", "merchant"].map((role) => [role, { email: `demo.${role}@masari.app`, password: env[`DEMO_${role.toUpperCase()}_PASSWORD`] }]));
+    const logins = Object.fromEntries(["admin", "passenger", "driver", "merchant"].map((role) => [role, { email: `demo.${role}@darb.app`, password: env[`DEMO_${role.toUpperCase()}_PASSWORD`] }]));
     const defines = join(runtime, "mobile-defines.json");
     await writeFile(defines, JSON.stringify({ APP_ENV: "demo", API_BASE_URL: urls.api, ENABLE_DEMO_FEATURES: true, ...Object.fromEntries(["passenger", "driver", "merchant"].flatMap((role) => [[`DEMO_${role.toUpperCase()}_EMAIL`, logins[role].email], [`DEMO_${role.toUpperCase()}_PASSWORD`, logins[role].password]])) }, null, 2), { mode: 0o600 });
     await writeFile(join(runtime, "qa-private.json"), JSON.stringify({ root, urls, logins, environment: currentEnv, stopFile: join(runtime, "STOP") }, null, 2), { mode: 0o600 });

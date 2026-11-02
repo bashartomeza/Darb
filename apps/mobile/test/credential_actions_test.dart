@@ -5,8 +5,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/auth/data/auth_repository.dart';
-import 'package:masari_mobile/features/auth/presentation/credential_actions.dart';
+import 'package:darb_mobile/features/auth/data/auth_repository.dart';
+import 'package:darb_mobile/features/auth/presentation/credential_actions.dart';
 
 import 'support/auth_test_support.dart';
 

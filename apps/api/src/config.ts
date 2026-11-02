@@ -68,6 +68,7 @@ const rawSchema = z.object({
   MAPS_ENABLED: z.string().optional(),
   CHECKPOINTS_ENABLED: z.string().optional(),
   AWEENRAYEH_LIMITED_DIRECTORY_ENABLED: z.string().optional(),
+  PARTNER_CHECKPOINT_MAP_ENABLED: z.string().optional(),
   AWEENRAYEH_PARTNER_API_KEY: z.string().trim().min(20).optional(),
   AWEENRAYEH_PARTNER_TIMEOUT_MS: z.coerce.number().int().min(500).max(15_000).default(6_000),
   CHECKPOINT_DIRECTORY_ENABLED: z.string().optional(),
@@ -241,9 +242,11 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (limitedCheckpointDirectoryEnabled && (!raw.AWEENRAYEH_PARTNER_API_KEY || isUnsafeRouteProviderSecret(raw.AWEENRAYEH_PARTNER_API_KEY))) {
     problems.push("AWEENRAYEH_PARTNER_API_KEY is required and must be securely configured");
   }
-  // Demo reset removes abuse counters; it must never reset a real provider budget.
-  if (limitedCheckpointDirectoryEnabled && demoFeaturesEnabled) {
-    problems.push("Limited provider directory cannot run with demo reset features");
+  // Demo reset keeps the partner budget rows (see modules/demoReset.ts), so the
+  // provider's rate limit survives a reset and the gate can run in demo/test.
+  const partnerCheckpointMapEnabled = parseBoolean("PARTNER_CHECKPOINT_MAP_ENABLED", raw.PARTNER_CHECKPOINT_MAP_ENABLED);
+  if (partnerCheckpointMapEnabled && !limitedCheckpointDirectoryEnabled) {
+    problems.push("PARTNER_CHECKPOINT_MAP_ENABLED requires AWEENRAYEH_LIMITED_DIRECTORY_ENABLED");
   }
   if (driverDocumentsEnabled && (!raw.DRIVER_DOCUMENTS_DIR || !isAbsolute(raw.DRIVER_DOCUMENTS_DIR))) {
     problems.push("DRIVER_DOCUMENTS_DIR must be an absolute path when driver documents are enabled");
@@ -599,7 +602,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     jwtSecret: raw.JWT_SECRET,
     accessTokenTtlSeconds,
     refreshTokenTtlDays,
-    refreshTokenPepper: raw.REFRESH_TOKEN_PEPPER ?? `masari-non-production:${raw.JWT_SECRET}`,
+    refreshTokenPepper: raw.REFRESH_TOKEN_PEPPER ?? `darb-non-production:${raw.JWT_SECRET}`,
     authActions: raw.AUTH_ACTION_TOKEN_PEPPER
       ? {
           key: {
@@ -646,6 +649,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     mapsEnabled,
     checkpointsEnabled,
     limitedCheckpointDirectoryEnabled,
+    partnerCheckpointMapEnabled,
     limitedCheckpointDirectory: limitedCheckpointDirectoryEnabled ? { apiKey: raw.AWEENRAYEH_PARTNER_API_KEY!, timeoutMs: raw.AWEENRAYEH_PARTNER_TIMEOUT_MS } : undefined,
     checkpointDirectoryEnabled,
     checkpointDirectoryFile: raw.CHECKPOINT_DIRECTORY_FILE,

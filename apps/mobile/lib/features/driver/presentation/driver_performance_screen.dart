@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/driver_controller.dart';
 import '../data/driver_repository.dart';
@@ -72,9 +72,9 @@ class DriverPerformanceScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: AppTokens.spaceLarge),
-              MasariSection(
+              DarbSection(
                 title: l10n.driverDashboard,
-                child: MasariInfoCard(
+                child: DarbInfoCard(
                   // The card carries two lifetime figures, so it is titled for
                   // the pair rather than for the live trip it does not show.
                   title: l10n.completedTripsTotal,
@@ -101,9 +101,9 @@ class DriverPerformanceScreen extends ConsumerWidget {
               // Named explicitly so the gap reads as a known limit of the
               // system rather than a screen that failed to load.
               const SizedBox(height: AppTokens.spaceLarge),
-              MasariSection(
+              DarbSection(
                 title: l10n.todayEarnings,
-                child: MasariInfoCard(
+                child: DarbInfoCard(
                   title: l10n.earningsNotTracked,
                   subtitle: l10n.earningsNotTrackedBody,
                   icon: Icons.account_balance_wallet_outlined,
@@ -124,7 +124,7 @@ class DriverPerformanceScreen extends ConsumerWidget {
                             message: l10n.acceptanceRateUnavailable,
                             icon: Icons.info_outline,
                           )
-                        : MasariInfoCard(
+                        : DarbInfoCard(
                             title: l10n.acceptanceRateTitle,
                             icon: Icons.thumb_up_alt_outlined,
                             subtitle: value.acceptanceRate == null

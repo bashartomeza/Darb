@@ -11,17 +11,17 @@ function goodEnv() {
     APP_ENV: "production",
     ENABLE_DEMO_FEATURES: "false",
     APP_RELEASE: "2026-10-28-abcdef1",
-    DATABASE_URL: ["mysql:/", "/svc:s3cretpw@db.internal:3306/masari"].join(""),
+    DATABASE_URL: ["mysql:/", "/svc:s3cretpw@db.internal:3306/darb"].join(""),
     JWT_SECRET: fill("j"),
     REFRESH_TOKEN_PEPPER: fill("r"),
     AUTH_ACTION_TOKEN_PEPPER: fill("t"),
-    CORS_ORIGINS: "https://masari.aynur.ps",
+    CORS_ORIGINS: "https://darb.aynur.ps",
     TRUST_PROXY: "1",
     OTP_PROVIDER: "disabled",
     SUPPORTED_PHONE_REGIONS: "PS",
     ROUTE_PROVIDER: "disabled",
     DRIVER_DOCUMENTS_ENABLED: "true",
-    DRIVER_DOCUMENTS_DIR: "/var/lib/masari/driver-documents"
+    DRIVER_DOCUMENTS_DIR: "/var/lib/darb/driver-documents"
   };
 }
 const failing = (results) => results.filter((r) => r.status === "FAIL").map((r) => r.id);
@@ -75,7 +75,7 @@ test("public onboarding needs the onboarding peppers but not the invitation-code
 });
 
 test("env file parsing works and output never reveals secret values", () => {
-  const dir = mkdtempSync(join(tmpdir(), "masari-preflight-"));
+  const dir = mkdtempSync(join(tmpdir(), "darb-preflight-"));
   try {
     const env = goodEnv();
     const file = join(dir, "api.env");
@@ -102,7 +102,7 @@ const smtpEnv = () => ({
   SMTP_SECURE: "starttls",
   SMTP_USER: "mailer",
   SMTP_PASSWORD: "an-smtp-secret-value",
-  EMAIL_FROM_ADDRESS: "no-reply@masari.aynur.ps"
+  EMAIL_FROM_ADDRESS: "no-reply@darb.aynur.ps"
 });
 
 test("a complete smtp configuration passes and email-off only warns", () => {
@@ -125,7 +125,7 @@ test("an incomplete or unsafe smtp configuration fails", () => {
 });
 
 test("the smtp password never appears in preflight output", () => {
-  const dir = mkdtempSync(join(tmpdir(), "masari-preflight-smtp-"));
+  const dir = mkdtempSync(join(tmpdir(), "darb-preflight-smtp-"));
   try {
     const file = join(dir, "api.env");
     const env = smtpEnv();
@@ -139,7 +139,7 @@ test("the smtp password never appears in preflight output", () => {
 });
 
 test("OTP_PROVIDER=email needs SMTP, fake is refused, and public onboarding needs the email provider", () => {
-  const smtp = { EMAIL_DELIVERY: "smtp", SMTP_HOST: "smtp.mail.example.org", SMTP_USER: "svc-mailer", SMTP_PASSWORD: "x".repeat(24), EMAIL_FROM_ADDRESS: "no-reply@masari.aynur.ps" };
+  const smtp = { EMAIL_DELIVERY: "smtp", SMTP_HOST: "smtp.mail.example.org", SMTP_USER: "svc-mailer", SMTP_PASSWORD: "x".repeat(24), EMAIL_FROM_ADDRESS: "no-reply@darb.aynur.ps" };
   const peppers = Object.fromEntries(["PHONE_DIGEST_PEPPER", "OTP_CODE_PEPPER", "ONBOARDING_SESSION_PEPPER", "IDEMPOTENCY_KEY_PEPPER", "ABUSE_KEY_PEPPER"].map((name, i) => [name, String(i + 1).repeat(40)]));
   assert.deepEqual(failing(runPreflight({ ...goodEnv(), ...smtp, ...peppers, OTP_PROVIDER: "email", PUBLIC_ONBOARDING_ENABLED: "true" })).filter((id) => /OTP|PUBLIC|PEPPER/.test(id)), []);
   assert.ok(failing(runPreflight({ ...goodEnv(), OTP_PROVIDER: "email" })).includes("OTP_PROVIDER_EMAIL"));

@@ -45,16 +45,16 @@ describe("submitting an application for review", () => {
   let userRow: Record<string, unknown>;
 
   beforeAll(async () => {
-    dir = await mkdtemp(join(tmpdir(), "masari-submit-"));
+    dir = await mkdtemp(join(tmpdir(), "darb-submit-"));
     app = createApp(
       createConfig({
         APP_ENV: "test",
-        DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+        DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
         JWT_SECRET: "test-only-jwt-secret-with-at-least-thirty-two-characters",
         CORS_ORIGINS: "http://localhost:5173",
         LOG_LEVEL: "silent",
         DEMO_RESET_KEY: "test-reset-key",
-        DEMO_RESET_ALLOWED_DATABASES: "masari_test",
+        DEMO_RESET_ALLOWED_DATABASES: "darb_test",
         DEMO_PASSENGER_PASSWORD: "test-passenger-password",
         DEMO_DRIVER_PASSWORD: "test-driver-password",
         DEMO_MERCHANT_PASSWORD: "test-merchant-password",
@@ -85,7 +85,7 @@ describe("submitting an application for review", () => {
     statusApp = createApp(
       createConfig({
         APP_ENV: "local",
-        DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+        DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
         JWT_SECRET: "local-test-jwt-secret-longer-than-thirty-two-characters",
         REFRESH_TOKEN_PEPPER: "local-test-refresh-pepper-longer-than-thirty-two-characters",
         CORS_ORIGINS: "http://localhost:5173",

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_back_button.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_back_button.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
+import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../data/merchant_models.dart';
+import 'merchant_order_route_map.dart';
 import 'merchant_ui.dart';
 
 class MerchantTripScreen extends ConsumerStatefulWidget {
@@ -57,7 +59,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
           l10n.merchantTrip,
           key: const ValueKey('merchantTripTitle'),
         ),
-        leading: const MasariBackButton(fallback: '/merchant/shipments'),
+        leading: const DarbBackButton(fallback: '/merchant/shipments'),
         actions: const [LanguageSwitch()],
       ),
       body: SafeArea(
@@ -89,6 +91,17 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
     );
   }
 
+  /// The trip's predefined route, else the order's, else (for trips created
+  /// before routes existed) the driver route's two ends.
+  static String _routeName(BuildContext context, MerchantTripViewState state) {
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    return state.trip.route.routeName(arabic: arabic) ??
+        state.order.routeName(arabic: arabic) ??
+        '${localizedCorridorPlace(context, state.trip.route.originLabel)}'
+            ' → '
+            '${localizedCorridorPlace(context, state.trip.route.destinationLabel)}';
+  }
+
   Widget _content(AppLocalizations l10n, MerchantTripViewState state) {
     final currentIndex = merchantTripTimeline.indexOf(state.trip.status);
     final location = state.location;
@@ -97,7 +110,17 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
         : ((location.sequence + 1) / 7).clamp(0.0, 1.0);
     return Column(
       children: [
-        MasariCard(
+        if (state.order.routeWaypoints.length >= 2) ...[
+          MerchantOrderRouteMap(
+            key: const ValueKey('merchantTripMap'),
+            order: state.order,
+            vehicle: location == null
+                ? null
+                : GeoPoint(location.lat, location.lng),
+          ),
+          const SizedBox(height: AppTokens.spaceMedium),
+        ],
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -106,7 +129,14 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
                 '${l10n.currentStatus}: ${merchantStatusLabel(l10n, state.trip.status)}',
                 key: const ValueKey('merchantTripStatus'),
               ),
-              Text('${l10n.selectedRoute}: ${l10n.lockedCorridor}'),
+              Text(
+                '${l10n.selectedRoute}: ${_routeName(context, state)}',
+                key: const ValueKey('merchantTripRoute'),
+              ),
+              Text(
+                '${l10n.pickup}: ${merchantPickupText(context, state.order)}',
+                key: const ValueKey('merchantTripPickup'),
+              ),
               Text(
                 '${l10n.orderStatus}: ${merchantStatusLabel(l10n, state.order.status)}',
                 key: const ValueKey('merchantTripOrderStatus'),
@@ -138,7 +168,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
           HandoverCodeCard(orderId: state.order.id),
           const SizedBox(height: AppTokens.spaceMedium),
         ],
-        MasariCard(
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -146,14 +176,14 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
               Text('${l10n.parcelCount}: ${state.order.parcels.length}'),
               ...state.order.parcels.indexed.map(
                 (entry) => Text(
-                  '${l10n.parcel} ${entry.$1 + 1}: ${merchantDestinationLabel(context, entry.$2.destinationLabel)} — ${merchantStatusLabel(l10n, entry.$2.status)}',
+                  '${l10n.parcel} ${entry.$1 + 1}: ${merchantParcelDropoffText(context, entry.$2)} — ${merchantStatusLabel(l10n, entry.$2.status)}',
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: AppTokens.spaceMedium),
-        MasariCard(
+        DarbCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -1,0 +1,502 @@
+{
+  "schema_version": 1,
+  "source": "OpenStreetMap via the Overpass API",
+  "source_server": "https://overpass-api.de/api/interpreter",
+  "licence": "ODbL-1.0",
+  "attribution": "© OpenStreetMap contributors",
+  "licence_url": "https://www.openstreetmap.org/copyright",
+  "fetched_at": "2026-11-01T18:21:40.381Z",
+  "query": "nwr[barrier=checkpoint] + nwr[military=checkpoint]",
+  "bbox": {
+    "south": 31.2,
+    "west": 34.85,
+    "north": 32.6,
+    "east": 35.6
+  },
+  "count": 69,
+  "checkpoints": [
+    {
+      "id": "node/11146989608",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.9999518,
+      "lng": 35.1226294
+    },
+    {
+      "id": "node/12164051937",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.8614139,
+      "lng": 35.3532723
+    },
+    {
+      "id": "node/1219459216",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7549707,
+      "lng": 35.5939504
+    },
+    {
+      "id": "node/1219459601",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7550012,
+      "lng": 35.5937585
+    },
+    {
+      "id": "node/1219910380",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.629745,
+      "lng": 35.5897647
+    },
+    {
+      "id": "node/12946885136",
+      "name": "מחסום שבי שומרון حاجز شافي شمرون",
+      "name_ar": null,
+      "lat": 32.2642241,
+      "lng": 35.1879236
+    },
+    {
+      "id": "node/12946885214",
+      "name": "מחסום דיר שרף حاجز ديار شرف",
+      "name_ar": null,
+      "lat": 32.2550694,
+      "lng": 35.185246
+    },
+    {
+      "id": "node/13411421247",
+      "name": "שער יקיר",
+      "name_ar": null,
+      "lat": 32.1464512,
+      "lng": 35.1161869
+    },
+    {
+      "id": "node/13448057421",
+      "name": "מעבר צופים",
+      "name_ar": null,
+      "lat": 32.1931639,
+      "lng": 34.9994315
+    },
+    {
+      "id": "node/13927003768",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7769109,
+      "lng": 35.2334061
+    },
+    {
+      "id": "node/14181065136",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.9252898,
+      "lng": 35.2290702
+    },
+    {
+      "id": "node/14242040437",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.9765054,
+      "lng": 35.2910476
+    },
+    {
+      "id": "node/14310998216",
+      "name": "Al Jeb Check point",
+      "name_ar": null,
+      "lat": 31.8568418,
+      "lng": 35.17613
+    },
+    {
+      "id": "node/1728958157",
+      "name": "Mizpe Shalem Checkpoint",
+      "name_ar": null,
+      "lat": 31.5811665,
+      "lng": 35.4072944
+    },
+    {
+      "id": "node/1835025969",
+      "name": null,
+      "name_ar": null,
+      "lat": 32.0098255,
+      "lng": 35.1313494
+    },
+    {
+      "id": "node/1960960265",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.8862773,
+      "lng": 35.1041425
+    },
+    {
+      "id": "node/2271555694",
+      "name": "Anata - Shwafat Checkpoint",
+      "name_ar": null,
+      "lat": 31.8083295,
+      "lng": 35.2422706
+    },
+    {
+      "id": "node/2271555699",
+      "name": "Anata - Shwafat Checkpoint",
+      "name_ar": null,
+      "lat": 31.8083127,
+      "lng": 35.2422297
+    },
+    {
+      "id": "node/2271555799",
+      "name": "Anata - Shwafat Checkpoint",
+      "name_ar": null,
+      "lat": 31.8083757,
+      "lng": 35.2423243
+    },
+    {
+      "id": "node/2271555807",
+      "name": "Anata - Shwafat Checkpoint",
+      "name_ar": null,
+      "lat": 31.8084028,
+      "lng": 35.2423771
+    },
+    {
+      "id": "node/2505718372",
+      "name": "Al Jeb Check point",
+      "name_ar": null,
+      "lat": 31.8568418,
+      "lng": 35.17613
+    },
+    {
+      "id": "node/2603716727",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7757359,
+      "lng": 35.2339202
+    },
+    {
+      "id": "node/2619694808",
+      "name": "Access to the bridge",
+      "name_ar": null,
+      "lat": 31.7757753,
+      "lng": 35.2340338
+    },
+    {
+      "id": "node/2820132150",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7766631,
+      "lng": 35.2332259
+    },
+    {
+      "id": "node/290358852",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7772101,
+      "lng": 35.2333565
+    },
+    {
+      "id": "node/2915691087",
+      "name": "Access to the Western Wall Area",
+      "name_ar": null,
+      "lat": 31.7757673,
+      "lng": 35.2339794
+    },
+    {
+      "id": "node/2915691135",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7758468,
+      "lng": 35.233493
+    },
+    {
+      "id": "node/309173780",
+      "name": "מעבר חשמונאים",
+      "name_ar": null,
+      "lat": 31.9410031,
+      "lng": 35.0331632
+    },
+    {
+      "id": "node/3114332085",
+      "name": "Car-only Checkpoint",
+      "name_ar": null,
+      "lat": 31.7237935,
+      "lng": 35.2050321
+    },
+    {
+      "id": "node/3340186991",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.9792954,
+      "lng": 35.2943296
+    },
+    {
+      "id": "node/3658366387",
+      "name": "מעבר עין יעל",
+      "name_ar": "حاجز الولجة - عين ياعيل",
+      "lat": 31.7373378,
+      "lng": 35.1511031
+    },
+    {
+      "id": "node/432123706",
+      "name": "Hawwarah Israili Check Point",
+      "name_ar": "نقطة تفتيش حوارة العسكرية الاسرائيلية",
+      "lat": 32.1780141,
+      "lng": 35.2734519
+    },
+    {
+      "id": "node/432288852",
+      "name": "Jaba' Israeli Check Point",
+      "name_ar": "نقطة تفتيش الجبع الاسرائيلية",
+      "lat": 31.8539247,
+      "lng": 35.2563993
+    },
+    {
+      "id": "node/4455754228",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.718989,
+      "lng": 35.1751357
+    },
+    {
+      "id": "node/4968982122",
+      "name": "حاجز عطارة",
+      "name_ar": "حاجز عطارة",
+      "lat": 31.9828387,
+      "lng": 35.200564
+    },
+    {
+      "id": "node/4973647874",
+      "name": "Machpela Checkpoint",
+      "name_ar": null,
+      "lat": 31.5248428,
+      "lng": 35.1103643
+    },
+    {
+      "id": "node/4973647884",
+      "name": "نقطة التفتيش ٥٦",
+      "name_ar": "نقطة التفتيش ٥٦",
+      "lat": 31.526573,
+      "lng": 35.1019801
+    },
+    {
+      "id": "node/4977276379",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7758523,
+      "lng": 35.2335269
+    },
+    {
+      "id": "node/4977276381",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7757287,
+      "lng": 35.2339908
+    },
+    {
+      "id": "node/5063565222",
+      "name": "حاجز تياسير العسكري",
+      "name_ar": "حاجز تياسير العسكري",
+      "lat": 32.3289189,
+      "lng": 35.4353458
+    },
+    {
+      "id": "node/5114691324",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.5256219,
+      "lng": 35.1104733
+    },
+    {
+      "id": "node/518451196",
+      "name": "מעבר אליהו",
+      "name_ar": "معبر إِلِياهو",
+      "lat": 32.1848477,
+      "lng": 34.9988546
+    },
+    {
+      "id": "node/5329510664",
+      "name": "מחסום אריאל",
+      "name_ar": "حاجز اريئيل",
+      "lat": 32.1027182,
+      "lng": 35.1637583
+    },
+    {
+      "id": "node/5341187723",
+      "name": null,
+      "name_ar": null,
+      "lat": 32.2150752,
+      "lng": 35.1797733
+    },
+    {
+      "id": "node/6269537521",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7054083,
+      "lng": 35.1687538
+    },
+    {
+      "id": "node/6269537522",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7053261,
+      "lng": 35.1687945
+    },
+    {
+      "id": "node/6269537523",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7052377,
+      "lng": 35.168835
+    },
+    {
+      "id": "node/6269537524",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7054805,
+      "lng": 35.1687234
+    },
+    {
+      "id": "node/6270211525",
+      "name": "שער יקיר",
+      "name_ar": null,
+      "lat": 32.1464865,
+      "lng": 35.1162438
+    },
+    {
+      "id": "node/6270216433",
+      "name": null,
+      "name_ar": null,
+      "lat": 32.206879,
+      "lng": 35.1628367
+    },
+    {
+      "id": "node/6577070042",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.755605,
+      "lng": 35.5938124
+    },
+    {
+      "id": "node/6577070043",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7555918,
+      "lng": 35.5936669
+    },
+    {
+      "id": "node/6648416368",
+      "name": "Container Checkpoint",
+      "name_ar": "حاجز وادي النار /الكونتينار",
+      "lat": 31.742219,
+      "lng": 35.2892827
+    },
+    {
+      "id": "node/6669159844",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.6297398,
+      "lng": 35.5896836
+    },
+    {
+      "id": "node/6853572955",
+      "name": "Mizpe Shalem Checkpoint",
+      "name_ar": null,
+      "lat": 31.5811811,
+      "lng": 35.4074105
+    },
+    {
+      "id": "node/798860090",
+      "name": "مركز حدود جسر الملك حسين",
+      "name_ar": "مركز حدود جسر الملك حسين",
+      "lat": 31.89,
+      "lng": 35.577778
+    },
+    {
+      "id": "node/8422166858",
+      "name": "מחסום רנתיס",
+      "name_ar": null,
+      "lat": 32.0401358,
+      "lng": 35.0066845
+    },
+    {
+      "id": "node/9250301576",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.7238752,
+      "lng": 35.2037396
+    },
+    {
+      "id": "node/9950297619",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.9253741,
+      "lng": 35.2290973
+    },
+    {
+      "id": "relation/13997043",
+      "name": "מעבר חשמונאים",
+      "name_ar": null,
+      "lat": 31.9406924,
+      "lng": 35.0329397
+    },
+    {
+      "id": "way/1109766775",
+      "name": "מחסום בל",
+      "name_ar": null,
+      "lat": 31.886297,
+      "lng": 35.1041596
+    },
+    {
+      "id": "way/1152262566",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.8306115,
+      "lng": 35.5575088
+    },
+    {
+      "id": "way/1415228264",
+      "name": "מחסום הקונטיינר",
+      "name_ar": null,
+      "lat": 31.7422052,
+      "lng": 35.2892591
+    },
+    {
+      "id": "way/1486935539",
+      "name": null,
+      "name_ar": null,
+      "lat": 32.1080676,
+      "lng": 35.0072562
+    },
+    {
+      "id": "way/305664196",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.670635,
+      "lng": 35.0543524
+    },
+    {
+      "id": "way/459524835",
+      "name": "מחסום מכבים",
+      "name_ar": null,
+      "lat": 31.8974975,
+      "lng": 35.0427421
+    },
+    {
+      "id": "way/494997557",
+      "name": "מעבר מכבים",
+      "name_ar": null,
+      "lat": 31.8975835,
+      "lng": 35.0428573
+    },
+    {
+      "id": "way/494998363",
+      "name": null,
+      "name_ar": null,
+      "lat": 31.8723521,
+      "lng": 35.1715937
+    },
+    {
+      "id": "way/886354702",
+      "name": "حاجز شرق أريحا / מחסום מזרוח יריחו",
+      "name_ar": "حاجز شرق أريحا",
+      "lat": 31.8644901,
+      "lng": 35.4987316
+    }
+  ]
+}

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/fares/fare.dart';
-import 'package:masari_mobile/core/widgets/fare_estimate.dart';
-import 'package:masari_mobile/features/canonical_assignments/domain/canonical_assignment_models.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_models.dart';
-import 'package:masari_mobile/features/passenger/domain/trip_offer.dart';
-import 'package:masari_mobile/features/passenger/presentation/widgets/trip_offer_card.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/fares/fare.dart';
+import 'package:darb_mobile/core/widgets/fare_estimate.dart';
+import 'package:darb_mobile/features/canonical_assignments/domain/canonical_assignment_models.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_models.dart';
+import 'package:darb_mobile/features/passenger/domain/trip_offer.dart';
+import 'package:darb_mobile/features/passenger/presentation/widgets/trip_offer_card.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 Widget _host(Locale locale, Widget child) => MaterialApp(
   locale: locale,

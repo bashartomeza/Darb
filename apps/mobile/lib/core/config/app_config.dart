@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum MasariAppEnvironment { local, test, demo, staging, production }
+enum DarbAppEnvironment { local, test, demo, staging, production }
 
 class AppConfig {
   const AppConfig({
@@ -28,7 +28,7 @@ class AppConfig {
     required String apiBaseUrl,
     required bool enableDemoFeatures,
   }) {
-    final environment = MasariAppEnvironment.values
+    final environment = DarbAppEnvironment.values
         .where((value) => value.name == appEnvironment)
         .firstOrNull;
     if (environment == null) {
@@ -38,8 +38,8 @@ class AppConfig {
       throw StateError('API_BASE_URL is required');
     }
     final productionLike =
-        environment == MasariAppEnvironment.staging ||
-        environment == MasariAppEnvironment.production;
+        environment == DarbAppEnvironment.staging ||
+        environment == DarbAppEnvironment.production;
     if (productionLike && !apiBaseUrl.startsWith('https://')) {
       throw StateError('API_BASE_URL must use HTTPS in staging and production');
     }
@@ -49,9 +49,9 @@ class AppConfig {
       );
     }
     final demoAllowed =
-        environment == MasariAppEnvironment.local ||
-        environment == MasariAppEnvironment.test ||
-        environment == MasariAppEnvironment.demo;
+        environment == DarbAppEnvironment.local ||
+        environment == DarbAppEnvironment.test ||
+        environment == DarbAppEnvironment.demo;
     final demoFeaturesEnabled = demoAllowed && enableDemoFeatures;
     return AppConfig(
       appEnvironment: environment,
@@ -60,7 +60,7 @@ class AppConfig {
     );
   }
 
-  final MasariAppEnvironment appEnvironment;
+  final DarbAppEnvironment appEnvironment;
   final String apiBaseUrl;
   final bool demoFeaturesEnabled;
 }

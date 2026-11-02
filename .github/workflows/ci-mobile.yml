@@ -46,18 +46,18 @@ jobs:
       - name: Test compiled APK location policy
         run: node --test scripts/tests/apk-location-policy.test.mjs scripts/tests/apk-build-tools.test.mjs
         env:
-          MASARI_TEST_ANDROID_TOOLS: "true"
+          DARB_TEST_ANDROID_TOOLS: "true"
       - name: Build debug-signed production-like APK (CI only, not distributable)
         working-directory: apps/mobile
         env:
           # Release builds fail without real signing material. CI has none, so
           # it opts in to debug signing explicitly. Never ship this APK.
-          MASARI_ALLOW_DEBUG_SIGNING: "true"
+          DARB_ALLOW_DEBUG_SIGNING: "true"
         run: >-
           flutter build apk --release
           --dart-define=APP_ENV=production
           --dart-define=ENABLE_DEMO_FEATURES=false
-          --dart-define=API_BASE_URL=https://api.staging.masari.invalid
+          --dart-define=API_BASE_URL=https://api.staging.darb.invalid
       - name: Scan production-like APK
         run: npm run security:artifacts -- --apk apps/mobile/build/app/outputs/flutter-apk/app-release.apk
 
@@ -88,4 +88,4 @@ jobs:
           flutter build ios --release --no-codesign
           --dart-define=APP_ENV=production
           --dart-define=ENABLE_DEMO_FEATURES=false
-          --dart-define=API_BASE_URL=https://api.staging.masari.invalid
+          --dart-define=API_BASE_URL=https://api.staging.darb.invalid

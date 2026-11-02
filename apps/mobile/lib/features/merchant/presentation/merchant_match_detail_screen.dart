@@ -2,12 +2,12 @@ import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/state_views.dart';
@@ -62,6 +62,7 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
     AppLocalizations l10n,
     MerchantMatch match,
   ) {
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppTokens.marginMobile,
@@ -70,7 +71,7 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
         AppTokens.spaceExtraLarge,
       ),
       children: [
-        MasariInfoCard(
+        DarbInfoCard(
           title: l10n.merchantOrder,
           statusLabel: merchantStatusLabel(l10n, match.status),
           statusTone: statusToneFor(match.status),
@@ -99,9 +100,17 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
               DetailRow(
                 label: l10n.selectedRoute,
                 value:
+                    match.route.routeName(arabic: arabic) ??
+                    match.order.routeName(arabic: arabic) ??
                     '${match.route.originLabel} → ${match.route.destinationLabel}',
                 icon: Icons.route_outlined,
               ),
+              if (match.order.pickupDetails case final pickup?)
+                DetailRow(
+                  label: l10n.pickup,
+                  value: pickup,
+                  icon: Icons.storefront_outlined,
+                ),
               if (match.batch != null)
                 DetailRow(
                   label: l10n.estimatedDistanceSaved,
@@ -130,7 +139,7 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
         ),
         const SizedBox(height: AppTokens.spaceLarge),
 
-        MasariSection(
+        DarbSection(
           title: l10n.scoringBreakdown,
           titleKey: const ValueKey('merchantScoringBreakdown'),
           child: Column(

@@ -16,7 +16,7 @@ const productionEnvironment = {
   ACCESS_TOKEN_TTL_SECONDS: "900",
   REFRESH_TOKEN_TTL_DAYS: "30",
   REFRESH_TOKEN_PEPPER: randomBytes(32).toString("base64url"),
-  CORS_ORIGINS: "https://admin.masari.invalid",
+  CORS_ORIGINS: "https://admin.darb.invalid",
   TRUST_PROXY: "none",
   LOG_LEVEL: "silent",
   PORT: "3102"
@@ -75,8 +75,8 @@ try {
   await call("/demo/reset", { method: "POST", body: {}, expected: [404] });
   await call("/compare/run", { method: "POST", body: {}, expected: [404] });
 
-  const passenger = await login("demo.passenger@masari.app", process.env.DEMO_PASSENGER_PASSWORD);
-  const admin = await login("demo.admin@masari.app", process.env.DEMO_ADMIN_PASSWORD);
+  const passenger = await login("demo.passenger@darb.app", process.env.DEMO_PASSENGER_PASSWORD);
+  const admin = await login("demo.admin@darb.app", process.env.DEMO_ADMIN_PASSWORD);
   assert(jwtLifetime(passenger.token) === 900, "Production access token did not use the approved 900-second lifetime");
   assert(passenger.refresh_token, "Production mobile login did not issue a refresh token");
   assert(!("refresh_token" in admin), "Production admin login received a refresh token");
@@ -90,7 +90,7 @@ try {
   await call("/me", { token: passenger.token, expected: [403] });
   await call("/auth/login", {
     method: "POST",
-    body: { email: "demo.passenger@masari.app", password: process.env.DEMO_PASSENGER_PASSWORD },
+    body: { email: "demo.passenger@darb.app", password: process.env.DEMO_PASSENGER_PASSWORD },
     expected: [403]
   });
   await call(`/admin/users/${passenger.user.id}/status`, {
@@ -99,7 +99,7 @@ try {
     body: { status: "active", expected_status: "suspended" }
   });
   await call("/me", { token: passenger.token, expected: [401] });
-  const reauthenticated = await login("demo.passenger@masari.app", process.env.DEMO_PASSENGER_PASSWORD);
+  const reauthenticated = await login("demo.passenger@darb.app", process.env.DEMO_PASSENGER_PASSWORD);
   await call("/me", { token: reauthenticated.token });
   console.log(
     JSON.stringify({

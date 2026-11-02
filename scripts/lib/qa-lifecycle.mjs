@@ -10,7 +10,7 @@ import { setTimeout as delay } from "node:timers/promises";
 export function createQaLifecycle({ env = process.env, graceMs = 1_500, forceMs = 5_000, onChild = () => {} } = {}) {
   const controller = new AbortController();
   const children = new Map();
-  const runtime = mkdtempSync(join(tmpdir(), "masari-functional-"));
+  const runtime = mkdtempSync(join(tmpdir(), "darb-functional-"));
   chmodSync(runtime, 0o700);
   const ownedRuntime = realpathSync(runtime);
   let cleaning;

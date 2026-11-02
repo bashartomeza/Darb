@@ -1,8 +1,11 @@
-import '../../../core/widgets/masari_back_button.dart';
+import '../../canonical_assignments/application/canonical_assignment_controller.dart';
+import '../../../core/widgets/darb_back_button.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/maps/darb_route_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -73,6 +76,15 @@ class _PassengerRouteRequestScreenState
     });
   }
 
+  /// Route requests are listed under "My trips" when this build can show
+  /// their status; otherwise the passenger goes back to the dashboard.
+  bool get _requestListAvailable =>
+      ref
+          .read(mobileCapabilitiesProvider)
+          .value
+          ?.canonicalAssignmentStatusAvailable ==
+      true;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -80,7 +92,7 @@ class _PassengerRouteRequestScreenState
       return Scaffold(
         appBar: AppBar(
           title: Text(l10n.canonicalPassengerRequest),
-          leading: const MasariBackButton(fallback: '/passenger'),
+          leading: const DarbBackButton(fallback: '/passenger'),
         ),
         body: SafeArea(
           child: ListView(
@@ -98,7 +110,11 @@ class _PassengerRouteRequestScreenState
               if (_error != null) Text(_errorLabel(l10n, _error!)),
               FilledButton(
                 onPressed: _acknowledgeResult,
-                child: Text(l10n.returnToDashboard),
+                child: Text(
+                  _requestListAvailable
+                      ? l10n.viewRouteRequests
+                      : l10n.returnToDashboard,
+                ),
               ),
             ],
           ),
@@ -109,7 +125,7 @@ class _PassengerRouteRequestScreenState
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.canonicalPassengerRequest),
-          leading: const MasariBackButton(fallback: '/passenger'),
+          leading: const DarbBackButton(fallback: '/passenger'),
         ),
         body: SafeArea(
           child: ref
@@ -161,6 +177,15 @@ class _PassengerRouteRequestScreenState
                                 }),
                         ),
                       if (route != null) ...[
+                        CanonicalRouteMap(
+                          key: const ValueKey('canonicalRouteMap'),
+                          route: route,
+                          highlightIds: {
+                            _pickupId,
+                            _dropoffId,
+                          }.whereType<String>().toSet(),
+                        ),
+                        const SizedBox(height: AppTokens.spaceMedium),
                         OrderedStopTimeline(
                           stops: route.stops,
                           selectedIds: {
@@ -277,6 +302,9 @@ class _PassengerRouteRequestScreenState
       'requested_departure_until': _until.toUtc().toIso8601String(),
       'passenger_count': _passengers,
     };
+    // Captured up front so the list still learns about a saved request if
+    // this screen is closed while the create is in flight.
+    final container = ProviderScope.containerOf(context, listen: false);
     try {
       final actorId = ref.read(authControllerProvider).value?.user?.id;
       if (actorId == null) {
@@ -315,6 +343,9 @@ class _PassengerRouteRequestScreenState
                   idempotencyKey: bundle.idempotencyKey,
                 ),
           );
+      // The request is saved server-side; make the passenger's route request
+      // list re-read so it appears without a manual pull.
+      container.invalidate(passengerCanonicalAssignmentsProvider);
       if (mounted) setState(() => _result = result);
     } catch (error) {
       if (error is ApiException && error.statusCode == 404) {
@@ -340,7 +371,14 @@ class _PassengerRouteRequestScreenState
             operation: 'passenger_route_request_create',
             idempotencyKey: completed.idempotencyKey,
           );
-      if (mounted) context.go('/passenger');
+      if (!mounted) return;
+      // Land where the new request is listed, not on the legacy dashboard
+      // that only shows location-based requests.
+      context.go(
+        _requestListAvailable
+            ? '/passenger/canonical-assignments'
+            : '/passenger',
+      );
     } catch (error) {
       if (mounted) setState(() => _error = error);
     }

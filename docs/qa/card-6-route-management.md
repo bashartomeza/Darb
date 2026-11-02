@@ -1,10 +1,10 @@
 # Card 6 route-management QA
 
-This runbook is only for disposable local QA. Every fixture command requires `--confirm-disposable` and accepts only a MySQL URL whose host is exactly `localhost` or `127.0.0.1`, whose database path is exactly `masari_routes_qa`, and which has no query string or fragment. Never run these commands against `masari`.
+This runbook is only for disposable local QA. Every fixture command requires `--confirm-disposable` and accepts only a MySQL URL whose host is exactly `localhost` or `127.0.0.1`, whose database path is exactly `darb_routes_qa`, and which has no query string or fragment. Never run these commands against `darb`.
 
 ## Environment boundary
 
-- Database: `masari_routes_qa` only
+- Database: `darb_routes_qa` only
 - API: `http://localhost:3100`
 - Admin: `http://localhost:5174`
 - API route management: enabled process-locally
@@ -17,7 +17,7 @@ Start from a securely loaded local `DATABASE_URL` without printing it, then chan
 
 ```powershell
 $qaDatabaseUrl = [System.UriBuilder]$env:DATABASE_URL
-$qaDatabaseUrl.Path = 'masari_routes_qa'
+$qaDatabaseUrl.Path = 'darb_routes_qa'
 $qaDatabaseUrl.Query = ''
 $qaDatabaseUrl.Fragment = ''
 $env:DATABASE_URL = $qaDatabaseUrl.Uri.AbsoluteUri
@@ -51,7 +51,7 @@ $env:VITE_APP_ENV = 'local'
 $env:VITE_ENABLE_DEMO_FEATURES = 'false'
 $env:VITE_API_BASE_URL = 'http://localhost:3100'
 $env:VITE_ROUTE_MANAGEMENT_ENABLED = 'true'
-npm run dev -w @masari/admin -- --port 5174
+npm run dev -w @darb/admin -- --port 5174
 ```
 
 ## Fixture identities

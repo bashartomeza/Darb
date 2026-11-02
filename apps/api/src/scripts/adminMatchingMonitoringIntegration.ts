@@ -91,7 +91,7 @@ function safeMatch(row: MatchRow) {
   if (row.merchant_order) keys(row.merchant_order, ["id", "status", "parcel_count"]);
   if (row.parcel_batch) keys(row.parcel_batch, ["id", "status"]);
   assert.equal(typeof row.score, "string");
-  assert(["masari_route_score", "unrecognized"].includes(row.method));
+  assert(["darb_route_score", "unrecognized"].includes(row.method));
 }
 function safeBatch(row: BatchRow) {
   keys(row, ["id", "status", "created_at", "merchant_order", "selected_driver_route"]);
@@ -134,7 +134,7 @@ function batchData(suffix: string, extra: Partial<Prisma.ParcelBatchUncheckedCre
   return { id: id(suffix), merchant_order_id: id("order"), driver_route_id: id("route"), estimated_distance_saved: "1.25", explanation: marker, created_at: created, ...extra };
 }
 function matchData(suffix: string, extra: Partial<Prisma.MatchUncheckedCreateInput> = {}): Prisma.MatchUncheckedCreateInput {
-  return { id: id(suffix), driver_route_id: id("route"), passenger_request_id: id("request"), merchant_order_id: id("order"), parcel_batch_id: id("batch_00"), score: "0.8751", method: "masari_route_score", explanation: marker,
+  return { id: id(suffix), driver_route_id: id("route"), passenger_request_id: id("request"), merchant_order_id: id("order"), parcel_batch_id: id("batch_00"), score: "0.8751", method: "darb_route_score", explanation: marker,
     scoring_breakdown: { private: marker }, created_at: created, ...extra };
 }
 async function domainSnapshot() {
@@ -205,7 +205,7 @@ try {
   await prisma.parcelBatch.createMany({ data: [batchData("old_batch", { created_at: old }), batchData("empty_batch", { merchant_order_id: id("empty_order"), driver_route_id: null, created_at: old }),
     batchData("excluded_demo_batch", { merchant_order_id: id("demo_order") }), batchData("excluded_driver_batch", { driver_route_id: id("demo_route") }), batchData("excluded_canonical_batch", { merchant_order_id: id("canonical_order") })] });
   await prisma.match.createMany({ data: Array.from({ length: 60 }, (_, index) => matchData(`match_${String(index).padStart(2, "0")}`, {
-    status: matchStatuses[index % 6], passenger_request_id: index % 3 === 1 ? null : id("request"), merchant_order_id: index % 3 === 0 ? null : id("order"), method: index === 59 ? marker : "masari_route_score" })) });
+    status: matchStatuses[index % 6], passenger_request_id: index % 3 === 1 ? null : id("request"), merchant_order_id: index % 3 === 0 ? null : id("order"), method: index === 59 ? marker : "darb_route_score" })) });
   await prisma.match.create({ data: matchData("old_match", { created_at: old, status: "accepted" }) });
   const excludedMatches: string[] = [];
   for (const [suffix, extra] of [

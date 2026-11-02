@@ -143,7 +143,7 @@ class CanonicalOperationStorage {
     // ignore: prefer_initializing_formals
   }) : _storageKey = storageKey;
 
-  static const bundleKey = 'masari_canonical_operation_v1';
+  static const bundleKey = 'darb_canonical_operation_v1';
   static const maximumEncodedBytes = 60 * 1024;
   final FlutterSecureStorage _storage;
   final String _storageKey;

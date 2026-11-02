@@ -5,6 +5,7 @@ import { useLocale } from "./i18n/LocaleContext";
 import type { TranslationKey } from "./i18n/translations";
 import { ADMIN_TOKEN_KEY, clearAdminSession, createAdminSessionExpiryHandler, isAdminSessionEndError, type TokenStorage } from "./session";
 import { RouteManagement } from "./features/routes/RouteManagement";
+import { OperatingRoutesPage } from "./features/operatingRoutes/OperatingRoutesPage";
 import { OverviewDashboard, type OverviewData } from "./features/overview/OverviewDashboard";
 import {
   OVERVIEW_RESOURCE_KEYS,
@@ -32,6 +33,7 @@ import { ProfilePanel } from "./features/profile/ProfilePanel";
 import {
   hashForModule,
   moduleFromHash,
+  navItemForModule,
   resolveActiveModule,
   visibleNavItems,
   type AdminRouteId
@@ -67,7 +69,7 @@ export function App({
   legacyStore?: TokenStorage;
 } = {}) {
   const { direction, locale, toggleLocale, t, status } = useLocale();
-  const demoEnabled = demoUiEnabled(config, __MASARI_DEMO_BUILD__);
+  const demoEnabled = demoUiEnabled(config, __DARB_DEMO_BUILD__);
   const routeManagementEnabled = routeManagementUiEnabled(config);
   const [token, setToken] = useState(() => {
     legacyStore.removeItem(ADMIN_TOKEN_KEY);
@@ -526,7 +528,8 @@ export function App({
 
   const overviewData: OverviewData = { dashboard, drivers, routes, requests, orders, trips, resources: overviewResources };
   const overviewRefreshing = Object.values(overviewResources).some((resource) => resource.phase === "loading");
-  const activeNavItem = navItems.find((item) => item.id === currentModule);
+  const activeNavId = navItemForModule(currentModule);
+  const activeNavItem = navItems.find((item) => item.id === activeNavId);
   const moduleTitle = currentModule === "profile"
     ? t("navProfile")
     : activeNavItem
@@ -575,6 +578,18 @@ export function App({
         return <TripsManagement api={api} token={token} search={search} canAct={canAct} />;
 
       case "routes":
+        return (
+          <OperatingRoutesPage
+            api={api}
+            token={token}
+            search={search}
+            advancedHref={routeManagementEnabled ? hashForModule("routeWorkspace") : null}
+          />
+        );
+
+      // Hidden: the older versioned route editor, reachable only from the
+      // Routes page when the build enables route management.
+      case "routeWorkspace":
         return routeManagementEnabled ? (
           <RouteManagement api={api} token={token} locale={locale} />
         ) : (
@@ -633,6 +648,7 @@ export function App({
     deliveries: t("requestsDescription"),
     matchingBatching: t("matchingDescription"),
     trips: t("tripsDescription"),
+    routes: t("operatingRoutesDescription"),
     users: t("usersDescription"),
     invitations: t("invitationsDescription"),
     drivers: t("verificationDescription"),
@@ -648,7 +664,7 @@ export function App({
         sidenav={
           <SideNav
             items={navItems}
-            active={currentModule === "profile" ? null : currentModule}
+            active={activeNavId}
             onSelect={navigateToModule}
             labels={{
               brand: t("brandName"),

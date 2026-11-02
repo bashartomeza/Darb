@@ -12,7 +12,7 @@ export function assertMonitoringIntegrationTarget(
     if (url.protocol !== "mysql:" || !url.hostname) return refuse();
     database = decodeURIComponent(url.pathname.slice(1));
   } catch { return refuse(); }
-  if (!/^[A-Za-z0-9_]+$/.test(database) || database.toLowerCase() === "masari" || !database.endsWith("_ci")) refuse();
+  if (!/^[A-Za-z0-9_]+$/.test(database) || database.toLowerCase() === "darb" || !database.endsWith("_ci")) refuse();
   const allowlist = (allowed ?? "").split(",").map((value) => value.trim()).filter(Boolean);
   if (!allowlist.includes(database)) refuse();
 }

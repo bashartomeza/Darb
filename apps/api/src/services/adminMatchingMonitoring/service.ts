@@ -56,7 +56,7 @@ function serializeMatch(row: SelectedMatch): MatchRow {
     status: row.status,
     created_at: row.created_at.toISOString(),
     score: row.score.toString(),
-    method: row.method === "masari_route_score" ? "masari_route_score" : "unrecognized",
+    method: row.method === "darb_route_score" ? "darb_route_score" : "unrecognized",
     demand_kind: demandKind,
     driver_route: row.driver_route,
     passenger_request: row.passenger_request,

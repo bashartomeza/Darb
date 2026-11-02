@@ -164,7 +164,7 @@ try {
   requireConfigurationFailure(environment({ MULTI_ROUTE_ENTRY_ENABLED: "yes" }), "malformed boolean");
   requireConfigurationFailure(environment({
     APP_ENV: "staging",
-    CORS_ORIGINS: "https://admin.staging.masari.invalid",
+    CORS_ORIGINS: "https://admin.staging.darb.invalid",
     APP_RELEASE: "m7h1-staging",
     TRUST_PROXY: "1",
     REFRESH_TOKEN_PEPPER: "m7h1-staging-refresh-pepper-at-least-thirty-two",
@@ -172,7 +172,7 @@ try {
   }), "staging canonical seed");
   requireConfigurationFailure(environment({
     APP_ENV: "production",
-    CORS_ORIGINS: "https://admin.masari.invalid",
+    CORS_ORIGINS: "https://admin.darb.invalid",
     APP_RELEASE: "m7h1-production",
     TRUST_PROXY: "1",
     REFRESH_TOKEN_PEPPER: "m7h1-production-refresh-pepper-at-least-thirty-two",

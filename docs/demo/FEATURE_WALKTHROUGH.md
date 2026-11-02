@@ -1,6 +1,6 @@
 # Feature walkthrough: notifications, incidents, reports, approvals
 
-An optional companion to `JUDGE_SCRIPT.md` (which stays the frozen 8-minute story). Use it for Q&A, a longer slot, or your own pre-demo check. Everything here runs on the disposable `masari_demo` database. Never use the real `masari` database.
+An optional companion to `JUDGE_SCRIPT.md` (which stays the frozen 8-minute story). Use it for Q&A, a longer slot, or your own pre-demo check. Everything here runs on the disposable `darb_demo` database. Never use the real `darb` database.
 
 ## Before you start
 
@@ -12,13 +12,13 @@ Seeded accounts (passwords are your local `DEMO_*_PASSWORD` values):
 
 | Role | Sign-in email | Phone | Notes |
 | --- | --- | --- |
-| Passenger | demo.passenger@masari.app | +970590000001 | has the seeded request |
-| Driver | demo.driver@masari.app / demo.driver2@masari.app | +970590000002 / +970590000003 | route owners |
-| Merchant | demo.merchant@masari.app | +970590000004 | has the five-parcel order |
-| Admin | demo.admin@masari.app | +970590000005 | Admin console |
-| Pending merchant | demo.pending.merchant@masari.app | +970590000006 | after `demo:seed-approvals` |
-| Rejected driver | demo.rejected.driver@masari.app | +970590000007 | after `demo:seed-approvals` |
-| Pending driver | demo.pending.driver@masari.app | +970590000008 | after `demo:seed-approvals` |
+| Passenger | demo.passenger@darb.app | +970590000001 | has the seeded request |
+| Driver | demo.driver@darb.app / demo.driver2@darb.app | +970590000002 / +970590000003 | route owners |
+| Merchant | demo.merchant@darb.app | +970590000004 | has the five-parcel order |
+| Admin | demo.admin@darb.app | +970590000005 | Admin console |
+| Pending merchant | demo.pending.merchant@darb.app | +970590000006 | after `demo:seed-approvals` |
+| Rejected driver | demo.rejected.driver@darb.app | +970590000007 | after `demo:seed-approvals` |
+| Pending driver | demo.pending.driver@darb.app | +970590000008 | after `demo:seed-approvals` |
 
 ## 1. In-app notifications (≈2 min)
 

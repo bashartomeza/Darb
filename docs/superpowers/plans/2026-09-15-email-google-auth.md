@@ -4,7 +4,7 @@
 
 **Goal:** Implement consent-gated email/password and Google authentication for mobile and linked-admin-only Google sign-in.
 
-**Architecture:** ExternalIdentity owns provider identity; digest-only AuthActionToken handles proof, reset, registration, and phone confirmation. Existing Masari server-managed session/status/security-version controls remain authoritative.
+**Architecture:** ExternalIdentity owns provider identity; digest-only AuthActionToken handles proof, reset, registration, and phone confirmation. Existing Darb server-managed session/status/security-version controls remain authoritative.
 
 **Tech Stack:** Express 5, TypeScript, Prisma/MySQL, Vitest, React/Vite, Flutter/Riverpod, Google maintained Node verification, official Flutter Google tooling.
 
@@ -32,14 +32,14 @@
 
 ~~~ts
 it('rejects a non-disposable rehearsal database', async () => {
-  await expect(runAuthMigrationRehearsal({ database: 'masari' }))
+  await expect(runAuthMigrationRehearsal({ database: 'darb' }))
     .rejects.toThrow('disposable_database_required');
 });
 ~~~
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- authMigrationRehearsal.test.ts
+Run: npm run test -w @darb/api -- authMigrationRehearsal.test.ts
 
 Expected: FAIL because the rehearsal harness is absent.
 
@@ -47,7 +47,7 @@ Expected: FAIL because the rehearsal harness is absent.
 
 ~~~ts
 export function assertDisposableDatabase(name: string) {
-  if (!/^masari_auth_rehearsal_[a-z0-9_]+$/.test(name)) {
+  if (!/^darb_auth_rehearsal_[a-z0-9_]+$/.test(name)) {
     throw new Error('disposable_database_required');
   }
 }
@@ -55,7 +55,7 @@ export function assertDisposableDatabase(name: string) {
 
 - [ ] **Step 4: Verify GREEN**
 
-Run: npm run test -w @masari/api -- authMigrationRehearsal.test.ts
+Run: npm run test -w @darb/api -- authMigrationRehearsal.test.ts
 
 Expected: PASS.
 
@@ -86,7 +86,7 @@ it('backfills google_sub without dropping it', async () => {
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- authMigrationRehearsal.test.ts
+Run: npm run test -w @darb/api -- authMigrationRehearsal.test.ts
 
 Expected: FAIL because the table/backfill is absent.
 
@@ -96,7 +96,7 @@ Add exact spec models/indexes, nullable transitional fields, and forward-only ba
 
 - [ ] **Step 4: Verify GREEN**
 
-Run: npm run prisma:validate && npm run test -w @masari/api -- authMigrationRehearsal.test.ts
+Run: npm run prisma:validate && npm run test -w @darb/api -- authMigrationRehearsal.test.ts
 
 Expected: PASS.
 
@@ -127,7 +127,7 @@ it('consumes a Google registration token once without persisting raw token', asy
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- authActionTokens.test.ts
+Run: npm run test -w @darb/api -- authActionTokens.test.ts
 
 Expected: FAIL because token primitives are absent.
 
@@ -137,7 +137,7 @@ Use AUTH_ACTION_TOKEN_PEPPER, fixed purpose/expiry, atomic consumption, and reda
 
 - [ ] **Step 4: Verify GREEN**
 
-Run: npm run test -w @masari/api -- authActionTokens.test.ts
+Run: npm run test -w @darb/api -- authActionTokens.test.ts
 
 Expected: PASS.
 
@@ -166,7 +166,7 @@ it.each(['/passenger/requests', '/driver/availability', '/merchant/orders', '/tr
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- profileState.test.ts
+Run: npm run test -w @darb/api -- profileState.test.ts
 
 Expected: FAIL because incomplete users reach handlers.
 
@@ -176,7 +176,7 @@ Allow only auth/session, me, capabilities, consent reads, and phone verification
 
 - [ ] **Step 4: Verify GREEN**
 
-Run: npm run test -w @masari/api -- profileState.test.ts
+Run: npm run test -w @darb/api -- profileState.test.ts
 
 Expected: PASS.
 
@@ -208,7 +208,7 @@ it('creates no user without verified email and exact effective consents', async 
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- emailAuth.test.ts
+Run: npm run test -w @darb/api -- emailAuth.test.ts
 
 Expected: FAIL because baseline registration bypasses consent.
 
@@ -218,7 +218,7 @@ Use injected delivery, one-time email proof, bcrypt, serializable consent/User/s
 
 - [ ] **Step 4: Verify GREEN**
 
-Run: npm run test -w @masari/api -- emailAuth.test.ts
+Run: npm run test -w @darb/api -- emailAuth.test.ts
 
 Expected: PASS.
 
@@ -249,7 +249,7 @@ it('does not link an unknown Google subject by matching local email', async () =
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- googleAuth.test.ts
+Run: npm run test -w @darb/api -- googleAuth.test.ts
 
 Expected: FAIL because baseline resolves by email.
 
@@ -259,7 +259,7 @@ Use maintained Google verifier, route-specific audience, subject-only lookup, ve
 
 - [ ] **Step 4: Verify GREEN**
 
-Run: npm run test -w @masari/api -- googleAuth.test.ts
+Run: npm run test -w @darb/api -- googleAuth.test.ts
 
 Expected: PASS.
 
@@ -288,7 +288,7 @@ it('unlocks operations only after verified phone completion', async () => {
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- phoneVerification.test.ts identityLinking.test.ts
+Run: npm run test -w @darb/api -- phoneVerification.test.ts identityLinking.test.ts
 
 Expected: FAIL because no verified-phone transition exists.
 
@@ -298,7 +298,7 @@ Persist only challenge digests, atomically check E.164 uniqueness/set complete s
 
 - [ ] **Step 4: Verify GREEN**
 
-Run: npm run test -w @masari/api -- phoneVerification.test.ts identityLinking.test.ts
+Run: npm run test -w @darb/api -- phoneVerification.test.ts identityLinking.test.ts
 
 Expected: PASS.
 
@@ -326,7 +326,7 @@ it('rejects non-admin credentials before an admin session exists', async () => {
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- adminAuth.test.ts && npm run test -w @masari/admin -- GoogleSignInButton.test.tsx
+Run: npm run test -w @darb/api -- adminAuth.test.ts && npm run test -w @darb/admin -- GoogleSignInButton.test.tsx
 
 Expected: FAIL because strict endpoint/UI are absent.
 
@@ -336,7 +336,7 @@ Accept active linked Admin subject only for Google, remove phone fields, show Go
 
 - [ ] **Step 4: Verify GREEN**
 
-Run: npm run test -w @masari/api -- adminAuth.test.ts && npm run test -w @masari/admin -- GoogleSignInButton.test.tsx
+Run: npm run test -w @darb/api -- adminAuth.test.ts && npm run test -w @darb/admin -- GoogleSignInButton.test.tsx
 
 Expected: PASS.
 
@@ -374,7 +374,7 @@ Expected: FAIL because capability/profile flow is absent.
 
 - [ ] **Step 3: Implement minimum client flow**
 
-Use official Google tooling, persist only Masari tokens, show consent before completion, and keep restricted accounts off product navigation.
+Use official Google tooling, persist only Darb tokens, show consent before completion, and keep restricted accounts off product navigation.
 
 - [ ] **Step 4: Verify GREEN**
 
@@ -406,7 +406,7 @@ it('rejects open Google signup in production without legal releases and approved
 
 - [ ] **Step 2: Verify RED**
 
-Run: npm run test -w @masari/api -- config.test.ts
+Run: npm run test -w @darb/api -- config.test.ts
 
 Expected: FAIL because prerequisites are absent.
 
@@ -416,7 +416,7 @@ Require legal/provider/rehearsal preconditions, HMAC allowlist, rate limits, red
 
 - [ ] **Step 4: Verify GREEN/full regression**
 
-Run: npm run test -w @masari/api && npm run test -w @masari/admin && cd apps/mobile && flutter test && cd ../.. && npm run test:integration:auth-migration
+Run: npm run test -w @darb/api && npm run test -w @darb/admin && cd apps/mobile && flutter test && cd ../.. && npm run test:integration:auth-migration
 
 Expected: all suites PASS; rehearsal uses only disposable database.
 

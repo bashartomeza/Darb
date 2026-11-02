@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/matching/data/matching_models.dart';
-import 'package:masari_mobile/features/merchant/application/merchant_controller.dart';
-import 'package:masari_mobile/features/merchant/data/merchant_models.dart';
-import 'package:masari_mobile/features/merchant/data/merchant_repository.dart';
-import 'package:masari_mobile/features/trips/data/trip_models.dart';
+import 'package:darb_mobile/features/matching/data/matching_models.dart';
+import 'package:darb_mobile/features/merchant/application/merchant_controller.dart';
+import 'package:darb_mobile/features/merchant/data/merchant_models.dart';
+import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 import 'support/auth_test_support.dart';
 
@@ -64,6 +64,47 @@ void main() {
     expect(container.read(merchantOrderDraftProvider)[1].size, 'L');
     controller.removeParcel(1);
     expect(container.read(merchantOrderDraftProvider), hasLength(9));
+  });
+
+  test('parcel drop-offs are typed details with an optional receiver', () {
+    final container = _container(_FakeMerchantRepository());
+    addTearDown(container.dispose);
+    final controller = container.read(merchantOrderDraftProvider.notifier);
+
+    controller.addParcel();
+    controller.addParcel();
+    controller.updateParcel(0, dropoffDetails: ' Manger Street ');
+    controller.updateParcel(
+      1,
+      dropoffDetails: 'Near the university gate',
+      receiverName: 'Sara',
+      receiverPhone: '+970599123456',
+    );
+    final parcels = container.read(merchantOrderDraftProvider);
+    expect(parcels[0].toJson(), {
+      'dropoff_details': 'Manger Street',
+      'size': 'S',
+      'priority': 'normal',
+    });
+    expect(parcels[1].toJson()['receiver_phone'], '+970599123456');
+    // Every parcel keeps its own identity, so its fields follow it when an
+    // earlier parcel is removed.
+    expect(parcels.map((parcel) => parcel.id).toSet(), hasLength(3));
+    final second = parcels[1].id;
+    controller.removeParcel(0);
+    expect(container.read(merchantOrderDraftProvider).first.id, second);
+  });
+
+  test('details and receiver phone validation', () {
+    expect(routeDetailsValid('ab'), isFalse);
+    expect(routeDetailsValid('  abc  '), isTrue);
+    expect(routeDetailsValid('x' * 300), isTrue);
+    expect(routeDetailsValid('x' * 301), isFalse);
+    expect(receiverPhoneValid(''), isTrue);
+    expect(receiverPhoneValid('+970 599-123456'), isTrue);
+    expect(receiverPhoneValid('0599123456'), isTrue);
+    expect(receiverPhoneValid('call me'), isFalse);
+    expect(receiverPhoneValid('12'), isFalse);
   });
 
   test(
@@ -183,7 +224,7 @@ void main() {
       final batch = _batch();
       final order = MerchantOrder(
         id: 'secondary',
-        pickupLabel: merchantPickupLabel,
+        pickupLabel: 'Bab Al-Zawiya',
         status: 'assigned',
         createdAt: _time,
         parcels: const [],
@@ -309,7 +350,7 @@ MerchantOrder _order({
   List<MerchantBatch>? batches,
 }) => MerchantOrder(
   id: 'order_1',
-  pickupLabel: merchantPickupLabel,
+  pickupLabel: 'Bab Al-Zawiya',
   status: status,
   createdAt: _time,
   parcels: const [
@@ -328,7 +369,7 @@ MerchantMatch _match({MerchantBatch? batch}) => MerchantMatch(
   id: 'match_1',
   status: 'proposed',
   score: 0.93,
-  method: 'masari_route_score',
+  method: 'darb_route_score',
   explanation: 'Safe explanation',
   breakdown: const ScoringBreakdown(
     corridorOverlap: 0.95,
@@ -342,7 +383,7 @@ MerchantMatch _match({MerchantBatch? batch}) => MerchantMatch(
   route: _route(),
   order: const MerchantOrderSummary(
     id: 'order_1',
-    pickupLabel: merchantPickupLabel,
+    pickupLabel: 'Bab Al-Zawiya',
     status: 'batched',
     parcelCount: 1,
   ),

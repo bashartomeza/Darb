@@ -14,7 +14,7 @@ on 2026-09-15. Unit fixtures alone never satisfy this gate.
 | `GOOGLE_PASSENGER_SIGNUP_MODE` | `disabled` by default; `allowlist` or `open` only in local/test/demo until approved production delivery integration lands. Existing linked login remains independent of signup mode. |
 | `GOOGLE_MOBILE_SERVER_CLIENT_ID` | Single mobile server OAuth audience; unset disables mobile Google. |
 | `GOOGLE_ADMIN_WEB_CLIENT_ID` | Single distinct Admin Web audience; unset disables Admin Google. |
-| `GOOGLE_PASSENGER_ALLOWLIST_HMACS` | Exact comma-separated lower-case SHA-256 HMACs of canonical email with domain `masari:google-passenger-allowlist`, using the auth action key. Nonempty in allowlist mode. Never publish entries through capabilities. |
+| `GOOGLE_PASSENGER_ALLOWLIST_HMACS` | Exact comma-separated lower-case SHA-256 HMACs of canonical email with domain `darb:google-passenger-allowlist`, using the auth action key. Nonempty in allowlist mode. Never publish entries through capabilities. |
 | `AUTH_ACTION_TOKEN_PEPPER` | Separate random server-only secret, at least 32 characters; never reuse JWT/refresh pepper. |
 | `AUTH_ACTION_TOKEN_KEY_VERSION` | Positive version, default 1. Rotating the sole active key intentionally invalidates pending proofs; tell users to restart the flow. |
 | `OTP_PROVIDER` | Existing invitation/public-onboarding setting. `fake` remains forbidden in staging/production. `email` is the production value: it also supplies the profile phone-step provider (the code goes to the account's verified email; the phone stays unverified). |
@@ -46,7 +46,7 @@ npm.cmd run test:integration:auth-migration -- --confirm-disposable
 The harness ignores caller DATABASE_URL. It creates a new short temporary data
 directory, uses no MySQL option files, chooses a free nondefault loopback port,
 generates a random root credential, disables MySQL X, and creates only exact
-`masari_auth_rehearsal_*` databases. It shuts down its instance in `finally`.
+`darb_auth_rehearsal_*` databases. It shuts down its instance in `finally`.
 It retains temporary data and redacted evidence for inspection; do not delete an
 existing MySQL service directory. A subsequent cleanup must target only the exact
 generated temporary directory after confirming the process has exited.

@@ -6,11 +6,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/onboarding/application/onboarding_controller.dart';
-import 'package:masari_mobile/features/onboarding/data/onboarding_repository.dart';
-import 'package:masari_mobile/features/onboarding/data/onboarding_storage.dart';
-import 'package:masari_mobile/features/onboarding/domain/onboarding_models.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/onboarding/application/onboarding_controller.dart';
+import 'package:darb_mobile/features/onboarding/data/onboarding_repository.dart';
+import 'package:darb_mobile/features/onboarding/data/onboarding_storage.dart';
+import 'package:darb_mobile/features/onboarding/domain/onboarding_models.dart';
 
 const _policy =
     '"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60';

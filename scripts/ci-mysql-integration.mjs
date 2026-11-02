@@ -8,7 +8,7 @@ if (process.env.APP_ENV !== "demo") throw new Error("CI MySQL integration requir
 const database = new URL(process.env.DATABASE_URL).pathname.slice(1);
 if (!database.endsWith("_ci")) throw new Error("CI MySQL integration refuses a database not ending in _ci");
 const resetAllowedDatabases = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
-if (database.toLowerCase() === "masari" || !resetAllowedDatabases.includes(database)) {
+if (database.toLowerCase() === "darb" || !resetAllowedDatabases.includes(database)) {
   throw new Error("CI MySQL integration requires an explicitly reset-safe database");
 }
 const root = resolve(new URL("../", import.meta.url).pathname.replace(/^\/(\w:)/, "$1"));
@@ -43,7 +43,7 @@ try {
       PUBLIC_ONBOARDING_ENABLED: "true",
       ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: "true",
       DRIVER_DOCUMENTS_ENABLED: "true",
-      DRIVER_DOCUMENTS_DIR: resolve(tmpdir(), "masari-ci-public-onboarding-documents"),
+      DRIVER_DOCUMENTS_DIR: resolve(tmpdir(), "darb-ci-public-onboarding-documents"),
       IDEMPOTENCY_PAYLOAD_PEPPER: "ci-only-payload-pepper-at-least-thirty-two-characters"
     }],
     ["test:integration:routes", "route lifecycle and concurrency smoke"],

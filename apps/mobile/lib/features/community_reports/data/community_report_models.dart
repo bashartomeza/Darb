@@ -55,6 +55,10 @@ enum CommunityReportCategory {
   /// asks for, or shows, personal details about a driver.
   bool get sensitive => this == safetyAlert || this == driverReport;
 
+  /// Map-related reports describe a place and must carry one (the server
+  /// enforces the same list). Driver and "other" reports may omit it.
+  bool get requiresLocation => this != driverReport && this != other;
+
   static CommunityReportCategory fromApi(String? value) =>
       CommunityReportCategory.values.firstWhere(
         (c) => c.apiValue == value,

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/map_cache_tile.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../auth/domain/auth_models.dart';
@@ -79,7 +79,7 @@ class _SessionManagementScreenState
               ],
               const SizedBox(height: AppTokens.spaceLarge),
 
-              MasariSection(
+              DarbSection(
                 title: l10n.activeSessions,
                 child: sessions.when(
                   loading: () => const Column(
@@ -236,7 +236,7 @@ class _SessionCard extends StatelessWidget {
       _ => l10n.otherDevice,
     };
 
-    return MasariInfoCard(
+    return DarbInfoCard(
       title: label,
       subtitle: client,
       icon: session.clientType == 'mobile'

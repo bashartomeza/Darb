@@ -92,21 +92,17 @@ final merchantOrderDraftProvider =
     >(MerchantOrderDraftController.new);
 
 class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
+  int _nextId = 1;
+
   @override
   List<ParcelDraft> build() => const [ParcelDraft()];
-
-  void restorePending(List<ParcelDraft> parcels) {
-    if (parcels.isEmpty || parcels.length > 10) {
-      throw const FormatException("Invalid parcel count");
-    }
-    state = List.unmodifiable(parcels);
-  }
 
   bool get canAdd => state.length < 10;
   bool get canRemove => state.length > 1;
 
   void addParcel() {
-    if (canAdd) state = [...state, const ParcelDraft()];
+    if (!canAdd) return;
+    state = [...state, ParcelDraft(id: _nextId++)];
   }
 
   void removeParcel(int index) {
@@ -116,16 +112,20 @@ class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
 
   void updateParcel(
     int index, {
-    String? destinationLabel,
+    String? dropoffDetails,
     String? size,
     String? priority,
+    String? receiverName,
+    String? receiverPhone,
   }) {
     if (index < 0 || index >= state.length) return;
     final updated = [...state];
     updated[index] = updated[index].copyWith(
-      destinationLabel: destinationLabel,
+      dropoffDetails: dropoffDetails,
       size: size,
       priority: priority,
+      receiverName: receiverName,
+      receiverPhone: receiverPhone,
     );
     state = updated;
   }

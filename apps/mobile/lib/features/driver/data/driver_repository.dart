@@ -113,7 +113,23 @@ class DriverRepository {
     return _routes(json);
   }
 
+  /// The driver's route for today on one predefined route; the server fills
+  /// the ends from the route's cities.
+  ///
+  /// [serviceRouteId] is null only when resending a route saved by a build
+  /// before routes existed: that send is a replay of its idempotency key.
+  static Map<String, dynamic> createRouteBody({
+    required String? serviceRouteId,
+    required int seatsAvailable,
+    required int parcelCapacityAvailable,
+  }) => {
+    'service_route_id': ?serviceRouteId,
+    'seats_available': seatsAvailable,
+    'parcel_capacity_available': parcelCapacityAvailable,
+  };
+
   Future<DriverRoute> createRoute({
+    required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
     String? idempotencyKey,
@@ -123,13 +139,11 @@ class DriverRepository {
       '/driver/routes',
       headers: {'Idempotency-Key': ?idempotencyKey},
       beforeRetry: beforeRetry,
-      body: {
-        'origin_label': lockedDriverOriginLabel,
-        'destination_label': lockedDriverDestinationLabel,
-        'corridor_key': lockedDriverCorridorKey,
-        'seats_available': seatsAvailable,
-        'parcel_capacity_available': parcelCapacityAvailable,
-      },
+      body: createRouteBody(
+        serviceRouteId: serviceRouteId,
+        seatsAvailable: seatsAvailable,
+        parcelCapacityAvailable: parcelCapacityAvailable,
+      ),
     );
     return DriverRoute.fromJson(json['route'] as Map<String, dynamic>);
   }
@@ -139,15 +153,21 @@ class DriverRepository {
     return DriverRoute.fromJson(json['route'] as Map<String, dynamic>);
   }
 
+  /// Going online without an active route needs [serviceRouteId]: the route
+  /// the driver chose to drive.
   Future<LegacyDriverOnlineResult> setLegacyOnlineState({
     required bool online,
     required String idempotencyKey,
     String? expectedRouteId,
+    String? serviceRouteId,
     Future<void> Function()? beforeRetry,
   }) async {
     final body = <String, dynamic>{'online': online};
     if (expectedRouteId != null) {
       body['expected_route_id'] = expectedRouteId;
+    }
+    if (serviceRouteId != null) {
+      body['service_route_id'] = serviceRouteId;
     }
     final json = await apiClient.putJson(
       '/driver/online-state',

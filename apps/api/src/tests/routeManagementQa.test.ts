@@ -251,9 +251,9 @@ describe("route management QA safety", () => {
 
   it("rejects raw empty query and fragment delimiters", () => {
     for (const unsafeUrl of [
-      "mysql://localhost:3306/masari_routes_qa?",
-      "mysql://localhost:3306/masari_routes_qa#",
-      "mysql://localhost:3306/masari_routes_qa?#"
+      "mysql://localhost:3306/darb_routes_qa?",
+      "mysql://localhost:3306/darb_routes_qa#",
+      "mysql://localhost:3306/darb_routes_qa?#"
     ]) {
       expect(() => assertRouteQaDatabase(unsafeUrl)).toThrow("route_qa_database_guard_rejected");
     }

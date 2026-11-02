@@ -22,7 +22,7 @@
 - Admin route-management preview remains tied to an existing editable draft route version and server-owned stops. Preview/geocode results are ephemeral, cache TTL remains zero in production-like configuration, no provider result is persisted, and published route geometry remains immutable; the schema and all 18 migrations are unchanged.
 - Production remains fail-closed with `ROUTE_MAPS_ENABLED=false` and `ROUTE_PROVIDER=disabled`; no provider or credential is required and provider calls are zero. Fake is prohibited in staging/production, fallback is never implicit, requests/responses are size- and deadline-bounded, retry is at most one, identical requests are single-flight coalesced, and circuit-breaker recovery is covered.
 - No Flutter/Admin map renderer, provider SDK, client token, location permission, GPS/current-location ingestion, background service, realtime location, tracking, moving marker, live ETA, route deviation, or navigation was added. M7E functionality remains absent.
-- Closure validation passes API 271, Admin 54, Flutter 241, M7C3C1 145, M7C3A 98, M7C1 79, M7H1 reset 45, legacy online 21, M7H1 passenger association 12, public onboarding 76, trusted sessions, onboarding foundation, route lifecycle, backup/restore, all five triggers, production builds, Android permission/artifact scans, and exact merge-head CI. Preflight is 22/22; deterministic smoke remains score 0.9317, sequence 2, trips 1/6, distance 21.53/129.19, cost 43.06/258.38, winner Masari, with zero provider calls.
+- Closure validation passes API 271, Admin 54, Flutter 241, M7C3C1 145, M7C3A 98, M7C1 79, M7H1 reset 45, legacy online 21, M7H1 passenger association 12, public onboarding 76, trusted sessions, onboarding foundation, route lifecycle, backup/restore, all five triggers, production builds, Android permission/artifact scans, and exact merge-head CI. Preflight is 22/22; deterministic smoke remains score 0.9317, sequence 2, trips 1/6, distance 21.53/129.19, cost 43.06/258.38, winner Darb, with zero provider calls.
 - Live provider status is exactly: Mapbox `NOT_EXECUTED`; Google `NOT_EXECUTED`; HERE `NOT_EXECUTED`; Stadia `NOT_EXECUTED`. No live Palestine routing, Arabic acceptance, success rate, latency, attribution, privacy, commercial, quota, or storage conclusion is claimed.
 - Provider selection remains `NO_PROVIDER_APPROVED_YET`; Mapbox is only the conditional next-evaluation lead. Storage rights remain `UNRESOLVED`, including permanent canonical geometry, geocoding-result retention, route polyline retention, and provider reference-ID retention.
 - Open provider evidence remains: credentialed bakeoffs for all four candidates; human Palestine corridor review; live Arabic geocoding; route/geocode success rates and route p50/p95; provider-specific storage and retention rights; final-display and renderer attribution; privacy/DPA/regional processing and request/telemetry retention; commercial/quota/support and production budget approval; renderer/client-token decision; and provider-persistence schema design.
@@ -36,7 +36,7 @@
 - `PUT /api/v1/driver/online-state` uses a strict explicit desired `online` state and required `Idempotency-Key`. Actor/operation/payload/scope-bound idempotency, response-loss replay, concurrent convergence, one audit transition per logical change, and authoritative reconciliation pass without canonical/shared capacity, offer, reservation, Trip, manifest, member, or location side effects.
 - Flutter operation `legacy_driver_online_state_v1` writes its actor-bound version-2 bundle before sending, retains one stable key through refresh and ambiguous results, preserves recovery after `session_changed` or account switching, shares the global unresolved-operation slot, and deletes only after authoritative terminal reconciliation. Secure-save failure sends no request and another actor cannot inspect or replay the bundle.
 - Closure validation passes 217 API tests, 54 Admin tests, 241 Flutter tests, and nine tooling tests. Real-MySQL regression passes reset 45, passenger association 12, legacy online recovery 21, M7C3C1 145, M7C3A 98, M7C1 79, public onboarding 76, trusted sessions, onboarding, route lifecycle, five triggers, and checksum-backed backup/restore.
-- Demo preflight passes `22/22`; deterministic smoke remains score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`. The earlier outage-era Android emulator startup limitation was cleared: the API 36 emulator installed the configured APK and opened Arabic/RTL with correct `مساري` branding.
+- Demo preflight passes `22/22`; deterministic smoke remains score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`. The earlier outage-era Android emulator startup limitation was cleared: the API 36 emulator installed the configured APK and opened Arabic/RTL with correct `مساري` branding.
 - Production-like Admin and Android artifacts pass isolation scanning. Canonical/shared gates remain fail closed; no map/GPS/location permission, foreground location service, realtime, ETA, tracking, pricing, payment, dispatch, M7D, or M7E control was introduced.
 - All 18 migrations, the Prisma schema, dependencies, workflows, both frozen tags, and M7C3 single/shared invariants remain unchanged. Exact merge-head CI is green: Admin run `31121529418` attempt 5, Backend and MySQL run `31121529276` attempt 2, Flutter Android run `31121529464` attempt 2, and Security run `31121529755` attempt 3.
 - Accepted obligations remain open: authoritative success for an already-offline `online:false` request; reset mid-transaction failure injection; more duplicated reset zero-state assertions; exhaustive physical back/rotation/process-interruption matrices; a dedicated rendered-widget delayed trust-response test; and continued harness-isolation/resource-conflict monitoring. None is claimed complete.
@@ -53,7 +53,7 @@
 - Accessibility corrections provide one actionable offer-card node and one accept/reject semantic action without duplicate child announcements. Arabic remains default RTL with correct `مساري`; English remains optional LTR. Selected merged-head evidence covers mixed aggregate presentation, rotation during confirmation, accepted terminal display, 720x1280, 200% text, and no overflow/fatal error. Approved exact-feature-head evidence also covers passenger-only acceptance, merchant-only rejection, portrait/landscape, system/AppBar back, and owner privacy.
 - Merged-head validation passed 205 API tests, 27 Admin tests, 203 Flutter tests, nine tooling tests, Prisma validation/generation, typecheck/build, standard/security validation, production-configured Admin, debug/release APK builds, and production Admin/APK artifact scans. The raw audit retains only the four approved moderate Prisma CLI transitives; no force fix was run.
 - Real-MySQL regression passed the M7C3C1 141-assertion, M7C3A 98-assertion, M7C1 79-assertion, and public-onboarding 76-check harnesses plus trusted sessions, onboarding foundation, route lifecycle, deterministic reset/reseed, five-trigger verification, and checksum-backed backup/isolated restore.
-- Preflight passed `22/22`. Deterministic smoke remains score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`. Legacy matching, batching, comparison, Trip lifecycle, and simulated tracking remain isolated from shared canonical records.
+- Preflight passed `22/22`. Deterministic smoke remains score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`. Legacy matching, batching, comparison, Trip lifecycle, and simulated tracking remain isolated from shared canonical records.
 - Production remains fail closed: shared backend/mobile presentation and canonical entry are disabled; no map SDK/surface, GPS/location permission or ingestion, foreground service, realtime dependency, tracking/ETA, capacity-reservation client, segment reuse, pricing/payment, dispatch, demo credential, or secure-bundle value is present in the production-like APK.
 - All four workflows passed on exact merge commit `5bc75752ff2f2b88805279e27002c99e73b6f73c`: Admin CI run `31017821373`, Backend and MySQL CI run `31017821340`, Flutter Android CI run `31017821397`, and Security and Configuration CI run `31017821584`.
 - Accepted non-blocking evidence obligations remain: complete physical TalkBack traversal, exhaustive hands-on process-death timing cut points, every in-flight rotation case, the full gesture-back matrix, maximum-timeline/maximum-count device automation, and continued smaller-physical-device testing. These are not claimed as completed.
@@ -73,7 +73,7 @@
 - Post-merge MySQL 8.0.46 evidence includes all 18 migrations from empty, repeat no-op deployment, current status, five active triggers, and a populated migration-16 upgrade retaining six single-demand offers and two Trips with zero manifests/members introduced. Checksum-backed backup/restore preserves the constraints and triggers and cleans the isolated restore database.
 - Real-MySQL regression passes exactly 141 M7C3C1 assertions, 98 M7C3A assertions, 79 M7C1 assertions, and 76 public-onboarding checks, plus trusted-session, onboarding-foundation, and route-lifecycle harnesses. The documented Windows aggregate-wrapper `spawn EINVAL` remains a tooling-only obligation; every underlying harness passes individually and Linux CI is authoritative.
 - Workspace and compatibility regression passes 201 API tests, 27 admin tests, and 179 Flutter tests with clean formatting, analysis, typecheck, build, standard/security/tooling validation, production-configured admin, production-like APK, and artifact scans. The raw production audit contains only the four documented Prisma CLI moderate transitive findings; no force fix was run.
-- Legacy preflight passes `22/22`. Deterministic smoke remains score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`; shared records remain isolated from legacy matching, batching, comparison, Trip, tracking, and reset behavior.
+- Legacy preflight passes `22/22`. Deterministic smoke remains score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`; shared records remain isolated from legacy matching, batching, comparison, Trip, tracking, and reset behavior.
 - All four workflows passed on exact merge commit `be3aad3047644a55669f85b930e432087b53ed98`: Admin CI run `30447066090`, Backend and MySQL CI run `30447066248`, Flutter Android CI run `30447066087`, and Security and Configuration CI run `30447066229`.
 
 [M7C3B_FLUTTER_CANONICAL_OFFERS_CLOSED]
@@ -90,7 +90,7 @@
 - M7C3A accepted obligations remain: broader administrative deadlock/backoff stress is future work. The driver-offer pagination obligation is resolved by M7C3B.
 - Merged-head validation is green with 193 API tests, 27 admin tests, and 179 Flutter tests. Disposable MySQL 8.0.46 applied all 16 unchanged migrations from empty, repeated deployment as a no-op, reported current status, passed the M7C3A 98-assertion and M7C1 79-assertion harnesses, and passed trusted-session, onboarding, 76-check public-onboarding, route-lifecycle, backup/restore, and restrictive cleanup gates.
 - Selected real-emulator evidence covers Arabic-default and English layouts, driver accepted-offer list/detail, passenger pending/cancelled/assigned history and minimum Trip summary, merchant pending/unavailable history, manual refresh, landscape/back behavior, and the explicit absence of map/tracking/ETA controls. Accept/reject response loss, process death, actor isolation, payload fencing, secure-save failure, auth refresh, rejection replay, expiry, and terminal races are proven by persistent-state integration and Flutter automation; they are not claimed as a complete manual device matrix.
-- Production-like admin and APK artifacts pass isolation scanning. Legacy demo preflight remains `22/22`; deterministic smoke remains score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`.
+- Production-like admin and APK artifacts pass isolation scanning. Legacy demo preflight remains `22/22`; deterministic smoke remains score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`.
 - Accepted non-blocking obligations remain: refresh is required to advance the display-only countdown snapshot; unknown Trip/vehicle enums need localized fail-closed presentation; offer-card semantics may duplicate announcements; disabled actions need clearer spoken reasons; manual process-death/emulator evidence must not be overstated; and capability-disabled direct assignment lists currently use an empty rather than dedicated unavailable state.
 - M7C3C aggregation/shared-trip membership is not started. M7D maps/GPS/location ingestion and M7E realtime/pricing/production dispatch are not started. One canonical Trip per one-off DriverRoute availability remains enforced.
 
@@ -107,7 +107,7 @@
 - Independent correction evidence: all 16 migrations apply from empty; the checksum-backed 13-migration baseline upgrades through migrations 14-16; repeat deployment is a no-op; and the disposable MySQL 8.0.46 M7C3A harness passes 98 persistent-state assertions. Added proofs cover two workers/two demands competing for one availability, one trip per one-off availability, same-dispatch pointers, accepted-offer trip provenance, merchant parcel drift, elapsed departure invalidation, canonical/generic expiry ownership, exact restoration, and exact response-loss replay.
 - Compatibility evidence remains green: 190 API, 27 admin, and 163 Flutter tests pass; the M7C1 harness passes 79 assertions (the original 78 behavior assertions plus migration-16 currency); trusted-session, onboarding, 76-check public-onboarding, and route-lifecycle harnesses pass; and checksum-backed restore/upgrade cleanup succeeds. Production admin and release APK artifact scans pass with no client contract or dependency change.
 - Production-like admin and release APK builds pass artifact isolation. Runtime logs contain no configured secret values, authorization headers, database URLs, phone numbers, route snapshot JSON, parcel descriptions, or raw idempotency keys. Canonical entry remains hidden and matching/trip creation remain fail-closed in staging/production.
-- Live demo preflight passes 22/22 on real MySQL and deterministic smoke remains exact: score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`. Canonical rows do not enter legacy comparison or tracking.
+- Live demo preflight passes 22/22 on real MySQL and deterministic smoke remains exact: score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`. Canonical rows do not enter legacy comparison or tracking.
 
 [M7C3A_POST_MERGE_CLOSURE]
 Merge and migration integrity (2026-07-27):
@@ -124,7 +124,7 @@ Canonical assignment result:
 Merged-head validation and release boundary:
 - Local validation passed dependency installation, Prisma validate/generate, workspace typecheck/build, 190 API tests, 27 admin tests, 163 Flutter tests, standard/security/workflow/tooling policy, production-configured admin and release-APK artifact scans, and the raw production audit. Only the four approved Prisma CLI moderate transitives remain; no force fix was run.
 - Disposable MySQL 8.0.46 with `utf8mb4_0900_ai_ci` passed the 98-assertion M7C3A harness, the 79-assertion M7C1 harness, trusted sessions, onboarding, the 76-check public-onboarding harness, route lifecycle, deterministic reset/reseed, and backup/restore. The Windows aggregate runner still reproduces documented `spawn EINVAL`; individual harnesses and Linux CI are authoritative.
-- Live preflight passed 22/22. Deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Live preflight passed 22/22. Deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - Canonical entry, matching, and canonical Trip creation remain explicit local/test/demo gates and fail closed in staging/production. No public matching/expiry runner, automatic worker, Flutter offer UI, combined batching, map/GPS/realtime dependency, pricing, or dispatch UI was added.
 - Admin, backend-mysql, mobile, and security workflows all passed on exact merge commit `81629473b76bf3f287bf04f177256edf92d85b9b`.
 
@@ -134,7 +134,7 @@ Accepted obligations and next boundary:
 - M7C3B is closed. M7C3C is not started. Maps/GPS/realtime remain M7D/M7E.
 
 [PROJECT_OVERVIEW]
-Masari is a Palestine-focused smart route-sharing logistics MVP.
+Darb is a Palestine-focused smart route-sharing logistics MVP.
 
 Current implementation status: M7B Canonical Route Management, M7C1 Backend Multi-Route Operational Foundation, M7C2 Flutter Multi-Route Role Flows, and M7C3 canonical matching/shared-trip aggregation, offers, assignments, and Flutter presentation are closed on `production-readiness`. Production canonical matching remains disabled; M7C3C3 was not begun, and M7D/M7E maps, GPS, location ingestion, realtime, ETA, pricing, payment, and dispatch work are not started.
 
@@ -155,7 +155,7 @@ The locked corridor remains the deterministic demo/test reference. M7B adds a fe
 - Used routes, versions, and stops remain readable history and cannot be destructively deleted.
 - Paused versions reject new availability and demand after M7C integration; active historical work is not rewritten.
 - Route pricing, provider selection, maps, GPS, realtime, and dispatching are outside M7B.
-- The original deterministic corridor, `masari_route_score`, simulation points, and approved metrics remain unchanged.
+- The original deterministic corridor, `darb_route_score`, simulation points, and approved metrics remain unchanged.
 
 [M7B_FIXED_CORRIDOR_AUDIT]
 - Deterministic demo fixtures: `LOCKED_CORRIDOR_KEY`, corridor labels/coordinates, demo route points, seeded passenger and merchant stops, comparison formulas, smoke expectations, Flutter demo presets, and their regression fixtures.
@@ -184,7 +184,7 @@ Implemented in M2A:
 Implemented in M2B:
 - Route-based matching API.
 - Merchant parcel batching API.
-- Masari vs nearest-driver comparison API.
+- Darb vs nearest-driver comparison API.
 - Persistent `ParcelBatch`, `Match`, and `ComparisonRun` records.
 - Deterministic Haversine-based demo metrics.
 - Audit events for match decisions, parcel batches, and comparison runs.
@@ -205,7 +205,7 @@ Implemented in M3B:
 - Dashboard overview for seeded users, routes, requests, orders, parcels, and trips.
 - Matching panel with selected route, score, scoring breakdown, and explanation.
 - Parcel batching panel with batch id, parcel count, distance saved, and explanation.
-- Comparison table for Masari vs nearest-driver metrics.
+- Comparison table for Darb vs nearest-driver metrics.
 - Trip control panel for match accept/reject and valid status progression.
 - Deterministic tracking simulation panel with latest location and route-progress trail.
 - Full demo sequence button using existing deterministic APIs.
@@ -223,7 +223,7 @@ Implemented in M3D:
 - Arabic is the default language and uses RTL layout.
 - English is optional and uses LTR layout.
 - Language switch appears on login and authenticated dashboard.
-- Selected language persists in `localStorage` under `masari_locale`.
+- Selected language persists in `localStorage` under `darb_locale`.
 - Document `<html>` `lang` and `dir` update dynamically.
 - UI labels, action text, success/error messages, progress steps, roles, statuses, and demo metrics are translated.
 - API enum values remain unchanged and are mapped to translated UI labels.
@@ -235,10 +235,10 @@ Implemented in M4B:
 - Android licenses accepted.
 - `flutter doctor -v` reports Android-capable environment with no issues.
 - Android-only Flutter app created under `apps/mobile`.
-- Android application ID set to `ps.masari.mobile`.
+- Android application ID set to `ps.darb.mobile`.
 - Arabic-default mobile shell implemented with Flutter ARB/gen_l10n.
 - English optional language switch implemented.
-- Locale persists with `masari_locale`.
+- Locale persists with `darb_locale`.
 - `API_BASE_URL` configured through `String.fromEnvironment`.
 - Debug APK builds successfully.
 - Android runtime validation passed on emulator `Medium_Phone_API_36.0` / `emulator-5554`, Android 16 API 36.
@@ -312,7 +312,7 @@ Implemented in M5B:
 - Froze hackathon product scope and limited changes to presentation documentation, preflight service-identity hardening, packaging, rehearsal, and final validation.
 - Audited the designated presentation machine, performed a no-snapshot cold start, rehearsed controlled API failure/recovery, and ran three final deterministic presentation checks.
 - Added `JUDGE_SCRIPT.md`, `BACKUP_DEMO.md`, `README_DEMO_START.md`, and `RELEASE_NOTES.md`.
-- Prepared the ignored `release/masari-hackathon-demo/` package and ZIP with APK, safe templates, evidence, and SHA-256 manifests.
+- Prepared the ignored `release/darb-hackathon-demo/` package and ZIP with APK, safe templates, evidence, and SHA-256 manifests.
 
 Implemented in M5C:
 - Preserved the complete PostgreSQL release at commit `074fc4e7cc79c6b08a2baa18ca251b4802aa48c7` and annotated tag `v0.1.0-hackathon`.
@@ -414,10 +414,10 @@ Required admin env:
 
 Localization:
 - Supported admin locales: Arabic `ar`, English `en`.
-- Default locale: Arabic `ar` unless `masari_locale` is already saved.
+- Default locale: Arabic `ar` unless `darb_locale` is already saved.
 - Arabic document mode: `lang="ar"`, `dir="rtl"`.
 - English document mode: `lang="en"`, `dir="ltr"`.
-- Locale persistence key: `masari_locale`.
+- Locale persistence key: `darb_locale`.
 - Future Flutter screens must also support Arabic default, English optional, and runtime RTL/LTR switching.
 
 [SYSTEM_FLOW]
@@ -441,21 +441,21 @@ M3B admin console flow:
 M3D localization flow:
 1. First admin visit opens in Arabic without browser-language detection.
 2. Language switch toggles `ar` and `en` without resetting auth or demo state.
-3. Selected locale is saved to `masari_locale`.
+3. Selected locale is saved to `darb_locale`.
 4. Refresh restores the saved locale.
 5. UI direction follows locale and technical values such as phone numbers, IDs, URLs, and coordinates remain readable LTR.
 
 M4B mobile shell flow:
-1. Android app starts in Arabic when `masari_locale` is not saved.
+1. Android app starts in Arabic when `darb_locale` is not saved.
 2. Arabic UI uses RTL through Flutter localization/direction handling.
 3. User can switch to English from the welcome shell.
-4. Selected language persists under `masari_locale` through `shared_preferences`.
+4. Selected language persists under `darb_locale` through `shared_preferences`.
 5. Welcome shell shows app-shell status and configured `API_BASE_URL` diagnostics only.
 6. No passenger, driver, merchant, auth, matching, trip, or tracking business flow is implemented yet.
 
 M4C mobile auth/session flow:
 1. App starts at `/splash` and loads the saved locale independently from auth state.
-2. App reads JWT from secure storage key `masari_jwt`.
+2. App reads JWT from secure storage key `darb_jwt`.
 3. If no token exists, unauthenticated users route to `/login`.
 4. If a token exists, app calls `GET /api/v1/me` with `Authorization: Bearer <token>`.
 5. If `/me` succeeds, session is restored and user routes by role.
@@ -560,7 +560,7 @@ Actual folder structure:
     │   │   │   │   └── app_tokens.dart
     │   │   │   └── widgets
     │   │   │       ├── language_switch.dart
-    │   │   │       └── masari_card.dart
+    │   │   │       └── darb_card.dart
     │   │   ├── features
     │   │   │   ├── auth
     │   │   │   │   ├── application
@@ -778,6 +778,16 @@ Implemented endpoints:
 - `POST /api/v1/merchant/orders`.
 - `GET /api/v1/merchant/orders`.
 - `GET /api/v1/merchant/orders/:id`.
+- `GET /api/v1/legacy-corridor` (any signed-in role): the locked corridor's driver-route ends and the active stops of its published route version, with their pickup/drop-off flags and coordinates. Kept read-only for older app builds; new flows use the operating routes below.
+- Route-based orders (contract: `docs/routes/route-based-orders.md`): every passenger request, merchant order, passenger parcel and driver route names one predefined route (`service_route_id`) and carries the exact pickup / drop-off as free text (`pickup_details` / `dropoff_details`, 3-300 characters). Rows stay legacy (`canonical_entry_version` null) and store the route's current `route_version_id`; legacy matching and batching only pair demand and driver routes on the same service route (rows from before routes existed keep matching the locked corridor). Unknown, retired or turned-off routes answer `409 route_unavailable`. The old coordinate bodies of passenger requests, `/matches/search` and merchant orders are still accepted and ride `hebron-to-bethlehem`.
+  - `GET /api/v1/operating-routes` (public, no sign-in): active two-city routes, ordered by origin then destination name.
+  - `POST /api/v1/passenger/requests` takes `service_route_id`, `pickup_details`, `dropoff_details`, `preferred_time`, `passenger_count`, optional `selected_driver_route_id` (same route only). Passenger requests, matches and trips serialize `service_route_id`, `route_name_ar`, `route_name_en`, `pickup_details`, `dropoff_details`.
+  - `POST /api/v1/matches/search` takes `service_route_id`, `preferred_time`, `passenger_count`.
+  - `POST/GET /api/v1/passenger/parcels`, `GET /passenger/parcels/:id`, `PATCH /passenger/parcels/:id/cancel`: always available. The route body creates a legacy parcel order owned by the passenger (same pipeline, matching and receiver handover code as merchant orders) and immediately asks for a driver on its route; the canonical body still needs `MULTI_ROUTE_ENTRY_ENABLED`.
+  - `POST /api/v1/merchant/orders` takes `service_route_id`, `pickup_details`, `parcels[{ dropoff_details, size, priority, receiver_name?, receiver_phone? }]`; bulk CSV columns `route_key, pickup_details, dropoff_details, size, priority[, receiver_name, receiver_phone]`, one order per (route_key, pickup_details).
+  - `POST /api/v1/driver/routes` requires `service_route_id`; `PUT /api/v1/driver/online-state` takes `service_route_id` (required to go online without an active driver route).
+  - Admin (admin auth, not gated by `ROUTE_MANAGEMENT_ENABLED`): `GET/POST /api/v1/admin/operating-routes`, `PATCH /api/v1/admin/operating-routes/:id` (`{ active }` pauses/resumes the current version), `GET/POST /api/v1/admin/cities`.
+  - The API creates the 10 city stops and 20 predefined routes when missing at start-up (and on demo reset, and when an admin opens the route list on a database that had no admin at start-up); it never edits or re-activates existing rows. Migration `20261104120000_route_based_orders` adds the details/receiver columns and lets legacy rows carry a `route_version_id`.
 - `GET /api/v1/admin/dashboard`.
 - `GET /api/v1/admin/drivers`.
 - `GET /api/v1/admin/requests`.
@@ -881,7 +891,7 @@ Run match response includes:
 {
   "match": {
     "score": "0.9317",
-    "method": "masari_route_score",
+    "method": "darb_route_score",
     "explanation": "Driver selected because the route matches the Hebron / PPU / Bab Al-Zawiya -> Bethlehem corridor, pickup is near the route, capacity is available, and trust score is high."
   },
   "scoringBreakdown": {
@@ -919,7 +929,7 @@ Inbox response shape:
       "id": "<match_id>",
       "status": "proposed",
       "score": "0.9317",
-      "method": "masari_route_score",
+      "method": "darb_route_score",
       "explanation": "...",
       "scoring_breakdown": {
         "corridorOverlap": 0.95,
@@ -976,7 +986,7 @@ POST /api/v1/merchant/orders/<order_id>/batch
 Run comparison example:
 ```json
 {
-  "scenarioKey": "masari_batch_wins",
+  "scenarioKey": "darb_batch_wins",
   "passengerRequestId": "<passenger_request_id>",
   "merchantOrderId": "<merchant_order_id>"
 }
@@ -986,15 +996,15 @@ Comparison response includes:
 ```json
 {
   "comparison": {
-    "masari_trips": 1,
+    "darb_trips": 1,
     "nearest_driver_trips": 6,
-    "masari_estimated_distance": "21.53",
+    "darb_estimated_distance": "21.53",
     "nearest_estimated_distance": "129.18",
-    "masari_estimated_cost": "43.06",
+    "darb_estimated_cost": "43.06",
     "nearest_estimated_cost": "258.36",
-    "parcel_batching_benefit": "5 parcels can use 1 Masari corridor trip instead of 5 nearest-driver parcel trips.",
+    "parcel_batching_benefit": "5 parcels can use 1 Darb corridor trip instead of 5 nearest-driver parcel trips.",
     "driver_utilization": "1.00",
-    "winner": "masari"
+    "winner": "darb"
   }
 }
 ```
@@ -1114,12 +1124,12 @@ Batching rules:
 
 Comparison formulas:
 - Corridor distance uses Haversine between Hebron/PPU/Bab Al-Zawiya and Bethlehem.
-- `masari_trips = 1` when passenger or parcel demand exists.
+- `darb_trips = 1` when passenger or parcel demand exists.
 - `nearest_driver_trips = passenger_request_count + parcel_count`.
 - `estimated_cost = estimated_distance * 2`.
 - `parcel_batching_benefit` explains trip reduction.
 - `driver_utilization = (parcel_count + passenger_count) / (parcel_count + 1)` clamped by deterministic demand formula.
-- Winner is `masari` when Masari cost and trips are less than or equal to nearest-driver baseline.
+- Winner is `darb` when Darb cost and trips are less than or equal to nearest-driver baseline.
 
 [TRIP_STATUS_LOGIC]
 Implemented in M3A.
@@ -1179,7 +1189,7 @@ Features:
 - System Overview panel uses admin dashboard/list endpoints for counts and seeded records.
 - Matching panel calls `POST /api/v1/matches/run` and displays selected route, score, breakdown, and explanation.
 - Parcel Batch panel calls `POST /api/v1/merchant/orders/:id/batch` and displays batch id, parcel count, estimated distance saved, and explanation.
-- Comparison panel calls `POST /api/v1/compare/run` and displays Masari vs nearest-driver metrics in a simple table.
+- Comparison panel calls `POST /api/v1/compare/run` and displays Darb vs nearest-driver metrics in a simple table.
 - Trip Flow panel calls match accept/reject, lists trips, and advances the valid trip lifecycle.
 - Tracking Simulation panel calls simulate step/reset and latest location polling.
 - Full Demo Sequence button runs reset, login, dashboard inputs, match, batch, comparison, accept, complete status progression, and one tracking step.
@@ -1216,13 +1226,13 @@ M3D localization:
 Implemented in M4B under `apps/mobile`.
 
 Scope implemented:
-- Android-only Flutter project `masari_mobile`.
-- Android application ID: `ps.masari.mobile`.
+- Android-only Flutter project `darb_mobile`.
+- Android application ID: `ps.darb.mobile`.
 - Welcome/app-shell route only at `/`.
 - Arabic default locale with RTL.
 - English optional locale with LTR.
 - Language switch on the welcome shell.
-- Locale persistence key: `masari_locale`.
+- Locale persistence key: `darb_locale`.
 - ARB/gen_l10n localization files:
   - `apps/mobile/l10n.yaml`.
   - `apps/mobile/lib/l10n/app_ar.arb`.
@@ -1248,7 +1258,7 @@ M4B Android runtime validation:
 - Initial emulator boot got stuck as ADB `offline`; a cold boot with wiped emulator data recovered it.
 - Runtime device: `emulator-5554`, `sdk gphone64 x86 64`, Android 16 API 36.
 - App launched with `flutter run -d emulator-5554 --no-resident --dart-define=API_BASE_URL=http://10.0.2.2:3000`.
-- `adb shell pm clear ps.masari.mobile` succeeded before runtime validation.
+- `adb shell pm clear ps.darb.mobile` succeeded before runtime validation.
 - Arabic opened by default and used RTL.
 - English switch changed UI to English/LTR.
 - English persisted after force-stop/relaunch.
@@ -1256,8 +1266,8 @@ M4B Android runtime validation:
 - API environment text showed `http://10.0.2.2:3000`.
 - No Flutter counter-template UI, crash, overflow, or visibly broken layout was observed.
 - Screenshots captured under `C:\Users\basha\AppData\Local\Temp\opencode`:
-  - `masari_m4b_ar.png`.
-  - `masari_m4b_en.png`.
+  - `darb_m4b_ar.png`.
+  - `darb_m4b_en.png`.
   - relaunch verification screenshots for both languages.
 
 [MOBILE_AUTH_AND_ROLE_ROUTING]
@@ -1271,9 +1281,9 @@ Scope implemented:
 - API errors are mapped to network, timeout, validation, unauthorized, forbidden, server, and unknown categories.
 - Error objects and `toString()` do not include raw JWT or password values.
 - DTO parsing is manual and typed; no code generation or JSON annotation package was added.
-- JWT is stored only in Flutter secure storage key `masari_jwt`.
+- JWT is stored only in Flutter secure storage key `darb_jwt`.
 - Passwords, raw login payloads, and JWTs are not stored in shared preferences.
-- Locale remains stored in shared preferences key `masari_locale`.
+- Locale remains stored in shared preferences key `darb_locale`.
 - Riverpod owns auth/session state, login action state, logout, restored user, and role routing inputs.
 - go_router routes:
   - `/splash`.
@@ -1291,7 +1301,7 @@ Scope implemented:
 - Unsupported admin message is localized as:
   - Arabic: `لوحة تحكم المسؤول متاحة عبر تطبيق الويب.`
   - English: `The admin console is available through the web application.`
-- Role home shells show Masari branding, current user name, role label, locked corridor, language switch, logout, workspace-ready copy, and clearly labeled coming-next copy.
+- Role home shells show Darb branding, current user name, role label, locked corridor, language switch, logout, workspace-ready copy, and clearly labeled coming-next copy.
 - No passenger request, driver route, merchant order, match list, match decision, trip, tracking, AI, Socket.IO, GPS, map, registration, refresh-token, or payment feature was implemented.
 
 M4C mobile translations:
@@ -1394,7 +1404,7 @@ Driver trip and tracking behavior:
 
 M4E2 localization:
 - All driver dashboard, route, inbox, match action, trip action, tracking, error, and status text is present in Arabic and English ARB files.
-- Arabic remains default RTL; English remains optional LTR; `masari_locale` persistence is unchanged.
+- Arabic remains default RTL; English remains optional LTR; `darb_locale` persistence is unchanged.
 - Technical IDs and coordinates are rendered LTR where needed.
 
 [MOBILE_MERCHANT_FLOW]
@@ -1445,7 +1455,7 @@ M4F backend contract correction:
 
 M4F localization:
 - Merchant dashboard, order form, parcel fields, batch flow, matching inbox/detail, waiting-for-driver copy, trip/order/location state, errors, priorities, and merchant-specific statuses are present in Arabic and English ARB files.
-- Arabic remains default RTL, English remains optional LTR, and `masari_locale` plus secure JWT restoration are unchanged.
+- Arabic remains default RTL, English remains optional LTR, and `darb_locale` plus secure JWT restoration are unchanged.
 - Technical IDs and coordinates remain LTR where needed.
 
 [DEMO_MODE]
@@ -1518,7 +1528,7 @@ Implemented minimal tests:
 - Admin console TypeScript typecheck.
 - Admin console production build.
 - Admin localization tests for Arabic default, saved English restore, document `lang`/`dir`, persistence, translation lookup, unknown-key fallback, and status label mapping.
-- Mobile app-shell tests for Arabic default, RTL direction, English switching, LTR direction, `masari_locale` persistence, saved English restoration, `API_BASE_URL` config, and absence of Flutter counter-template content.
+- Mobile app-shell tests for Arabic default, RTL direction, English switching, LTR direction, `darb_locale` persistence, saved English restoration, `API_BASE_URL` config, and absence of Flutter counter-template content.
 - Mobile auth repository tests for successful login parsing, failed login mapping, `/me` parsing, authorization header sending, and avoiding raw-token exposure in errors.
 - Mobile auth controller tests for no-token login state, valid saved-token restoration, 401 token removal, temporary network failure preserving token with retry state, and logout token removal.
 - Mobile routing/widget tests for passenger, driver, merchant, unsupported admin, role-route protection, Arabic RTL login, English LTR switch, demo preset fill, loading disabled button, translated invalid credentials, logout returning to login, and locale preservation after logout.
@@ -1550,7 +1560,7 @@ Required validation commands:
 Prisma config behavior:
 - `apps/api/prisma.config.ts` uses `DATABASE_URL` when set.
 - For schema validation/generation without a local `.env`, it uses a non-secret placeholder MySQL URL.
-- Real database operations require a reachable MySQL `masari` database.
+- Real database operations require a reachable MySQL `darb` database.
 - The approved release migration mechanism is `npm run db:migrate`, not `db push`.
 
 [MILESTONES]
@@ -1571,13 +1581,13 @@ M1 validation results:
 - `npm run typecheck`: passed.
 - `npm run test`: passed, 2 files and 4 tests.
 - `npm run build`: passed.
-- `npm run db:push`: passed against `postgresql://postgres:postgres@localhost:5432/masari?schema=public`; database `masari` was created/synced.
+- `npm run db:push`: passed against `postgresql://postgres:postgres@localhost:5432/darb?schema=public`; database `darb` was created/synced.
 - Real API validation: passed for `GET /api/v1/health`, `POST /api/v1/demo/reset`, `POST /api/v1/auth/login` for passenger/driver/merchant/admin, and `GET /api/v1/me` for each role.
 - `npm audit --omit=dev`: reports 3 moderate findings through Prisma CLI transitive `@hono/node-server`; `npm audit fix --force` would install `prisma@6.19.3`, a breaking downgrade, so it was not applied.
 
 M2A validation results:
 - Pre-step M1 validation passed: `npm run prisma:validate`, `npm run prisma:generate`, `npm run typecheck`, `npm run test`, `npm run build`.
-- Git initialized and M1 committed as `chore: initialize Masari foundation`.
+- Git initialized and M1 committed as `chore: initialize Darb foundation`.
 - `npm run prisma:validate`: passed.
 - `npm run prisma:generate`: passed.
 - `npm run typecheck`: passed.
@@ -1596,7 +1606,7 @@ M2B validation results:
 - `npm run build`: passed.
 - `npm run db:push`: passed against local PostgreSQL.
 - Real M2B smoke validation passed for demo reset, match run/read, merchant batch, comparison run/read.
-- Real smoke output included match score `0.9317`, batch status `created`, estimated distance saved `86.12`, comparison winner `masari`, Masari trips `1`, nearest-driver trips `6`.
+- Real smoke output included match score `0.9317`, batch status `created`, estimated distance saved `86.12`, comparison winner `darb`, Darb trips `1`, nearest-driver trips `6`.
 
 M3A validation results:
 - Migration integrity check completed.
@@ -1609,7 +1619,7 @@ M3A validation results:
 - `npm run build`: passed.
 - `npm run db:push`: passed against local PostgreSQL.
 - Real M3A smoke validation passed against local PostgreSQL for `GET /api/v1/health`, `POST /api/v1/demo/reset`, login as admin/passenger/driver/merchant, `GET /api/v1/me`, match run, parcel batch, comparison run/read, match accept, full trip status progression to `completed`, simulated tracking step, and latest location polling.
-- Real smoke output included dashboard users `5`, match status `proposed`, match score `0.9317`, batch status `created`, comparison winner `masari`, accepted trip status `accepted`, final trip status `completed`, simulated location sequence `0`, latest sequence `0`, latest source `simulated`.
+- Real smoke output included dashboard users `5`, match status `proposed`, match score `0.9317`, batch status `created`, comparison winner `darb`, accepted trip status `accepted`, final trip status `completed`, simulated location sequence `0`, latest sequence `0`, latest source `simulated`.
 
 M3B validation results:
 - `npm install`: passed; reported existing 3 moderate audit findings, and `npm audit fix --force` was not run.
@@ -1623,7 +1633,7 @@ M3B validation results:
 - `npm run typecheck`: passed for admin and API workspaces.
 - `npm run build`: passed for admin and API workspaces.
 - Real M3B smoke validation passed against local PostgreSQL for demo reset, admin login, dashboard load, admin routes/requests/orders load, match run/read, parcel batch, comparison run/read, match accept, full status progression to `completed`, trips list, simulated tracking step, and latest location polling.
-- Real smoke output included dashboard users `5`, routes `2`, requests `1`, orders `1`, match score `0.9317`, batch status `created`, distance saved `86.12`, comparison winner `masari`, trip count `1`, final status `completed`, location sequence `0`, latest source `simulated`.
+- Real smoke output included dashboard users `5`, routes `2`, requests `1`, orders `1`, match score `0.9317`, batch status `created`, distance saved `86.12`, comparison winner `darb`, trip count `1`, final status `completed`, location sequence `0`, latest source `simulated`.
 
 M3C validation results:
 - Pre-step `git status`: clean.
@@ -1635,7 +1645,7 @@ M3C validation results:
 - Local API dev server started with PostgreSQL on port `3100`.
 - Local admin Vite server started and served the app HTML on port `5174` via IPv6 loopback.
 - Local full demo API sequence passed for demo reset, admin login, dashboard/routes/requests/orders load, match run, parcel batch, comparison run, match accept, trip progression to `completed`, tracking step, and latest location.
-- Local smoke output included users `5`, routes `2`, requests `1`, orders `1`, match score `0.9317`, batch status `created`, comparison winner `masari`, final status `completed`, location sequence `0`, latest sequence `0`.
+- Local smoke output included users `5`, routes `2`, requests `1`, orders `1`, match score `0.9317`, batch status `created`, comparison winner `darb`, final status `completed`, location sequence `0`, latest sequence `0`.
 - Final `npm run prisma:validate`: passed.
 - Final `npm run prisma:generate`: passed.
 - Final `npm run typecheck`: passed for admin and API workspaces.
@@ -1660,8 +1670,8 @@ M3D validation results:
 - Local API dev server started with PostgreSQL on port `3103`.
 - Local admin Vite server started and served the app on port `5175`.
 - Local full backend demo smoke passed after localization changes: reset, admin login, dashboard, match, batch, comparison, accept, status progression to `completed`, tracking step, and latest location.
-- Local smoke output included users `5`, match score `0.9317`, batch status `created`, comparison winner `masari`, final status `completed`, location sequence `0`, latest sequence `0`.
-- Interactive browser visual inspection could not be performed from the current tool environment; remaining manual check is to clear `masari_locale`, open the admin console, confirm Arabic RTL default, login and run demo flow in Arabic, switch to English, refresh to confirm English persists, switch back to Arabic, and confirm auth/demo state remain functional.
+- Local smoke output included users `5`, match score `0.9317`, batch status `created`, comparison winner `darb`, final status `completed`, location sequence `0`, latest sequence `0`.
+- Interactive browser visual inspection could not be performed from the current tool environment; remaining manual check is to clear `darb_locale`, open the admin console, confirm Arabic RTL default, login and run demo flow in Arabic, switch to English, refresh to confirm English persists, switch back to Arabic, and confirm auth/demo state remain functional.
 
 M4B validation results:
 - Initial toolchain inspection found Flutter, Dart, and adb missing from PATH.
@@ -1692,7 +1702,7 @@ M4B runtime validation results:
 - Existing AVD `Medium_Phone_API_36.0` found through emulator list.
 - AVD cold boot with wiped emulator data became visible as `emulator-5554`.
 - `flutter devices` reported `sdk gphone64 x86 64 (mobile)`, Android 16 API 36.
-- App data cleared with `adb shell pm clear ps.masari.mobile`.
+- App data cleared with `adb shell pm clear ps.darb.mobile`.
 - Runtime launch passed with `flutter run -d emulator-5554 --no-resident --dart-define=API_BASE_URL=http://10.0.2.2:3000`.
 - Arabic default, RTL, English/LTR switch, relaunch persistence for English, relaunch persistence for Arabic, configured API URL, no counter-template UI, and no visible crash/overflow were verified.
 - No M4B code fix was needed and no separate M4B fix commit was created.
@@ -1710,7 +1720,7 @@ M4C validation results:
 
 M4C Android runtime smoke:
 - API started locally with `npm run dev:api` using local PostgreSQL URL, development JWT secret, and demo reset key.
-- API health returned `{"ok":true,"service":"masari-api"}`.
+- API health returned `{"ok":true,"service":"darb-api"}`.
 - Demo data reset passed with `POST /api/v1/demo/reset` and `x-demo-reset-key`.
 - Mobile launched on `emulator-5554` with `API_BASE_URL=http://10.0.2.2:3000`.
 - Cleared app data before smoke.
@@ -1745,7 +1755,7 @@ M4D validation results:
 M4D Android runtime smoke:
 - Emulator: `emulator-5554`, `Medium_Phone_API_36.0`, Android 16 API 36.
 - API started locally with local PostgreSQL URL, development JWT secret, and demo reset key.
-- API health returned `{"ok":true,"service":"masari-api"}`.
+- API health returned `{"ok":true,"service":"darb-api"}`.
 - Demo data reset passed with `POST /api/v1/demo/reset` and `x-demo-reset-key`.
 - App data cleared before runtime smoke.
 - App launched with `flutter run -d emulator-5554 --no-resident --dart-define=API_BASE_URL=http://10.0.2.2:3000`.
@@ -1817,7 +1827,7 @@ M4E2 validation results:
 
 M4E2 Android/PostgreSQL runtime smoke:
 - Emulator: `emulator-5554`, AVD `Medium_Phone_API_36.0`, Android 16 API 36.
-- Local PostgreSQL remained on port `5432`; an unrelated existing local project occupied port `3000`, so the runtime-only Masari build used API port `3111` and `API_BASE_URL=http://10.0.2.2:3111` without stopping the unrelated process.
+- Local PostgreSQL remained on port `5432`; an unrelated existing local project occupied port `3000`, so the runtime-only Darb build used API port `3111` and `API_BASE_URL=http://10.0.2.2:3111` without stopping the unrelated process.
 - Demo reset passed; passenger matching created match `cmriyy9cm0028bghnls3fe209` for driver 1, while alternate driver 2 inbox returned zero.
 - App data was cleared before launch and Arabic opened by default in RTL.
 - Driver 1 login reached the real driver dashboard with seeded active route, proposed count `1`, and no fabricated active trip.
@@ -1909,13 +1919,13 @@ Demo tooling and documentation:
 
 Five-run rehearsal result:
 - Five consecutive `npm run demo:smoke` runs passed in 2.20, 1.86, 1.79, 1.76, and 1.80 seconds.
-- Every run produced final score `0.9317`, location sequence `2`, comparison winner `masari`, 1 versus 6 trips, distance `21.53` versus `129.19`, and estimated cost `43.06` versus `258.38`.
+- Every run produced final score `0.9317`, location sequence `2`, comparison winner `darb`, 1 versus 6 trips, distance `21.53` versus `129.19`, and estimated cost `43.06` versus `258.38`.
 - Every run rejected unauthorized/cross-role/duplicate/invalid actions as expected and restored the deterministic seed without manual database edits.
 
 Admin Full Demo Sequence audit:
 - Real browser QA ran the Arabic default RTL console through reset/login/load, merchant batch, combined match, comparison, acceptance, full lifecycle, and tracking using current APIs.
 - The sequence is ordered so the merchant batch exists before the combined match, stops visibly on a failed API call, and updates the match, batch, route, request, order, trip, tracking, and comparison cards to authoritative final state.
-- All 14 progress steps retranslate live when switching locale; English LTR and Arabic RTL persist through `masari_locale` and page reload.
+- All 14 progress steps retranslate live when switching locale; English LTR and Arabic RTL persist through `darb_locale` and page reload.
 - Controlled API outage showed the translated network error; API recovery plus refresh restored the authenticated dashboard.
 
 Cross-role emulator and visual QA:
@@ -1946,12 +1956,12 @@ APK:
 
 [M5B_PRESENTATION_FREEZE]
 Scope freeze:
-- Masari feature development is frozen for the hackathon presentation. Only presentation-blocking corrections are permitted.
+- Darb feature development is frozen for the hackathon presentation. Only presentation-blocking corrections are permitted.
 - No new API, screen, business feature, database table, dependency, matching formula, architecture, AI, Socket.IO, GPS, map, payment, registration, multi-city, app-store, or deployment work was added.
-- The only executable correction was strengthening `demo:preflight` to validate Masari API/admin identity instead of accepting any HTTP 200 response on the expected ports.
+- The only executable correction was strengthening `demo:preflight` to validate Darb API/admin identity instead of accepting any HTTP 200 response on the expected ports.
 
 Designated presentation machine audit (2026-07-13):
-- The exact event judge machine cannot be independently identified from repository context. M5B validated the currently designated presentation machine `C:\Users\basha\Desktop\Masari`; if the event uses another physical machine, run the transfer checklist in `README_DEMO_START.md` before presenting.
+- The exact event judge machine cannot be independently identified from repository context. M5B validated the currently designated presentation machine `C:\Users\basha\Desktop\Darb`; if the event uses another physical machine, run the transfer checklist in `README_DEMO_START.md` before presenting.
 - Windows 11 Pro 24H2, version `10.0.26100`, build `26100` (`flutter doctor` reported `10.0.26100.8655`).
 - Node.js `v22.17.1`; npm `10.9.2`; PostgreSQL `18.3`, Windows service `postgresql-x64-18` running automatically on port 5432.
 - Flutter `3.44.6` stable; Dart `3.12.2`; Android SDK `C:\Users\basha\AppData\Local\Android\Sdk`, platform/build-tools 36.0.0.
@@ -1959,14 +1969,14 @@ Designated presentation machine audit (2026-07-13):
 - AVD `Medium_Phone_API_36.0`, `emulator-5554`, Android 16/API 36.
 - Memory: 15.84 GB total / 3.16 GB free at audit. Disk: C 77.01 GB free; D 163.16 GB free.
 - Active presentation network: Wi-Fi `192.168.6.28`, gateway `192.168.6.1`; VMware and Hyper-V local adapters also present.
-- Port ownership was inspected before stopping anything: verified Masari Node API on 3000, verified Masari Vite on 5173, PostgreSQL on 5432. No unrelated process was terminated.
+- Port ownership was inspected before stopping anything: verified Darb Node API on 3000, verified Darb Vite on 5173, PostgreSQL on 5432. No unrelated process was terminated.
 
 Frozen URLs and artifacts:
 - API `http://localhost:3000`; admin `http://localhost:5173`; Android emulator API `http://10.0.2.2:3000`.
 - Debug APK source: `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`, 191,880,956 bytes.
 - APK SHA-256: `0F9C367DEFC1A9E986E1522D2E2331962EE6E5D685B32D217FA09DB4B425B619`, unchanged after the required final rebuild.
 - Presenter script: `JUDGE_SCRIPT.md`; operational runbook: `DEMO_RUNBOOK.md`; backup: `BACKUP_DEMO.md`; start card: `README_DEMO_START.md`; notes: `RELEASE_NOTES.md`.
-- Ignored package folder: `release/masari-hackathon-demo/`; ignored ZIP: `release/masari-hackathon-demo.zip`.
+- Ignored package folder: `release/darb-hackathon-demo/`; ignored ZIP: `release/darb-hackathon-demo.zip`.
 
 Cold-start result:
 - Verified M5A API/Vite ownership, stopped only those processes, shut down the emulator, left PostgreSQL untouched, and confirmed ports 3000/5173 free.
@@ -1982,14 +1992,14 @@ Failure and recovery rehearsal:
 - Restarting the same API configuration restored admin Refresh and mobile Retry; a protected reset then completed without database edits.
 - Full visual recovery time was `89.07` seconds (target under 2 minutes); API was healthy after `53.83` seconds and the recovery reset took `0.45` seconds.
 - A separate final recovery run proved preflight blocks while API is absent and completed API restart + 10/10 preflight + full smoke in `4.10` seconds.
-- Controlled unrelated HTTP services on a temporary port were rejected as “not the Masari API” and “not the Masari admin console,” proving port/service conflict identity detection.
+- Controlled unrelated HTTP services on a temporary port were rejected as “not the Darb API” and “not the Darb admin console,” proving port/service conflict identity detection.
 
 Three final rehearsals using `JUDGE_SCRIPT.md`:
 - The written presenter timeline is fixed at exactly `8:00`; automated technical execution is recorded separately and does not pretend to be spoken presentation time.
 - Arabic-primary: passed, technical flow `2.56` seconds, no presenter/technical issue.
 - Normal full: passed, technical flow `2.16` seconds, no presenter/technical issue.
 - Recovery: preflight blocked the outage, then passed after restart; technical smoke `2.43` seconds and recovery + smoke `4.10` seconds.
-- Every run returned score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`, and clean reset recovery.
+- Every run returned score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`, and clean reset recovery.
 
 Final M5B validation:
 - Prisma validation/generation passed with Prisma 7.8.0; no schema or migration changed.
@@ -2009,12 +2019,12 @@ Safety and fallback:
 - Work began from clean PostgreSQL release commit `074fc4e7cc79c6b08a2baa18ca251b4802aa48c7`; `v0.1.0-hackathon` still points exactly to it.
 - Work is isolated on branch `mysql-release`; the PostgreSQL commit/tag and migration history were not amended or moved.
 - The local ignored `apps/api/.env` is used without printing, documenting, packaging, or committing real credentials/secrets.
-- Authenticated read-only inspection confirmed the intended `masari` database had 0 tables, views, triggers, routines, and events before migration.
+- Authenticated read-only inspection confirmed the intended `darb` database had 0 tables, views, triggers, routines, and events before migration.
 - No PostgreSQL row transfer was performed; deterministic demo reset is the MySQL data strategy.
 
 Observed MySQL target:
 - MySQL Community Server 8.0.46 on local port 3306.
-- Database: `masari`.
+- Database: `darb`.
 - Database character set/collation: `utf8mb4` / `utf8mb4_0900_ai_ci`.
 - Prisma-created tables use `utf8mb4_unicode_ci` and support Arabic, English, and emoji.
 
@@ -2034,9 +2044,9 @@ Reset and Unicode verification:
 
 Demo tooling and rehearsal:
 - `demo:preflight` loads the ignored API environment when shell values are absent and reports only presence/provider-safe facts.
-- Preflight verifies MySQL protocol, connectivity, expected database, `utf8mb4`, collation, Masari API/admin identity, API URL consistency, APK, and Android device.
+- Preflight verifies MySQL protocol, connectivity, expected database, `utf8mb4`, collation, Darb API/admin identity, API URL consistency, APK, and Android device.
 - `demo:smoke` loads the same ignored environment without displaying values and retains the complete cross-role story and recovery checks.
-- Five full real MySQL rehearsals passed with score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`, alternate-driver isolation, combined trip state, and clean recovery reset.
+- Five full real MySQL rehearsals passed with score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`, alternate-driver isolation, combined trip state, and clean recovery reset.
 - Rehearsal technical durations were 5.46, 5.03, 4.96, 4.99, and 6.03 seconds.
 - Final preflight passed 12/12.
 - Final workspace validation passed: Prisma validate/generate, migration deploy/status, typecheck, 6 API files / 60 tests, and build.
@@ -2114,7 +2124,7 @@ Validation status:
 - Flutter dependency/localization generation, 70-file clean formatting, analysis, and 65 tests passed.
 - Explicit demo and production-like admin builds passed; the production bundle scan found no former passwords, reset header/path, simulation/comparison paths, or Full Demo Sequence text.
 - Explicit demo debug and production-like release APKs built; extracted production APK scan found no known or injected demo passwords. Production-like APK SHA-256: `5B55A9D1E59801E5C341A7C56845EA989FEC40D490E3F3BE9EF47178B3F46A9A`.
-- Real MySQL demo preflight passed 18/18 and full smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Real MySQL demo preflight passed 18/18 and full smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - Separate production-mode runtime validation passed 10/10: health and normal role/trip/location routes remained registered, while reset, simulation step/reset, and deterministic comparison returned `404`.
 
 Remaining after M6B1A:
@@ -2151,7 +2161,7 @@ Validation status:
 - Added exact dependencies after 2026-07 registry checks: Helmet `8.3.0`, express-rate-limit `8.5.2`, and Pino `10.3.1`. `pino-http` was evaluated but not added because the smaller allowlisted middleware avoids broad default request serialization.
 - Prisma validate/generate, workspace typecheck/build, 10 API files / 94 tests, and production-like admin typecheck/build with 3 files / 12 tests passed.
 - Flutter dependency/localization generation, 70-file clean formatting, analysis, and 65 tests passed. No APK rebuild was performed because M6B1B changed no admin/mobile source or shared client configuration.
-- Real MySQL demo preflight passed 19/19, including readiness. Full smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`, and reset recovery.
+- Real MySQL demo preflight passed 19/19, including readiness. Full smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`, and reset recovery.
 - Demo runtime headers/request IDs passed and 55 captured structured completion events contained no authorization material, password/phone keys, database URLs, seeded phones, or precise demo coordinates.
 - Production-like real-MySQL checks passed: health/live/ready `200`, normal protected API `401`, demo reset/comparison/simulation `404`, CORS preflight `204`, login `401,401,401,429` with `Retry-After`, oversized JSON safe `413`, malformed JSON safe `400`, HSTS/security headers present, and `X-Powered-By` absent.
 - Production log inspection passed across 14 completion events. With an unavailable database, liveness stayed `200`, readiness returned redacted `503 not_ready`, and a safe readiness-failure event was recorded.
@@ -2171,7 +2181,7 @@ Scope:
 - Added transaction-consistent MySQL backup with SHA-256, fail-closed isolated restore verification, and reproducible safe release metadata.
 
 CI and security contract:
-- Backend CI creates only `masari_ci` in an ephemeral MySQL 8 service, deploys migrations from empty twice, checks status, runs all API tests/build, and executes the compiled deterministic real-MySQL smoke.
+- Backend CI creates only `darb_ci` in an ephemeral MySQL 8 service, deploys migrations from empty twice, checks status, runs all API tests/build, and executes the compiled deterministic real-MySQL smoke.
 - Admin and mobile build production-like artifacts without demo configuration or signing secrets and scan outputs for reset/simulation/demo markers.
 - Production APK scanning proved runtime-only UI gating retained driver simulation endpoint strings. A surgical compile-time product-build guard now removes those two existing calls from release artifacts while preserving demo/debug behavior; no screen or backend contract changed.
 - Security CI rejects prohibited tracked artifacts and high-confidence credentials without printing values; high/critical and unapproved moderate dependency advisories fail. The moderate exception is limited to the documented Prisma CLI chain.
@@ -2179,7 +2189,7 @@ CI and security contract:
 
 Operator commands:
 - `npm run validate`, `validate:backend`, `validate:admin`, `validate:security`, and `validate:all`.
-- `npm run mysql:backup` and `npm run mysql:restore:verify -- -- --dump <ignored-dump> --database masari_restore_<name> --confirm-isolated [--cleanup]` (the extra separator preserves flags with npm 10 on Windows).
+- `npm run mysql:backup` and `npm run mysql:restore:verify -- -- --dump <ignored-dump> --database darb_restore_<name> --confirm-isolated [--cleanup]` (the extra separator preserves flags with npm 10 on Windows).
 - `npm run release:metadata -- -- --release <id> --environment <type> --output release/metadata.json`.
 - Staging build/start, migration, health, isolation, and shutdown procedures are in `docs/operations/staging-startup.md`.
 
@@ -2192,12 +2202,12 @@ M6B2 validation status (2026-07-13):
 - Local workflow parsing and required-step/reference checks passed for all four workflow files. The standard repository validation passed Prisma validate/generate, workspace typecheck/build, 94 API tests, 12 admin tests, tracked-content scanning, the precise npm audit policy, and 5 tooling safety/reproducibility tests.
 - The production admin artifact scan passed. Flutter dependency/localization generation, 70-file clean formatting, analysis, and all 65 tests passed; the production-like release APK built and its extracted native payload passed the forbidden demo-marker scan. The generated APK remains ignored and is not a release artifact.
 - Both API Docker targets built. Runtime user `node`, missing-configuration failure, explicit empty-database migration, live/ready `200`, protected route `401`, demo reset/comparison/simulation `404`, HSTS/security/request-ID headers, structured logs, and graceful shutdown (0.41 seconds) passed against an isolated MySQL 8 staging simulation with no seeded users.
-- A real local MySQL logical backup and SHA-256 sidecar were created in the ignored backup directory. Restore into `masari_restore_m6b2_20260713` passed checksum, Prisma migration status, Masari physical-table identity, and read-only connectivity checks; verification took 2.876 seconds (3.53 seconds command elapsed) and cleanup removed only the isolated database.
-- Demo preflight passed 19/19 and the real MySQL deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`, and reset recovery.
+- A real local MySQL logical backup and SHA-256 sidecar were created in the ignored backup directory. Restore into `darb_restore_m6b2_20260713` passed checksum, Prisma migration status, Darb physical-table identity, and read-only connectivity checks; verification took 2.876 seconds (3.53 seconds command elapsed) and cleanup removed only the isolated database.
+- Demo preflight passed 19/19 and the real MySQL deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`, and reset recovery.
 - Safe release metadata generation passed with two migration checksums and reproducible output under `SOURCE_DATE_EPOCH`.
 
 M6B2A private remote and real CI execution (2026-07-17):
-- Repository-local Git identity is configured for Bashar Tomeza. `origin` is `https://github.com/bashartomeza/Masari.git`; GitHub confirmed the repository is private and the authenticated `bashartomeza` account has `ADMIN` permission.
+- Repository-local Git identity is configured for Bashar Tomeza. `origin` is `https://github.com/bashartomeza/Darb.git`; GitHub confirmed the repository is private and the authenticated `bashartomeza` account has `ADMIN` permission.
 - Local and remote history were compared before every push. `production-readiness` was synchronized only by normal fast-forward pushes; no force, history rewrite, branch deletion, or tag replacement was used.
 - Frozen annotated tags were pushed unchanged: `v0.1.0-hackathon` still peels to PostgreSQL release `074fc4e7cc79c6b08a2baa18ca251b4802aa48c7`, and `v0.2.0-hackathon-mysql` still peels to MySQL release `7f5c5bace1b081c32f6a24a7352c6b163ac97438`.
 - The first real execution proved two CI/tooling defects rather than product regressions: security test paths were incorrectly rooted for the API workspace and the Ubuntu APK scan used GNU `tar` for a ZIP-format APK. Corrective commits `3a14206`, `e15bf56`, and `3eb16a9` use workspace-relative test paths, generate the ignored Prisma client with a credential-free generation-only URL, and use the provisioned JDK's cross-platform `jar` extraction with the prior local fallback.
@@ -2233,9 +2243,9 @@ Schema, migration, reset, and recovery:
 - A verified ignored backup was created before migration. The pre-migration backup restored into an isolated database and upgraded successfully with `--migrate`; a post-migration backup also restored at current migration status. Both isolated databases were cleaned up.
 
 Local validation (2026-07-17):
-- Migration deployed from empty on disposable `masari_m6c1a_ci`, a second deploy was idempotent, and status was current. The disposable run verified both tables, all seven required indexes, all three foreign keys/delete rules, `utf8mb4`, five active/version-1 demo users, and zero session/token rows after cleanup reset.
+- Migration deployed from empty on disposable `darb_m6c1a_ci`, a second deploy was idempotent, and status was current. The disposable run verified both tables, all seven required indexes, all three foreign keys/delete rules, `utf8mb4`, five active/version-1 demo users, and zero session/token rows after cleanup reset.
 - Real MySQL rotation, replacement use, used-token replay, session revocation, repeated logout, logout-all, admin suspension, immediate rejection, reactivation/fresh login, and cleanup passed. Two concurrent refreshes produced exactly one success; replay defense revoked the affected session.
-- Deterministic regression remained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Deterministic regression remained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - Focused architecture and operations documentation: `docs/security/account-and-session-model.md`, `docs/security/refresh-token-rotation.md`, `docs/operations/session-revocation.md`, and `docs/decisions/ADR-004-server-managed-sessions.md`.
 - Draft PR #1 CI passed on implementation/documentation head `bd37dac7390c360e59130486cb317889c70157f7`: Admin CI run `29572269624`, Backend and MySQL CI run `29572269627`, Flutter Android CI run `29572269643`, and Security and Configuration CI run `29572269622`. Exact successful contexts were `admin`, `backend-mysql`, `mobile`, and `security`; the PR remained draft and unmerged.
 
@@ -2265,8 +2275,8 @@ Independent local validation:
 - `npm ci`, Prisma validate/generate, workspace typecheck, 133 API tests, workspace builds, 12 admin tests, production admin build, workflow validation, tracked-secret scan, audit policy, and 6 tooling tests passed.
 - Raw `npm audit --omit=dev` still reports only the three documented moderate Prisma CLI transitive entries and proposes a breaking force downgrade; no force fix was run.
 - Flutter dependency resolution/localization generation, zero-change format check, analysis, and 65 tests passed. No Flutter or admin product source change was required.
-- Dedicated `masari_m6c1a_ci` migration applied from empty, redeployed idempotently, and reported current before the strengthened real-MySQL suite passed. Local demo preflight passed 22/22 with API, admin, and Android emulator.
-- Deterministic smoke remained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Dedicated `darb_m6c1a_ci` migration applied from empty, redeployed idempotently, and reported current before the strengthened real-MySQL suite passed. Local demo preflight passed 22/22 with API, admin, and Android emulator.
+- Deterministic smoke remained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 
 Remaining review risks:
 - The global in-memory refresh rate limit is acceptable for the controlled beta but must be reconsidered with distributed deployment or abuse evidence.
@@ -2279,10 +2289,10 @@ Merge result (2026-07-17):
 - Frozen release tags remain unchanged: `v0.1.0-hackathon` peels to `074fc4e7cc79c6b08a2baa18ca251b4802aa48c7`, and `v0.2.0-hackathon-mysql` peels to `7f5c5bace1b081c32f6a24a7352c6b163ac97438`.
 
 Post-merge migration and validation:
-- The intended local MySQL 8 `masari` database already contained `20260717094000_trusted_sessions`. Prisma validation/generation passed, migration deploy reported no pending migrations, and migration status was current at all three migrations; no migration SQL was edited.
+- The intended local MySQL 8 `darb` database already contained `20260717094000_trusted_sessions`. Prisma validation/generation passed, migration deploy reported no pending migrations, and migration status was current at all three migrations; no migration SQL was edited.
 - `npm ci`, workspace validation, Prisma validation/generation, typecheck, 133 API tests, builds, 12 admin tests, production admin build, workflow validation, tracked-secret scan, audit policy, and 6 tooling tests passed. Raw production-dependency audit retained only the three documented moderate Prisma CLI transitive findings; no force fix was run.
 - Flutter dependency resolution/localization generation, zero-change format check, analysis, 65 tests, and the production-like APK scan passed. The disposable real-MySQL session suite reapplied all migrations from empty, verified idempotent deploy/status, and passed refresh rotation, replay/session revocation, exactly-one-winner concurrent refresh, logout/logout-all, account suspension/immediate rejection, role binding, admin concurrency, persistent-state assertions, and cleanup.
-- Live demo preflight passed 22/22 with MySQL, API, admin, and Android emulator. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Live demo preflight passed 22/22 with MySQL, API, admin, and Android emulator. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 
 Merge-commit CI:
 - All required workflows passed on merge commit `c84ab84b9e3bd360e60edbf1a6b1c292e84b2f5b`: Admin CI run `29576328593`, Backend and MySQL CI run `29576328601`, Flutter Android CI run `29576328515`, and Security and Configuration CI run `29576328563`. Exact successful contexts were `admin`, `backend-mysql`, `mobile`, and `security`.
@@ -2291,7 +2301,7 @@ Merge-commit CI:
 [M6C1B_CLIENT_REFRESH_AND_SESSION_CONTROLS]
 Scope and compatibility (2026-07-17):
 - Flutter passenger, driver, and merchant flows now consume the M6C1A rotating-refresh contract through one authenticated-client boundary. Existing backend product contracts, matching/batching behavior, role authorization, Flutter screens, and admin business UI remain intact.
-- The mobile app persists a versioned `masari_auth_bundle_v1` secure-storage document containing the access token, optional refresh token, API-derived UTC expiries, optional session ID, and legacy-access marker. The client does not decode JWT claims. A valid former `masari_jwt` is migrated safely; corrupt/unsupported bundles fail closed; logout clears auth keys while preserving locale.
+- The mobile app persists a versioned `darb_auth_bundle_v1` secure-storage document containing the access token, optional refresh token, API-derived UTC expiries, optional session ID, and legacy-access marker. The client does not decode JWT claims. A valid former `darb_jwt` is migrated safely; corrupt/unsupported bundles fail closed; logout clears auth keys while preserving locale.
 - Admin remains access-token only and receives no browser refresh implementation. No Prisma schema, migration, dependency, release tag, or frozen-release change was made.
 
 Refresh, retry, and termination policy:
@@ -2303,13 +2313,13 @@ Refresh, retry, and termination policy:
 Session and admin UX:
 - A shared Arabic-first RTL / English LTR `/security/sessions` screen is available to passenger, driver, and merchant only. It lists allowlisted session summaries and supports revoke-other, revoke-current, logout, and logout-all with localized confirmations. Internal session IDs, token data, phone numbers, and security internals are not displayed.
 - Revoking the current session ends local auth; revoking another keeps the current session; logout-all clears locally after server success and preserves state on failure; explicit local logout remains possible during an outage.
-- Admin terminal access-token 401s clear `masari_admin_token` from both `sessionStorage` and legacy `localStorage`, clear all in-memory/auth-derived state, return to login, and show one exact localized notice across concurrent failures. Normal login/forbidden/network errors do not force logout, and no admin refresh request is made.
+- Admin terminal access-token 401s clear `darb_admin_token` from both `sessionStorage` and legacy `localStorage`, clear all in-memory/auth-derived state, return to login, and show one exact localized notice across concurrent failures. Normal login/forbidden/network errors do not force logout, and no admin refresh request is made.
 
 Runtime and security evidence:
 - Real Android-emulator scenarios passed restore after restart, proactive refresh, one refresh for three concurrent merchant calls, other/current session revocation, logout-all, immediate suspension handling, terminal invalid-refresh handling, outage-preserving retry and recovery, Arabic default RTL, and English LTR. A route loss found during near-expiry runtime testing was fixed in focused commit `e00c2e9` and is covered by an authenticated-routing projection regression.
 - Real admin-browser expiry produced four concurrent terminal responses but one Arabic notice, cleared both browser stores, made zero refresh calls, and allowed a fresh login.
 - Production-like admin and release APK builds passed the repository artifact scanner. A separate value-aware local scan found no configured infrastructure secrets or generated runtime access/refresh tokens in production admin, production APK, demo APK, or captured logs; no values were printed.
-- Real MySQL session integration passed from an empty disposable database with idempotent migration deployment/status. Main database status remained current at three migrations. Demo preflight passed 22/22 and deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Real MySQL session integration passed from an empty disposable database with idempotent migration deployment/status. Main database status remained current at three migrations. Demo preflight passed 22/22 and deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 
 Tests, validation, and delivery evidence:
 - API regression is 13 files / 134 tests, including the exact expired-access middleware code. Admin regression is 3 files / 15 tests. Flutter regression is 100 tests with clean localization generation, formatting, and analysis.
@@ -2329,7 +2339,7 @@ Merge result (2026-07-17):
 Post-merge validation:
 - Prisma validation/generation, workspace typecheck/test/build, standard and security validation, admin typecheck/test/build, and Flutter dependency/localization/format/analyze/test checks passed. API regression is 13 files / 134 tests, admin regression is 3 files / 16 tests, and Flutter regression is 106 tests.
 - Real MySQL migration status remained current at three migrations. Disposable-database session integration passed refresh rotation, replay revocation, exactly-one-success concurrency, session revocation, logout-all, account-status and role binding, admin concurrency, persistence, cleanup, and production-configuration assertions.
-- Live demo preflight passed 22/22. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Live demo preflight passed 22/22. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - Android-emulator regression confirmed Arabic default RTL, English LTR locale persistence across restart, passenger login, secure session restoration to the passenger route, and a successful post-expiry authenticated refresh. Revocation, logout-all, concurrent refresh, and admin-expiry behavior remained covered by the passing real integration and regression suites.
 - Raw `npm audit --omit=dev` retained only the documented three moderate Prisma CLI transitive findings whose proposed repair is a prohibited breaking force downgrade; no force fix was run.
 
@@ -2360,7 +2370,7 @@ Admin API and reset:
 Migration/recovery and local validation:
 - A checksum-verified ignored backup preceded migration. Current-schema upgrade, empty disposable deploy, repeated deploy, current status, pre-migration restore+upgrade, post-migration backup restore, and isolated cleanup passed.
 - Real MySQL races passed for one-time invitation consumption, invitation use/revoke terminal state, one-success OTP verification, rejected resend preservation, exact durable counter increments/no bypass, and one-owner idempotency claims/replays. Fake-provider state, token isolation, admin authorization/serialization/filter/revoke, route absence, and reset cleanup passed.
-- Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`. Full workspace/security/mobile validation and draft-PR CI evidence are recorded after completion.
+- Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`. Full workspace/security/mobile validation and draft-PR CI evidence are recorded after completion.
 - Final independent-review validation passed 146 API tests, 16 admin tests, 106 Flutter tests, standard/security validation, production admin/APK artifact scans, 22/22 live preflight, and the expanded disposable real-MySQL suite. The approved Prisma CLI moderate-only audit exception remains unchanged; no force fix was run.
 - Draft PR #3 initially passed all exact required contexts on implementation head `1634e9ff438472553aa5bf03c38a5eb54565d785`: Admin CI run `29612026855`, Backend and MySQL CI run `29612026804`, Flutter Android CI run `29612026845`, and Security and Configuration CI run `29612026803`. The PR remains draft and unmerged; the final documentation head must also pass all four checks before handoff.
 
@@ -2389,7 +2399,7 @@ Independent validation evidence:
 - `npm ci`, Prisma validate/generate, workspace typecheck/build, 146 API tests, standard/security validation, 16 admin tests, explicit production admin build, 106 Flutter tests, workflow validation, six tooling tests, tracked-secret scan, production admin/release-APK artifact scans, and value-aware configured-secret/captured-log scans passed.
 - Raw `npm audit --omit=dev` reports only the three approved moderate Prisma CLI transitive entries and proposes the prohibited breaking force downgrade; no force fix was run.
 - Expanded disposable MySQL tests prove single-attempt/single-redemption behavior, mismatched binding rejection, no OTP before redemption, concurrent resend exclusion, stale dispatch reclaim/late-result fencing, one-success OTP verification, invalid-state OTP/session rejection, exact abuse admission counts, idempotency reclaim fencing, consent approval/deletion protection, safe admin serialization/audits, route isolation, and clean demo reset.
-- Live preflight passed 22/22. Deterministic smoke remained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Live preflight passed 22/22. Deterministic smoke remained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 
 Residual controls before public launch:
 - Public onboarding remains fail-closed and absent. M6C2B2 must add separately reviewed public orchestration, real-provider controls, legal document publication workflow, failed-idempotency policy, exact retention scheduling, and the approved storage-at-rest/backup protection boundary before enabling it.
@@ -2403,12 +2413,12 @@ Merge result (2026-07-19):
 - All feature and corrective commits remain visible. The merged migration history contains `20260717195454_onboarding_foundation`, `20260719120000_harden_onboarding_foundation`, and `20260719123000_enforce_single_invitation_attempt`; no previously applied migration was modified.
 
 Post-merge database and validation:
-- The ignored local environment was confirmed present and targeted the intended local Masari development database without exposing values. A fresh checksum-backed ignored backup preceded post-merge verification. Phone preflight reported `total=5`, `valid=5`, `invalid=0`, and `collisions=0` without printing phone values.
+- The ignored local environment was confirmed present and targeted the intended local Darb development database without exposing values. A fresh checksum-backed ignored backup preceded post-merge verification. Phone preflight reported `total=5`, `valid=5`, `invalid=0`, and `collisions=0` without printing phone values.
 - Prisma validation/generation passed. All six migrations were already applied to local MySQL; two migration deploys were idempotent and final status was current with no pending migration.
 - The disposable real-MySQL suite applied all six migrations from empty, redeployed idempotently, and passed deterministic smoke, trusted-session concurrency, invitation single-attempt/consume-revoke races, OTP verification/resend/stale-claim fencing, onboarding-session isolation, exact abuse-counter concurrency, idempotency owner fencing, consent retention, disabled route/provider controls, audit privacy, and demo-reset cleanup.
 - A checksum-verified pre-onboarding backup restored into an isolated database and upgraded through every migration. The fresh post-merge backup restored at current status. Each restore contained nine onboarding tables, 13 foreign keys, the single-attempt unique index, 13 `ascii_bin` digest columns, both required check constraints, and six completed migration rows; both isolated databases were removed after verification.
 - Workspace typecheck/build, 146 API tests, standard/security validation, 16 admin tests, explicit production admin validation, workflow/tooling/secret policy checks, production admin/release-APK artifact scans, and the configured-secret/captured-log scan passed. Flutter localization generation, zero-change formatting, analysis, and all 106 tests passed. Raw `npm audit --omit=dev` retained only the three approved moderate Prisma CLI transitive findings; no force fix was run.
-- Live demo preflight passed 22/22. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Live demo preflight passed 22/22. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 
 Merge-commit CI and locked boundaries:
 - All required workflows passed on merge commit `a8d0036cbeba9330fe082b74987c47a004344318`: Admin CI run `29701306641`, Backend and MySQL CI run `29701306635`, Flutter Android CI run `29701306653`, and Security and Configuration CI run `29701306648`. Exact successful contexts were `admin`, `backend-mysql`, `mobile`, and `security`.
@@ -2444,7 +2454,7 @@ Schema, test fixtures, reset, and evidence:
 - Forward-only migration `20260719203000_public_onboarding_scopes` adds only the `continuation`/`pending_status` enum values and required bounded audit actions; no table or column was added and all six prior migrations remain unchanged. Test/demo legal text is created only by the disposable integration harness, never by production runtime or migrations.
 - Demo reset records onboarded user IDs before deleting attempts, removes their sessions/consents/redemptions/users plus legal fixtures/counters/idempotency in foreign-key-safe order, and recreates only the five deterministic demo accounts and scenario data.
 - The real MySQL public harness passed 58 checks covering config/legal gating, generic mismatches, provider rejection, concurrent start/resume, accepted/rejected/concurrent resend, all three role outcomes, login compatibility, status isolation/recovery, verify replay/conflict, consent/adult validation, concurrent completion, keyed payload/privacy assertions, and orphan-free reset. Final workspace, security, admin, Flutter, demo, artifact, PR, and CI evidence is recorded at handoff.
-- Committed-head local validation passed clean install, Prisma validation/generation, current seven-migration deploy/status, workspace typecheck/build, 149 API tests, 16 admin tests, security/workflow/tooling policy, the 58-check real-MySQL harness, 106 Flutter tests with zero formatting/analyzer findings, production admin/release-APK artifact scan, 22/22 live preflight, and deterministic smoke (`0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`). Raw dependency audit retains only the three approved moderate Prisma CLI transitives and no force fix was run.
+- Committed-head local validation passed clean install, Prisma validation/generation, current seven-migration deploy/status, workspace typecheck/build, 149 API tests, 16 admin tests, security/workflow/tooling policy, the 58-check real-MySQL harness, 106 Flutter tests with zero formatting/analyzer findings, production admin/release-APK artifact scan, 22/22 live preflight, and deterministic smoke (`0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`). Raw dependency audit retains only the three approved moderate Prisma CLI transitives and no force fix was run.
 
 Remaining after M6C2B2:
 - M6C2B2 is merged and post-merge verified. Production remains blocked on a real provider, approved legal publication workflow/content, storage-at-rest and backup policy, retention automation, Flutter onboarding UI, and driver/merchant approval operations.
@@ -2468,7 +2478,7 @@ Post-merge database and validation:
 Real MySQL and runtime evidence:
 - The real MySQL public onboarding harness passed 67 checks covering disabled/enabled configuration, enumeration-safe eligibility, one-attempt redemption, lost-response recovery, resend fencing, provider rejection recovery, verify replay/grant rotation, passenger active creation without session issuance, driver/merchant pending access, pending-token isolation, operational-route denial, pending-login denial, consent fail-closed behavior, idempotency fencing, suspension revocation, audit privacy, and clean demo-reset cleanup.
 - The live onboarding foundation harness passed against the running API. Live demo preflight passed 22/22 with the MySQL-backed API, admin URL, mobile emulator URL, and Android emulator attached.
-- Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - Production-like artifact boundary scans passed for the release APK and a production-configured admin build. Explicit route-boundary tests passed for public-onboarding disablement, staging/production fail-closed behavior, fake-provider rejection outside local/test/demo, log redaction, route isolation, and foundation security.
 
 Merge-commit CI:
@@ -2499,7 +2509,7 @@ Client architecture:
 
 State machine and secure bundle:
 - The mobile onboarding controller uses explicit stages equivalent to checking availability, unavailable, choosing role, invitation/phone entry, starting, OTP sent/resending/verifying, phone verified, loading consents, account details, consent review, completion, passenger-created, pending-review, retryable failure, and terminal failure.
-- Secure onboarding state is stored in `masari_onboarding_bundle_v1`, separate from `masari_auth_bundle_v1` and `masari_jwt`. Corrupt, unsupported, incomplete, or expired bundles fail closed and clear only onboarding state.
+- Secure onboarding state is stored in `darb_onboarding_bundle_v1`, separate from `darb_auth_bundle_v1` and `darb_jwt`. Corrupt, unsupported, incomplete, or expired bundles fail closed and clear only onboarding state.
 - Stored onboarding data is limited to bundle version/type, safe stage, role, locale, attempt ID, continuation token/expiry, registration grant/expiry, pending-status token/expiry, masked phone, resend time, and safe idempotency metadata. Raw invitation code, OTP, password, raw phone, full authorization headers, provider details, fake outbox data, JWTs, and refresh tokens are not stored in onboarding state.
 - Token/grant replacement follows the crash-consistent order: validate response, construct the replacement bundle, write secure storage, then publish controller state.
 
@@ -2528,8 +2538,8 @@ Validation evidence:
 - Full backend/workspace validation passed: clean install, Prisma validate/generate, seven-migration MySQL status current, workspace typecheck, 149 API tests, workspace build, standard validation, and security validation. Raw `npm audit --omit=dev` still reports only the approved three moderate Prisma CLI transitive findings and no force fix was run.
 - Explicit admin validation passed: typecheck, 16 tests, normal build, production-configured build, and production artifact scan.
 - Explicit Flutter validation passed: dependency resolution, localization generation, zero-change formatting, analysis, 122 tests, debug APK build for `http://10.0.2.2:3000`, production-like release APK build, and production APK scan.
-- Real MySQL public onboarding harness passed 67 checks. Live demo preflight passed 22/22 with API, admin, debug APK, MySQL, and Android emulator attached. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
-- Android emulator install/launch smoke passed for package `ps.masari.mobile` using the generated debug APK. The exhaustive invite/OTP/operator UI rehearsal remains required for independent review because the repository does not yet provide a full Flutter integration automation harness for reading fake-provider OTP externally and driving all screens.
+- Real MySQL public onboarding harness passed 67 checks. Live demo preflight passed 22/22 with API, admin, debug APK, MySQL, and Android emulator attached. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
+- Android emulator install/launch smoke passed for package `ps.darb.mobile` using the generated debug APK. The exhaustive invite/OTP/operator UI rehearsal remains required for independent review because the repository does not yet provide a full Flutter integration automation harness for reading fake-provider OTP externally and driving all screens.
 
 Remaining after M6C2C:
 - Draft PR creation and independent mobile security/state review remain required before merge. Public launch still requires full manual/operator onboarding rehearsal, a real OTP provider, governed legal publication, storage/backup/retention approval, retention automation, admin invitation UI if desired, and driver/merchant approval operations.
@@ -2557,7 +2567,7 @@ Focused regression coverage:
 Independent validation and emulator evidence:
 - Final clean install and validation passed: Prisma validate/generate, current seven-migration MySQL status, workspace typecheck/build, 149 API tests, standard/security validation, six tooling tests, 16 admin tests, real MySQL public-onboarding integration, Flutter localization generation, zero-change formatting, analysis, 137 Flutter tests, local debug APK, and production-like release APK.
 - Raw `npm audit --omit=dev` retains only the three documented moderate Prisma CLI transitives whose proposed repair is the prohibited breaking force downgrade. No force fix was run.
-- Live preflight passed 22/22. Deterministic smoke retained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Live preflight passed 22/22. Deterministic smoke retained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - Passenger completed invitation, externally read/manual OTP entry, all three consents, creation without auto-login, normal access/refresh login, dashboard entry, and confirmed logout. Driver and merchant each completed registration into pending isolation, restored after real process death, remained unable to login, recovered pending status with credentials, refreshed status, and cleared local pending state.
 - A real consent-set switch from operator version A to B produced `consent_version_changed`; Flutter cleared all three prior acceptances, rendered B, required fresh acceptance, and then completed. Arabic default, English switch, semantic accessibility tree, and 1.5x font-scale login layout passed. A production-like APK launched fail-closed with Arabic login available and registration/recovery absent; artifact scans found no local secret or temporary review marker.
 - A response-loss proxy confirmed start and verify response loss can be retried in-process without losing the workflow. Completion response loss committed server-side and retained the exact form/three acceptances for explicit retry, but the operator automation did not obtain a final replayed-result observation. Resend temporary failure, pending-status temporary failure, TalkBack, and rotation remain uncompleted manual gates.
@@ -2590,12 +2600,12 @@ API, admin, authorization, and privacy:
 - The production React module is separate from `/demo` and provides a bilingual RTL/LTR catalog, loading/empty/error states, search/filter/pagination, identity/version and numeric stop forms, keyboard-accessible stop reordering, permission controls, revision-conflict handling, lifecycle confirmations, explicit geometry readiness, shared responsive design tokens, and no map surface.
 
 Migration, recovery, and validation evidence:
-- Forward-only migration `20260721110000_canonical_route_catalog` adds the four canonical tables, enums, compatibility columns, indexes, restrictive foreign keys, utf8mb4 tables, and MySQL CHECK constraints. The seven existing migrations were not edited and no `db push` was used. Main `masari` upgraded from seven to eight migrations, repeated deploy was a no-op, and final status is current.
+- Forward-only migration `20260721110000_canonical_route_catalog` adds the four canonical tables, enums, compatibility columns, indexes, restrictive foreign keys, utf8mb4 tables, and MySQL CHECK constraints. The seven existing migrations were not edited and no `db push` was used. Main `darb` upgraded from seven to eight migrations, repeated deploy was a no-op, and final status is current.
 - Aggregate preflight found two legacy DriverRoute rows, no trips/matches using them, one distinct corridor, and no invalid legacy capacities. A fresh isolated database applied all eight migrations. The populated upgrade passed, and the disposable real-MySQL route harness passed repeatedly before final validation and once again from an empty database at final head.
 - Real-MySQL coverage includes route/stop uniqueness, idempotent replay/conflict, version-number and clone concurrency, optimistic draft conflict, stop constraints, invalid publication, one deterministic current publication under concurrency, published immutability, pause/resume/retire rules, usage deletion protection, capacity checks, Arabic round-trip, demo seed/reset idempotency, and final cleanup.
 - Ignored checksum-backed backups were made before and after migration. The pre-migration dump restored into an isolated database and upgraded through all eight migrations; the post-migration dump restored at current status. Both isolated restore databases were removed after verification.
 - Final local validation passed dependency installation, Prisma validate/generate, eight-migration deploy/status, workspace typecheck/build, 160 API tests, 24 admin tests, standard/security/workflow/tooling gates, production admin and release-APK artifact scans, 141 Flutter tests with zero format/analyzer findings, 22/22 live preflight, fresh emulator APK install, and Arabic-first launch. The release APK was not rebuilt by M7B.
-- Deterministic live smoke remains score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Deterministic live smoke remains score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 
 M7B review and remaining work:
 - M7B is intentionally delivered as an unmerged draft PR and requires independent schema, lifecycle, authorization, privacy, and real-MySQL concurrency review before merge.
@@ -2616,7 +2626,7 @@ Independent-review corrections:
 - The production-like trusted-session harness was inheriting the local-only legal-fixture flag from its parent process. A small environment-sanitization helper now removes local/test-only flags before production subprocess startup, with delivery-tooling regression coverage. Production configuration continues to fail closed if those flags are supplied directly.
 
 Review validation boundary:
-- Focused API CORS/security tests, admin route tests, delivery-tooling tests, the disposable real-MySQL route concurrency harness, and the complete trusted-session integration harness passed after correction. The latter retained the approved deterministic metrics: score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Focused API CORS/security tests, admin route tests, delivery-tooling tests, the disposable real-MySQL route concurrency harness, and the complete trusted-session integration harness passed after correction. The latter retained the approved deterministic metrics: score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - The final local gate passed a clean npm install, Prisma validate/generate, repeatable 9-migration deploy/current status, workspace typecheck/build, 160 API tests, 26 admin tests, 8 tooling tests, workflow/secret/security validation, zero-change Flutter formatting, Flutter analysis, and 141 Flutter tests. Real MySQL route concurrency, trusted-session, 76-check public-onboarding, checksum-backed backup/isolated restore, 22/22 live preflight, deterministic smoke, production-like session isolation, production admin/release-APK artifact scans, and temporary-log scans all passed. Disposable review/restore databases and browser-review artifacts were removed afterward.
 - During final validation, the registry began reporting a high-severity advisory against transitive `fast-uri@3.1.3` through Prisma CLI's AJV dependency. A lockfile-only non-breaking update to `3.1.4` removed the high finding without changing Prisma or adding a direct dependency. Raw `npm audit --omit=dev` now reports only the three documented moderate Prisma CLI transitives whose proposed repair remains the prohibited breaking force update; the repository audit policy passes.
 - Exact-head GitHub CI remains required before PR #6 can leave draft. PR #6 remains unmerged. M7C and M7D remain out of scope.
@@ -2636,7 +2646,7 @@ Artifact, regression, and CI closure:
 - Corrective PR #7 removed dormant tracking-simulation control labels from production-configured admin bundles by using the existing compile-time demo boundary; demo behavior remains available only in approved local/test/demo builds. The production admin artifact scan passes with all five affected translation properties empty and no simulation-control labels or demo endpoints bundled.
 - The frozen hackathon APK is intentionally a demo artifact and may contain demo-gated tracking simulation strings/endpoints. It was not rebuilt, replaced, retagged, or treated as production-clean. Production-like APKs are the production gate; PR-head and merge-commit Flutter CI both built and scanned a demo-disabled production-like APK successfully.
 - Post-merge validation passed 160 API tests, 27 admin tests, 141 Flutter tests, 8 tooling tests, Prisma validation/generation, workspace typecheck/build, standard/security policy, production artifact scans, and secret/log scans. Raw audit retains only the three documented moderate Prisma CLI transitives; no force fix was run.
-- Live preflight passed 22/22. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Live preflight passed 22/22. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - All four workflows passed on PR #7 merge commit `4e9c711a3824a7caf0eb23be6d2742dc4d6d244a`: Admin CI, Backend and MySQL CI, Flutter Android CI (including production-like APK scan), and Security and Configuration CI.
 
 Milestone boundary:
@@ -2670,7 +2680,7 @@ Migration, recovery, and evidence:
 - The M7C1 real-MySQL suite passes 36 persistent-state scenarios covering route/stop eligibility, passenger/merchant references, duplicate availability, owner isolation, seat/parcel/combined holds, insufficient rollback, replay/conflict, confirm/release/expiry races, capacity bounds/restoration, legacy records, Arabic round-trip, and idempotent reset cleanup.
 - Final local validation passed clean dependency installation, Prisma validation/generation, repeatable eleven-migration deploy/current status, workspace typecheck/build, 171 API tests, 27 admin tests, 8 tooling tests, standard/security/workflow/audit-policy gates, zero-change Flutter formatting, Flutter analysis, and 141 Flutter tests. A production-configured admin build and production-like release APK both built and passed artifact scanning. Raw `npm audit --omit=dev` retains only the three documented moderate Prisma CLI transitive findings; no force fix was run.
 - The checksum-backed pre-upgrade backup restored into an isolated database and upgraded through all eleven migrations; the post-upgrade backup restored at current status. Both restore databases were removed. The final disposable real-MySQL integration reapplied all eleven migrations from empty, proved repeat deploy was a no-op, and passed every legacy and M7C1 harness before cleanup.
-- Live preflight passed 22/22 against the MySQL-backed API, production admin, and Android emulator. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`. Value-aware scanning found no configured secret in generated artifacts or captured logs, and captured logs contained no credential/header/body/coordinate markers. Dependency and Flutter source boundary scans confirmed no map/GPS/realtime package or M7C1 mobile client wiring.
+- Live preflight passed 22/22 against the MySQL-backed API, production admin, and Android emulator. Deterministic smoke retained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`. Value-aware scanning found no configured secret in generated artifacts or captured logs, and captured logs contained no credential/header/body/coordinate markers. Dependency and Flutter source boundary scans confirmed no map/GPS/realtime package or M7C1 mobile client wiring.
 - The draft PR must remain unmerged. Exact-head GitHub checks for Backend and MySQL CI, Admin CI, Flutter Android CI, and Security and Configuration CI remain the final delivery gate after this evidence commit is pushed.
 
 Remaining boundaries:
@@ -2686,7 +2696,7 @@ Review findings and corrections (2026-07-22):
 - Legacy passenger/merchant/driver queries exclude canonical records. Comparison selects legacy demand only, matching authorizes before revealing the canonical isolation response, and legacy match acceptance/rejection rejects canonical offers. Production matching remains disabled.
 - Forward-only migration `20260722180000_harden_multi_route_operations` adds canonical availability/count/marker/checksum/reason checks plus composite Match-to-availability/demand and reservation-to-Match route integrity. The original eleven migrations remain byte-stable. The migration replaces the older DriverRoute route-version FK update action with `RESTRICT` so MySQL 8.0.46 can enforce the new checked column safely.
 - The expanded disposable real-MySQL suite applies all twelve migrations from empty, repeats deployment, and exercises direct-SQL ownership failures, exact concurrent idempotent holds, approval revocation, pause-versus-demand/hold, cancel-versus-hold, update-versus-release, cross-route Match/reservation attempts, poison-resistant expiry, capacity bounds, and persisted audit allowlists. It passes 53 persistent-state assertions.
-- Final local review validation passes 176 API tests (including the 50/51-parcel boundary), 27 admin tests, 141 Flutter tests, 8 tooling tests, production-configured admin/APK artifact scans, 34 focused production-isolation tests, real-MySQL trusted-session/onboarding/route/multi-route suites, 22/22 runtime preflight, and exact deterministic smoke (`0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`). The required raw production dependency audit reports only the three approved moderate Prisma CLI transitives and no High/Critical advisory. Exact correction-head CI is recorded in the PR independent-review comment after all four workflows finish.
+- Final local review validation passes 176 API tests (including the 50/51-parcel boundary), 27 admin tests, 141 Flutter tests, 8 tooling tests, production-configured admin/APK artifact scans, 34 focused production-isolation tests, real-MySQL trusted-session/onboarding/route/multi-route suites, 22/22 runtime preflight, and exact deterministic smoke (`0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`). The required raw production dependency audit reports only the three approved moderate Prisma CLI transitives and no High/Critical advisory. Exact correction-head CI is recorded in the PR independent-review comment after all four workflows finish.
 
 Remaining review obligations:
 - A legacy-shaped Parcel can still be inserted under a canonical MerchantOrder only by a privileged direct database writer because nullable composite foreign keys do not enforce the inverse parent-to-child mode rule. Every application creation path is atomic, strict, and mode-consistent; M7C3 must preserve that invariant or add a normalized non-null order-mode key if standalone parcel creation is introduced.
@@ -2705,7 +2715,7 @@ Follow-up findings and correction (2026-07-22):
 
 Corrective verification:
 - Two independently empty MySQL 8.0.46 databases using `utf8mb4_0900_ai_ci` applied all thirteen migrations. Status was current and repeat deploy was a no-op. The expanded M7C1 suite passes 78 persistent-state assertions, including direct SQL mode/route/demand ownership failures, exact update-versus-hold/release/expiry totals and audit counts, cancellation safety, status/role revocation, stop retirement serialization, ten-way same-identity replay and post-commit response-loss recovery, atomic 50/51-parcel boundaries, and poison-row quarantine.
-- The broader disposable sequence passes deterministic demo smoke, trusted-session concurrency, onboarding foundation, 76-check public onboarding, M7B route lifecycle/concurrency, and the M7C1 harness. Deterministic values remain score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`.
+- The broader disposable sequence passes deterministic demo smoke, trusted-session concurrency, onboarding foundation, 76-check public onboarding, M7B route lifecycle/concurrency, and the M7C1 harness. Deterministic values remain score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`.
 - The privileged direct-database inverse Parcel mode limitation remains accepted only because all runtime merchant creation is one strict nested transaction and no ETL/import/admin/standalone Parcel writer exists. M7C3 owns normalized parent-child mode enforcement before any standalone writer is introduced.
 - Millisecond-different availability departures remain independent capacity rows by design; exact retries remain idempotent. Lock ordering is documented in `docs/operations/m7c1-migration-and-recovery.md`; bounded internal deadlock retry remains optional because rollback is atomic and callers receive a safe retry category.
 - M7C2, M7C3, maps, GPS, realtime, pricing, dispatching, production enablement, and mobile/admin feature work remain unimplemented. PR #8 remains draft and unmerged pending exact-head CI and team-leader action.
@@ -2726,7 +2736,7 @@ Post-merge validation evidence:
 - A fresh disposable MySQL 8.0.46 database using `utf8mb4_0900_ai_ci` applied all thirteen migrations from empty, repeated deploy as a no-op, reported current status, and passed deterministic demo, trusted-session, onboarding, 76-check public-onboarding, route-lifecycle, and M7C1 integration suites. M7C1 passed 78 persistent-state assertions and cleaned up its database.
 - The runtime/API coverage includes trusted active-role enforcement; owner-only availability; valid driver, passenger, and merchant flows; cross-route/reverse/arbitrary-field rejection; the atomic 50/51-parcel boundary; availability and reservation races; exact response-loss replay; same-key/different-payload conflict; poison expiry; and safe retryable deadlock/transaction conflict behavior.
 - A checksum-backed migration-12 backup restored into an isolated database and upgraded through migration 13. A post-M7C1 backup restored at current status. Both isolated restore databases were removed. Read-only merged-state checks confirmed ownership/mode foreign keys, capacity checks, expiry quarantine fields/index, valid legacy null-route/mode shapes, and zero canonical leakage.
-- Live preflight passed 22/22 against the MySQL-backed API, production admin, and Android emulator. Deterministic smoke remained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Live preflight passed 22/22 against the MySQL-backed API, production admin, and Android emulator. Deterministic smoke remained score `0.9317`, tracking sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - Production-configured admin and production-like release APK builds passed artifact-isolation scans. M7C2 strings/UI, map/GPS/realtime code, production canonical seeds, and demo-only mutation controls remain absent from production artifacts. The frozen hackathon APK remains a separately classified demo artifact.
 - All four workflows passed on PR #8 merge commit `77e7035abbb9ff6ae649a482b17918bdcfe0a1b4`: Admin CI, Backend and MySQL CI, Flutter Android CI, and Security and Configuration CI.
 
@@ -2759,7 +2769,7 @@ Final validation evidence (2026-07-25):
 - Flutter dependency/localization generation, zero-change formatting, analysis, and 155 tests passed at the implementation head. The independent review correction adds actor/operation isolation, write-before-send, delete-after-result, logout preservation, ambiguity classification, expiry quarantine, strict catalog parsing, and focused regressions; its final test count and runtime evidence are recorded at review handoff. Debug and production-like APKs built; the production admin and APK artifact scans passed.
 - The dedicated real-MySQL empty/current suites passed migration repeatability, trusted sessions, onboarding, public onboarding, M7B routes, and the M7C1 78-assertion operational/concurrency harness, then cleaned up. Checksum-backed backup/isolated restore verification passed and removed the restore database.
 - Emulator API 36 validation passed Arabic-first RTL, English LTR, driver availability lifecycle, passenger canonical request, merchant atomic route order, truthful matching-disabled outcomes, system back, landscape, and 200% text. A raw service-region key discovered in the route card was removed and the rebuilt APK was rechecked.
-- Live demo preflight passed 22/22. Deterministic smoke retained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`. Production artifact and captured-log scans found no forbidden configuration, credential, authorization, idempotency-header, coordinate, demo-control, matching, map, GPS, or realtime leakage.
+- Live demo preflight passed 22/22. Deterministic smoke retained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`. Production artifact and captured-log scans found no forbidden configuration, credential, authorization, idempotency-header, coordinate, demo-control, matching, map, GPS, or realtime leakage.
 
 Independent M7C2 correction review (2026-07-25):
 - No Critical issue was proven. High-risk recovery defects were corrected before review readiness: actor-bound bundles survive logout/session termination; unresolved payloads/operations/accounts cannot replace or consume one another; secure persistence precedes send; temporary and ambiguous idempotency outcomes preserve the exact key; confirmed results clear only after UI acknowledgement or owner-detail reconciliation; and expired/clock-anomalous/unreadable state is quarantined.
@@ -2792,7 +2802,7 @@ Merged-head Flutter and secure-recovery evidence:
 Production-like, legacy, and CI closure:
 - The production-like release APK launched fail-closed against its unreachable production-style endpoint, contained no demo account controls, and kept canonical entry hidden/guarded. The manifest requests only Internet access; there is no map SDK/surface, Android location permission, capacity-reservation mutation client, MatchOffer/canonical Trip UI, GPS ingestion, route pricing, or direct realtime dependency.
 - Production admin and release-APK isolation scans passed. Actual local secret/runtime values were absent from the API/admin/release-APK and captured API/admin/Flutter logs; no token, authorization header, password, database URL, raw idempotency key, secure-bundle payload, merchant payload, parcel description, coordinate, internal region key, or M7C3 control was observed. The API build intentionally retains only the approved synthetic demo phone fixtures required by the protected deterministic reset and compiled test harnesses; no real/user phone data was captured.
-- Legacy/demo regression ran after canonical role-flow execution and left zero canonical MatchOffer, Trip, or availability mutation. Preflight passed `22/22`; deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `masari`.
+- Legacy/demo regression ran after canonical role-flow execution and left zero canonical MatchOffer, Trip, or availability mutation. Preflight passed `22/22`; deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, and winner `darb`.
 - All four workflows passed on exact merge commit `26406815aa6bf9712021c803c0a8f548b381ccad`: Admin CI, Backend and MySQL CI, Flutter Android CI, and Security and Configuration CI.
 
 Accepted obligations and next boundary:
@@ -2811,5 +2821,5 @@ Implementation record (2026-08-05):
 - No Prisma schema or migration changed; all 18 migrations and M7C3C1 matching/capacity/Trip behavior remain outside this presentation milestone. No segment capacity reuse, matching invocation, manifest editing, Trip lifecycle mutation, map/GPS/location permission, realtime, ETA, pricing, payment, or dispatch control was added.
 - Final corrected validation passed 205 API tests, 27 Admin tests, 203 Flutter tests, nine tooling tests, Prisma/typecheck/build/standard/security gates, production-configured Admin and production-like APK scans, and the raw audit policy with only four approved moderate Prisma CLI transitives. MySQL 8.0.46 applied all 18 migrations from empty, repeated as a no-op, retained both approved normalized checksums and all five integrity triggers, and passed the M7C3C1 141-, M7C3A 98-, M7C1 79-, and public-onboarding 76-check harnesses plus trusted sessions, onboarding, route lifecycle, backup/restore, and cleanup.
 - API 36 device evidence covered Arabic-default RTL and English LTR; separate shared navigation; passenger-only acceptance; merchant-only categorical rejection; mixed acceptance; aggregate stop events and conservative-capacity wording; one-Trip persistent state; passenger/merchant co-member-blind assignments; portrait; landscape at 200% text; manual refresh/no-live wording; and absence of lifecycle/map/ETA/tracking controls. Rejected state restored capacity exactly once and created zero Trip. Mixed acceptance assigned both dispatches to one Trip and one snapshot.
-- Preflight passed 22/22 and deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `masari`. Production-like artifacts remain fail-closed with Internet-only Android permission and no map/GPS/realtime dependency.
+- Preflight passed 22/22 and deterministic smoke remained score `0.9317`, sequence `2`, trips `1` versus `6`, distance `21.53` versus `129.19`, cost `43.06` versus `258.38`, winner `darb`. Production-like artifacts remain fail-closed with Internet-only Android permission and no map/GPS/realtime dependency.
 - Automated coverage proves response-loss replay, write-before-send, no-send on secure-save failure, one-slot actor/operation isolation, logout preservation, capability-loss retention, stale-response fencing, exact reconciliation, and quarantine behavior. The exhaustive hands-on process-death timing matrix, every rotation-in-flight/back variant, full gesture-back matrix, maximum-timeline/count automation, smaller-physical-device coverage, and a full manual TalkBack pass remain accepted evidence obligations and are not claimed as executed. PR-head and merge-commit CI passed; the formal closure record above is authoritative. M7C3C3, M7D, and M7E have not started.

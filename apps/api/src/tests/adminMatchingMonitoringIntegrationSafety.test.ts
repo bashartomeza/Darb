@@ -9,9 +9,9 @@ describe("monitoring integration disposable target guard", () => {
     ["test", undefined, "card7_ci"],
     ["test", "not a url", "card7_ci"],
     ["test", "postgres://localhost/card7_ci", "card7_ci"],
-    ["test", "mysql://localhost/masari", "masari"],
-    ["test", "mysql://localhost/MaSaRi", "MaSaRi"],
-    ["test", "mysql://localhost/masari_dev", "masari_dev"],
+    ["test", "mysql://localhost/darb", "darb"],
+    ["test", "mysql://localhost/Darb", "Darb"],
+    ["test", "mysql://localhost/darb_dev", "darb_dev"],
     ["test", "mysql://localhost/card7_ci", "other_ci"],
     ["test", "mysql://localhost/card7_ci", undefined],
     ["test", "mysql://localhost/card7_ci", "CARD7_CI"],
@@ -26,14 +26,14 @@ describe("monitoring integration disposable target guard", () => {
 
   it.each([
     ["test", "mysql://localhost/card7_ci", "card7_ci"],
-    ["demo", "mysql://localhost/masari_ci", "other_ci, masari_ci"],
+    ["demo", "mysql://localhost/darb_ci", "other_ci, darb_ci"],
     ["test", "mysql://localhost/card7%5Fci", "card7_ci"],
   ])("accepts explicitly allowed disposable target %s %s", (environment, url, allowed) => {
     expect(() => assertMonitoringIntegrationTarget(environment, url, allowed)).not.toThrow();
   });
 
   it("never echoes URL credentials or malformed input in errors", () => {
-    for (const url of ["mysql://secret-user:secret-password@localhost/masari", "secret-password malformed"]) {
+    for (const url of ["mysql://secret-user:secret-password@localhost/darb", "secret-password malformed"]) {
       let thrown: unknown;
       try {
         assertMonitoringIntegrationTarget("test", url, "card7_ci");

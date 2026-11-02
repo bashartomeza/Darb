@@ -16,4 +16,4 @@ if ($Remove) {
 $password = Read-Host -AsSecureString "Paste the 16-letter Google App Password (input is hidden)"
 Save-MailPassword -Password $password
 $password.Dispose()
-Write-Output "The App Password is stored for this Windows user (target Masari/DemoGmailAppPassword). It was not displayed. Restart the test environment (stop.ps1, start.ps1) to use it."
+Write-Output "The App Password is stored for this Windows user (target Darb/DemoGmailAppPassword). It was not displayed. Restart the test environment (stop.ps1, start.ps1) to use it."

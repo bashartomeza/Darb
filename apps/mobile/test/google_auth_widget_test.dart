@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/auth/data/auth_repository.dart';
-import 'package:masari_mobile/features/auth/data/google_sign_in_service.dart';
-import 'package:masari_mobile/features/auth/presentation/widgets/google_auth_button.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/auth/data/auth_repository.dart';
+import 'package:darb_mobile/features/auth/data/google_sign_in_service.dart';
+import 'package:darb_mobile/features/auth/presentation/widgets/google_auth_button.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 class _ConfiguredGoogle extends GoogleSignInService {
   @override

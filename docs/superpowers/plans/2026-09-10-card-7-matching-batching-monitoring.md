@@ -22,7 +22,7 @@
 - Safe projections only; no raw payloads/snapshots/fingerprints, unnecessary PII or coordinates.
 - No algorithm, Maps/GPS, realtime engine, mobile, AI or Trip lifecycle changes.
 - Card 7 introduces no Prisma/schema changes or migrations; the current production-readiness baseline contains 22 migrations.
-- Never access real masari. Integration uses explicitly allowed disposable *_ci databases.
+- Never access real darb. Integration uses explicitly allowed disposable *_ci databases.
 - No implementation or PR now. No merge of the eventual PR, rebase or force-push.
 
 ## Execution protocol
@@ -86,7 +86,7 @@ export type BatchQuery = PageQuery & Range & {
 };
 export type MatchRow = {
   id: string; status: MatchStatus; created_at: string; score: string;
-  method: 'masari_route_score' | 'unrecognized'; demand_kind: DemandKind;
+  method: 'darb_route_score' | 'unrecognized'; demand_kind: DemandKind;
   driver_route: { id: string; status: DriverRouteStatus };
   passenger_request: null | { id: string; status: RequestStatus; passenger_count: number };
   merchant_order: null | { id: string; status: MerchantOrderStatus; parcel_count: number };
@@ -143,7 +143,7 @@ expect(() => parseMatchQuery({ source: 'canonical' }, now)).toThrow();
 expect(() => parseBatchQuery({ status: 'completed' }, now)).toThrow();
 expect(parseMatchQuery({ demand_kind: 'combined', search: ' m1 ' }, now).search).toBe('m1');
 ```
-- [x] Run `npm run test -w @masari/api -- src/tests/adminMatchingMonitoringContracts.test.ts`; confirm red before code.
+- [x] Run `npm run test -w @darb/api -- src/tests/adminMatchingMonitoringContracts.test.ts`; confirm red before code.
 - [x] Implement strict Zod parsing: numeric scalar strings only, integer bounds, paired UTC Z ranges, max31 days, no future until, blank search normalized absent, IDs/search max191. Preserve unknown-key rejection.
 - [x] Implement typed predicates from spec section3 and selects from section6:
 ```ts
@@ -172,7 +172,7 @@ expect(result.data.items[0].score).toBe('0.875');
 expect(result.observed_at).toBe(now.toISOString());
 ```
   Score preserves decimal value, not trailing-zero display formatting. Test exact keys, method allowlist, null route, zero-filled maps, page/count and missing/excluded 404.
-- [x] Run `npm run test -w @masari/api -- src/tests/adminMatchingMonitoringService.test.ts`; confirm red.
+- [x] Run `npm run test -w @darb/api -- src/tests/adminMatchingMonitoringService.test.ts`; confirm red.
 - [x] Implement all reads with shared eligibility and explicit serialization. Details use findFirst(id AND eligibility), missing -> HttpError(404,'not_found'). Each method captures observed_at before a RepeatableRead transaction with maxWait2000/timeout5000. Page/count share transaction; no N+1. Filters are typed WhereInput built from exact query fields:
 ```ts
 const rows = await tx.match.findMany({
@@ -196,7 +196,7 @@ const app = createApp(undefined, { adminMatchingMonitoringService: service });
 await request(app).get('/api/v1/admin/matching-batching/overview').expect(401);
 expect(service.overview).not.toHaveBeenCalled();
 ```
-- [x] Run `npm run test -w @masari/api -- src/tests/adminMatchingMonitoringApi.test.ts`; confirm intended failures.
+- [x] Run `npm run test -w @darb/api -- src/tests/adminMatchingMonitoringApi.test.ts`; confirm intended failures.
 - [x] Add factory, router-level requireAuth/requireRole('admin'), six handlers and app dependency/mount. Existing Express5 error handling handles rejected async handlers:
 ```ts
 router.get('/matches/:id', async (req, res) => {
@@ -228,7 +228,7 @@ expect(gate.isCurrent(old)).toBe(false);
 expect(gate.isCurrent(current)).toBe(true);
 gate.invalidate(); expect(gate.isCurrent(current)).toBe(false);
 ```
-- [x] Run `npm run test -w @masari/admin -- src/api.test.ts src/features/monitoring/monitoringState.test.ts`; confirm red.
+- [x] Run `npm run test -w @darb/admin -- src/api.test.ts src/features/monitoring/monitoringState.test.ts`; confirm red.
 - [x] Add wrappers inside createApiClient using its private apiRequest (do not bypass session handling):
 ```ts
 monitoringMatch: (token: string, id: string) =>
@@ -243,7 +243,7 @@ monitoringMatch: (token: string, id: string) =>
 **Consumes:** client/types/gate. **Produces:** `MatchingBatchingMonitoring({api,token}:{api:ApiClient;token:string})` and `MatchingResults({api,token}:{api:ApiClient;token:string})` React components. Overview initial tab; Task6 connects Batches before feature completion.
 
 - [x] Add React DOM tests using existing jsdom/React act/createRoot patterns and localized static rendering. Mock six monitoring methods; legacy action mocks throw if called. Assert separate request/order cards, current-state vs creation-cohort labels, unavailable notices, both combined links, Score label, no success-rate/confidence or algorithm controls. Extend existing navigation fixture with demoEnabled=false and require matchingBatching available.
-- [x] Run `npm run test -w @masari/admin -- src/navigation.test.ts src/features/monitoring/MatchingBatchingMonitoring.test.tsx src/features/monitoring/MatchingResults.test.tsx`; confirm red.
+- [x] Run `npm run test -w @darb/admin -- src/navigation.test.ts src/features/monitoring/MatchingBatchingMonitoring.test.tsx src/features/monitoring/MatchingResults.test.tsx`; confirm red.
 - [x] Build table/detail and Overview using existing UI primitives. Matching filters are date/status/kind/exact-ID; change resets page1. Each endpoint has independent generation/state and last successful observed_at. Request function uses this pattern, with local state typed ObservationState<MatchRow>:
 ```tsx
 const generation = gate.begin();
@@ -270,7 +270,7 @@ const batch: BatchRow = { id: 'b1', status: 'assigned',
   selected_driver_route: null };
 ```
   Render and assert BOTH different statuses, Current eligible order contents, No selected route, 25 rows then one row, and no completed/savings/timeline claims. Test list filters and independent detail/member timestamps.
-- [x] Run `npm run test -w @masari/admin -- src/features/monitoring/LegacyBatches.test.tsx`; confirm red.
+- [x] Run `npm run test -w @darb/admin -- src/features/monitoring/LegacyBatches.test.tsx`; confirm red.
 - [x] Implement directory/date/status/exact-ID filters, detail and independently paginated members. Invalidate both gates on parent change; clear member rows on parent404/auth failures. Never use Parcel.batch_id or query trips. Render only allowed fields:
 ```tsx
 <tr key={row.id}><td>{row.id}</td><td>{statusLabel(row.status)}</td></tr>
@@ -283,14 +283,14 @@ const batch: BatchRow = { id: 'b1', status: 'assigned',
 **Files:** create two integration scripts and safety test; modify package.json/ci-mysql-integration.mjs.
 **Consumes:** six routes and existing disposable CI auth setup. **Produces:** `test:integration:monitoring` script = `node apps/api/dist/scripts/adminMatchingMonitoringIntegration.js`; pure guard `assertMonitoringIntegrationTarget(appEnv:string|undefined,databaseUrl:string|undefined,allowed:string|undefined):void`.
 
-- [x] Test absent/malformed URL, masari case-insensitive, non-_ci, unlisted DB and wrong environment; errors must not echo URLs:
+- [x] Test absent/malformed URL, darb case-insensitive, non-_ci, unlisted DB and wrong environment; errors must not echo URLs:
 ```ts
-expect(() => assertMonitoringIntegrationTarget('test','mysql://localhost/masari','masari')).toThrow();
+expect(() => assertMonitoringIntegrationTarget('test','mysql://localhost/darb','darb')).toThrow();
 expect(() => assertMonitoringIntegrationTarget('test','mysql://localhost/card7_ci','other_ci')).toThrow();
 expect(() => assertMonitoringIntegrationTarget('test','mysql://localhost/card7_ci','card7_ci')).not.toThrow();
 ```
-- [x] Run `npm run test -w @masari/api -- src/tests/adminMatchingMonitoringIntegrationSafety.test.ts`; confirm red.
-- [x] Implement URL path decoding, strict alphanumeric/underscore DB name, case-insensitive masari rejection, _ci suffix, exact allowlist membership and demo/test environment. Call before dynamic Prisma import, no .env loading or connection logging:
+- [x] Run `npm run test -w @darb/api -- src/tests/adminMatchingMonitoringIntegrationSafety.test.ts`; confirm red.
+- [x] Implement URL path decoding, strict alphanumeric/underscore DB name, case-insensitive darb rejection, _ci suffix, exact allowlist membership and demo/test environment. Call before dynamic Prisma import, no .env loading or connection logging:
 ```ts
 assertMonitoringIntegrationTarget(process.env.APP_ENV, process.env.DATABASE_URL,
   process.env.DEMO_RESET_ALLOWED_DATABASES);
@@ -307,7 +307,7 @@ const { prisma } = await import('../lib/prisma.js');
 
 - [ ] Run `npm ci`, `npm audit`, `npm audit --omit=dev`, `npm run security:audit`; require vulnerabilities0, all severity counts0, no exceptions or force fix.
 - [ ] Run `npm run validate:all`: Prisma validate/generate, API/Admin tests/typechecks/build, security/tooling and Mobile format/analyze/test. Run `npm run test:integration:mysql` only in allowed disposable environment; it includes Card6 and new monitoring. Verify the latest base's 22 migration directories and no Card 7 Prisma diff. No real DB migration.
-- [ ] Match Mobile CI release build from apps/mobile: `flutter build apk --release --dart-define=APP_ENV=production --dart-define=ENABLE_DEMO_FEATURES=false --dart-define=API_BASE_URL=https://api.staging.masari.invalid`; then root `npm run security:artifacts -- --apk apps/mobile/build/app/outputs/flutter-apk/app-release.apk`. Do not modify Mobile for monitoring.
+- [ ] Match Mobile CI release build from apps/mobile: `flutter build apk --release --dart-define=APP_ENV=production --dart-define=ENABLE_DEMO_FEATURES=false --dart-define=API_BASE_URL=https://api.staging.darb.invalid`; then root `npm run security:artifacts -- --apk apps/mobile/build/app/outputs/flutter-apk/app-release.apk`. Do not modify Mobile for monitoring.
 - [ ] Human-smoke-ready disposable UI check: separate units/cohort labels, combined match detail, filters/pages/manual refresh, batch order contents, unauthorized clearing, Arabic RTL/keyboard. Monitoring must not issue algorithm mutations.
 - [ ] Whole-branch spec/quality review and Codex Security diff review. Validate findings technically before fixes. External CodeRabbit review requires Card7-specific private-diff/minimal-context authorization; earlier PR30/35 authorization does not cover it. Do not transmit any code during planning. Never transmit secrets/untracked QA files/DB contents.
 - [ ] After implementation and authorization to open a draft PR, require exact-final-head hosted Admin, Backend/MySQL, Mobile and Security PASS, CodeRabbit without valid unresolved blockers, and Codex Security without validated unresolved findings. Meaningful fixes require affected local tests and fresh exact-head CI/security review. Do not create a PR now or merge the eventual PR.

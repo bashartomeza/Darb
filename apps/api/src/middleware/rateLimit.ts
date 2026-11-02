@@ -14,7 +14,7 @@ function loginKey(req: Request, secret: string) {
   // Valid identities share a keyed bucket across IPs and spelling variants.
   // Credential-only actions use an IP bucket, never a raw credential key.
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 191) return safeIpKey(req);
-  return createHmac("sha256", secret).update(`masari:auth-rate-limit:${normalizeEmailForAbuse(email)}`).digest("hex");
+  return createHmac("sha256", secret).update(`darb:auth-rate-limit:${normalizeEmailForAbuse(email)}`).digest("hex");
 }
 
 function handler(req: Request, res: Response) {
@@ -40,7 +40,7 @@ function sharedOptions(windowMs: number, max: number) {
 export function createGlobalRateLimiter(appConfig: AppConfig) {
   return rateLimit({
     ...sharedOptions(appConfig.rateLimits.global.windowMs, appConfig.rateLimits.global.max),
-    identifier: "masari-global-api",
+    identifier: "darb-global-api",
     keyGenerator: safeIpKey
   });
 }
@@ -48,7 +48,7 @@ export function createGlobalRateLimiter(appConfig: AppConfig) {
 export function createLoginRateLimiter(appConfig: AppConfig) {
   return rateLimit({
     ...sharedOptions(appConfig.rateLimits.login.windowMs, appConfig.rateLimits.login.max),
-    identifier: "masari-login",
+    identifier: "darb-login",
     skip: (req) => {
       const path = req.originalUrl.split("?")[0].toLowerCase().replace(/\/+$/, "");
       // These routes authenticate first and use an account-bound limiter below.
@@ -61,11 +61,11 @@ export function createLoginRateLimiter(appConfig: AppConfig) {
 export function createAuthenticatedAuthRateLimiter(appConfig: AppConfig) {
   return rateLimit({
     ...sharedOptions(appConfig.rateLimits.login.windowMs, appConfig.rateLimits.login.max),
-    identifier: "masari-authenticated-credential-action",
+    identifier: "darb-authenticated-credential-action",
     keyGenerator: (req: AuthenticatedRequest) => {
       if (!req.user) return safeIpKey(req);
       return createHmac("sha256", appConfig.authActions?.key.secret ?? appConfig.refreshTokenPepper)
-        .update(`masari:authenticated-auth-rate-limit:${req.user.id}`).digest("hex");
+        .update(`darb:authenticated-auth-rate-limit:${req.user.id}`).digest("hex");
     }
   });
 }

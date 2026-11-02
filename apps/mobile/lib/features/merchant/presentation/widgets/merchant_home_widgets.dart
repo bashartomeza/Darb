@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import '../../../../core/presentation/localized_labels.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
-import '../../../../core/widgets/masari_card.dart';
-import '../../../../core/widgets/masari_section.dart';
+import '../../../../core/widgets/darb_card.dart';
+import '../../../../core/widgets/darb_section.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../data/merchant_models.dart';
 import '../../domain/merchant_home_stats.dart';
@@ -118,7 +117,7 @@ class MerchantCountCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -179,7 +178,7 @@ class BatchSuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return MasariInfoCard(
+    return DarbInfoCard(
       title: l10n.batchSuggestionTitle(
         suggestion.parcelCount,
         merchantDestinationLabel(context, suggestion.destinationLabel),
@@ -216,12 +215,10 @@ class OrderTimelineRow extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final tone = statusToneFor(order.status);
-    final destination = order.parcels.isEmpty
-        ? null
-        : merchantDestinationLabel(
-            context,
-            order.parcels.first.destinationLabel,
-          );
+    // The route by name, with the merchant's own pickup words when the order
+    // has them; older orders keep their corridor places.
+    final pickupDetails = order.pickupDetails;
+    final routeLine = merchantOrderRouteLabel(context, order);
 
     return IntrinsicHeight(
       child: Row(
@@ -252,7 +249,7 @@ class OrderTimelineRow extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: AppTokens.spaceSmall),
-              child: MasariCard(
+              child: DarbCard(
                 onTap: onTap,
                 padding: const EdgeInsets.all(AppTokens.gutterMobile),
                 child: Row(
@@ -268,19 +265,23 @@ class OrderTimelineRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            destination == null
-                                ? localizedCorridorPlace(
-                                    context,
-                                    order.pickupLabel,
-                                  )
-                                : '${localizedCorridorPlace(context, order.pickupLabel)}'
-                                      ' ← $destination',
+                            routeLine,
+                            key: ValueKey('merchantOrderRouteLine-${order.id}'),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: AppTheme.onSurfaceVariant,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          if (pickupDetails != null)
+                            Text(
+                              pickupDetails,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppTheme.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),

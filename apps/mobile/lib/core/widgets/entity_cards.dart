@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/semantic_colors.dart';
-import 'masari_card.dart';
+import 'darb_card.dart';
 import 'route_chip.dart';
 import 'status_chip.dart';
 
@@ -114,7 +114,7 @@ class DriverCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MasariCard(
+    return DarbCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       child: Row(
@@ -290,7 +290,7 @@ class TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MasariCard(
+    return DarbCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       child: Column(
@@ -433,7 +433,7 @@ class ShipmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MasariCard(
+    return DarbCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       child: Row(

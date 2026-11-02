@@ -2,19 +2,20 @@ import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
 
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
-import 'package:masari_mobile/features/checkpoints/domain/checkpoint_models.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import '../../../core/maps/checkpoint_map_markers.dart';
+import '../../../core/maps/darb_route_map.dart';
+import '../../../core/maps/map_overlays.dart';
 import '../../../core/maps/osrm_route_service.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_map.dart';
+import '../../../core/widgets/darb_map.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../checkpoints/application/checkpoint_controller.dart';
+import '../../community_reports/application/community_reports_controller.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
 import '../application/passenger_trip_controller.dart';
 import 'trip_rating_prompt.dart';
@@ -30,11 +31,8 @@ class PassengerTripScreen extends ConsumerStatefulWidget {
 }
 
 class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
-  Future<OsrmRouteResult>? _routeFuture;
-  String? _routeKey;
-
   // ============================================================
-  // MASARI DESIGN SYSTEM
+  // DARB DESIGN SYSTEM
   // ============================================================
 
   static const Color _orange = Color(0xFFFA5F12);
@@ -63,70 +61,9 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   // ROUTE
   // ============================================================
 
-  Future<OsrmRouteResult> _loadRoute(
-    double originLat,
-    double originLng,
-    double destinationLat,
-    double destinationLng,
-  ) async {
-    try {
-      final result = await const OsrmRouteService().getRoute(
-        start: LatLng(originLat, originLng),
-        end: LatLng(destinationLat, destinationLng),
-      );
-
-      if (result.points.length >= 2) {
-        return result;
-      }
-    } catch (_) {
-      // Keep the fallback route available if OSRM fails.
-    }
-
-    return const OsrmRouteResult(
-      points: [],
-      durationSeconds: 0,
-      distanceMeters: 0,
-    );
-  }
-
-  Future<OsrmRouteResult> _getRouteFuture(PassengerTripState data) {
-    final trip = data.trip;
-
-    if (!trip.hasRouteCoordinates) {
-      return Future.value(
-        const OsrmRouteResult(
-          points: [],
-          durationSeconds: 0,
-          distanceMeters: 0,
-        ),
-      );
-    }
-
-    final startLat = data.location?.lat ?? trip.originLat!;
-    final startLng = data.location?.lng ?? trip.originLng!;
-
-    final destinationLat = trip.destinationLat!;
-    final destinationLng = trip.destinationLng!;
-
-    final key =
-        '${routeCoordKey(startLat)},${routeCoordKey(startLng)}|'
-        '$destinationLat,$destinationLng';
-
-    if (_routeFuture == null || _routeKey != key) {
-      _routeKey = key;
-
-      _routeFuture = _loadRoute(
-        startLat,
-        startLng,
-        destinationLat,
-        destinationLng,
-      );
-    }
-
-    return _routeFuture!;
-  }
-
-  List<GeoPoint> _fallbackRoutePoints(PassengerTripState data) {
+  /// The trip's own points for the route line: the vehicle (or the trip's
+  /// origin before a position is known) to the trip's destination.
+  List<GeoPoint> _routeWaypoints(PassengerTripState data) {
     final trip = data.trip;
 
     if (!trip.hasRouteCoordinates) {
@@ -213,9 +150,15 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
     final checkpointSnapshot = checkpoints.value ?? CheckpointSnapshot.empty;
 
     return ForegroundRefresh(
-      refresh: () => ref
-          .read(passengerTripControllerProvider(widget.tripId).notifier)
-          .refresh(),
+      refresh: () {
+        // Other users' new reports reach this map while it is open; a slow
+        // reports call never holds back the trip itself.
+        final trip = ref
+            .read(passengerTripControllerProvider(widget.tripId).notifier)
+            .refresh();
+        pollCommunityReports(ref);
+        return trip;
+      },
       child: Scaffold(
         backgroundColor: _background,
         body: state.when(
@@ -497,7 +440,8 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                             : CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${_displayOrigin(context, data)}  →  ${_displayDestination(context, data)}',
+                            data.trip.routeName(arabic: isArabic) ??
+                                '${_displayOrigin(context, data)}  →  ${_displayDestination(context, data)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: isArabic
@@ -585,6 +529,31 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                   ],
                 ),
 
+                // ==================================================
+                // EXACT PLACES (requests booked on a route)
+                // ==================================================
+                if (data.trip.pickupDetails != null ||
+                    data.trip.dropoffDetails != null) ...[
+                  const SizedBox(height: 10),
+                  _placeDetails(
+                    key: const ValueKey('tripPlaceDetails'),
+                    rows: [
+                      if (data.trip.pickupDetails != null)
+                        (
+                          icon: Icons.trip_origin_rounded,
+                          label: l10n.passengerPickupPoint,
+                          value: data.trip.pickupDetails!,
+                        ),
+                      if (data.trip.dropoffDetails != null)
+                        (
+                          icon: Icons.location_on_rounded,
+                          label: l10n.passengerDropoffPoint,
+                          value: data.trip.dropoffDetails!,
+                        ),
+                    ],
+                  ),
+                ],
+
                 const SizedBox(height: 10),
 
                 // ==================================================
@@ -615,6 +584,64 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
           ),
         );
       },
+    );
+  }
+
+  // ============================================================
+  // PLACE DETAILS
+  // ============================================================
+
+  Widget _placeDetails({
+    required Key key,
+    required List<({IconData icon, String label, String value})> rows,
+  }) {
+    return Container(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: _background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (index, row) in rows.indexed) ...[
+            if (index > 0) const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(row.icon, size: 18, color: _orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        row.label,
+                        style: const TextStyle(
+                          color: _secondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        row.value,
+                        style: const TextStyle(
+                          color: _text,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -705,15 +732,25 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
     AppLocalizations l10n,
     PassengerTripState data,
   ) {
-    return FutureBuilder<OsrmRouteResult>(
-      future: _getRouteFuture(data),
-      builder: (context, snapshot) {
-        final route = snapshot.data;
+    final road = watchRoadRoute(ref, _routeWaypoints(data));
+    return Builder(
+      builder: (context) {
+        final route =
+            road != null && road.routed && (road.durationSeconds ?? 0) > 0
+            ? OsrmRouteResult(
+                points: const [],
+                durationSeconds: road.durationSeconds!,
+                distanceMeters: road.distanceMeters ?? 0,
+              )
+            : null;
 
         final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-        if (route == null || route.durationSeconds <= 0) {
-          return _buildLoadingEta(context, isArabic);
+        if (route == null) {
+          // No road route: no travel time is invented.
+          return road == null
+              ? _buildLoadingEta(context, isArabic)
+              : const SizedBox.shrink();
         }
 
         return Container(
@@ -975,21 +1012,10 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
     PassengerTripState data,
     CheckpointSnapshot checkpointSnapshot,
   ) {
-    return FutureBuilder<OsrmRouteResult>(
-      future: _getRouteFuture(data),
-      builder: (context, snapshot) {
-        final routeResult = snapshot.data;
-
-        final routedPoints = routeResult?.points
-            .map((p) => GeoPoint(p.latitude, p.longitude))
-            .toList(growable: false);
-
-        final fallbackPoints = _fallbackRoutePoints(data);
-
-        final pathPoints = routedPoints != null && routedPoints.length >= 2
-            ? routedPoints
-            : fallbackPoints;
-
+    final road = watchRoadRoute(ref, _routeWaypoints(data));
+    final overlay = watchMapOverlay(ref, l10n);
+    return Builder(
+      builder: (context) {
         final trip = data.trip;
 
         final origin = trip.hasRouteCoordinates
@@ -1000,7 +1026,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
             ? GeoPoint(trip.destinationLat!, trip.destinationLng!)
             : null;
 
-        return MasariMap(
+        return DarbMap(
           emptyLabel: l10n.noLocationYet,
           attributionLabel: l10n.mapAttribution,
 
@@ -1008,10 +1034,10 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
               ? OfflineBanner(message: l10n.locationIsStale)
               : null,
 
-          paths: [
-            if (pathPoints.length >= 2)
-              MasariMapPath(points: pathPoints, color: _orange, width: 7),
-          ],
+          // Real roads when available; otherwise a dashed, labelled straight
+          // line between the trip's own points.
+          paths: roadRoutePaths(road, color: _orange, width: 7),
+          notes: [...roadRouteNotes(l10n, road), ...overlay.notes],
 
           markers: [
             // ==========================================================
@@ -1022,13 +1048,13 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
             // origin/destination/current location stay
             // visually on top when markers overlap.
             //
-            ...checkpointTrafficMarkers(checkpointSnapshot.checkpoints),
+            ...overlay.markers,
 
             // ==========================================================
             // ORIGIN
             // ==========================================================
             if (origin != null)
-              MasariMapMarker(
+              DarbMapMarker(
                 position: origin,
                 icon: Icons.trip_origin_rounded,
                 color: _orange,
@@ -1040,26 +1066,26 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
             // DESTINATION
             // ==========================================================
             if (destination != null)
-              MasariMapMarker(
+              DarbMapMarker(
                 position: destination,
                 icon: Icons.flag_rounded,
                 color: _orangeDark,
                 label: l10n.mapDestinationLabel(_destinationCity(data)),
                 size: 42,
-                type: MasariMapMarkerType.destination,
+                type: DarbMapMarkerType.destination,
               ),
 
             // ==========================================================
             // CURRENT LOCATION
             // ==========================================================
             if (data.location != null)
-              MasariMapMarker(
+              DarbMapMarker(
                 position: GeoPoint(data.location!.lat, data.location!.lng),
                 icon: Icons.local_shipping_rounded,
                 color: _orange,
                 label: localizedLocationSource(l10n, data.location!.source),
                 size: 50,
-                type: MasariMapMarkerType.driver,
+                type: DarbMapMarkerType.driver,
               ),
           ],
         );

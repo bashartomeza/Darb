@@ -16,7 +16,7 @@ const { isProfileCompletionSafePath } = await import("../middleware/profileState
 
 const appConfig = createConfig({
   APP_ENV: "local",
-  DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+  DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
   JWT_SECRET: "profile-state-test-secret-with-thirty-two-characters",
   CORS_ORIGINS: "http://localhost:5173",
   LOG_LEVEL: "silent"

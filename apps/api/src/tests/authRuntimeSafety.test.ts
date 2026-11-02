@@ -9,9 +9,9 @@ describe("disposable runtime guard", () => {
   beforeEach(() => { originalExitCode = process.exitCode; vi.resetModules(); fixture.databaseWrite.mockClear(); });
   afterEach(() => { process.exitCode = originalExitCode; });
   it.each([
-    "mysql://fixture:fixture@127.0.0.1/masari_auth_rehearsal_guard",
-    "mysql://fixture:fixture@127.0.0.1:3306/masari_auth_rehearsal_guard",
-    "mysql://fixture:fixture@127.0.0.1:0/masari_auth_rehearsal_guard"
+    "mysql://fixture:fixture@127.0.0.1/darb_auth_rehearsal_guard",
+    "mysql://fixture:fixture@127.0.0.1:3306/darb_auth_rehearsal_guard",
+    "mysql://fixture:fixture@127.0.0.1:0/darb_auth_rehearsal_guard"
   ])("rejects unsafe port before database access: %s", async (url) => {
     fixture.url = url;
     await expect(import("../scripts/authRuntimeRehearsal.js")).rejects.toThrow("disposable_local_database_required");

@@ -5,6 +5,8 @@ import type { PartnerBudget, PartnerLease } from "./limitedCheckpointDirectory.j
 // This reserved namespace holds a key until its attempt is durably settled.
 // Crashes or failed cooldown writes leave it fail-closed, never a short retry.
 const HELD_UNTIL = new Date("9999-12-31T00:00:00.000Z");
+/** abuse_counters bucket that coordinates the partner key budget; demo reset keeps it. */
+export const PARTNER_BUDGET_BUCKET = "checkpoint_partner_budget";
 export class MysqlPartnerBudget implements PartnerBudget {
   private readonly digest: string;
   constructor(private readonly db: PrismaClient, key: string) {

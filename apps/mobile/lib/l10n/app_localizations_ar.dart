@@ -57,10 +57,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'تدفقات المسافر والسائق والتاجر ستضاف في مراحل لاحقة.';
 
   @override
-  String get lockedCorridor =>
-      'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم';
-
-  @override
   String get diagnostics => 'تشخيصات تقنية';
 
   @override
@@ -389,7 +385,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get routeMatchExplanation =>
-      'اختار درب هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.';
+      'اختار درب هذا السائق لأنه يسلك نفس المسار الذي اخترته، ولديه مقعد متاح لك، ودرجة الثقة لديه مرتفعة.';
 
   @override
   String get passengerTrip => 'رحلة المسافر';
@@ -1005,6 +1001,97 @@ class AppLocalizationsAr extends AppLocalizations {
       'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.';
 
   @override
+  String get orderRouteLabel => 'المسار';
+
+  @override
+  String get orderRouteChoose => 'اختر المسار';
+
+  @override
+  String get orderRoutesLoadFailed =>
+      'تعذّر تحميل المسارات. تحقّق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String get orderRoutesEmpty => 'لا توجد مسارات تعمل حالياً. حاول لاحقاً.';
+
+  @override
+  String get orderRouteRequired => 'اختر المسار أولاً.';
+
+  @override
+  String get orderRouteUnavailable =>
+      'هذا المسار لم يعد يعمل. اختر مساراً آخر.';
+
+  @override
+  String get orderRouteSaved => 'المسار المحفوظ';
+
+  @override
+  String get orderDetailsTooShort =>
+      'اكتب 3 أحرف على الأقل ليجد السائق المكان.';
+
+  @override
+  String get merchantPickupDetailsLabel => 'تفاصيل مكان الاستلام';
+
+  @override
+  String get merchantPickupDetailsHint => 'مثال: اسم المتجر والشارع';
+
+  @override
+  String get merchantDropoffDetailsLabel => 'تفاصيل مكان التسليم';
+
+  @override
+  String get merchantDropoffDetailsHint => 'مثال: الحي والشارع وأقرب معلم';
+
+  @override
+  String get merchantReceiverNameLabel => 'اسم المستلم (اختياري)';
+
+  @override
+  String get merchantReceiverPhoneLabel => 'هاتف المستلم (اختياري)';
+
+  @override
+  String get merchantReceiverPhoneInvalid =>
+      'أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.';
+
+  @override
+  String get merchantReceiverLabel => 'المستلم';
+
+  @override
+  String get merchantPendingOrderTitle => 'طلب بانتظار التأكيد';
+
+  @override
+  String get driverRoutePickTitle => 'اختر مسارك';
+
+  @override
+  String get driverRoutePickBody =>
+      'ستصلك طلبات الركاب والطرود على هذا المسار فقط.';
+
+  @override
+  String get driverRoutePickConfirm => 'ابدأ العمل';
+
+  @override
+  String get driverRouteNone => 'لم تختر مساراً بعد';
+
+  @override
+  String get driverPickupDetailsLabel => 'مكان الصعود';
+
+  @override
+  String get driverDropoffDetailsLabel => 'مكان النزول';
+
+  @override
+  String get driverMerchantPickupLabel => 'استلم الطرود من';
+
+  @override
+  String get driverParcelStopsTitle => 'أماكن تسليم الطرود';
+
+  @override
+  String driverParcelStopLabel(int number) {
+    return 'الطرد $number';
+  }
+
+  @override
+  String get driverReceiverLabel => 'المستلم';
+
+  @override
+  String get driverWhereToFindTitle => 'أماكن الاستلام والتسليم';
+
+  @override
   String get noPublishedRoutes => 'لا توجد مسارات منشورة ومؤهلة حالياً.';
 
   @override
@@ -1189,6 +1276,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get returnToDashboard => 'العودة إلى لوحة التحكم';
+
+  @override
+  String get viewRouteRequests => 'عرض طلبات المسار الخاصة بي';
 
   @override
   String get canonicalDriverOffers => 'عروض المسار';
@@ -1828,6 +1918,114 @@ class AppLocalizationsAr extends AppLocalizations {
       'خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.';
 
   @override
+  String get assistantHistoryErrorTitle => 'تعذّر تحميل المحادثة';
+
+  @override
+  String get assistantHistoryErrorBody =>
+      'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get assistantNewChat => 'محادثة جديدة';
+
+  @override
+  String get assistantNewChatTitle => 'بدء محادثة جديدة؟';
+
+  @override
+  String get assistantNewChatBody =>
+      'سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.';
+
+  @override
+  String get assistantNewChatFailed =>
+      'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get passengerRouteLabel => 'المسار';
+
+  @override
+  String get passengerRouteHint => 'اختر المسار';
+
+  @override
+  String get passengerRoutesLoading => 'جارٍ تحميل المسارات…';
+
+  @override
+  String get passengerRoutesLoadFailed =>
+      'تعذّر تحميل المسارات. تحقّق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get passengerRoutesEmpty =>
+      'لا توجد مسارات متاحة حاليًا. يُرجى المحاولة لاحقًا.';
+
+  @override
+  String get passengerRouteRequired => 'اختر المسار للمتابعة.';
+
+  @override
+  String get passengerRouteUnavailable =>
+      'هذا المسار لم يعد متاحًا. اختر مسارًا آخر.';
+
+  @override
+  String get passengerPickupDetailsLabel => 'مكان الصعود بالتحديد';
+
+  @override
+  String get passengerPickupDetailsHint =>
+      'مثال: أمام البوابة الرئيسية لجامعة بوليتكنك فلسطين';
+
+  @override
+  String get passengerDropoffDetailsLabel => 'مكان النزول بالتحديد';
+
+  @override
+  String get passengerDropoffDetailsHint =>
+      'مثال: مجمّع سيارات بيت لحم، بجانب الصيدلية';
+
+  @override
+  String get passengerDetailsHelper =>
+      'صِف المكان بوضوح ليصل إليه السائق بسهولة.';
+
+  @override
+  String get passengerDetailsTooShort => 'اكتب 3 أحرف على الأقل.';
+
+  @override
+  String get passengerPickupPoint => 'مكان الصعود';
+
+  @override
+  String get passengerDropoffPoint => 'مكان النزول';
+
+  @override
+  String get assistantRouteChoose =>
+      'اختر المسار المناسب لرحلتك، ثم تأكّد من مكانَي الصعود والنزول.';
+
+  @override
+  String get passengerParcelRouteIntro =>
+      'اختر المسار، وصِف مكان استلام الطرد ومكان تسليمه، ثم أخبرنا من سيستلمه.';
+
+  @override
+  String get passengerParcelPickupDetailsLabel => 'مكان استلام الطرد منك';
+
+  @override
+  String get passengerParcelPickupDetailsHint =>
+      'مثال: المحل المجاور لدوار ابن رشد في الخليل';
+
+  @override
+  String get passengerParcelDropoffDetailsLabel => 'مكان تسليم الطرد';
+
+  @override
+  String get passengerParcelDropoffDetailsHint =>
+      'مثال: بيت المستلم، قرب كنيسة المهد';
+
+  @override
+  String get passengerParcelPreferredTime => 'الوقت المفضّل للاستلام';
+
+  @override
+  String get welcomeRoutesTitle => 'المسارات التي نخدمها';
+
+  @override
+  String welcomeRoutesMore(int count) {
+    return 'و$count أخرى';
+  }
+
+  @override
+  String get welcomeRoutesOffline => 'ستظهر المسارات عند الاتصال بالإنترنت.';
+
+  @override
   String get assistantClarificationLabel => 'يحتاج مساعد درب إلى توضيح';
 
   @override
@@ -2156,6 +2354,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get incidentCategoryOther => 'أخرى';
+
+  @override
+  String get myIncidentReports => 'بلاغاتي';
+
+  @override
+  String get myIncidentReportsEmpty => 'لم ترسل أي بلاغ بعد.';
+
+  @override
+  String get myIncidentReportsFailed => 'تعذّر تحميل بلاغاتك.';
+
+  @override
+  String get incidentStatusOpen => 'مفتوح';
+
+  @override
+  String get incidentStatusReviewing => 'قيد المراجعة';
+
+  @override
+  String get incidentStatusResolved => 'تمت المعالجة';
 
   @override
   String get notifIncidentUpdatedTitle => 'تحديث على بلاغك';
@@ -2801,4 +3017,81 @@ class AppLocalizationsAr extends AppLocalizations {
   String communityVoteCounts(int up, int down) {
     return '$up تأييد، $down اعتراض';
   }
+
+  @override
+  String get mapStraightLineNote => 'تعذر حساب الطريق: يظهر خط مستقيم';
+
+  @override
+  String get mapCheckpointsUnavailable => 'بيانات الحواجز غير متوفرة';
+
+  @override
+  String get mapCheckpointsLoadFailed => 'تعذر تحميل الحواجز';
+
+  @override
+  String get checkpointOfficialUnknown => 'الحالة الرسمية: غير منشورة';
+
+  @override
+  String checkpointEnteringChanged(String time) {
+    return 'دخول: آخر تغيير $time';
+  }
+
+  @override
+  String checkpointLeavingChanged(String time) {
+    return 'خروج: آخر تغيير $time';
+  }
+
+  @override
+  String checkpointCommunitySays(String status) {
+    return 'المجتمع يقول: $status (غير مؤكد)';
+  }
+
+  @override
+  String get communityStatusOpen => 'مفتوح';
+
+  @override
+  String get communityStatusClosed => 'مغلق';
+
+  @override
+  String get communityStatusOutdated => 'قد تكون الحالة قديمة';
+
+  @override
+  String get checkpointPositionOsm => 'الموقع: © مساهمو OpenStreetMap (ODbL)';
+
+  @override
+  String get checkpointsUnplacedTitle => 'حواجز بلا موقع على الخريطة';
+
+  @override
+  String get checkpointsUnplacedBody =>
+      'يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.';
+
+  @override
+  String get communityPickLocation => 'اضغط على الخريطة لتحديد المكان';
+
+  @override
+  String get communityUseMyLocation => 'استخدام موقعي الحالي';
+
+  @override
+  String get communityLocationRequired =>
+      'حدد المكان على الخريطة لهذا النوع من البلاغات.';
+
+  @override
+  String get communityLocationOptional => 'الموقع (اختياري)';
+
+  @override
+  String get communityLocationOutside => 'هذا المكان خارج منطقة خدمة درب.';
+
+  @override
+  String get communityLocationUnavailable => 'موقعك الحالي غير متاح.';
+
+  @override
+  String get communityLocationSet => 'تم تحديد المكان على الخريطة';
+
+  @override
+  String get communityClearLocation => 'إزالة المكان';
+
+  @override
+  String get mapRouteLabel => 'المسار';
+
+  @override
+  String get merchantOrderMapTitle => 'مسار الطلب';
 }

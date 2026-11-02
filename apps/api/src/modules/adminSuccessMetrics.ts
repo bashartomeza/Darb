@@ -105,7 +105,7 @@ adminSuccessMetricsRouter.get("/admin/success-metrics/export", async (req, res, 
     const window = resolveWindow(rangeSchema.parse(req.query));
     const metrics = await buildWindowReport(window);
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", 'attachment; filename="masari-success-metrics.csv"');
+    res.setHeader("Content-Disposition", 'attachment; filename="darb-success-metrics.csv"');
     res.send(successMetricsCsv(metrics, window));
   } catch (error) {
     next(error);

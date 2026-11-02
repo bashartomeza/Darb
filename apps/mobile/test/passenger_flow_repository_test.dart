@@ -2,12 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/auth/data/authenticated_api_client.dart';
-import 'package:masari_mobile/features/matching/data/matching_repository.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_models.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_repository.dart';
-import 'package:masari_mobile/features/trips/data/trip_repository.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
+import 'package:darb_mobile/features/matching/data/matching_repository.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_repository.dart';
+import 'package:darb_mobile/features/trips/data/trip_repository.dart';
 
 import 'support/auth_test_support.dart';
 import 'support/booking_recovery_test_support.dart';
@@ -78,31 +77,25 @@ void main() {
       // ------------------------------------------------------------------
 
       await repo.createRequest(
-        pickup: const PassengerLocation(
-          label: 'PPU Main Gate',
-          latitude: 31.550000,
-          longitude: 35.100000,
-        ),
-        destination: const PassengerLocation(
-          label: 'Bethlehem Center',
-          latitude: 31.705400,
-          longitude: 35.202400,
-        ),
+        serviceRouteId: 'route-heb-bth',
+        pickupDetails: '  near the PPU main gate ',
+        dropoffDetails: 'Bethlehem bus station',
         preferredTime: DateTime.utc(2026, 7, 2, 10),
         passengerCount: 2,
       );
 
-      expect(createBody?['pickup_label'], 'PPU Main Gate');
+      // A route and typed details; the server fills labels and coordinates.
+      expect(createBody?['service_route_id'], 'route-heb-bth');
 
-      expect(createBody?['pickup_lat'], 31.55);
+      expect(createBody?['pickup_details'], 'near the PPU main gate');
 
-      expect(createBody?['pickup_lng'], 35.1);
+      expect(createBody?['dropoff_details'], 'Bethlehem bus station');
 
-      expect(createBody?['destination_label'], 'Bethlehem Center');
+      expect(createBody?['preferred_time'], '2026-07-02T10:00:00.000Z');
 
-      expect(createBody?['destination_lat'], 31.7054);
+      expect(createBody?.containsKey('pickup_lat'), isFalse);
 
-      expect(createBody?['destination_lng'], 35.2024);
+      expect(createBody?.containsKey('selected_driver_route_id'), isFalse);
 
       expect(createBody?['passenger_count'], 2);
 

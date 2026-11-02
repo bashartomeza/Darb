@@ -2,15 +2,17 @@ import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
+
+import 'merchant_order_route_map.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/home_top_bar.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_map.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_map.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
@@ -105,7 +107,7 @@ class _MerchantHomeScreenState extends ConsumerState<MerchantHomeScreen> {
                     ),
 
                     const SizedBox(height: AppTokens.spaceLarge),
-                    MasariSection(
+                    DarbSection(
                       title: l10n.smartBatchingTitle,
                       child: _Suggestions(
                         stats: stats,
@@ -115,13 +117,13 @@ class _MerchantHomeScreenState extends ConsumerState<MerchantHomeScreen> {
                     ),
 
                     const SizedBox(height: AppTokens.spaceLarge),
-                    MasariSection(
+                    DarbSection(
                       title: l10n.liveTracking,
                       child: _Tracking(dashboard: dashboard),
                     ),
 
                     const SizedBox(height: AppTokens.spaceLarge),
-                    MasariSection(
+                    DarbSection(
                       title: l10n.recentOrders,
                       // The home strip shows only the newest few; the shipments
                       // tab is where the full list lives.
@@ -131,7 +133,7 @@ class _MerchantHomeScreenState extends ConsumerState<MerchantHomeScreen> {
                     ),
 
                     const SizedBox(height: AppTokens.spaceLarge),
-                    MasariInfoCard(
+                    DarbInfoCard(
                       title: l10n.merchantMatchInbox,
                       icon: Icons.inbox_outlined,
                       body: StatStrip(
@@ -154,9 +156,9 @@ class _MerchantHomeScreenState extends ConsumerState<MerchantHomeScreen> {
 
                     if (canonicalEntry) ...[
                       const SizedBox(height: AppTokens.spaceLarge),
-                      MasariSection(
+                      DarbSection(
                         title: l10n.canonicalRoutes,
-                        child: MasariInfoCard(
+                        child: DarbInfoCard(
                           title: l10n.canonicalMerchantOrder,
                           subtitle: l10n.canonicalMerchantOrderBody,
                           icon: Icons.alt_route_outlined,
@@ -342,16 +344,23 @@ class _Tracking extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // No live fix reaches this screen yet, so the map shows its explicit
-        // empty state rather than a decorative one.
-        MasariMap(
-          emptyLabel: l10n.mapNoLocation,
-          attributionLabel: l10n.mapAttribution,
-          height: 180,
-        ),
+        // The active trip's own order route; with no active trip the map
+        // shows its empty state on the service area.
+        if (trip != null && trip.order.routeWaypoints.length >= 2)
+          MerchantOrderRouteMap(
+            key: const ValueKey('merchantHomeMap'),
+            order: trip.order,
+            height: 200,
+          )
+        else
+          DarbMap(
+            emptyLabel: l10n.mapNoLocation,
+            attributionLabel: l10n.mapAttribution,
+            height: 180,
+          ),
         if (trip != null) ...[
           const SizedBox(height: AppTokens.spaceMedium),
-          MasariInfoCard(
+          DarbInfoCard(
             title: l10n.activeTrip,
             icon: Icons.local_shipping_outlined,
             statusLabel: merchantStatusLabel(l10n, trip.status),

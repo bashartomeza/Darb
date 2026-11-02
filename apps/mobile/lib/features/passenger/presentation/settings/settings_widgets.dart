@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../../core/theme/passenger_theme.dart';
-import '../../../../core/widgets/masari_back_button.dart';
+import '../../../../core/widgets/darb_back_button.dart';
 
 /// Page frame shared by the passenger settings sub-screens: white page, the
 /// passenger back button and a section-title heading, matching the other
@@ -27,7 +27,7 @@ class SettingsPage extends StatelessWidget {
       backgroundColor: PassengerStyle.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: MasariBackButton(fallback: fallback),
+        leading: DarbBackButton(fallback: fallback),
         title: Text(title),
         actions: actions,
       ),

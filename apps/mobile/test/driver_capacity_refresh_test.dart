@@ -4,16 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/core/widgets/language_switch.dart';
-import 'package:masari_mobile/features/auth/application/auth_actor_binding.dart';
-import 'package:masari_mobile/features/driver/application/driver_controller.dart';
-import 'package:masari_mobile/features/driver/data/driver_models.dart';
-import 'package:masari_mobile/features/driver/data/driver_repository.dart';
-import 'package:masari_mobile/features/driver/presentation/driver_route_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/core/widgets/language_switch.dart';
+import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
+import 'package:darb_mobile/features/driver/application/driver_controller.dart';
+import 'package:darb_mobile/features/driver/data/driver_models.dart';
+import 'package:darb_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/driver/presentation/driver_route_screen.dart';
+import 'package:darb_mobile/features/operating_routes/data/operating_route_repository.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/operating_routes_fixture.dart';
 
 void main() {
   testWidgets(
@@ -261,7 +263,12 @@ Future<Object?> _error(Future<Object?> work) =>
 
 ProviderContainer _container(_Repository repository, {bool bind = true}) {
   final container = ProviderContainer(
-    overrides: [driverRepositoryProvider.overrideWithValue(repository)],
+    overrides: [
+      driverRepositoryProvider.overrideWithValue(repository),
+      operatingRoutesProvider.overrideWith(
+        (ref) async => testOperatingRoutes(),
+      ),
+    ],
   );
   if (bind) {
     container.read(authenticatedActorBindingProvider).bind('synthetic-driver');
@@ -339,13 +346,13 @@ class _Repository extends DriverRepository {
 
 DriverRoute _route({required int seats, int parcels = 4}) => DriverRoute(
   id: 'synthetic-route',
-  originLabel: lockedDriverOriginLabel,
-  originLat: lockedDriverOriginLat,
-  originLng: lockedDriverOriginLng,
-  destinationLabel: lockedDriverDestinationLabel,
-  destinationLat: lockedDriverDestinationLat,
-  destinationLng: lockedDriverDestinationLng,
-  corridorKey: lockedDriverCorridorKey,
+  originLabel: 'Hebron',
+  originLat: 31.5326,
+  originLng: 35.0998,
+  destinationLabel: 'Bethlehem',
+  destinationLat: 31.7054,
+  destinationLng: 35.2024,
+  corridorKey: 'hebron-to-bethlehem',
   seatsAvailable: seats,
   parcelCapacityAvailable: parcels,
   status: 'active',

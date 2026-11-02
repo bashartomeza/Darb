@@ -151,7 +151,7 @@ describe("one-time auth actions", () => {
   });
 
   it("requires a distinct, strong production action-token pepper while allowing an injected test key", () => {
-    const databaseUrl = new URL("mysql://localhost:3306/masari_test");
+    const databaseUrl = new URL("mysql://localhost:3306/darb_test");
     databaseUrl.username = "test";
     databaseUrl.password = "test";
     const production = {
@@ -159,7 +159,7 @@ describe("one-time auth actions", () => {
       DATABASE_URL: databaseUrl.toString(),
       JWT_SECRET: "production-jwt-secret-with-at-least-thirty-two-characters",
       REFRESH_TOKEN_PEPPER: "production-refresh-pepper-with-at-least-thirty-two-characters",
-      CORS_ORIGINS: "https://admin.masari.example",
+      CORS_ORIGINS: "https://admin.darb.example",
       APP_RELEASE: "auth-actions-test",
       TRUST_PROXY: "none"
     };

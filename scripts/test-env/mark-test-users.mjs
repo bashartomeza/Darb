@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 const root = resolve(import.meta.dirname, "../..");
 const databaseName = new URL(process.env.DATABASE_URL ?? "mysql://invalid/").pathname.slice(1);
 const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
-if (databaseName.toLowerCase() === "masari" || !allowed.includes(databaseName)) {
+if (databaseName.toLowerCase() === "darb" || !allowed.includes(databaseName)) {
   throw new Error("Refusing: not an explicitly allow-listed disposable database.");
 }
 process.env.APP_ENV ??= "demo";

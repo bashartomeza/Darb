@@ -12,9 +12,11 @@ const db = vi.hoisted(() => ({
   driverRoute: { create: vi.fn(), findFirst: vi.fn() },
   idempotencyRecord: { create: vi.fn(), findUniqueOrThrow: vi.fn(), updateMany: vi.fn() },
   auditEvent: { create: vi.fn() },
+  serviceRoute: { findUnique: vi.fn() },
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: db }));
 const { createApp } = await import("../app.js");
+const { findOperatingRoute, HEBRON_TO_BETHLEHEM } = await import("./operatingRouteFixture.js");
 
 type Row = Record<string, any>;
 let rows: Row[];
@@ -52,6 +54,8 @@ describe("legacy passenger creation recovery", () => {
         user: { id, role: id.startsWith("driver") ? "driver" : "passenger", account_status: "active", security_version: 1, email_verified_at: new Date() } };
     });
     db.authSession.update.mockResolvedValue({});
+    // Coordinate bodies ride the predefined Hebron → Bethlehem route.
+    db.serviceRoute.findUnique.mockImplementation(findOperatingRoute());
     db.passengerRequest.create.mockImplementation(async ({ data }) => {
       const row = { id: `request_${++nextId}`, created_at: new Date(), ...data };
       rows.push(row); return row;
@@ -109,6 +113,57 @@ describe("legacy passenger creation recovery", () => {
       destination_label: "Selected place", destination_lat: "31.705400", destination_lng: "35.202400",
     });
     expect(rows[0]).toMatchObject({ pickup_label: "جامعة بوليتكنك فلسطين", destination_label: "Selected place" });
+  });
+
+  describe("selected driver route", () => {
+    let selectable: Set<string>;
+    beforeEach(() => {
+      selectable = new Set(["route_selected"]);
+      // Selection lookups carry the matching supply filter; driver-owned lookups do not.
+      const ownedLookup = db.driverRoute.findFirst.getMockImplementation()!;
+      db.driverRoute.findFirst.mockImplementation(async (args) => args.where.driver?.verified
+        ? (selectable.has(args.where.id) ? { id: args.where.id } : null)
+        : ownedLookup(args));
+    });
+
+    it("saves the pick on the request and returns it", async () => {
+      const response = await create("passenger_1", { ...body(), selected_driver_route_id: "route_selected" }, "pin-key-1").expect(201);
+      expect(response.body.request.selected_driver_route_id).toBe("route_selected");
+      expect(rows[0]).toMatchObject({ selected_driver_route_id: "route_selected" });
+      expect(db.driverRoute.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          id: "route_selected", status: "active", operational_mode: "legacy", canonical_availability_version: null,
+          seats_available: { gte: 1 }, driver: { verified: true, user: { role: "driver", account_status: "active" } },
+        }),
+      }));
+    });
+
+    it("returns null for a request without a pick", async () => {
+      const response = await create("passenger_1", body(), "pin-key-2").expect(201);
+      expect(response.body.request.selected_driver_route_id).toBeNull();
+    });
+
+    it("saves nothing when the picked route is unavailable", async () => {
+      const response = await create("passenger_1", { ...body(), selected_driver_route_id: "route_gone" }, "pin-key-3").expect(409);
+      expect(response.body.error).toBe("selected_driver_route_unavailable");
+      expect(rows).toHaveLength(0);
+      expect(records).toHaveLength(0);
+      expect(audits).toHaveLength(0);
+    });
+
+    it("replays the committed pick and binds the key to it", async () => {
+      const payload = { ...body(), selected_driver_route_id: "route_selected" };
+      const first = await create("passenger_1", payload, "pin-key-4").expect(201);
+      // A replay returns the saved row even after the route stops being selectable.
+      selectable.clear();
+      const replay = await create("passenger_1", payload, "pin-key-4").expect(201);
+      expect(replay.body.request).toMatchObject({ id: first.body.request.id, selected_driver_route_id: "route_selected" });
+      selectable.add("route_other");
+      await create("passenger_1", { ...payload, selected_driver_route_id: "route_other" }, "pin-key-4").expect(409);
+      const { selected_driver_route_id: _pick, ...unpinned } = payload;
+      await create("passenger_1", unpinned, "pin-key-4").expect(409);
+      expect(rows).toHaveLength(1);
+    });
   });
 
   it("rejects a request without a place name instead of saving bare coordinates", async () => {
@@ -210,7 +265,7 @@ describe("legacy passenger creation recovery", () => {
   });
 
   it("recovers keyed driver creation after capacity reservation, completion and retention expiry", async () => {
-    const payload = { seats_available: 2, parcel_capacity_available: 5 };
+    const payload = { service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: 2, parcel_capacity_available: 5 };
     const first = await createDriver("driver_1", payload, "durable-driver-route-key").expect(201);
     driverRoutes[0]!.seats_available = 1;
     const reserved = await createDriver("driver_1", payload, "durable-driver-route-key").expect(201);
@@ -225,7 +280,7 @@ describe("legacy passenger creation recovery", () => {
   });
 
   it("isolates durable driver keys by actor and collapses concurrent retries", async () => {
-    const payload = { seats_available: 2, parcel_capacity_available: 5 };
+    const payload = { service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: 2, parcel_capacity_available: 5 };
     const concurrent = await Promise.all(Array.from({ length: 4 }, () => createDriver("driver_1", payload, "concurrent-driver-key")));
     expect(concurrent.every(response => response.status === 201)).toBe(true);
     expect(new Set(concurrent.map(response => response.body.route.id)).size).toBe(1);
@@ -236,7 +291,7 @@ describe("legacy passenger creation recovery", () => {
   });
 
   it("rolls keyed driver creation and its claim back on audit failure", async () => {
-    const payload = { seats_available: 2, parcel_capacity_available: 5 };
+    const payload = { service_route_id: HEBRON_TO_BETHLEHEM.id, seats_available: 2, parcel_capacity_available: 5 };
     db.auditEvent.create.mockRejectedValueOnce(new Error("audit unavailable"));
     await createDriver("driver_1", payload, "driver-audit-failure-key").expect(500);
     expect(driverRoutes).toHaveLength(0);

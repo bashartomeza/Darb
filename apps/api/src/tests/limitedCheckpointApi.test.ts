@@ -64,6 +64,9 @@ it("requires an active complete-profile session even when data is cached", async
   await request(app).get("/api/v1/limited-checkpoint-directory").set(auth()).expect(401);
   expect(transport).toHaveBeenCalledTimes(1);
 });
-it("rejects simultaneous demo-reset and real-key budget coordination", () => {
-  expect(() => createConfig({ ...env, APP_ENV: "test", AWEENRAYEH_LIMITED_DIRECTORY_ENABLED: "true", AWEENRAYEH_PARTNER_API_KEY: "SYNTHETIC-LIMITED-KEY-ONLY" })).toThrow(/demo reset/);
+it("runs beside demo reset because the reset keeps the partner budget rows", () => {
+  // modules/demoReset.ts deletes every abuse counter except PARTNER_BUDGET_BUCKET.
+  // (Other demo settings are missing here; only the old conflict must be gone.)
+  expect(() => createConfig({ ...env, APP_ENV: "test", AWEENRAYEH_LIMITED_DIRECTORY_ENABLED: "true", AWEENRAYEH_PARTNER_API_KEY: "SYNTHETIC-LIMITED-KEY-ONLY" })).not.toThrow(/Limited provider directory|demo reset/);
+  expect(() => createConfig({ ...env, PARTNER_CHECKPOINT_MAP_ENABLED: "true" })).toThrow(/PARTNER_CHECKPOINT_MAP_ENABLED requires/);
 });

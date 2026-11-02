@@ -5,9 +5,9 @@ Plan p21 targets 85% accuracy when the assistant understands Arabic ride and par
 ## Run it
 
 ```
-npm run ai:eval -w @masari/api                       # baseline keyword parser
-npm run ai:eval -w @masari/api -- --threshold 90     # stricter gate (percent)
-npm run ai:eval -w @masari/api -- --category typo    # one category only
+npm run ai:eval -w @darb/api                       # baseline keyword parser
+npm run ai:eval -w @darb/api -- --threshold 90     # stricter gate (percent)
+npm run ai:eval -w @darb/api -- --category typo    # one category only
 ```
 
 Options (flag or env): `--parser` / `AI_EVAL_PARSER` (`baseline` default, `real`, `groq`, `gemini`), `--threshold` / `AI_EVAL_THRESHOLD` (default 85), `--failures N` (failures listed, default 15), `--category`.
@@ -56,7 +56,7 @@ Every parser is reduced to the same shape (`type, pickup, dropoff, time, seats, 
 The harness targets the pure function `parseRequest(text, context)` (branch `feat/ai-assistant-v2`). `context` is `{ now, timezone, locale, stops: [{id, name_ar, name_en}], provider? }`.
 
 ```
-AI_EVAL_PARSER_MODULE=src/services/<parser-file>.ts npm run ai:eval -w @masari/api -- --parser real
+AI_EVAL_PARSER_MODULE=src/services/<parser-file>.ts npm run ai:eval -w @darb/api -- --parser real
 ```
 
 The path is relative to `apps/api` and the module must export `parseRequest`. The harness is written against that signature only; `normalizeRealResult` in `adapters.ts` maps the returned object onto the scored shape and accepts several field spellings (`type|intent`, `pickup|pickupStopId`, `seats|seatCount|passengerCount`, and so on, optionally wrapped in `request`). If the real result differs, adjust that one function.
@@ -64,8 +64,8 @@ The path is relative to `apps/api` and the module must export `parseRequest`. Th
 ## Live Groq / Gemini providers (opt-in, never CI)
 
 ```
-AI_EVAL_LIVE=1 GROQ_API_KEY=... AI_EVAL_PARSER_MODULE=... npm run ai:eval -w @masari/api -- --parser groq
-AI_EVAL_LIVE=1 GEMINI_API_KEY=... AI_EVAL_PARSER_MODULE=... npm run ai:eval -w @masari/api -- --parser gemini
+AI_EVAL_LIVE=1 GROQ_API_KEY=... AI_EVAL_PARSER_MODULE=... npm run ai:eval -w @darb/api -- --parser groq
+AI_EVAL_LIVE=1 GEMINI_API_KEY=... AI_EVAL_PARSER_MODULE=... npm run ai:eval -w @darb/api -- --parser gemini
 ```
 
 The harness passes `context.provider = "groq" | "gemini"` to the real parser, which must select that provider. Live runs are refused unless `AI_EVAL_LIVE=1`, refused when `CI` is set, and refused without the key. They make network calls and may cost money (165 requests per run). Unit tests never call the network; the vitest suite only exercises the baseline parser and the scoring code.

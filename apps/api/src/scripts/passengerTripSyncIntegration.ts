@@ -6,6 +6,7 @@ import { createApp } from '../app.js';
 import { prisma } from '../lib/prisma.js';
 import { signAuthToken } from '../middleware/auth.js';
 import { LOCKED_CORRIDOR_KEY } from '../modules/demoReset.js';
+import { ensureIntegrationRoutes } from "./integrationRoutes.js";
 const db = new URL(process.env.DATABASE_URL!);
 assert(['127.0.0.1', 'localhost'].includes(db.hostname) && db.pathname.endsWith('_ci') && process.env.MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE === 'true', 'explicit_owned_disposable_database_required');
 const prefix = `task11_${randomUUID()}`;
@@ -35,11 +36,13 @@ async function call(actor: keyof typeof actors, method: string, path: string, bo
   const r = await fetch(base + path, { method, headers: { authorization: `Bearer ${tokens[actor]}`, 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   return { status: r.status, body: await r.json() as any };
 }
+// Legacy demand rides the predefined Hebron → Bethlehem route; supply must be on it to match.
+const HEBRON_TO_BETHLEHEM = await ensureIntegrationRoutes(prisma);
 const originals = await prisma.driverRoute.findMany({ where: { operational_mode: 'legacy' }, select: { id: true, status: true } });
 let profileId: string;
 async function trip() {
   await prisma.driverRoute.updateMany({ where: { operational_mode: 'legacy' }, data: { status: 'inactive' } });
-  const route = await prisma.driverRoute.create({ data: { driver_id: profileId, origin_label: 'Hebron / PPU / Bab Al-Zawiya', origin_lat: '31.532600', origin_lng: '35.099800', destination_label: 'Bethlehem', destination_lat: '31.705400', destination_lng: '35.202400', corridor_key: LOCKED_CORRIDOR_KEY, seats_available: 4, parcel_capacity_available: 5, status: 'active' } });
+  const route = await prisma.driverRoute.create({ data: { driver_id: profileId, origin_label: 'Hebron / PPU / Bab Al-Zawiya', origin_lat: '31.532600', origin_lng: '35.099800', destination_label: 'Bethlehem', destination_lat: '31.705400', destination_lng: '35.202400', corridor_key: LOCKED_CORRIDOR_KEY, route_version_id: HEBRON_TO_BETHLEHEM.current_version_id, seats_available: 4, parcel_capacity_available: 5, status: 'active' } });
   const created = await call('passenger', 'POST', '/passenger/requests', { pickup_label: 'SYNTHETIC Task11 pickup', pickup_lat: 31.5326, pickup_lng: 35.0998, destination_label: 'Bethlehem', destination_lat: 31.7054, destination_lng: 35.2024, preferred_time: new Date(Date.now() + 3600000).toISOString(), passenger_count: 1 });
   assert.equal(created.status, 201);
   const requestId = created.body.request.id;

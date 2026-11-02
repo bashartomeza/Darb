@@ -1,11 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../application/onboarding_controller.dart';
 import '../data/onboarding_repository.dart';
 import '../domain/onboarding_models.dart';
@@ -158,7 +158,7 @@ class _DriverDocumentsCardState extends ConsumerState<DriverDocumentsCard> {
     final l10n = AppLocalizations.of(context);
     final list = _list;
     final atLimit = list != null && list.documents.length >= list.maxDocuments;
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

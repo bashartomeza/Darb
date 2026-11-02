@@ -4,14 +4,14 @@ import '../../auth/application/auth_actor_binding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../passenger/application/passenger_controller.dart';
@@ -87,7 +87,7 @@ class _MatchDetailScreenState extends ConsumerState<MatchDetailScreen> {
                 AppTokens.spaceExtraLarge,
               ),
               children: [
-                MasariInfoCard(
+                DarbInfoCard(
                   title: match.driverName,
                   subtitle: l10n.selectedDriver,
                   icon: Icons.person_outline,
@@ -104,9 +104,28 @@ class _MatchDetailScreenState extends ConsumerState<MatchDetailScreen> {
                               children: [
                                 DetailRow(
                                   label: l10n.selectedRoute,
-                                  value: match.routeLabel,
+                                  value: match.routeName(
+                                    arabic:
+                                        Localizations.localeOf(
+                                          context,
+                                        ).languageCode ==
+                                        'ar',
+                                  ),
                                   icon: Icons.route_outlined,
+                                  valueKey: const ValueKey('matchRouteName'),
                                 ),
+                                if (match.pickupDetails != null)
+                                  DetailRow(
+                                    label: l10n.passengerPickupPoint,
+                                    value: match.pickupDetails!,
+                                    icon: Icons.trip_origin_rounded,
+                                  ),
+                                if (match.dropoffDetails != null)
+                                  DetailRow(
+                                    label: l10n.passengerDropoffPoint,
+                                    value: match.dropoffDetails!,
+                                    icon: Icons.location_on_outlined,
+                                  ),
                                 DetailRow(
                                   label: l10n.seatsAvailable,
                                   value: '${match.seatsAvailable}',
@@ -127,7 +146,7 @@ class _MatchDetailScreenState extends ConsumerState<MatchDetailScreen> {
                 ),
                 const SizedBox(height: AppTokens.spaceLarge),
 
-                MasariSection(
+                DarbSection(
                   title: l10n.scoringBreakdown,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

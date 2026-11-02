@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import 'masari_bottom_nav.dart';
+import 'darb_bottom_nav.dart';
 import 'language_switch.dart';
-import 'masari_back_button.dart';
+import 'darb_back_button.dart';
 import 'passenger_bottom_nav.dart';
 import '../theme/app_theme.dart';
 import '../theme/passenger_theme.dart';
@@ -14,7 +14,7 @@ import '../theme/passenger_theme.dart';
 class RoleNavDestination {
   const RoleNavDestination({required this.item});
 
-  final MasariNavItem item;
+  final DarbNavItem item;
 }
 
 /// The single Scaffold that owns the bottom navigation for a role.
@@ -91,7 +91,7 @@ class RoleShellScaffold extends StatelessWidget {
         title: Text(title),
         centerTitle: false,
         automaticallyImplyLeading: false,
-        leading: isDetail ? MasariBackButton(fallback: roleHome) : null,
+        leading: isDetail ? DarbBackButton(fallback: roleHome) : null,
         actions: [const LanguageSwitch(), const SizedBox(width: 12)],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
@@ -108,7 +108,7 @@ class RoleShellScaffold extends StatelessWidget {
       ),
       bottomNavigationBar: wide
           ? null
-          : MasariBottomNav(
+          : DarbBottomNav(
               items: [for (final d in destinations) d.item],
               currentIndex: navigationShell.currentIndex,
               onSelected: _onSelected,
@@ -144,7 +144,7 @@ class RoleShellScaffold extends StatelessWidget {
         appBar: needsAppBar
             ? AppBar(
                 automaticallyImplyLeading: false,
-                leading: const MasariBackButton(fallback: '/passenger'),
+                leading: const DarbBackButton(fallback: '/passenger'),
                 title: Text(l10n.requestDetails),
               )
             : null,
@@ -328,7 +328,7 @@ class RoleShellScaffold extends StatelessWidget {
 /// the two disagree; each one renders an [UnavailableTab] that names the
 /// missing backend rather than an empty list that reads as a failed load.
 ///
-/// Five is the ceiling: [MasariBottomNav] and Material's own guidance both stop
+/// Five is the ceiling: [DarbBottomNav] and Material's own guidance both stop
 /// being legible past that, which is why the merchant's "create shipment" node
 /// stays a primary action on the home and shipments screens instead of a sixth
 /// tab.
@@ -339,35 +339,35 @@ class RoleNavDestinations {
 
   static List<RoleNavDestination> passenger(AppLocalizations l10n) => [
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.home_outlined,
         selectedIcon: Icons.home,
         label: l10n.navHome,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.route_outlined,
         selectedIcon: Icons.route,
         label: l10n.navTrips,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.map_outlined,
         selectedIcon: Icons.map,
         label: l10n.navMapAlerts,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.notifications_none,
         selectedIcon: Icons.notifications,
         label: l10n.navNotifications,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
         label: l10n.navAccount,
@@ -407,35 +407,35 @@ class RoleNavDestinations {
 
   static List<RoleNavDestination> driver(AppLocalizations l10n) => [
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.home_outlined,
         selectedIcon: Icons.home,
         label: l10n.navHome,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.inbox_outlined,
         selectedIcon: Icons.inbox,
         label: l10n.navRequests,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.local_shipping_outlined,
         selectedIcon: Icons.local_shipping,
         label: l10n.navMyTrip,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.insights_outlined,
         selectedIcon: Icons.insights,
         label: l10n.navPerformance,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
         label: l10n.navAccount,
@@ -445,35 +445,35 @@ class RoleNavDestinations {
 
   static List<RoleNavDestination> merchant(AppLocalizations l10n) => [
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.home_outlined,
         selectedIcon: Icons.home,
         label: l10n.navHome,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.inventory_2_outlined,
         selectedIcon: Icons.inventory_2,
         label: l10n.navShipments,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.assessment_outlined,
         selectedIcon: Icons.assessment,
         label: l10n.navReports,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.notifications_none,
         selectedIcon: Icons.notifications,
         label: l10n.navNotifications,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
         label: l10n.navAccount,

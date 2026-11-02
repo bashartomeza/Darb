@@ -2,12 +2,12 @@ import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/state_views.dart';
@@ -73,6 +73,9 @@ class _DriverMatchDetailScreenState
   }
 
   Widget _content(AppLocalizations l10n, DriverMatch match) {
+    final routeName = match.route.routeName(
+      arabic: Localizations.localeOf(context).languageCode == 'ar',
+    );
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppTokens.marginMobile,
@@ -81,7 +84,7 @@ class _DriverMatchDetailScreenState
         AppTokens.spaceExtraLarge,
       ),
       children: [
-        MasariInfoCard(
+        DarbInfoCard(
           title: matchTypeLabel(l10n, match),
           statusLabel: driverStatusLabel(l10n, match.status),
           statusTone: statusToneFor(match.status),
@@ -91,10 +94,18 @@ class _DriverMatchDetailScreenState
               Row(
                 children: [
                   Expanded(
-                    child: RouteChip(
-                      from: match.pickupLabel,
-                      to: match.destinationLabel,
-                    ),
+                    // A route match is named by its route; older matches
+                    // keep their two places.
+                    child: routeName != null
+                        ? Text(
+                            routeName,
+                            key: const ValueKey('driverMatchRoute'),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          )
+                        : RouteChip(
+                            from: match.pickupLabel,
+                            to: match.destinationLabel,
+                          ),
                   ),
                   const SizedBox(width: AppTokens.gutterMobile),
                   MatchScore(score: match.score, label: l10n.matchScore),
@@ -126,7 +137,17 @@ class _DriverMatchDetailScreenState
         ),
         const SizedBox(height: AppTokens.spaceLarge),
 
-        MasariSection(
+        // Where to collect and drop each passenger and parcel: the typed
+        // details are how the driver finds people.
+        if (match.passengerRequest != null || match.merchantOrder != null) ...[
+          DriverStopDetailsCard(
+            passenger: match.passengerRequest,
+            merchantOrder: match.merchantOrder,
+          ),
+          const SizedBox(height: AppTokens.spaceLarge),
+        ],
+
+        DarbSection(
           title: l10n.scoringBreakdown,
           titleKey: const ValueKey('driverScoringBreakdown'),
           child: Column(

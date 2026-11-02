@@ -42,7 +42,7 @@ def decode_polyline6(encoded):
 
 def calculate_route(base_url, points):
     payload = json.dumps({"locations": [{"lat": lat, "lon": lon} for lat, lon in points], "costing": "auto", "units": "kilometers"}).encode()
-    request = urllib.request.Request(f"{base_url.rstrip('/')}/route", data=payload, headers={"Content-Type": "application/json", "User-Agent": "Masari-M7D1B-evidence/1.0"})
+    request = urllib.request.Request(f"{base_url.rstrip('/')}/route", data=payload, headers={"Content-Type": "application/json", "User-Agent": "Darb-M7D1B-evidence/1.0"})
     with urllib.request.urlopen(request, timeout=15) as response:
         result = json.load(response)
     decoded = []

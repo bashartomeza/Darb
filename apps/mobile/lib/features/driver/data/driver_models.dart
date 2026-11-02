@@ -2,13 +2,6 @@ import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 
-const lockedDriverOriginLabel = 'Hebron / PPU / Bab Al-Zawiya';
-const lockedDriverOriginLat = 31.5326;
-const lockedDriverOriginLng = 35.0998;
-const lockedDriverDestinationLabel = 'Bethlehem';
-const lockedDriverDestinationLat = 31.7054;
-const lockedDriverDestinationLng = 35.2024;
-const lockedDriverCorridorKey = 'hebron-ppu-bab-al-zawiya-to-bethlehem';
 const driverTripTimeline = [
   'accepted',
   'pickup_started',
@@ -33,6 +26,9 @@ class DriverRoute {
     required this.status,
     required this.activatedAt,
     required this.completedAt,
+    this.serviceRouteId,
+    this.routeNameAr,
+    this.routeNameEn,
   });
 
   final String id;
@@ -48,6 +44,15 @@ class DriverRoute {
   final String status;
   final DateTime? activatedAt;
   final DateTime? completedAt;
+
+  /// The predefined route the driver chose; null for routes created before
+  /// routes existed.
+  final String? serviceRouteId;
+  final String? routeNameAr;
+  final String? routeNameEn;
+
+  String? routeName({required bool arabic}) =>
+      _routeName(routeNameAr, routeNameEn, arabic: arabic);
 
   bool get isOperational =>
       status == 'active' || status == 'assigned' || status == 'on_trip';
@@ -68,6 +73,9 @@ class DriverRoute {
       status: _string(json, 'status'),
       activatedAt: _dateTimeOrNull(json['activated_at']),
       completedAt: _dateTimeOrNull(json['completed_at']),
+      serviceRouteId: _text(json['service_route_id']),
+      routeNameAr: _text(json['route_name_ar']),
+      routeNameEn: _text(json['route_name_en']),
     );
   }
 }
@@ -81,6 +89,8 @@ class DriverRouteSummary {
     required this.seatsAvailable,
     required this.parcelCapacityAvailable,
     required this.status,
+    this.routeNameAr,
+    this.routeNameEn,
   });
 
   final String id;
@@ -90,6 +100,11 @@ class DriverRouteSummary {
   final int seatsAvailable;
   final int parcelCapacityAvailable;
   final String status;
+  final String? routeNameAr;
+  final String? routeNameEn;
+
+  String? routeName({required bool arabic}) =>
+      _routeName(routeNameAr, routeNameEn, arabic: arabic);
 
   factory DriverRouteSummary.fromJson(Map<String, dynamic> json) {
     return DriverRouteSummary(
@@ -100,6 +115,8 @@ class DriverRouteSummary {
       seatsAvailable: _int(json, 'seats_available'),
       parcelCapacityAvailable: _int(json, 'parcel_capacity_available'),
       status: _string(json, 'status'),
+      routeNameAr: _text(json['route_name_ar']),
+      routeNameEn: _text(json['route_name_en']),
     );
   }
 }
@@ -113,6 +130,8 @@ class DriverPassengerSummary {
     required this.status,
     this.pickup,
     this.destination,
+    this.pickupDetails,
+    this.dropoffDetails,
   });
 
   final String id;
@@ -123,6 +142,11 @@ class DriverPassengerSummary {
   final GeoPoint? pickup;
   final GeoPoint? destination;
 
+  /// Where exactly the passenger waits and gets off, in their own words; null
+  /// for requests created before routes existed.
+  final String? pickupDetails;
+  final String? dropoffDetails;
+
   factory DriverPassengerSummary.fromJson(Map<String, dynamic> json) {
     return DriverPassengerSummary(
       id: _string(json, 'id'),
@@ -132,8 +156,38 @@ class DriverPassengerSummary {
       status: _string(json, 'status'),
       pickup: _point(json['pickup_lat'], json['pickup_lng']),
       destination: _point(json['destination_lat'], json['destination_lng']),
+      pickupDetails: _text(json['pickup_details']),
+      dropoffDetails: _text(json['dropoff_details']),
     );
   }
+}
+
+/// One parcel of a merchant order as the driver delivers it.
+class DriverParcelStop {
+  const DriverParcelStop({
+    this.dropoffDetails,
+    this.destinationLabel,
+    this.receiverName,
+    this.receiverPhone,
+    this.size,
+  });
+
+  /// Where exactly the parcel goes, as the merchant typed it; null for
+  /// parcels created before routes existed.
+  final String? dropoffDetails;
+  final String? destinationLabel;
+  final String? receiverName;
+  final String? receiverPhone;
+  final String? size;
+
+  factory DriverParcelStop.fromJson(Map<String, dynamic> json) =>
+      DriverParcelStop(
+        dropoffDetails: _text(json['dropoff_details']),
+        destinationLabel: _text(json['destination_label']),
+        receiverName: _text(json['receiver_name']),
+        receiverPhone: _text(json['receiver_phone']),
+        size: _text(json['size']),
+      );
 }
 
 class DriverMerchantSummary {
@@ -145,6 +199,8 @@ class DriverMerchantSummary {
     this.pickup,
     this.destination,
     this.destinationLabel,
+    this.pickupDetails,
+    this.parcels = const [],
   });
 
   final String id;
@@ -154,6 +210,13 @@ class DriverMerchantSummary {
   final GeoPoint? pickup;
   final GeoPoint? destination;
   final String? destinationLabel;
+
+  /// Where the parcels are collected, as the merchant typed it; null for
+  /// orders created before routes existed.
+  final String? pickupDetails;
+
+  /// The parcels, when the payload lists them.
+  final List<DriverParcelStop> parcels;
 
   factory DriverMerchantSummary.fromJson(Map<String, dynamic> json) {
     final parcels = json['parcels'];
@@ -187,6 +250,14 @@ class DriverMerchantSummary {
           : parcels is List
           ? parcels.length
           : 0,
+      pickupDetails: _text(json['pickup_details']),
+      parcels: parcels is List
+          ? [
+              for (final parcel in parcels)
+                if (parcel is Map<String, dynamic>)
+                  DriverParcelStop.fromJson(parcel),
+            ]
+          : const [],
     );
   }
 }
@@ -430,6 +501,18 @@ int _int(Map<String, dynamic> json, String key) {
   final value = json[key];
   if (value is num) return value.toInt();
   throw FormatException('Missing $key');
+}
+
+/// An optional text field: trimmed, or null when absent or blank.
+String? _text(Object? value) {
+  if (value is! String) return null;
+  final text = value.trim();
+  return text.isEmpty ? null : text;
+}
+
+String? _routeName(String? nameAr, String? nameEn, {required bool arabic}) {
+  if (arabic && nameAr != null) return nameAr;
+  return nameEn ?? nameAr;
 }
 
 DateTime? _dateTimeOrNull(Object? value) {

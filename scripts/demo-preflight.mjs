@@ -18,7 +18,7 @@ function resetAllowedDatabase(databaseUrl) {
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean);
-    return name.toLowerCase() !== "masari" && /^[A-Za-z0-9_]+$/.test(name) && allowed.includes(name) ? name : null;
+    return name.toLowerCase() !== "darb" && /^[A-Za-z0-9_]+$/.test(name) && allowed.includes(name) ? name : null;
   } catch {
     return null;
   }
@@ -103,7 +103,7 @@ if (process.env.DATABASE_URL) {
 
 await checkHttp("API health", `${apiBaseUrl}/api/v1/health`, async (response) => {
   const body = await response.json().catch(() => null);
-  return body?.ok === true && body?.service === "masari-api" && body?.request_id ? undefined : "is not the Darb API";
+  return body?.ok === true && body?.service === "darb-api" && body?.request_id ? undefined : "is not the Darb API";
 });
 await checkHttp("API readiness", `${apiBaseUrl}/api/v1/health/ready`, async (response) => {
   const body = await response.json().catch(() => null);
@@ -111,7 +111,7 @@ await checkHttp("API readiness", `${apiBaseUrl}/api/v1/health/ready`, async (res
 });
 await checkHttp("admin console", adminUrl, async (response) => {
   const body = await response.text();
-  return /<title>(Darb|Masari) Admin Console<\/title>/.test(body) ? undefined : "is not the Darb admin console";
+  return /<title>(Darb|Darb) Admin Console<\/title>/.test(body) ? undefined : "is not the Darb admin console";
 });
 
 const adminExample = readFileSync(resolve(root, "apps/admin/.env.example"), "utf8");

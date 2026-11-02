@@ -1,27 +1,33 @@
+import 'dart:async';
+
 import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_map.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/maps/darb_route_map.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
+import '../../canonical_routes/domain/canonical_route_models.dart';
+import '../../community_reports/application/community_reports_controller.dart';
 import '../../security/presentation/security_actions.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../driver_renewal/presentation/driver_renewal_banner.dart';
 import '../application/driver_controller.dart';
+import '../data/driver_models.dart';
 import '../data/driver_stats_source.dart';
 import '../domain/driver_home_stats.dart';
 import 'driver_ui.dart';
 import 'widgets/driver_home_widgets.dart';
+import 'widgets/driver_route_picker.dart';
 
 class DriverHomeScreen extends ConsumerStatefulWidget {
   const DriverHomeScreen({super.key});
@@ -49,10 +55,22 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
     final route = dashboard.value?.currentRoute;
     final isOnline = route?.isOperational ?? false;
+    // The route being driven by name; a route from before routes existed is
+    // named by its start.
+    final routeName = route == null
+        ? null
+        : route.routeName(
+                arabic: Localizations.localeOf(context).languageCode == 'ar',
+              ) ??
+              localizedCorridorPlace(context, route.originLabel);
 
     return ForegroundRefresh(
       refresh: () async {
-        await ref.read(driverDashboardProvider.notifier).refresh();
+        // Reports from other users reach the map without reopening it; a
+        // slow reports call never holds back the dashboard.
+        final dashboard = ref.read(driverDashboardProvider.notifier).refresh();
+        pollCommunityReports(ref);
+        await dashboard;
       },
       child: Column(
         key: const ValueKey('driverHome'),
@@ -76,10 +94,9 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
                     DriverStatusCard(
                       greeting: _greeting(l10n, user?.name),
-                      // Keeps the role visible alongside the operating area.
+                      // Keeps the role visible alongside the chosen route.
                       subtitle:
-                          '${l10n.driver} • '
-                          '${localizedCorridorPlace(context, 'Hebron / PPU / Bab Al-Zawiya')}',
+                          '${l10n.driver} • ${routeName ?? l10n.driverRouteNone}',
                       isOnline: isOnline,
                       busy: _busy || dashboard.isLoading,
                       onChanged: (value) => _toggleOnline(l10n, value),
@@ -121,12 +138,26 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                     ),
 
                     const SizedBox(height: AppTokens.spaceMedium),
-                    // No driver position is published to this screen yet, so the
-                    // map renders its empty state rather than a decorative one.
-                    MasariMap(
+                    // The driver's own active route (from its stored ends) with
+                    // checkpoints and located community reports. No driver
+                    // position is published to this screen, so none is drawn.
+                    DarbRouteMap(
+                      key: const ValueKey('driverHomeMap'),
+                      height: 240,
                       emptyLabel: l10n.mapNoLocation,
-                      attributionLabel: l10n.mapAttribution,
-                      height: 190,
+                      waypoints: route == null
+                          ? const []
+                          : [
+                              GeoPoint(route.originLat, route.originLng),
+                              GeoPoint(
+                                route.destinationLat,
+                                route.destinationLng,
+                              ),
+                            ],
+                      originLabel: route == null
+                          ? null
+                          : localizedOrigin(context, route.originLabel),
+                      destinationLabel: route?.destinationLabel,
                     ),
 
                     const SizedBox(height: AppTokens.spaceLarge),
@@ -134,9 +165,9 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
                     if (canonicalEntry) ...[
                       const SizedBox(height: AppTokens.spaceLarge),
-                      MasariSection(
+                      DarbSection(
                         title: l10n.canonicalRoutes,
-                        child: MasariInfoCard(
+                        child: DarbInfoCard(
                           title: l10n.driverAvailabilities,
                           subtitle: l10n.canonicalRoutesBody,
                           icon: Icons.alt_route_outlined,
@@ -163,7 +194,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
 
                     if (sharedOffers) ...[
                       const SizedBox(height: AppTokens.spaceMedium),
-                      MasariInfoCard(
+                      DarbInfoCard(
                         title: l10n.sharedOffers,
                         icon: Icons.groups_outlined,
                         primaryAction: CardAction(
@@ -200,15 +231,38 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
     return l10n.greetingEvening(who);
   }
 
+  /// The route of the driver's most recent route that named one.
+  String? _lastRouteId() {
+    for (final route
+        in ref.read(driverDashboardProvider).value?.routes ??
+            const <DriverRoute>[]) {
+      if (route.serviceRouteId != null) return route.serviceRouteId;
+    }
+    return null;
+  }
+
   /// Reconciles an explicit desired state through the response-loss-safe
-  /// legacy operation slot.
+  /// legacy operation slot. Going online without a route asks for one.
   Future<void> _toggleOnline(AppLocalizations l10n, bool value) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await ref.read(legacyDriverOnlineControllerProvider).setOnline(value);
+      final online = ref.read(legacyDriverOnlineControllerProvider);
+      try {
+        await online.setOnline(value);
+      } on DriverRouteRequired {
+        // No route is running for this driver: ask which one they drive,
+        // starting from the route they drove last.
+        if (!mounted) return;
+        final chosen = await showDriverRoutePicker(
+          context,
+          initialRouteId: _lastRouteId(),
+        );
+        if (chosen == null || !mounted) return;
+        await online.setOnline(value, serviceRouteId: chosen);
+      }
     } catch (error) {
       if (mounted) setState(() => _error = driverErrorLabel(l10n, error));
       await ref.read(driverDashboardProvider.notifier).refresh();
@@ -281,7 +335,7 @@ class _InboxSection extends StatelessWidget {
       data: (state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          MasariInfoCard(
+          DarbInfoCard(
             title: l10n.matchInbox,
             icon: Icons.inbox_outlined,
             emphasis: state.proposedMatchCount > 0,
@@ -302,7 +356,7 @@ class _InboxSection extends StatelessWidget {
           ),
           if (state.activeTrip != null) ...[
             const SizedBox(height: AppTokens.spaceMedium),
-            MasariInfoCard(
+            DarbInfoCard(
               title: l10n.activeTrip,
               icon: Icons.local_shipping_outlined,
               statusLabel: driverStatusLabel(l10n, state.activeTrip!.status),

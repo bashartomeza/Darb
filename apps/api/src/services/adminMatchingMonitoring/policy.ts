@@ -1,15 +1,18 @@
 import { Prisma } from "../../generated/prisma/client.js";
 
+// Legacy rows now carry the predefined route they were booked on
+// (`route_version_id`), so route presence no longer separates legacy from
+// canonical rows: the operational mode and the canonical version columns do.
+// Matches still never carry a route on the legacy path.
+
 export const eligibleParcel = {
   operational_mode: "legacy",
-  canonical_entry_version: null,
-  route_version_id: null
+  canonical_entry_version: null
 } satisfies Prisma.ParcelWhereInput;
 
 export const eligiblePassenger = {
   operational_mode: "legacy",
   canonical_entry_version: null,
-  route_version_id: null,
   source: "manual",
   passenger: { is: { demo_account: false } }
 } satisfies Prisma.PassengerRequestWhereInput;
@@ -17,7 +20,6 @@ export const eligiblePassenger = {
 const orderProvenance = {
   operational_mode: "legacy",
   canonical_entry_version: null,
-  route_version_id: null,
   merchant: { is: { demo_account: false } }
 } satisfies Prisma.MerchantOrderWhereInput;
 
@@ -29,7 +31,6 @@ export const eligibleOrder = {
 export const eligibleRoute = {
   operational_mode: "legacy",
   canonical_availability_version: null,
-  route_version_id: null,
   driver: { is: { user: { is: { demo_account: false } } } }
 } satisfies Prisma.DriverRouteWhereInput;
 

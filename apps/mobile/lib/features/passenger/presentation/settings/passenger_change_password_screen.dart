@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_error.dart';
-import '../../../../core/widgets/masari_text_field.dart';
+import '../../../../core/widgets/darb_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../auth/presentation/auth_completion_screen.dart'
@@ -153,7 +153,7 @@ class _PassengerChangePasswordScreenState
     return SettingsPage(
       title: authText(context, 'Change Password', 'تغيير كلمة المرور'),
       children: [
-        MasariTextField(
+        DarbTextField(
           key: const ValueKey('passwordCurrent'),
           controller: _current,
           label: authText(context, 'Current password', 'كلمة المرور الحالية'),
@@ -169,7 +169,7 @@ class _PassengerChangePasswordScreenState
           ),
         ),
         const SizedBox(height: 16),
-        MasariTextField(
+        DarbTextField(
           key: const ValueKey('passwordNew'),
           controller: _new,
           label: authText(context, 'New password', 'كلمة المرور الجديدة'),
@@ -190,7 +190,7 @@ class _PassengerChangePasswordScreenState
           ),
         ),
         const SizedBox(height: 16),
-        MasariTextField(
+        DarbTextField(
           key: const ValueKey('passwordConfirm'),
           controller: _confirm,
           label: authText(

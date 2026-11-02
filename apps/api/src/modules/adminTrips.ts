@@ -7,6 +7,7 @@ import { requireAuth, requireRole, type AuthenticatedRequest } from "../middlewa
 import { HttpError } from "../middleware/error.js";
 import { adminDeliveryConfirmations } from "../services/deliveryHandover.js";
 import { recomputeTrustForTrip } from "../services/driverTrust.js";
+import { routeSummarySelect, withRouteFields } from "../services/operatingRoutes.js";
 import { ADMIN_FORWARD_TRIP_TRANSITION, advanceLegacyTrip } from "../services/tripLifecycle.js";
 
 const tripStatuses = ["created", "accepted", "pickup_started", "picked_up", "in_transit", "delivered", "completed", "cancelled"] as const;
@@ -65,16 +66,21 @@ const tripBaseSelect = {
       id: true,
       pickup_label: true,
       destination_label: true,
+      pickup_details: true,
+      dropoff_details: true,
       passenger_count: true,
       passenger: { select: personSelect },
+      route_version: routeSummarySelect,
     },
   },
   merchant_order: {
     select: {
       id: true,
       pickup_label: true,
+      pickup_details: true,
       merchant: { select: personSelect },
       _count: { select: { parcels: true } },
+      route_version: routeSummarySelect,
     },
   },
   parcel_batch: { select: { id: true, status: true } },
@@ -142,6 +148,9 @@ function serializeTrip(trip: TripListRow) {
   );
   return {
     ...trip,
+    // The route each order was booked on, flattened like the other order payloads.
+    passenger_request: trip.passenger_request ? withRouteFields(trip.passenger_request) : null,
+    merchant_order: trip.merchant_order ? withRouteFields(trip.merchant_order) : null,
     kind,
     demo_context: demoContext,
     has_stored_location: trip._count.location_events > 0,

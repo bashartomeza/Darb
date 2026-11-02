@@ -1,6 +1,6 @@
 export type TokenStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-export const ADMIN_TOKEN_KEY = "masari_admin_token";
+export const ADMIN_TOKEN_KEY = "darb_admin_token";
 
 const sessionEndCodes = new Set([
   "access_token_expired",

@@ -5,11 +5,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:masari_mobile/features/auth/application/auth_actor_binding.dart';
-import 'package:masari_mobile/features/driver/data/driver_repository.dart';
-import 'package:masari_mobile/features/driver/presentation/driver_route_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
+import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
+import 'package:darb_mobile/features/driver/application/legacy_driver_route_mutation.dart';
+import 'package:darb_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/driver/presentation/driver_route_screen.dart';
+import 'package:darb_mobile/features/operating_routes/data/operating_route_repository.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import 'support/auth_test_support.dart';
+import 'support/operating_routes_fixture.dart';
 
 void main() {
   testWidgets(
@@ -18,6 +22,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       FlutterSecureStorage.setMockInitialValues({});
       final keys = <String>[];
+      final bodies = <String>[];
       final rows = <String, Map<String, dynamic>>{};
       var lose = true;
       Future<http.Response> handler(http.Request request) async {
@@ -29,10 +34,14 @@ void main() {
         }
         final key = request.headers['idempotency-key'] ?? '';
         keys.add(key);
+        bodies.add(request.body);
         final row = rows.putIfAbsent(
           key,
           () => {
             ...jsonDecode(request.body) as Map<String, dynamic>,
+            'origin_label': 'Hebron',
+            'destination_label': 'Bethlehem',
+            'corridor_key': 'hebron-to-bethlehem',
             'id': 'original-route',
             'origin_lat': 31.5,
             'origin_lng': 35.1,
@@ -61,6 +70,10 @@ void main() {
               driverRepositoryProvider.overrideWithValue(
                 DriverRepository(apiClient: client.client),
               ),
+              // One running route, so it is chosen for the driver.
+              operatingRoutesProvider.overrideWith(
+                (ref) async => testOperatingRoutes().take(1).toList(),
+              ),
             ],
             child: const MaterialApp(
               locale: Locale('en'),
@@ -86,10 +99,83 @@ void main() {
       await pump();
       await tester.pumpAndSettle();
       expect(keys, [keys.first, keys.first]);
+      // The replay is the saved body, route included.
+      expect(bodies.toSet(), hasLength(1));
+      expect(jsonDecode(bodies.first)['service_route_id'], 'route-heb-bth');
       expect(rows.length, 1);
       expect(find.byKey(const ValueKey('driverRouteMessage')), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+
+  testWidgets(
+    'a route saved before routes existed is replayed as saved, without a route',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
+      final saved = CanonicalOperationBundle.create(
+        operation: LegacyDriverRouteMutation.operation,
+        scope: 'driver',
+        actorId: 'driver',
+        payload: const {
+          'route_version_id': LegacyDriverRouteMutation.sentinel,
+          'seats_available': 3,
+          'parcel_capacity_available': 4,
+        },
+      );
+      await CanonicalOperationStorage(
+        const FlutterSecureStorage(),
+        storageKey: 'darb_legacy_driver_create_v1',
+      ).save(saved);
+
+      final posts = <http.Request>[];
+      Future<http.Response> handler(http.Request request) async {
+        if (request.method == 'GET') {
+          return http.Response(
+            posts.isEmpty ? '{"routes":[]}' : '{"routes":[$_oldRoute]}',
+            200,
+          );
+        }
+        posts.add(request);
+        return http.Response('{"route":$_oldRoute}', 200);
+      }
+
+      final client = TestAuthenticatedClient(handler: handler);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authenticatedActorBindingProvider.overrideWithValue(
+              AuthenticatedActorBinding()..bind('driver'),
+            ),
+            driverRepositoryProvider.overrideWithValue(
+              DriverRepository(apiClient: client.client),
+            ),
+            operatingRoutesProvider.overrideWith(
+              (ref) async => testOperatingRoutes(),
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: DriverRouteScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(posts, hasLength(1));
+      expect(posts.single.headers['idempotency-key'], saved.idempotencyKey);
+      expect(jsonDecode(posts.single.body), {
+        'seats_available': 3,
+        'parcel_capacity_available': 4,
+      });
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }
+
+const _oldRoute =
+    '{"id":"old-route","origin_label":"Hebron / PPU / Bab Al-Zawiya","origin_lat":31.5,"origin_lng":35.1,"destination_label":"Bethlehem","destination_lat":31.7,"destination_lng":35.2,"corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":3,"parcel_capacity_available":4,"status":"active","activated_at":null,"completed_at":null}';

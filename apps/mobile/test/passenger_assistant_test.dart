@@ -6,16 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/core/theme/app_theme.dart';
-import 'package:masari_mobile/features/assistant/application/passenger_assistant_controller.dart';
-import 'package:masari_mobile/features/assistant/data/passenger_assistant_repository.dart';
-import 'package:masari_mobile/features/assistant/domain/passenger_assistant_models.dart';
-import 'package:masari_mobile/features/assistant/presentation/passenger_assistant_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/core/theme/app_theme.dart';
+import 'package:darb_mobile/features/assistant/application/passenger_assistant_controller.dart';
+import 'package:darb_mobile/features/assistant/data/passenger_assistant_repository.dart';
+import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
+import 'package:darb_mobile/features/assistant/presentation/passenger_assistant_screen.dart';
+import 'package:darb_mobile/features/operating_routes/data/operating_route_repository.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
 import 'support/booking_recovery_test_support.dart';
+import 'support/operating_routes_fixture.dart';
 
 void main() {
   group('assistant repository', () {
@@ -47,11 +49,18 @@ void main() {
         );
         final draft = PassengerAssistantTripDraft(
           pickupKey: 'bab_al_zawiya',
+          pickupLat: 31.5326,
+          pickupLng: 35.0998,
+          destinationLat: 31.7054,
+          destinationLng: 35.2024,
           pickupLabel: 'Bab Al-Zawiya',
           destinationKey: 'bethlehem',
           destinationLabel: 'Bethlehem Center',
           preferredTime: DateTime.utc(2030, 1, 2, 12),
           passengerCount: 1,
+          serviceRouteId: 'route-heb-bth',
+          pickupDetails: 'Bab Al-Zawiya, by the pharmacy',
+          dropoffDetails: 'Bethlehem Center bus stop',
         );
         const option = PassengerAssistantTripOption(
           id: 'route_1',
@@ -130,11 +139,18 @@ void main() {
         );
         final draft = PassengerAssistantTripDraft(
           pickupKey: 'bab_al_zawiya',
+          pickupLat: 31.5326,
+          pickupLng: 35.0998,
+          destinationLat: 31.7054,
+          destinationLng: 35.2024,
           pickupLabel: 'Bab Al-Zawiya',
           destinationKey: 'bethlehem',
           destinationLabel: 'Bethlehem Center',
           preferredTime: DateTime.utc(2030, 1, 2, 12),
           passengerCount: 2,
+          serviceRouteId: 'route-heb-bth',
+          pickupDetails: 'Bab Al-Zawiya, by the pharmacy',
+          dropoffDetails: 'Bethlehem Center bus stop',
         );
 
         final options = await repository.searchTrips(draft);
@@ -148,26 +164,23 @@ void main() {
         expect(options.single.score, 0.91);
         expect(requests, hasLength(3));
         expect(requests[0].url.path, '/api/v1/matches/search');
+        // Search by route: driver routes on the same predefined route.
         expect(jsonDecode(requests[0].body), {
-          'pickup_label': 'Bab Al-Zawiya',
-          'pickup_lat': 31.5326,
-          'pickup_lng': 35.0998,
-          'destination_label': 'Bethlehem Center',
-          'destination_lat': 31.7054,
-          'destination_lng': 35.2024,
+          'service_route_id': 'route-heb-bth',
           'preferred_time': '2030-01-02T12:00:00.000Z',
           'passenger_count': 2,
         });
         expect(requests[1].url.path, '/api/v1/passenger/requests');
+        // The route and the exact places; the server fills labels and
+        // coordinates from the route's cities.
         expect(jsonDecode(requests[1].body), {
-          'pickup_label': 'Bab Al-Zawiya',
-          'pickup_lat': 31.5326,
-          'pickup_lng': 35.0998,
-          'destination_label': 'Bethlehem Center',
-          'destination_lat': 31.7054,
-          'destination_lng': 35.2024,
+          'service_route_id': 'route-heb-bth',
+          'pickup_details': 'Bab Al-Zawiya, by the pharmacy',
+          'dropoff_details': 'Bethlehem Center bus stop',
           'preferred_time': '2030-01-02T12:00:00.000Z',
           'passenger_count': 2,
+          // Saved on the request by the server as its matching pin.
+          'selected_driver_route_id': 'route_1',
         });
         expect(requests[2].url.path, '/api/v1/matches/run');
         expect(jsonDecode(requests[2].body), {
@@ -390,6 +403,10 @@ void main() {
         ],
         draft: PassengerAssistantTripDraft(
           pickupKey: 'bab_al_zawiya',
+          pickupLat: 31.5326,
+          pickupLng: 35.0998,
+          destinationLat: 31.7054,
+          destinationLng: 35.2024,
           pickupLabel: 'Bab Al-Zawiya',
           destinationKey: 'bethlehem',
           destinationLabel: 'Bethlehem Center',
@@ -415,12 +432,13 @@ void main() {
         find.byKey(const ValueKey('assistantExtractedData')),
         findsOneWidget,
       );
+      expect(find.byKey(const ValueKey('assistantRouteField')), findsOneWidget);
       expect(
-        find.byKey(const ValueKey('assistantPickupField')),
+        find.byKey(const ValueKey('assistantPickupDetailsField')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const ValueKey('assistantDestinationField')),
+        find.byKey(const ValueKey('assistantDropoffDetailsField')),
         findsOneWidget,
       );
       expect(find.byKey(const ValueKey('assistantTimeField')), findsOneWidget);
@@ -432,8 +450,11 @@ void main() {
         find.byKey(const ValueKey('assistantConfirmSearch')),
         findsOneWidget,
       );
-      expect(find.text('باب الزاوية'), findsOneWidget);
-      expect(find.text('وسط بيت لحم'), findsOneWidget);
+      // The route the extracted places point to is preselected, and the
+      // places prefill the details for the passenger to refine.
+      expect(find.text('الخليل ← بيت لحم'), findsOneWidget);
+      expect(find.text('Bab Al-Zawiya'), findsOneWidget);
+      expect(find.text('Bethlehem Center'), findsOneWidget);
     });
 
     testWidgets('renders Arabic RTL and the ready and loading states', (
@@ -659,6 +680,19 @@ class _ControlledAssistantRepository implements PassengerAssistantRepository {
   PassengerAssistantTripOption? selectedOption;
 
   @override
+  Future<PassengerAssistantState> loadConversation() async =>
+      const PassengerAssistantState();
+
+  @override
+  Future<void> clearConversation() async {}
+
+  @override
+  Future<void> linkSavedRequest({
+    required String conversationId,
+    required String requestId,
+  }) async {}
+
+  @override
   Future<List<PassengerAssistantTripOption>> searchTrips(
     PassengerAssistantTripDraft draft,
   ) async {
@@ -727,6 +761,10 @@ class _SelectingAssistantController extends PassengerAssistantController {
 
 PassengerAssistantTripDraft _tripDraft() => PassengerAssistantTripDraft(
   pickupKey: 'bab_al_zawiya',
+  pickupLat: 31.5326,
+  pickupLng: 35.0998,
+  destinationLat: 31.7054,
+  destinationLng: 35.2024,
   pickupLabel: 'Bab Al-Zawiya',
   destinationKey: 'bethlehem',
   destinationLabel: 'Bethlehem Center',
@@ -748,7 +786,12 @@ const PassengerAssistantTripOption _tripOption = PassengerAssistantTripOption(
 
 Widget _testApp({required dynamic override}) {
   return ProviderScope(
-    overrides: [override],
+    overrides: [
+      override,
+      operatingRoutesProvider.overrideWith(
+        (ref) async => testOperatingRoutes(),
+      ),
+    ],
     child: MaterialApp(
       locale: const Locale('ar'),
       supportedLocales: AppLocalizations.supportedLocales,
@@ -771,7 +814,12 @@ Widget _routerTestApp({required dynamic override}) {
     ],
   );
   return ProviderScope(
-    overrides: [override],
+    overrides: [
+      override,
+      operatingRoutesProvider.overrideWith(
+        (ref) async => testOperatingRoutes(),
+      ),
+    ],
     child: MaterialApp.router(
       locale: const Locale('ar'),
       supportedLocales: AppLocalizations.supportedLocales,

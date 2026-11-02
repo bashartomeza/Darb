@@ -11,7 +11,7 @@ sender's user id.
 1. **Code issued.** When a parcel order is created, the API generates a six-digit
    numeric handover code and returns it once, in `order.handover.code` of the
    create response (the order owner only). Only a keyed digest
-   (`HMAC-SHA256`, context `masari:delivery-handover:<orderId>`, key
+   (`HMAC-SHA256`, context `darb:delivery-handover:<orderId>`, key
    `AUTH_ACTION_TOKEN_PEPPER`, falling back to the refresh-token pepper) is
    stored in `delivery_handovers.code_digest`.
 2. **Sender passes the code on.** The sender shows or reads the code to the

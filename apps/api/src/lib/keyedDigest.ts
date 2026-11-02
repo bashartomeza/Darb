@@ -18,23 +18,23 @@ export function hexDigestMatches(expectedHex: string, actualHex: string) {
 }
 
 export function invitationCodeDigest(code: string, key: VersionedKey) {
-  return keyedDigest("masari:invitation-code", code, key);
+  return keyedDigest("darb:invitation-code", code, key);
 }
 
 export function phoneDigest(phoneE164: string, key: VersionedKey) {
-  return keyedDigest("masari:phone", phoneE164, key);
+  return keyedDigest("darb:phone", phoneE164, key);
 }
 
 export function otpCodeDigest(challengeId: string, code: string, key: VersionedKey) {
-  return keyedDigest(`masari:otp:${challengeId}`, code, key);
+  return keyedDigest(`darb:otp:${challengeId}`, code, key);
 }
 
 export function onboardingSessionDigest(token: string, key: VersionedKey) {
-  return keyedDigest("masari:onboarding-session", token, key);
+  return keyedDigest("darb:onboarding-session", token, key);
 }
 
 export function idempotencyKeyDigest(scope: string, value: string, key: VersionedKey) {
-  return keyedDigest(`masari:idempotency:${scope}`, value, key);
+  return keyedDigest(`darb:idempotency:${scope}`, value, key);
 }
 
 export function idempotencyPayloadDigest(operation: string, canonicalPayload: string, key: VersionedKey) {
@@ -42,9 +42,9 @@ export function idempotencyPayloadDigest(operation: string, canonicalPayload: st
 }
 
 export function registrationGrantDigest(grant: string, key: VersionedKey) {
-  return keyedDigest("masari:registration-grant", grant, key);
+  return keyedDigest("darb:registration-grant", grant, key);
 }
 
 export function abuseSubjectDigest(bucket: string, value: string, key: VersionedKey) {
-  return keyedDigest(`masari:abuse:${bucket}`, value, key);
+  return keyedDigest(`darb:abuse:${bucket}`, value, key);
 }

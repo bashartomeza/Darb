@@ -15,7 +15,6 @@
   "configuredApiBaseUrl": "رابط API المضبوط",
   "androidOnly": "هدف أندرويد فقط",
   "businessFlowsPending": "تدفقات المسافر والسائق والتاجر ستضاف في مراحل لاحقة.",
-  "lockedCorridor": "الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم",
   "diagnostics": "تشخيصات تقنية",
   "loadingSession": "جارٍ استعادة الجلسة...",
   "sessionRestoreFailed": "تعذرت استعادة الجلسة. يرجى إعادة المحاولة.",
@@ -121,7 +120,7 @@
   "trustScore": "درجة الثقة",
   "capacityFit": "ملاءمة السعة",
   "matchExplanation": "شرح المطابقة",
-  "routeMatchExplanation": "اختار درب هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.",
+  "routeMatchExplanation": "اختار درب هذا السائق لأنه يسلك نفس المسار الذي اخترته، ولديه مقعد متاح لك، ودرجة الثقة لديه مرتفعة.",
   "passengerTrip": "رحلة المسافر",
   "tripTimeline": "خط الرحلة الزمني",
   "latestLocation": "آخر موقع",
@@ -325,6 +324,41 @@
   "canonicalRoutesBody": "اختر من المسارات الحالية والمحطات المعتمدة.",
   "featureUnavailable": "هذه الخدمة غير متاحة في هذه البيئة.",
   "routeCatalogUnavailable": "المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.",
+  "orderRouteLabel": "المسار",
+  "orderRouteChoose": "اختر المسار",
+  "orderRoutesLoadFailed": "تعذّر تحميل المسارات. تحقّق من الاتصال وحاول مرة أخرى.",
+  "orderRoutesEmpty": "لا توجد مسارات تعمل حالياً. حاول لاحقاً.",
+  "orderRouteRequired": "اختر المسار أولاً.",
+  "orderRouteUnavailable": "هذا المسار لم يعد يعمل. اختر مساراً آخر.",
+  "orderRouteSaved": "المسار المحفوظ",
+  "orderDetailsTooShort": "اكتب 3 أحرف على الأقل ليجد السائق المكان.",
+  "merchantPickupDetailsLabel": "تفاصيل مكان الاستلام",
+  "merchantPickupDetailsHint": "مثال: اسم المتجر والشارع",
+  "merchantDropoffDetailsLabel": "تفاصيل مكان التسليم",
+  "merchantDropoffDetailsHint": "مثال: الحي والشارع وأقرب معلم",
+  "merchantReceiverNameLabel": "اسم المستلم (اختياري)",
+  "merchantReceiverPhoneLabel": "هاتف المستلم (اختياري)",
+  "merchantReceiverPhoneInvalid": "أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.",
+  "merchantReceiverLabel": "المستلم",
+  "merchantPendingOrderTitle": "طلب بانتظار التأكيد",
+  "driverRoutePickTitle": "اختر مسارك",
+  "driverRoutePickBody": "ستصلك طلبات الركاب والطرود على هذا المسار فقط.",
+  "driverRoutePickConfirm": "ابدأ العمل",
+  "driverRouteNone": "لم تختر مساراً بعد",
+  "driverPickupDetailsLabel": "مكان الصعود",
+  "driverDropoffDetailsLabel": "مكان النزول",
+  "driverMerchantPickupLabel": "استلم الطرود من",
+  "driverParcelStopsTitle": "أماكن تسليم الطرود",
+  "driverParcelStopLabel": "الطرد {number}",
+  "@driverParcelStopLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "driverReceiverLabel": "المستلم",
+  "driverWhereToFindTitle": "أماكن الاستلام والتسليم",
   "noPublishedRoutes": "لا توجد مسارات منشورة ومؤهلة حالياً.",
   "selectRoute": "اختر المسار",
   "routeDirection": "الاتجاه",
@@ -398,6 +432,7 @@
   "statusFilled": "ممتلئة",
   "statusDeparted": "انطلقت",
   "returnToDashboard": "العودة إلى لوحة التحكم",
+  "viewRouteRequests": "عرض طلبات المسار الخاصة بي",
   "canonicalDriverOffers": "عروض المسار",
   "canonicalDriverOffersBody": "راجع طلبات الركاب والطرود الحالية المرتبطة بإتاحة مسارك.",
   "noCanonicalOffers": "لا توجد عروض مسار حالياً.",
@@ -463,7 +498,6 @@
       }
     }
   },
-  "whereToGo": "إلى أين تريد الذهاب؟",
   "smartSearch": "بحث ذكي",
   "destinationSearchHint": "مثال: من البوليتكنك إلى بيت لحم",
   "quickDestinations": "الوجهات السريعة",
@@ -678,6 +712,44 @@
   "assistantErrorTitle": "تعذّر إكمال الطلب",
   "assistantErrorBody": "لم يتمكن المساعد من إكمال طلبك. حاول مرة أخرى.",
   "assistantUnavailable": "خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.",
+  "assistantHistoryErrorTitle": "تعذّر تحميل المحادثة",
+  "assistantHistoryErrorBody": "محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.",
+  "assistantNewChat": "محادثة جديدة",
+  "assistantNewChatTitle": "بدء محادثة جديدة؟",
+  "assistantNewChatBody": "سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.",
+  "assistantNewChatFailed": "تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.",
+  "passengerRouteLabel": "المسار",
+  "passengerRouteHint": "اختر المسار",
+  "passengerRoutesLoading": "جارٍ تحميل المسارات…",
+  "passengerRoutesLoadFailed": "تعذّر تحميل المسارات. تحقّق من اتصالك وحاول مرة أخرى.",
+  "passengerRoutesEmpty": "لا توجد مسارات متاحة حاليًا. يُرجى المحاولة لاحقًا.",
+  "passengerRouteRequired": "اختر المسار للمتابعة.",
+  "passengerRouteUnavailable": "هذا المسار لم يعد متاحًا. اختر مسارًا آخر.",
+  "passengerPickupDetailsLabel": "مكان الصعود بالتحديد",
+  "passengerPickupDetailsHint": "مثال: أمام البوابة الرئيسية لجامعة بوليتكنك فلسطين",
+  "passengerDropoffDetailsLabel": "مكان النزول بالتحديد",
+  "passengerDropoffDetailsHint": "مثال: مجمّع سيارات بيت لحم، بجانب الصيدلية",
+  "passengerDetailsHelper": "صِف المكان بوضوح ليصل إليه السائق بسهولة.",
+  "passengerDetailsTooShort": "اكتب 3 أحرف على الأقل.",
+  "passengerPickupPoint": "مكان الصعود",
+  "passengerDropoffPoint": "مكان النزول",
+  "assistantRouteChoose": "اختر المسار المناسب لرحلتك، ثم تأكّد من مكانَي الصعود والنزول.",
+  "passengerParcelRouteIntro": "اختر المسار، وصِف مكان استلام الطرد ومكان تسليمه، ثم أخبرنا من سيستلمه.",
+  "passengerParcelPickupDetailsLabel": "مكان استلام الطرد منك",
+  "passengerParcelPickupDetailsHint": "مثال: المحل المجاور لدوار ابن رشد في الخليل",
+  "passengerParcelDropoffDetailsLabel": "مكان تسليم الطرد",
+  "passengerParcelDropoffDetailsHint": "مثال: بيت المستلم، قرب كنيسة المهد",
+  "passengerParcelPreferredTime": "الوقت المفضّل للاستلام",
+  "welcomeRoutesTitle": "المسارات التي نخدمها",
+  "welcomeRoutesMore": "و{count} أخرى",
+  "@welcomeRoutesMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeRoutesOffline": "ستظهر المسارات عند الاتصال بالإنترنت.",
   "assistantClarificationLabel": "يحتاج مساعد درب إلى توضيح",
   "assistantResultLabel": "رد مساعد درب",
   "assistantPassengerMessage": "رسالتك",
@@ -831,6 +903,12 @@
   "incidentCategoryParcelDamage": "تلف طرد",
   "incidentCategoryBehavior": "سلوك",
   "incidentCategoryOther": "أخرى",
+  "myIncidentReports": "بلاغاتي",
+  "myIncidentReportsEmpty": "لم ترسل أي بلاغ بعد.",
+  "myIncidentReportsFailed": "تعذّر تحميل بلاغاتك.",
+  "incidentStatusOpen": "مفتوح",
+  "incidentStatusReviewing": "قيد المراجعة",
+  "incidentStatusResolved": "تمت المعالجة",
   "notifIncidentUpdatedTitle": "تحديث على بلاغك",
   "notifIncidentReviewingBody": "بلاغك قيد المراجعة.",
   "notifIncidentResolvedBody": "تمت معالجة بلاغك.",
@@ -1129,5 +1207,49 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mapStraightLineNote": "تعذر حساب الطريق: يظهر خط مستقيم",
+  "mapCheckpointsUnavailable": "بيانات الحواجز غير متوفرة",
+  "mapCheckpointsLoadFailed": "تعذر تحميل الحواجز",
+  "checkpointOfficialUnknown": "الحالة الرسمية: غير منشورة",
+  "checkpointEnteringChanged": "دخول: آخر تغيير {time}",
+  "@checkpointEnteringChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLeavingChanged": "خروج: آخر تغيير {time}",
+  "@checkpointLeavingChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointCommunitySays": "المجتمع يقول: {status} (غير مؤكد)",
+  "@checkpointCommunitySays": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "communityStatusOpen": "مفتوح",
+  "communityStatusClosed": "مغلق",
+  "communityStatusOutdated": "قد تكون الحالة قديمة",
+  "checkpointPositionOsm": "الموقع: © مساهمو OpenStreetMap (ODbL)",
+  "checkpointsUnplacedTitle": "حواجز بلا موقع على الخريطة",
+  "checkpointsUnplacedBody": "يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.",
+  "communityPickLocation": "اضغط على الخريطة لتحديد المكان",
+  "communityUseMyLocation": "استخدام موقعي الحالي",
+  "communityLocationRequired": "حدد المكان على الخريطة لهذا النوع من البلاغات.",
+  "communityLocationOptional": "الموقع (اختياري)",
+  "communityLocationOutside": "هذا المكان خارج منطقة خدمة درب.",
+  "communityLocationUnavailable": "موقعك الحالي غير متاح.",
+  "communityLocationSet": "تم تحديد المكان على الخريطة",
+  "communityClearLocation": "إزالة المكان",
+  "mapRouteLabel": "المسار",
+  "merchantOrderMapTitle": "مسار الطلب"
 }

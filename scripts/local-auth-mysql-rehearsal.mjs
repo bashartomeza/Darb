@@ -17,7 +17,7 @@ if (!process.env.AUTH_REHEARSAL_MYSQLD) throw new Error("AUTH_REHEARSAL_MYSQLD_r
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // MySQL on Windows cannot create ALTER-table scratch paths beyond MAX_PATH.
 const scratch = resolve(tmpdir());
-const runtime = await mkdtemp(join(scratch, "masari-auth-"));
+const runtime = await mkdtemp(join(scratch, "darb-auth-"));
 assert(runtime.startsWith(scratch + "/") || runtime.startsWith(scratch + "\\"));
 const data = join(runtime, "data");
 const password = randomBytes(32).toString("hex");
@@ -75,7 +75,7 @@ try {
   await writeFile(baselineConfig, `export default { schema: ${JSON.stringify(join(baseline, "schema.prisma"))}, migrations: { path: ${JSON.stringify(join(baseline, "migrations"))} }, datasource: { url: process.env.DATABASE_URL } };\n`);
   const prismaCli = "node_modules/prisma/build/index.js";
   for (const scenario of ["upgrade", "fresh"]) {
-    const database = `masari_auth_rehearsal_${scenario}_${Date.now()}`;
+    const database = `darb_auth_rehearsal_${scenario}_${Date.now()}`;
     assertDisposableDatabase(database);
     await connection.query(`CREATE DATABASE \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
     const env = envFor(database);

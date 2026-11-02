@@ -17,7 +17,7 @@ const { createOrResetAdmin, listAdmins, validateAdminInput, AdminBootstrapError 
 const { parseCliArgs, stripTrailingNewline } = await import("../scripts/adminCliInput.js");
 
 const PASSWORD = "correct horse battery staple";
-const guard = { demoFeaturesEnabled: false, databaseName: "masari_prod", demoResetAllowedDatabases: ["masari_demo"], allowDemoDatabase: false };
+const guard = { demoFeaturesEnabled: false, databaseName: "darb_prod", demoResetAllowedDatabases: ["darb_demo"], allowDemoDatabase: false };
 const db = prismaMock as never;
 const base = { email: "Owner@Example.com", name: "Owner", password: PASSWORD, resetPassword: false, dryRun: false, guard };
 
@@ -120,7 +120,7 @@ describe("admin bootstrap", () => {
 
   it("refuses demo environments, demo databases and demo data unless explicitly allowed", async () => {
     expect(await rejection(createOrResetAdmin(db, { ...base, guard: { ...guard, demoFeaturesEnabled: true } }))).toBe("demo_environment_refused");
-    expect(await rejection(createOrResetAdmin(db, { ...base, guard: { ...guard, databaseName: "masari_demo" } }))).toBe("demo_database_refused");
+    expect(await rejection(createOrResetAdmin(db, { ...base, guard: { ...guard, databaseName: "darb_demo" } }))).toBe("demo_database_refused");
     prismaMock.user.count.mockResolvedValue(3);
     expect(await rejection(createOrResetAdmin(db, base))).toBe("demo_accounts_present_refused");
     expect(prismaMock.user.create).not.toHaveBeenCalled();

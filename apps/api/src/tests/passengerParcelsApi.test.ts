@@ -12,7 +12,7 @@ const { serializePassengerParcel } = await import("../services/passengerParcels.
 
 const environment = {
   APP_ENV: "local",
-  DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+  DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
   JWT_SECRET: "test-only-jwt-secret-with-at-least-thirty-two-characters",
   CORS_ORIGINS: "http://localhost:5173",
   LOG_LEVEL: "silent",
@@ -118,9 +118,87 @@ describe("passenger parcel API", () => {
     expect(service.cancel).toHaveBeenCalledWith("p1", "order_1");
   });
 
-  it("is not found while multi-route entry is disabled", async () => {
-    const app = createApp(disabled, { passengerParcelService: setup().service as never });
-    expect((await request(app).get("/api/v1/passenger/parcels").set(auth("p1", "passenger"))).status).toBe(404);
+  it("stays available without multi-route entry, which only gates the canonical body", async () => {
+    const { service } = setup();
+    const app = createApp(disabled, { passengerParcelService: service as never });
+    expect((await request(app).get("/api/v1/passenger/parcels").set(auth("p1", "passenger"))).status).toBe(200);
+    const canonical = await request(app).post("/api/v1/passenger/parcels").set(auth("p1", "passenger"))
+      .set("Idempotency-Key", "parcel-key-0001").send(body);
+    expect(canonical.status).toBe(400);
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
+  describe("route-based body", () => {
+    const routeBody = {
+      service_route_id: "service_route_hebron_bethlehem",
+      pickup_details: " PPU main gate ",
+      dropoff_details: "Manger Square",
+      preferred_time: "2030-01-01T10:00:00Z",
+      size: "M",
+      receiver_name: "Sami",
+      receiver_phone: "0591234567",
+      forbidden_items_acknowledged: true,
+      note: "books"
+    };
+    const legacyDetail = { ...detail, order: { ...detail.order, canonical_dispatch: null } };
+
+    function routeSetup(replayed = false, matcher = vi.fn().mockResolvedValue({})) {
+      const service = {
+        create: vi.fn(),
+        createForRoute: vi.fn().mockResolvedValue({ parcel: legacyDetail, replayed, handoverCode: replayed ? null : "123456" }),
+        list: vi.fn(),
+        get: vi.fn().mockResolvedValue(legacyDetail),
+        cancel: vi.fn()
+      };
+      return { service, matcher, app: createApp(disabled, { passengerParcelService: service as never, passengerParcelMatcher: matcher }) };
+    }
+
+    it("creates through the legacy pipeline without multi-route entry and asks for a driver", async () => {
+      const { app, service, matcher } = routeSetup();
+      const response = await request(app).post("/api/v1/passenger/parcels").set(auth("p1", "passenger"))
+        .set("Idempotency-Key", "parcel-key-0002").send(routeBody).expect(201);
+      expect(service.createForRoute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          serviceRouteId: "service_route_hebron_bethlehem", pickupDetails: "PPU main gate", dropoffDetails: "Manger Square",
+          preferredTime: new Date("2030-01-01T10:00:00Z"), size: "M", receiverPhone: "+970591234567", note: "books"
+        }),
+        expect.objectContaining({ id: "p1", idempotencyKey: "parcel-key-0002" })
+      );
+      expect(service.create).not.toHaveBeenCalled();
+      expect(matcher).toHaveBeenCalledWith({ id: "p1", role: "passenger" }, { merchantOrderId: "order_1" });
+      expect(response.body).toMatchObject({ replayed: false, handover_code: "123456", parcel: { id: "order_1", can_cancel: true } });
+      expect(JSON.stringify(response.body)).not.toContain("+970591234567");
+    });
+
+    it("keeps the parcel searching when no driver is on the route yet", async () => {
+      const { HttpError } = await import("../middleware/error.js");
+      const { app, matcher } = routeSetup(false, vi.fn().mockRejectedValue(new HttpError(404, "no_compatible_driver_route")));
+      const response = await request(app).post("/api/v1/passenger/parcels").set(auth("p1", "passenger"))
+        .set("Idempotency-Key", "parcel-key-0003").send(routeBody).expect(201);
+      expect(matcher).toHaveBeenCalledOnce();
+      expect(response.body.parcel.tracking_state).toBe("searching");
+    });
+
+    it("does not ask for a driver again on a replay", async () => {
+      const { app, matcher } = routeSetup(true);
+      const response = await request(app).post("/api/v1/passenger/parcels").set(auth("p1", "passenger"))
+        .set("Idempotency-Key", "parcel-key-0004").send(routeBody).expect(200);
+      expect(response.body).toMatchObject({ replayed: true, handover_code: null });
+      expect(matcher).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["short details", { pickup_details: "ab" }],
+      ["a large parcel", { size: "L" }],
+      ["no acknowledgement", { forbidden_items_acknowledged: false }],
+      ["a bad phone", { receiver_phone: "12345" }],
+      ["no route", { service_route_id: undefined }]
+    ])("rejects %s", async (_label, change) => {
+      const { app, service } = routeSetup();
+      await request(app).post("/api/v1/passenger/parcels").set(auth("p1", "passenger"))
+        .set("Idempotency-Key", "parcel-key-0005").send({ ...routeBody, ...change }).expect(400);
+      expect(service.createForRoute).not.toHaveBeenCalled();
+    });
   });
 
   it("serialiser never exposes the stored receiver phone", () => {

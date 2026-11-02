@@ -6,11 +6,11 @@ Accepted for M6B1B.
 
 ## Context
 
-Masari needed request correlation and production JSON logs without allowing bodies, query strings, credentials, phone numbers, or precise locations into operational output. Business `AuditEvent` rows serve a different compliance/history purpose.
+Darb needed request correlation and production JSON logs without allowing bodies, query strings, credentials, phone numbers, or precise locations into operational output. Business `AuditEvent` rows serve a different compliance/history purpose.
 
 ## Decision
 
-Use `crypto.randomUUID()` plus a strict inbound request-ID allowlist. Use Pino with an asynchronous destination and a small Masari-owned completion middleware that emits only approved fields. Do not use pino-http because its broader default request serialization is unnecessary for this API and would require additional suppression of URLs and headers.
+Use `crypto.randomUUID()` plus a strict inbound request-ID allowlist. Use Pino with an asynchronous destination and a small Darb-owned completion middleware that emits only approved fields. Do not use pino-http because its broader default request serialization is unnecessary for this API and would require additional suppression of URLs and headers.
 
 ## Consequences
 

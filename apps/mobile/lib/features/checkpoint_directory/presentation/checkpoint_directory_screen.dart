@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/widgets/masari_card.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/checkpoint_directory_controller.dart';
@@ -147,12 +147,12 @@ class _DirectoryListState extends State<_DirectoryList> {
                     for (final group in groups.entries)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: MasariSection(
+                        child: DarbSection(
                           title: group.key,
                           child: Column(
                             children: [
                               for (final row in group.value)
-                                MasariCard(
+                                DarbCard(
                                   key: ValueKey(row.key),
                                   child: ListTile(
                                     title: Text(row.nameAr),

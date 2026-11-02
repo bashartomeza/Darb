@@ -1,6 +1,6 @@
 # M7C2 secure state and response-loss recovery
 
-Canonical create operations use one secure-storage bundle at `masari_canonical_operation_v1`. Bundle schema version 2 stores only operation type, role scope, authenticated actor ID, random idempotency key, normalized exact payload, deterministic change-detection fingerprint, creation time, and route-version ID. It is never stored in preferences or logs.
+Canonical create operations use one secure-storage bundle at `darb_canonical_operation_v1`. Bundle schema version 2 stores only operation type, role scope, authenticated actor ID, random idempotency key, normalized exact payload, deterministic change-detection fingerprint, creation time, and route-version ID. It is never stored in preferences or logs.
 
 Before sending a new operation, the client revalidates capability/current-route eligibility, synchronously fences duplicate taps, persists the bundle, and confirms secure persistence. Only then may it send. Timeout, connection loss, HTTP 502/503, `transaction_retry_required`, and ambiguous idempotency responses retain the exact bundle. A recreated screen restores only tentative selections for the same authenticated actor; a different account cannot inspect or replay the payload. An identical retry reuses the same key. A changed payload or different operation is blocked while the prior outcome is unresolved and cannot overwrite it.
 

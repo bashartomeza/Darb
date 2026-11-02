@@ -16,6 +16,9 @@ const {createApp}=await import(pathToFileURL(root+'/apps/api/dist/app.js'));
 const {signAuthToken}=await import(pathToFileURL(root+'/apps/api/dist/middleware/auth.js'));
 const {expireLegacyDispatches}=await import(pathToFileURL(root+'/apps/api/dist/services/legacyDispatch.js'));
 const {LOCKED_CORRIDOR_KEY}=await import(pathToFileURL(root+'/apps/api/dist/modules/demoReset.js'));
+// Older order bodies map to the predefined Hebron → Bethlehem route, which must exist.
+const {ensureIntegrationRoutes}=await import(pathToFileURL(root+'/apps/api/dist/scripts/integrationRoutes.js'));
+await ensureIntegrationRoutes(prisma);
 const prefix='task14a_'+randomUUID();
 const actors=[],tokens=new Map(),orderIds=[],routeIds=[],failures=[],scenarios=[],snapshots=[];
 let assertions=0,server,origin,dropBatch=false,droppedResponses=0;

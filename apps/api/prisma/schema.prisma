@@ -457,6 +457,7 @@ model User {
   community_report_votes           CommunityReportVote[]
   community_report_flags           CommunityReportFlag[]
   trip_ratings                     TripRating[]
+  assistant_conversations          PassengerAssistantConversation[]
 
   @@map("users")
 }
@@ -510,7 +511,7 @@ model Invitation {
   intended_phone_digest String         @db.Char(64)
   phone_digest_version  Int
   phone_last4           String         @db.Char(4)
-  /// Where the one-time code is emailed (Masari sends no SMS). Null only on pre-email invitations.
+  /// Where the one-time code is emailed (Darb sends no SMS). Null only on pre-email invitations.
   contact_email         String?        @db.VarChar(191)
   campaign              String?        @db.VarChar(100)
   source                String?        @db.VarChar(100)
@@ -890,6 +891,7 @@ model DriverRoute {
   mode_trips Trip[] @relation("TripAvailabilityMode")
   canonical_manifests CanonicalTripManifest[]
   canonical_attempts CanonicalDemandAttempt[]
+  selected_by_passenger_requests PassengerRequest[] @relation("PassengerRequestSelectedRoute")
 
   @@index([corridor_key])
   @@index([route_version_id, availability_status, departure_at])
@@ -1085,15 +1087,25 @@ model PassengerRequest {
   fare_unit_minor               Int?
   fare_total_minor              Int?
   fare_currency                 String?    @db.Char(3)
+  /// The driver route the passenger picked when booking. Matching for this
+  /// request is pinned to it; null means "best compatible route".
+  selected_driver_route_id      String?
+  /// Free text the passenger typed for the exact pickup / drop-off inside the
+  /// route's cities. The labels and coordinates hold the city names and centres.
+  pickup_details                String?    @db.VarChar(300)
+  dropoff_details               String?    @db.VarChar(300)
 
   passenger    User                 @relation(fields: [passenger_id], references: [id], onDelete: Cascade)
   route_version ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  selected_driver_route DriverRoute? @relation("PassengerRequestSelectedRoute", fields: [selected_driver_route_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
   matches      Match[]
   trips        Trip[]
   canonical_dispatch CanonicalDemandDispatch?
   canonical_manifest_members CanonicalTripManifestMember[]
+  assistant_conversations PassengerAssistantConversation[]
 
   @@index([route_version_id, requested_departure_from])
+  @@index([selected_driver_route_id])
   @@unique([id, route_version_id], map: "passenger_requests_route_ownership_key")
   @@unique([id, operational_mode], map: "passenger_requests_mode_ownership_key")
   @@unique([id, route_version_id, operational_mode], map: "passenger_requests_route_mode_ownership_key")
@@ -1115,6 +1127,8 @@ model MerchantOrder {
   requested_departure_until DateTime?
   canonical_created_at      DateTime?
   operational_mode          String     @default("legacy") @db.VarChar(50)
+  /// Free-text pickup typed by the sender (merchant or passenger parcel sender).
+  pickup_details            String?    @db.VarChar(300)
 
   merchant       User          @relation(fields: [merchant_id], references: [id], onDelete: Cascade)
   route_version  ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -1152,6 +1166,11 @@ model Parcel {
   fare_id                String? @db.VarChar(191)
   fare_minor             Int?
   fare_currency          String? @db.Char(3)
+  /// Free-text drop-off typed by the sender, and an optional receiver for
+  /// merchant parcels (passenger parcels keep theirs in passenger_parcel_details).
+  dropoff_details        String? @db.VarChar(300)
+  receiver_name          String? @db.VarChar(80)
+  receiver_phone         String? @db.VarChar(32)
 
   order         MerchantOrder        @relation(fields: [order_id, operational_mode], references: [id, operational_mode], onDelete: Restrict, onUpdate: Restrict)
   route_version ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
@@ -1290,11 +1309,11 @@ model Match {
 model ComparisonRun {
   id                         String   @id @default(cuid())
   scenario_key               String
-  masari_trips               Int
+  darb_trips               Int
   nearest_driver_trips       Int
-  masari_estimated_distance  Decimal  @db.Decimal(10, 2)
+  darb_estimated_distance  Decimal  @db.Decimal(10, 2)
   nearest_estimated_distance Decimal  @db.Decimal(10, 2)
-  masari_estimated_cost      Decimal  @db.Decimal(10, 2)
+  darb_estimated_cost      Decimal  @db.Decimal(10, 2)
   nearest_estimated_cost     Decimal  @db.Decimal(10, 2)
   parcel_batching_benefit    String   @db.Text
   driver_utilization         Decimal  @db.Decimal(5, 2)
@@ -1884,4 +1903,47 @@ model TripRating {
   @@unique([trip_id, passenger_id], map: "trip_ratings_trip_passenger_key")
   @@index([driver_id, passenger_id])
   @@map("trip_ratings")
+}
+
+/// The passenger's chat with the trip assistant, kept so it follows the account
+/// to another device. Holds only what the app shows: the newest messages up to
+/// a fixed cap. The passenger can clear it and it is erased with the account.
+model PassengerAssistantConversation {
+  id               String   @id @default(cuid())
+  passenger_id     String
+  /// The request the passenger saved from this chat, if any.
+  saved_request_id String?
+  /// Sequence the next message gets; orders messages written in the same millisecond.
+  next_sequence    Int      @default(1)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  passenger     User                        @relation(fields: [passenger_id], references: [id], onDelete: Cascade)
+  saved_request PassengerRequest?           @relation(fields: [saved_request_id], references: [id], onDelete: SetNull)
+  messages      PassengerAssistantMessage[]
+
+  @@index([passenger_id, updated_at])
+  @@index([saved_request_id])
+  @@map("passenger_assistant_conversations")
+}
+
+model PassengerAssistantMessage {
+  id              String                        @id @default(cuid())
+  conversation_id String
+  sequence        Int
+  role            PassengerAssistantMessageRole
+  text            String                        @db.VarChar(2000)
+  /// Structured reply the app renders with the text (status, choices, trip draft).
+  payload         Json?
+  created_at      DateTime                      @default(now())
+
+  conversation PassengerAssistantConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@unique([conversation_id, sequence])
+  @@map("passenger_assistant_messages")
+}
+
+enum PassengerAssistantMessageRole {
+  user
+  assistant
 }

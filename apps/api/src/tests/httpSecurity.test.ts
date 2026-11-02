@@ -22,7 +22,7 @@ const { createApp } = await import("../app.js");
 
 const baseEnvironment = {
   APP_ENV: "local",
-  DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+  DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
   JWT_SECRET: "http-security-test-secret-with-thirty-two-characters",
   CORS_ORIGINS: "http://localhost:5173",
   LOG_LEVEL: "silent"
@@ -37,7 +37,7 @@ function productionConfig() {
     ...baseEnvironment,
     APP_ENV: "production",
     APP_RELEASE: "http-security-test",
-    CORS_ORIGINS: "https://admin.masari.example",
+    CORS_ORIGINS: "https://admin.darb.example",
     REFRESH_TOKEN_PEPPER: "http-security-refresh-pepper-with-thirty-two-characters",
     AUTH_ACTION_TOKEN_PEPPER: "http-security-action-pepper-with-thirty-two-characters",
     TRUST_PROXY: "none"
@@ -120,7 +120,7 @@ describe("production HTTP security baseline", () => {
         password: "body-password-secret",
         latitude: 31.53261234,
         longitude: 35.09981234,
-        database_url: "mysql://secret-user:secret-pass@secret-host/masari"
+        database_url: "mysql://secret-user:secret-pass@secret-host/darb"
       })
       .expect(401);
     await settleLogs();
@@ -263,7 +263,7 @@ describe("production HTTP security baseline", () => {
     app.use(operationalLogMiddleware(logger));
     app.get("/boom", () => {
       throw new Error(
-        "stack-password-secret Bearer.jwt-secret mysql://db-user:db-password@db.internal:3306/masari +970590001234"
+        "stack-password-secret Bearer.jwt-secret mysql://db-user:db-password@db.internal:3306/darb +970590001234"
       );
     });
     app.use(errorHandler);
@@ -292,7 +292,7 @@ describe("production HTTP security baseline", () => {
       throw Object.assign(new Error("database-password-secret"), { code: "P2002" });
     });
     app.get("/database", () => {
-      throw Object.assign(new Error("mysql://user:password@database.internal/masari"), { code: "P1001" });
+      throw Object.assign(new Error("mysql://user:password@database.internal/darb"), { code: "P1001" });
     });
     app.get("/deadlock", () => {
       throw Object.assign(new Error("private transaction details"), { code: "P2034" });
@@ -403,7 +403,7 @@ describe("production HTTP security baseline", () => {
 
     const foreign = await request(app)
       .options("/api/v1/auth/register")
-      .set("Origin", "https://evil.masari.example")
+      .set("Origin", "https://evil.darb.example")
       .expect(204);
     expect(foreign.headers["access-control-allow-origin"]).toBeUndefined();
   });
