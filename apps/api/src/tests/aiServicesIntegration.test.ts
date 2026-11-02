@@ -128,10 +128,13 @@ describe("POST /passenger/assistant/voice", () => {
   const service = { answer: vi.fn() };
   const recorder = { record: vi.fn() };
 
-  function appWith(client: ReturnType<typeof createAiServicesClient> | null) {
+  function appWith(
+    client: ReturnType<typeof createAiServicesClient> | null,
+    store = createPrismaAssistantHistoryStore(createAssistantHistoryDb().db as never)
+  ) {
     const app = express();
     app.use(express.json());
-    app.use(createPassengerAssistantRouter(appConfig, service as any, recorder, createPrismaAssistantHistoryStore(createAssistantHistoryDb().db as never), client as any));
+    app.use(createPassengerAssistantRouter(appConfig, service as any, recorder, store, client as any));
     app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       const status = error instanceof HttpError ? error.statusCode : 500;
       res.status(status).json({ error: (error as Error).message });
@@ -197,5 +200,76 @@ describe("POST /passenger/assistant/voice", () => {
     const down = { analyzeText: vi.fn(), analyzeVoice: vi.fn().mockRejectedValue(new AiServicesError("unavailable")) };
     expect((await request(appWith(down)).post("/passenger/assistant/voice").set("Content-Type", "audio/wav").send(WAV)).status).toBe(503);
     expect(service.answer).not.toHaveBeenCalled();
+  });
+
+  it("continues the chat on screen: same saved conversation, its recent turns and the app's language", async () => {
+    const store = createPrismaAssistantHistoryStore(createAssistantHistoryDb().db as never);
+    const conversationId = await store.appendExchange({
+      passengerId: "passenger_1",
+      userText: "I need a ride",
+      assistantText: "Where are you leaving from?",
+      assistantPayload: { status: "clarification", suggestions: [] }
+    });
+    const analyzeVoice = vi.fn().mockResolvedValue({
+      kind: "ok",
+      transcript: "from Hebron",
+      dispatch: {},
+      routing: { routing_target: "HUMAN_DISPATCHER_QUEUE_INTERFACE", needs_review: false },
+      uiDirectives: uiDirectivesSchema.parse(contract.standard)
+    });
+
+    const res = await request(appWith({ analyzeText: vi.fn(), analyzeVoice }, store))
+      .post(`/passenger/assistant/voice?locale=en&conversation_id=${conversationId}`)
+      .set("Content-Type", "audio/wav")
+      .send(WAV);
+
+    expect(res.status).toBe(200);
+    expect(res.body.conversation_id).toBe(conversationId);
+    expect(service.answer).toHaveBeenCalledWith(expect.objectContaining({
+      message: "from Hebron",
+      locale: "en",
+      history: [
+        { role: "user", text: "I need a ride" },
+        { role: "assistant", text: "Where are you leaving from?" }
+      ]
+    }));
+    const saved = await store.latest("passenger_1");
+    expect(saved?.id).toBe(conversationId);
+    expect(saved?.messages.map((message) => message.text)).toEqual([
+      "I need a ride",
+      "Where are you leaving from?",
+      "from Hebron",
+      "من وين بدك تطلع؟"
+    ]);
+  });
+
+  it("starts a new chat, with no borrowed context, for an id that is not the passenger's", async () => {
+    const store = createPrismaAssistantHistoryStore(createAssistantHistoryDb().db as never);
+    const analyzeVoice = vi.fn().mockResolvedValue({
+      kind: "ok",
+      transcript: "from Hebron",
+      dispatch: {},
+      routing: { routing_target: "HUMAN_DISPATCHER_QUEUE_INTERFACE", needs_review: false },
+      uiDirectives: uiDirectivesSchema.parse(contract.standard)
+    });
+
+    const res = await request(appWith({ analyzeText: vi.fn(), analyzeVoice }, store))
+      .post("/passenger/assistant/voice?conversation_id=someone-elses-chat")
+      .set("Content-Type", "audio/wav")
+      .send(WAV);
+
+    expect(res.status).toBe(200);
+    expect(res.body.conversation_id).not.toBe("someone-elses-chat");
+    expect(service.answer).toHaveBeenCalledWith(expect.objectContaining({ locale: "ar", history: [] }));
+  });
+
+  it("refuses an unknown language before any upstream call", async () => {
+    const analyzeVoice = vi.fn();
+    const res = await request(appWith({ analyzeText: vi.fn(), analyzeVoice }))
+      .post("/passenger/assistant/voice?locale=fr")
+      .set("Content-Type", "audio/wav")
+      .send(WAV);
+    expect(res.status).not.toBe(200);
+    expect(analyzeVoice).not.toHaveBeenCalled();
   });
 });

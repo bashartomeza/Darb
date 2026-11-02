@@ -33,6 +33,15 @@ const assistantMessageSchema = z.object({
   }).strict()).max(8).default([])
 }).strict();
 
+// The voice body is the audio itself, so the chat it belongs to comes in the query string.
+const voiceQuerySchema = z.object({
+  locale: z.enum(["ar", "en"]).default("ar"),
+  conversation_id: z.string().trim().min(1).max(128).optional()
+});
+
+/** Turns the model sees with a new message, as many as the text route accepts from the app. */
+const VOICE_HISTORY_TURNS = 8;
+
 const savedRequestLinkSchema = z.object({
   conversation_id: z.string().trim().min(1).max(128),
   saved_request_id: z.string().trim().min(1).max(191)
@@ -211,7 +220,8 @@ export function createPassengerAssistantRouter(
 
   /**
    * Voice -> Whisper (ai_services) -> verified pipeline -> existing assistant.
-   * Body: raw .wav/.mp3 bytes. Response = the normal assistant body plus
+   * Body: raw .wav/.mp3 bytes; query: `locale` (ar|en, default ar) and the chat's `conversation_id`,
+   * so a voice message lands in the same saved chat as typed ones. Response = the normal assistant body plus
    * `transcript`, `ai_routing` and `frontend_ai_ui_directives` (contract v1).
    */
   router.post(
@@ -220,6 +230,7 @@ export function createPassengerAssistantRouter(
     async (req: AuthenticatedRequest, res, next) => {
       try {
         if (!aiServices) throw new HttpError(503, "voice_unavailable");
+        const query = voiceQuerySchema.parse(req.query);
         const audio = req.body;
         if (!Buffer.isBuffer(audio) || audio.length === 0) throw new HttpError(415, "unsupported_media_type");
 
@@ -235,7 +246,21 @@ export function createPassengerAssistantRouter(
         const transcript = (analysis.transcript ?? "").trim().slice(0, 1_000);
         if (!transcript) throw new HttpError(422, "voice_input_rejected");
 
-        const body = await answerExchange(req, { message: transcript, locale: "ar", history: [] });
+        // A voice message continues the chat on screen, exactly like a typed one: it is saved in the
+        // same conversation (the store ignores an id the passenger does not own and starts a new one)
+        // and the model sees that chat's recent turns, read from the database the app shows.
+        const current = query.conversation_id ? await history.latest(req.user!.id) : null;
+        const turns = (current && current.id === query.conversation_id ? current.messages : [])
+          .filter((message) => message.text.trim().length > 0)
+          .slice(-VOICE_HISTORY_TURNS)
+          .map((message) => ({ role: message.role, text: message.text.trim().slice(0, 2_000) }));
+
+        const body = await answerExchange(req, {
+          message: transcript,
+          locale: query.locale,
+          conversation_id: query.conversation_id,
+          history: turns
+        });
         res.json({
           ...body,
           transcript,
