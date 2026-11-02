@@ -111,4 +111,21 @@ def test_emergency_directives_hex_haptics_and_dial_buttons():
     d = nlp_engine.generate_dynamic_ai_ui_payload({"urgency_profile": "Emergency", "vehicle_class": "Unspecified"})["frontend_ai_ui_directives"]
     assert d["mode"] == "emergency" and d["theme"]["primary_color_hex"] == "#DC2626" and d["theme"]["flashing"]
     assert d["haptics"]["vibrate"] and d["haptics"]["pattern_ms"] and d["requires_human_confirmation"]
-    assert all(a["dial_uri"].startswith("tel:") for a in d
+    assert all(a["dial_uri"].startswith("tel:") for a in d["emergency_actions"]) and len(d["emergency_actions"]) == 3
+    assert d["theme"]["respect_reduce_motion"] is True and d["logistics_progress"] is None
+
+
+def test_logistics_directives_chart_series_and_savings_bounds():
+    d = nlp_engine.generate_dynamic_ai_ui_payload({"urgency_profile": "High", "vehicle_class": "Logistics", "capacity_requirements": 4})["frontend_ai_ui_directives"]
+    p = d["logistics_progress"]
+    assert d["mode"] == "logistics" and not d["haptics"]["vibrate"] and d["emergency_actions"] == []
+    assert p["parcels_total"] == 4 and len(p["series"]) == 4 and p["is_simulation"]
+    assert 0.2 <= p["fuel_savings_index"] <= 0.4 and p["trips_saved"] == 3
+
+
+def test_standard_directives_and_emergency_number_override(monkeypatch):
+    d = nlp_engine.generate_dynamic_ai_ui_payload({"urgency_profile": "Low", "vehicle_class": "Public"})["frontend_ai_ui_directives"]
+    assert d["mode"] == "standard" and not d["theme"]["flashing"]
+    monkeypatch.setenv("AI_SERVICES_EMERGENCY_NUMBERS", "101,+97012345,evil;rm")
+    e = nlp_engine.generate_dynamic_ai_ui_payload({"urgency_profile": "Emergency"})["frontend_ai_ui_directives"]
+    assert [a["dial_uri"] for a in e["emergency_actions"]] == ["tel:101", "tel:+97012345"]
