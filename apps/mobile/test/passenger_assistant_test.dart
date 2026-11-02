@@ -47,6 +47,10 @@ void main() {
         );
         final draft = PassengerAssistantTripDraft(
           pickupKey: 'bab_al_zawiya',
+          pickupLat: 31.5326,
+          pickupLng: 35.0998,
+          destinationLat: 31.7054,
+          destinationLng: 35.2024,
           pickupLabel: 'Bab Al-Zawiya',
           destinationKey: 'bethlehem',
           destinationLabel: 'Bethlehem Center',
@@ -130,6 +134,10 @@ void main() {
         );
         final draft = PassengerAssistantTripDraft(
           pickupKey: 'bab_al_zawiya',
+          pickupLat: 31.5326,
+          pickupLng: 35.0998,
+          destinationLat: 31.7054,
+          destinationLng: 35.2024,
           pickupLabel: 'Bab Al-Zawiya',
           destinationKey: 'bethlehem',
           destinationLabel: 'Bethlehem Center',
@@ -168,6 +176,8 @@ void main() {
           'destination_lng': 35.2024,
           'preferred_time': '2030-01-02T12:00:00.000Z',
           'passenger_count': 2,
+          // Saved on the request by the server as its matching pin.
+          'selected_driver_route_id': 'route_1',
         });
         expect(requests[2].url.path, '/api/v1/matches/run');
         expect(jsonDecode(requests[2].body), {
@@ -390,6 +400,10 @@ void main() {
         ],
         draft: PassengerAssistantTripDraft(
           pickupKey: 'bab_al_zawiya',
+          pickupLat: 31.5326,
+          pickupLng: 35.0998,
+          destinationLat: 31.7054,
+          destinationLng: 35.2024,
           pickupLabel: 'Bab Al-Zawiya',
           destinationKey: 'bethlehem',
           destinationLabel: 'Bethlehem Center',
@@ -659,6 +673,19 @@ class _ControlledAssistantRepository implements PassengerAssistantRepository {
   PassengerAssistantTripOption? selectedOption;
 
   @override
+  Future<PassengerAssistantState> loadConversation() async =>
+      const PassengerAssistantState();
+
+  @override
+  Future<void> clearConversation() async {}
+
+  @override
+  Future<void> linkSavedRequest({
+    required String conversationId,
+    required String requestId,
+  }) async {}
+
+  @override
   Future<List<PassengerAssistantTripOption>> searchTrips(
     PassengerAssistantTripDraft draft,
   ) async {
@@ -727,6 +754,10 @@ class _SelectingAssistantController extends PassengerAssistantController {
 
 PassengerAssistantTripDraft _tripDraft() => PassengerAssistantTripDraft(
   pickupKey: 'bab_al_zawiya',
+  pickupLat: 31.5326,
+  pickupLng: 35.0998,
+  destinationLat: 31.7054,
+  destinationLng: 35.2024,
   pickupLabel: 'Bab Al-Zawiya',
   destinationKey: 'bethlehem',
   destinationLabel: 'Bethlehem Center',

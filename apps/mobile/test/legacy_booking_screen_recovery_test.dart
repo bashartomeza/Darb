@@ -15,7 +15,6 @@ import 'package:darb_mobile/features/assistant/data/passenger_assistant_reposito
 import 'package:darb_mobile/features/assistant/domain/passenger_assistant_models.dart';
 import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
 import 'package:darb_mobile/features/passenger/application/legacy_passenger_request_mutation.dart';
-import 'package:darb_mobile/features/passenger/data/passenger_request_selection_storage.dart';
 import 'package:darb_mobile/features/passenger/data/passenger_repository.dart';
 import 'package:darb_mobile/features/passenger/presentation/create_request_screen.dart';
 import 'package:darb_mobile/features/passenger/presentation/request_detail_screen.dart';
@@ -26,11 +25,13 @@ import 'support/auth_test_support.dart';
 
 void main() {
   testWidgets(
-    'direct request detail cannot lose selection after confirmed create pin write fails',
+    'request detail matches the route saved on the server-side request',
     (tester) async {
       FlutterSecureStorage.setMockInitialValues({});
+      // The pick lives on the request row, so a fresh install with empty
+      // device storage still books exactly the route the passenger chose.
       final saved = {
-        'id': 'pin-pending-request',
+        'id': 'pinned-request',
         'status': 'pending',
         'pickup_label': 'Origin',
         'pickup_lat': 31.5,
@@ -40,61 +41,32 @@ void main() {
         'destination_lng': 35.2,
         'preferred_time': '2030-01-02T12:00:00.000Z',
         'passenger_count': 1,
+        'selected_driver_route_id': 'selected-route',
         'created_at': DateTime.now().toUtc().toIso8601String(),
       };
-      final mutation = LegacyPassengerRequestMutation(
-        storage: CanonicalOperationStorage(
-          const FlutterSecureStorage(),
-          storageKey: 'darb_legacy_passenger_create_v1',
-        ),
-        currentActor: () => 'passenger-fixture',
-        selectionStorage: _FailedSelectionStorage(),
-      );
-      await expectLater(
-        mutation.create(
-          payload: {...saved}
-            ..remove('id')
-            ..remove('status')
-            ..remove('created_at'),
-          recoveryContext: const {
-            'option': {'id': 'selected-route'},
-          },
-          send: (_, _, _) async => {'request': saved},
-        ),
-        throwsStateError,
-      );
-      expect(await mutation.pending(), isNotNull);
-      var matchingCalls = 0;
-      await _pump(
-        tester,
-        (request) async {
-          if (request.url.path.endsWith(
-            '/passenger/requests/pin-pending-request',
-          )) {
-            return http.Response(jsonEncode({'request': saved}), 200);
-          }
-          if (request.url.path.endsWith('/matches/run')) {
-            matchingCalls++;
-            return http.Response(
-              jsonEncode(_matchResponse('alternative-route')),
-              201,
-            );
-          }
-          if (request.url.path.endsWith('/trips')) {
-            return http.Response('{"trips":[]}', 200);
-          }
-          return http.Response('{"matches":[]}', 200);
-        },
-        preserveStorage: true,
-        detailRequestId: 'pin-pending-request',
-      );
+      final routes = <Object?>[];
+      await _pump(tester, (request) async {
+        if (request.url.path.endsWith('/passenger/requests/pinned-request')) {
+          return http.Response(jsonEncode({'request': saved}), 200);
+        }
+        if (request.url.path.endsWith('/matches/run')) {
+          routes.add((jsonDecode(request.body) as Map)['driverRouteId']);
+          return http.Response(
+            jsonEncode(_matchResponse('selected-route')),
+            201,
+          );
+        }
+        if (request.url.path.endsWith('/trips')) {
+          return http.Response('{"trips":[]}', 200);
+        }
+        return http.Response('{"matches":[]}', 200);
+      }, detailRequestId: 'pinned-request');
       await tester.tap(
         find.widgetWithText(FilledButton, 'Find compatible route'),
       );
       await tester.pumpAndSettle();
-      expect(matchingCalls, 0);
-      expect(find.text('Matched'), findsNothing);
-      expect(await mutation.pending(), isNotNull);
+      expect(routes, ['selected-route']);
+      expect(find.text('Matched'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
@@ -166,6 +138,10 @@ void main() {
         assistant.selectTrip(
           draft: PassengerAssistantTripDraft(
             pickupKey: 'bab_al_zawiya',
+            pickupLat: 31.5326,
+            pickupLng: 35.0998,
+            destinationLat: 31.7054,
+            destinationLng: 35.2024,
             pickupLabel: 'Origin',
             destinationKey: 'bethlehem',
             destinationLabel: 'Destination',
@@ -271,6 +247,10 @@ void main() {
           assistant.selectTrip(
             draft: PassengerAssistantTripDraft(
               pickupKey: 'bab_al_zawiya',
+              pickupLat: 31.5326,
+              pickupLng: 35.0998,
+              destinationLat: 31.7054,
+              destinationLng: 35.2024,
               pickupLabel: 'Bab Al-Zawiya',
               destinationKey: 'bethlehem',
               destinationLabel: 'Bethlehem Center',
@@ -553,14 +533,6 @@ Map<String, dynamic> _matchResponse(String routeId) => {
       key: 0.8,
   },
 };
-
-class _FailedSelectionStorage extends PassengerRequestSelectionStorage {
-  _FailedSelectionStorage() : super(const FlutterSecureStorage());
-  @override
-  Future<void> save(String actorId, String requestId, String routeId) async {
-    throw StateError('secure selection write failed');
-  }
-}
 
 Future<void> _pump(
   WidgetTester tester,

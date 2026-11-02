@@ -16,7 +16,9 @@ import '../../../core/widgets/darb_back_button.dart';
 import '../application/passenger_assistant_controller.dart';
 import '../data/speech_service.dart';
 import '../domain/passenger_assistant_models.dart';
-import '../../passenger/data/passenger_models.dart';
+import '../../passenger/application/passenger_controller.dart';
+import '../../legacy_corridor/data/legacy_corridor_models.dart';
+import '../../legacy_corridor/data/legacy_corridor_repository.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../passenger/domain/trip_offer.dart';
 import '../../passenger/presentation/widgets/trip_offer_card.dart';
@@ -193,6 +195,8 @@ class _PassengerAssistantScreenState
     if (!mounted || actor != ref.read(authControllerProvider).value?.user?.id) {
       return;
     }
+    // A booking may have saved a request (and a match) whatever the outcome.
+    invalidatePassengerLists(ref.invalidate);
     if (mounted && matchId != null) {
       context.go('/passenger/match/$matchId');
     } else if (mounted) {
@@ -217,6 +221,40 @@ class _PassengerAssistantScreenState
         );
         context.go('/passenger/request/$requestId');
       }
+    }
+  }
+
+  Future<void> _startNewChat() async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.assistantNewChatTitle),
+        content: Text(l10n.assistantNewChatBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('assistantNewChatConfirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.assistantNewChat),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    _inputController.clear();
+    try {
+      await ref
+          .read(passengerAssistantControllerProvider.notifier)
+          .startNewChat();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.assistantNewChatFailed)));
     }
   }
 
@@ -249,12 +287,27 @@ class _PassengerAssistantScreenState
             ),
       body: Column(
         children: [
+          if ((assistant.value?.messages.isNotEmpty ?? false) &&
+              !busy &&
+              !recoveryPending)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(top: 4, end: 8),
+                child: TextButton.icon(
+                  key: const ValueKey('assistantNewChat'),
+                  onPressed: _startNewChat,
+                  icon: const Icon(Icons.add_comment_outlined, size: 18),
+                  label: Text(l10n.assistantNewChat),
+                ),
+              ),
+            ),
           Expanded(
             child: assistant.when(
               loading: () => const _AssistantLoadingView(),
               error: (_, _) => ErrorStateView(
-                title: l10n.assistantErrorTitle,
-                message: l10n.assistantErrorBody,
+                title: l10n.assistantHistoryErrorTitle,
+                message: l10n.assistantHistoryErrorBody,
                 retryLabel: l10n.retry,
                 onRetry: () =>
                     ref.invalidate(passengerAssistantControllerProvider),
@@ -585,7 +638,7 @@ class _TripSearchResults extends StatelessWidget {
   );
 }
 
-class _TripReviewCard extends StatefulWidget {
+class _TripReviewCard extends ConsumerStatefulWidget {
   const _TripReviewCard({
     required this.draft,
     required this.searching,
@@ -599,11 +652,44 @@ class _TripReviewCard extends StatefulWidget {
   final ValueChanged<PassengerAssistantTripDraft> onConfirm;
 
   @override
-  State<_TripReviewCard> createState() => _TripReviewCardState();
+  ConsumerState<_TripReviewCard> createState() => _TripReviewCardState();
 }
 
-class _TripReviewCardState extends State<_TripReviewCard> {
+class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
   late PassengerAssistantTripDraft _draft = widget.draft;
+
+  /// Sets each end the passenger kept but that has no coordinates yet from the
+  /// corridor stop with the same key, so the request carries server places.
+  PassengerAssistantTripDraft _withCorridorCoordinates(
+    PassengerAssistantTripDraft draft,
+    LegacyCorridor? corridor,
+  ) {
+    if (corridor == null) return draft;
+    var resolved = draft;
+    if (draft.pickupLat == null || draft.pickupLng == null) {
+      final place = corridor.passengerPickups
+          .where((value) => value.key == draft.pickupKey)
+          .firstOrNull;
+      if (place != null) {
+        resolved = resolved.copyWith(
+          pickupLat: place.lat,
+          pickupLng: place.lng,
+        );
+      }
+    }
+    if (draft.destinationLat == null || draft.destinationLng == null) {
+      final place = corridor.passengerDropoffs
+          .where((value) => value.key == draft.destinationKey)
+          .firstOrNull;
+      if (place != null) {
+        resolved = resolved.copyWith(
+          destinationLat: place.lat,
+          destinationLng: place.lng,
+        );
+      }
+    }
+    return resolved;
+  }
 
   @override
   void didUpdateWidget(covariant _TripReviewCard oldWidget) {
@@ -618,6 +704,12 @@ class _TripReviewCardState extends State<_TripReviewCard> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final timeValid = _draft.preferredTime.isAfter(DateTime.now());
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    // The other places offered are the corridor's own stops; until they load
+    // (or if they cannot), the assistant's matched stops remain choosable.
+    final corridor = ref.watch(legacyCorridorProvider).value;
+    final pickups = corridor?.passengerPickups ?? const <CorridorPlace>[];
+    final destinations = corridor?.passengerDropoffs ?? const <CorridorPlace>[];
 
     return DarbCard(
       key: const ValueKey('assistantExtractedData'),
@@ -650,24 +742,24 @@ class _TripReviewCardState extends State<_TripReviewCard> {
             initialValue: _draft.pickupKey,
             decoration: InputDecoration(labelText: l10n.pickup),
             items: [
-              for (final pickup in lockedPickupPresets)
+              for (final pickup in pickups)
                 DropdownMenuItem(
                   value: pickup.key,
-                  child: Text(localizedCorridorPlace(context, pickup.label)),
+                  child: Text(pickup.displayName(arabic: arabic)),
                 ),
-              // The stop the assistant matched, when it is not a preset place.
-              if (!lockedPickupPresets.any(
-                (value) => value.key == widget.draft.pickupKey,
-              ))
+              // The stop the assistant matched, when it is not a corridor stop.
+              if (!pickups.any((value) => value.key == widget.draft.pickupKey))
                 DropdownMenuItem(
                   value: widget.draft.pickupKey,
-                  child: Text(widget.draft.pickupLabel),
+                  child: Text(
+                    localizedCorridorPlace(context, widget.draft.pickupLabel),
+                  ),
                 ),
             ],
             onChanged: widget.searching
                 ? null
                 : (key) {
-                    final pickup = lockedPickupPresets
+                    final pickup = pickups
                         .where((value) => value.key == key)
                         .firstOrNull;
                     setState(() {
@@ -695,30 +787,39 @@ class _TripReviewCardState extends State<_TripReviewCard> {
             initialValue: _draft.destinationKey,
             decoration: InputDecoration(labelText: l10n.destination),
             items: [
-              DropdownMenuItem(
-                value: 'bethlehem',
-                child: Text(
-                  localizedCorridorPlace(context, lockedDestinationLabel),
+              for (final destination in destinations)
+                DropdownMenuItem(
+                  value: destination.key,
+                  child: Text(destination.displayName(arabic: arabic)),
                 ),
-              ),
-              // The stop the assistant matched, when it is not the preset one.
-              if (widget.draft.destinationKey != 'bethlehem')
+              // The stop the assistant matched, when it is not a corridor stop.
+              if (!destinations.any(
+                (value) => value.key == widget.draft.destinationKey,
+              ))
                 DropdownMenuItem(
                   value: widget.draft.destinationKey,
-                  child: Text(widget.draft.destinationLabel),
+                  child: Text(
+                    localizedCorridorPlace(
+                      context,
+                      widget.draft.destinationLabel,
+                    ),
+                  ),
                 ),
             ],
             onChanged: widget.searching
                 ? null
                 : (key) {
                     if (key == null) return;
+                    final destination = destinations
+                        .where((value) => value.key == key)
+                        .firstOrNull;
                     setState(() {
-                      _draft = key == 'bethlehem'
+                      _draft = destination != null
                           ? _draft.copyWith(
-                              destinationKey: key,
-                              destinationLabel: lockedDestinationLabel,
-                              destinationLat: lockedDestinationLat,
-                              destinationLng: lockedDestinationLng,
+                              destinationKey: destination.key,
+                              destinationLabel: destination.label,
+                              destinationLat: destination.lat,
+                              destinationLng: destination.lng,
                             )
                           : _draft.copyWith(
                               destinationKey: widget.draft.destinationKey,
@@ -781,7 +882,9 @@ class _TripReviewCardState extends State<_TripReviewCard> {
             icon: widget.searching ? null : Icons.search,
             busy: widget.searching,
             onPressed: !widget.searching && timeValid
-                ? () => widget.onConfirm(_draft)
+                ? () => widget.onConfirm(
+                    _withCorridorCoordinates(_draft, corridor),
+                  )
                 : null,
           ),
         ],

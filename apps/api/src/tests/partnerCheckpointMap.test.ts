@@ -10,6 +10,8 @@ import {
   nameSkeleton,
   normaliseArabicName,
   osmArabicNames,
+  partnerDirectionStatus,
+  partnerOverallStatus,
   placePartnerCheckpoints,
   type OsmCheckpointFile
 } from "../services/partnerCheckpointMap.js";
@@ -37,7 +39,7 @@ const osm: OsmCheckpointFile = {
   ]
 };
 
-const partner = (rows: Array<{ id: string; city: string; checkpoint: string }>) =>
+const partner = (rows: Array<{ id: string; city: string; checkpoint: string; entering_status?: string; leaving_status?: string }>) =>
   mapLimitedPartnerResponse(
     {
       generatedAt: "2026-11-01T10:00:00Z",
@@ -81,7 +83,37 @@ describe("Arabic name normalisation", () => {
 describe("placing partner rows", () => {
   const index = new OsmCheckpointIndex(osm.checkpoints);
 
-  it("pins only exact name matches, keeps status unknown and lists the rest", () => {
+  it("carries the partner's entering/leaving state; the worst direction sets the pin", () => {
+    const result = placePartnerCheckpoints(
+      partner([
+        { id: "s1", city: "نابلس", checkpoint: "حوارة", entering_status: "سالك", leaving_status: "سالك" },
+        { id: "s2", city: "نابلس", checkpoint: "دير شرف", entering_status: "سالك", leaving_status: "مغلق" },
+        { id: "s3", city: "بيت لحم", checkpoint: "الكونتينر", entering_status: "أزمة خانقة", leaving_status: "سالك" },
+        { id: "s4", city: "أريحا - طوباس", checkpoint: "تياسير", entering_status: "سالك" },
+        { id: "s5", city: "نابلس", checkpoint: "المربعة", entering_status: "أزمة متوسطة", leaving_status: "مغلق" }
+      ]),
+      index,
+      osm
+    );
+    expect(result.checkpoints.map((c) => [c.id, c.status, c.entering_status, c.leaving_status])).toEqual([
+      ["aweenrayeh:s1", "open", "سالك", "سالك"],
+      ["aweenrayeh:s2", "closed", "سالك", "مغلق"],
+      ["aweenrayeh:s3", "congested", "أزمة خانقة", "سالك"],
+      // One direction missing: not called open.
+      ["aweenrayeh:s4", "unknown", "سالك", null]
+    ]);
+    expect(result.unplaced[0]).toMatchObject({ id: "aweenrayeh:s5", status: "closed", entering_status: "أزمة متوسطة", leaving_status: "مغلق" });
+  });
+
+  it("does not guess a state from unfamiliar wording", () => {
+    expect(partnerDirectionStatus("مغلقة")).toBe("closed");
+    expect(partnerDirectionStatus("ازمة")).toBe("congested");
+    expect(partnerDirectionStatus("غير محدد")).toBe("unknown");
+    expect(partnerDirectionStatus(null)).toBe("unknown");
+    expect(partnerOverallStatus("سالك", "غير محدد")).toBe("unknown");
+  });
+
+  it("pins only exact name matches, keeps status unknown without a state and lists the rest", () => {
     const result = placePartnerCheckpoints(
       partner([
         { id: "p1", city: "نابلس", checkpoint: "حوارة" },
@@ -169,7 +201,7 @@ describe("GET /api/v1/checkpoints from the partner source", () => {
           JSON.stringify({
             generatedAt: "2026-11-01T10:00:00Z",
             checkpoints: [
-              { id: "p1", city: "نابلس", checkpoint: "حوارة", entering_status_last_updated: "2026-11-01T09:00:00", leaving_status_last_updated: "2026-11-01T09:00:00" },
+              { id: "p1", city: "نابلس", checkpoint: "حوارة", entering_status: "مغلق", leaving_status: "سالك", entering_status_last_updated: "2026-11-01T09:00:00", leaving_status_last_updated: "2026-11-01T09:00:00" },
               { id: "p2", city: "نابلس", checkpoint: "غير موجود", entering_status_last_updated: "2026-11-01T09:00:00", leaving_status_last_updated: "2026-11-01T09:00:00" }
             ]
           })
@@ -210,7 +242,7 @@ describe("GET /api/v1/checkpoints from the partner source", () => {
       expect(res.headers["cache-control"]).toBe("no-store");
       expect(res.body.source).toBe("aweenrayeh_partner");
       expect(res.body.checkpoints).toHaveLength(1);
-      expect(res.body.checkpoints[0]).toMatchObject({ id: "aweenrayeh:p1", status: "unknown", latitude: 32.178 });
+      expect(res.body.checkpoints[0]).toMatchObject({ id: "aweenrayeh:p1", status: "closed", entering_status: "مغلق", leaving_status: "سالك", latitude: 32.178 });
       expect(res.body.unplaced).toEqual([expect.objectContaining({ id: "aweenrayeh:p2", reason: "no_name_match" })]);
       expect((await request(server).get("/api/v1/capabilities").set(auth(next)).expect(200)).body.checkpoints_available).toBe(true);
     }

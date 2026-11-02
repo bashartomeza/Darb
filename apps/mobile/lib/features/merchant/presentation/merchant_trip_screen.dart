@@ -118,7 +118,12 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
                 '${l10n.currentStatus}: ${merchantStatusLabel(l10n, state.trip.status)}',
                 key: const ValueKey('merchantTripStatus'),
               ),
-              Text('${l10n.selectedRoute}: ${l10n.lockedCorridor}'),
+              Text(
+                '${l10n.selectedRoute}: '
+                '${localizedCorridorPlace(context, state.trip.route.originLabel)}'
+                ' → '
+                '${localizedCorridorPlace(context, state.trip.route.destinationLabel)}',
+              ),
               Text(
                 '${l10n.orderStatus}: ${merchantStatusLabel(l10n, state.order.status)}',
                 key: const ValueKey('merchantTripOrderStatus'),

@@ -500,6 +500,62 @@ describe("matching, batching, comparison", () => {
     expect(prismaMock.match.create).not.toHaveBeenCalled();
   });
 
+  describe("route pinned on the saved request", () => {
+    const pinnedRoute = {
+      ...compatibleRoute,
+      id: "route_pinned",
+      driver: { ...compatibleRoute.driver, id: "driver_profile_pinned", trust_score: 60, user: { name: "Pinned Driver" } }
+    };
+    const pinnedRequest = { ...passengerRequest, selected_driver_route_id: "route_pinned" };
+
+    beforeEach(() => {
+      prismaMock.passengerRequest.findUnique.mockResolvedValue(pinnedRequest);
+      prismaMock.merchantOrder.findUnique.mockResolvedValue(null);
+      prismaMock.match.create.mockImplementation(({ data }) => ({ id: "match_pinned", ...data, driver_route: pinnedRoute }));
+    });
+
+    it("matches the saved route even when the caller sends no route", async () => {
+      // The higher-scoring candidate must not replace the passenger's own pick.
+      prismaMock.driverRoute.findMany.mockResolvedValue([compatibleRoute, pinnedRoute]);
+
+      await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("passenger_1"))
+        .send({ passengerRequestId: "req_1" })
+        .expect(201);
+
+      expect(prismaMock.match.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ driver_route_id: "route_pinned" }) })
+      );
+    });
+
+    it("refuses a different route than the one saved on the request", async () => {
+      prismaMock.driverRoute.findMany.mockResolvedValue([compatibleRoute, pinnedRoute]);
+
+      const response = await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("passenger_1"))
+        .send({ passengerRequestId: "req_1", driverRouteId: "route_compatible" })
+        .expect(409);
+
+      expect(response.body.error).toBe("selected_driver_route_unavailable");
+      expect(prismaMock.match.create).not.toHaveBeenCalled();
+    });
+
+    it("never substitutes another candidate when the saved route is gone", async () => {
+      prismaMock.driverRoute.findMany.mockResolvedValue([compatibleRoute]);
+
+      const response = await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("passenger_1"))
+        .send({ passengerRequestId: "req_1" })
+        .expect(409);
+
+      expect(response.body.error).toBe("selected_driver_route_unavailable");
+      expect(prismaMock.match.create).not.toHaveBeenCalled();
+    });
+  });
+
   it("combined matching links the merchant's persisted parcel batch", async () => {
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }]);
     prismaMock.parcel.count.mockResolvedValue(5);

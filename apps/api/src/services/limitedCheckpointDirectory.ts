@@ -33,6 +33,10 @@ function timestamp(value: unknown): PartnerTimestamp {
   // In particular, do not call Date.parse on an offset-free provider value.
   return { raw, timezone_specified: zone !== undefined };
 }
+/** Provider's directional state ("سالك", "مغلق", "أزمة ..."), passed through as text. Optional. */
+function optionalStatus(value: unknown): string | null {
+  return typeof value === "string" && value.trim() && value.length <= 100 ? value.trim() : null;
+}
 export function mapLimitedPartnerResponse(payload: unknown, fetchedAt: string) {
   const root = object(payload);
   const generated_at = timestamp(root.generatedAt);
@@ -50,6 +54,7 @@ export function mapLimitedPartnerResponse(payload: unknown, fetchedAt: string) {
       provider_checkpoint_id: id, checkpoint_name_ar: name, city_ar: city,
       entering_status_last_updated: timestamp(row.entering_status_last_updated),
       leaving_status_last_updated: timestamp(row.leaving_status_last_updated),
+      entering_status: optionalStatus(row.entering_status), leaving_status: optionalStatus(row.leaving_status),
       latitude: null, longitude: null, coordinate_verified: false,
       ready_for_map: false, traffic_status: "unavailable" as const
     };

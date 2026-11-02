@@ -1,10 +1,12 @@
-# Starts the local test environment: API (port 3000) and Admin site (port 5173) on the
-# disposable darb_demo database. State, logs and one-time codes live in
-# .staging-data/test-env (git-ignored).
+# Starts the local environment: API (port 3000) and Admin site (port 5173). By default it runs
+# on the permanent `darb` database: everything created in the apps is kept, pending migrations
+# are applied first, and the demo reset refuses this database (lib/demoResetSafety.ts).
+# -Disposable runs on the resettable darb_demo database instead (scripts/test-env/reset-data.ps1).
+# State, logs and one-time codes live in .staging-data/test-env (git-ignored).
 #
-#   pwsh -NoProfile -File scripts/test-env/start.ps1
+#   pwsh -NoProfile -File scripts/test-env/start.ps1 [-Disposable]
 #   pwsh -NoProfile -File scripts/test-env/stop.ps1
-param([int]$ApiPort = 3000, [int]$AdminPort = 5173, [switch]$RealMail)
+param([int]$ApiPort = 3000, [int]$AdminPort = 5173, [switch]$RealMail, [switch]$Disposable)
 $ErrorActionPreference = "Stop"
 
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
@@ -19,12 +21,24 @@ foreach ($port in $ApiPort, $AdminPort) {
 }
 if (-not (Test-Path (Join-Path $root "apps\api\dist\server.js"))) { throw "Build first: npm run build -w @darb/api" }
 
-# Settings come from apps/api/.env, then the database is pointed at the disposable demo one.
+# Settings come from apps/api/.env, then the database is pointed at `darb` (or darb_demo).
 $values = @{}
 foreach ($line in Get-Content (Join-Path $root "apps\api\.env")) {
   if ($line -match '^([A-Z0-9_]+)=(.*)$') { $values[$Matches[1]] = $Matches[2].Trim('"') }
 }
-$databaseUrl = $values["DATABASE_URL"] -replace "/[A-Za-z0-9_]+(\?|$)", "/darb_demo`$1"
+$databaseName = if ($Disposable) { "darb_demo" } else { "darb" }
+$databaseUrl = $values["DATABASE_URL"] -replace "/[A-Za-z0-9_]+(\?|$)", "/$databaseName`$1"
+
+# Bring the database schema up to date before anything uses it (applies only pending migrations).
+$env:DATABASE_URL = $databaseUrl
+Push-Location (Join-Path $root "apps\api")
+try {
+  npx prisma migrate deploy 2>&1 | Out-File -Encoding utf8 (Join-Path $state "migrate.log")
+  if ($LASTEXITCODE -ne 0) { throw "Database migration failed; see $(Join-Path $state 'migrate.log')." }
+} finally {
+  Pop-Location
+  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+}
 
 # Admin site first, with a clean environment (it reads its own apps/admin/.env.local).
 $adminProcess = Start-Process -FilePath (Get-Command npm.cmd).Source `
@@ -32,12 +46,13 @@ $adminProcess = Start-Process -FilePath (Get-Command npm.cmd).Source `
   -WorkingDirectory $root -WindowStyle Hidden -PassThru `
   -RedirectStandardOutput (Join-Path $state "admin.log") -RedirectStandardError (Join-Path $state "admin.err.log")
 
-# API: settings from apps/api/.env, pointed at the disposable demo database.
+# API: settings from apps/api/.env, pointed at the chosen database.
 foreach ($key in $values.Keys) { Set-Item -Path "Env:$key" -Value $values[$key] }
 $env:DATABASE_URL = $databaseUrl
 $env:APP_ENV = "demo"
 $env:PORT = "$ApiPort"
-$env:DEMO_RESET_ALLOWED_DATABASES = "darb_demo"
+# Only the disposable database may ever be reset; the permanent one is never listed.
+$env:DEMO_RESET_ALLOWED_DATABASES = if ($Disposable) { "darb_demo" } else { "" }
 $env:TEST_OTP_FILE = Join-Path $state "otp.txt"
 # Email sign-up needs a secret for its one-time tokens; keep one per test machine.
 $pepperFile = Join-Path $state "auth-pepper.txt"
@@ -123,6 +138,7 @@ function Wait-Http($url) {
 }
 $apiUp = Wait-Http "http://127.0.0.1:$ApiPort/api/v1/health/ready"
 $adminUp = Wait-Http "http://localhost:$AdminPort/"
+Write-Output "Database: $databaseName $(if ($Disposable) { '(disposable, reset-data.ps1 can wipe it)' } else { '(permanent, never reset)' })"
 Write-Output "API   http://localhost:$ApiPort   ready: $apiUp"
 Write-Output "Admin http://localhost:$AdminPort   ready: $adminUp"
 Write-Output "One-time sign-up codes appear in: $(Join-Path $state 'otp.txt')"

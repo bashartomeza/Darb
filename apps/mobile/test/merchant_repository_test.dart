@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:darb_mobile/features/legacy_corridor/data/legacy_corridor_models.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_models.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
 
 import 'support/auth_test_support.dart';
+import 'support/legacy_corridor_fixture.dart';
 
 void main() {
   test('order list/detail parse parcels and persisted safe batch', () async {
@@ -23,41 +25,46 @@ void main() {
     expect((await repository.orderDetail('order_1')).canBatch, isFalse);
   });
 
-  test('create order sends only locked pickup and 1-10 parcel DTOs', () async {
-    Map<String, dynamic>? body;
-    final repository = _repository((request) async {
-      body = jsonDecode(request.body) as Map<String, dynamic>;
-      return http.Response('{"order":$_submittedOrderJson}', 201);
-    });
+  test(
+    'create order sends the chosen corridor places and 1-10 parcel DTOs',
+    () async {
+      Map<String, dynamic>? body;
+      final repository = _repository((request) async {
+        body = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response('{"order":$_submittedOrderJson}', 201);
+      });
+      const nearer = CorridorPlace(
+        key: 'nearer',
+        nameAr: 'أقرب',
+        nameEn: 'Nearer stop',
+        lat: 31.61,
+        lng: 35.16,
+        parcelDropoff: true,
+      );
 
-    final order = await repository.createOrder(const [
-      ParcelDraft(),
-      ParcelDraft(
-        destinationLabel: 'Manger Street',
-        size: 'M',
-        priority: 'high',
-      ),
-      ParcelDraft(
-        destinationLabel: 'Bethlehem Center',
-        size: 'L',
-        priority: 'low',
-      ),
-    ]);
+      final order = await repository.createOrder(testPickup, [
+        ParcelDraft.to(testDropoff),
+        ParcelDraft.to(nearer, size: 'M', priority: 'high'),
+        ParcelDraft.to(testDropoff, size: 'L', priority: 'low'),
+      ]);
 
-    expect(order.parcels, hasLength(3));
-    expect(body?['pickup_label'], merchantPickupLabel);
-    expect(body?['pickup_lat'], merchantPickupLat);
-    expect(body?['pickup_lng'], merchantPickupLng);
-    final parcels = body?['parcels'] as List<dynamic>;
-    expect(parcels, hasLength(3));
-    expect(parcels[1], {
-      'destination_label': 'Manger Street',
-      'destination_lat': merchantDestinationLat,
-      'destination_lng': merchantDestinationLng,
-      'size': 'M',
-      'priority': 'high',
-    });
-  });
+      expect(order.parcels, hasLength(3));
+      expect(body?['pickup_label'], 'Bab Al-Zawiya');
+      expect(body?['pickup_lat'], 31.5326);
+      expect(body?['pickup_lng'], 35.0998);
+      final parcels = body?['parcels'] as List<dynamic>;
+      expect(parcels, hasLength(3));
+      // Each parcel carries its own stop's coordinates.
+      expect(parcels[1], {
+        'destination_label': 'Nearer stop',
+        'destination_lat': 31.61,
+        'destination_lng': 35.16,
+        'size': 'M',
+        'priority': 'high',
+      });
+      expect(parcels[0]['destination_lat'], 31.7054);
+    },
+  );
 
   test(
     'batch, matching, inbox, detail, trip, and location contracts',

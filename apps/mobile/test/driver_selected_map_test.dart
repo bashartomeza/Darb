@@ -122,7 +122,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('مغلق'), findsOneWidget);
     expect(find.text('سالك'), findsOneWidget);
-    expect(find.text('أزمة متوسطة'), findsOneWidget);
+    expect(find.text('أزمة'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     h.dispose();

@@ -2,13 +2,6 @@ import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 
-const lockedDriverOriginLabel = 'Hebron / PPU / Bab Al-Zawiya';
-const lockedDriverOriginLat = 31.5326;
-const lockedDriverOriginLng = 35.0998;
-const lockedDriverDestinationLabel = 'Bethlehem';
-const lockedDriverDestinationLat = 31.7054;
-const lockedDriverDestinationLng = 35.2024;
-const lockedDriverCorridorKey = 'hebron-ppu-bab-al-zawiya-to-bethlehem';
 const driverTripTimeline = [
   'accepted',
   'pickup_started',

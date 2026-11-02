@@ -1,10 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
 import '../../auth/application/auth_actor_binding.dart';
 import '../../trips/data/trip_models.dart';
 import '../../trips/data/trip_repository.dart';
 import '../data/passenger_models.dart';
 import '../data/passenger_repository.dart';
+import 'passenger_history_controller.dart';
+
+/// Home and "My trips" both list the passenger's saved requests and live for
+/// the whole session. After any create, match or cancellation both are
+/// dropped so they re-read the server instead of showing the old snapshot.
+///
+/// Pass `ref.invalidate` from a widget, or a captured container's
+/// `invalidate` when the screen may close before the mutation finishes.
+void invalidatePassengerLists(
+  void Function(ProviderOrFamily provider) invalidate,
+) {
+  invalidate(passengerDashboardProvider);
+  invalidate(passengerHistoryProvider);
+}
 
 class PassengerDashboardState {
   const PassengerDashboardState({
