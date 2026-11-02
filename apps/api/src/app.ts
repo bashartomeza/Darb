@@ -63,6 +63,7 @@ import { createRouteProvider } from "./maps/liveProviders.js";
 import { createRoutePreviewService, type RoutePreviewService } from "./maps/previewService.js";
 import { createRoutePreviewRouter } from "./modules/routePreview.js";
 import { createPassengerAssistantRouter } from "./modules/passengerAssistant.js";
+import { createAiServicesClientFromEnv, type AiServicesClient } from "./services/aiServicesClient.js";
 import type { PassengerAssistantService } from "./services/passengerAssistant.js";
 import type { PassengerAssistantHistoryStore } from "./services/passengerAssistantHistory.js";
 import { createAdminConsentRouter } from "./modules/adminConsents.js";
@@ -104,6 +105,7 @@ type AppDependencies = {
   partnerCheckpointMapService?: PartnerCheckpointMapService;
   legacyDriverOnlineStateService?: LegacyDriverOnlineStateService;
   routePreviewService?: RoutePreviewService;
+  aiServicesClient?: AiServicesClient | null;
   passengerAssistantService?: PassengerAssistantService;
   passengerAssistantHistory?: PassengerAssistantHistoryStore;
   consentReleaseService?: ConsentReleaseService;
@@ -216,6 +218,7 @@ export function createApp(
       dependencies.passengerAssistantService,
       undefined,
       dependencies.passengerAssistantHistory,
+      dependencies.aiServicesClient === undefined ? createAiServicesClientFromEnv() : dependencies.aiServicesClient,
     ),
   );
   app.use(

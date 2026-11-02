@@ -1,3 +1,0 @@
-pydantic>=2.0
-openai>=1.30.0  # optional: only required to use the real LLM path instead of MOCK_MODE
-pytest>=8.0     # dev dependency, for tests/
