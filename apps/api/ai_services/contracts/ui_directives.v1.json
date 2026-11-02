@@ -1,1 +1,107 @@
-
+{
+  "emergency": {
+    "schema_version": 1,
+    "mode": "emergency",
+    "theme": {
+      "primary_color_hex": "#DC2626",
+      "flashing": true,
+      "flash_interval_ms": 800,
+      "respect_reduce_motion": true
+    },
+    "haptics": {
+      "vibrate": true,
+      "pattern_ms": [
+        0,
+        500,
+        200,
+        500,
+        200,
+        800
+      ]
+    },
+    "emergency_actions": [
+      {
+        "id": "dial_101",
+        "label_ar": "الإسعاف",
+        "label_en": "Ambulance",
+        "dial_uri": "tel:101"
+      },
+      {
+        "id": "dial_100",
+        "label_ar": "الشرطة",
+        "label_en": "Police",
+        "dial_uri": "tel:100"
+      },
+      {
+        "id": "dial_102",
+        "label_ar": "الدفاع المدني",
+        "label_en": "Civil Defense",
+        "dial_uri": "tel:102"
+      }
+    ],
+    "logistics_progress": null,
+    "requires_human_confirmation": true
+  },
+  "logistics": {
+    "schema_version": 1,
+    "mode": "logistics",
+    "theme": {
+      "primary_color_hex": "#0F766E",
+      "flashing": false,
+      "flash_interval_ms": 0,
+      "respect_reduce_motion": true
+    },
+    "haptics": {
+      "vibrate": false,
+      "pattern_ms": []
+    },
+    "emergency_actions": [],
+    "logistics_progress": {
+      "parcels_total": 4,
+      "trips_saved": 3,
+      "fuel_savings_index": 0.28,
+      "fuel_savings_percentage": 28.0,
+      "series": [
+        {
+          "step": 1,
+          "trips_without_batching": 1,
+          "trips_with_batching": 1
+        },
+        {
+          "step": 2,
+          "trips_without_batching": 2,
+          "trips_with_batching": 1
+        },
+        {
+          "step": 3,
+          "trips_without_batching": 3,
+          "trips_with_batching": 1
+        },
+        {
+          "step": 4,
+          "trips_without_batching": 4,
+          "trips_with_batching": 1
+        }
+      ],
+      "is_simulation": true
+    },
+    "requires_human_confirmation": false
+  },
+  "standard": {
+    "schema_version": 1,
+    "mode": "standard",
+    "theme": {
+      "primary_color_hex": "#1D4ED8",
+      "flashing": false,
+      "flash_interval_ms": 0,
+      "respect_reduce_motion": true
+    },
+    "haptics": {
+      "vibrate": false,
+      "pattern_ms": []
+    },
+    "emergency_actions": [],
+    "logistics_progress": null,
+    "requires_human_confirmation": false
+  }
+}
