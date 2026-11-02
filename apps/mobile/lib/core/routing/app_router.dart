@@ -331,8 +331,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'profile',
-                    builder: (context, state) =>
-                        const PassengerProfileScreen(),
+                    builder: (context, state) => const PassengerProfileScreen(),
                   ),
                   GoRoute(
                     path: 'password',

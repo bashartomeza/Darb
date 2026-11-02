@@ -493,9 +493,7 @@ void main() {
     // Passenger logout lives on the Settings tab of the redesigned shell.
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('logoutButton')),
-    );
+    await tester.ensureVisible(find.byKey(const ValueKey('logoutButton')));
     await tester.tap(find.byKey(const ValueKey('logoutButton')));
     await tester.pumpAndSettle();
     expect(find.text('Confirm logout'), findsOneWidget);
@@ -692,9 +690,7 @@ void main() {
     // Passenger logout lives on the Settings tab of the redesigned shell.
     await tester.tap(find.byKey(const ValueKey('roleNavigation-4')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('logoutButton')),
-    );
+    await tester.ensureVisible(find.byKey(const ValueKey('logoutButton')));
     await tester.tap(find.byKey(const ValueKey('logoutButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirmSecurityActionButton')));

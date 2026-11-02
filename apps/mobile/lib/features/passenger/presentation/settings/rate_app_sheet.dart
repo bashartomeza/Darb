@@ -10,12 +10,13 @@ import '../../../auth/presentation/auth_completion_screen.dart' show authText;
 const ratingStorageKey = 'passenger_app_rating';
 const ratingFeedbackStorageKey = 'passenger_app_rating_feedback';
 
-Future<void> showRateAppSheet(BuildContext context) => showModalBottomSheet<void>(
-  context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
-  builder: (_) => const RateAppSheet(),
-);
+Future<void> showRateAppSheet(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const RateAppSheet(),
+    );
 
 /// Interactive 1–5 star rating with an optional note.
 class RateAppSheet extends ConsumerStatefulWidget {

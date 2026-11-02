@@ -31,11 +31,7 @@ class PassengerHelpScreen extends StatelessWidget {
         ),
       ),
       (
-        authText(
-          context,
-          'How do I follow my driver?',
-          'كيف أتابع السائق؟',
-        ),
+        authText(context, 'How do I follow my driver?', 'كيف أتابع السائق؟'),
         authText(
           context,
           'Once a driver accepts, open the Maps tab to see the route, the driver’s latest location and checkpoint alerts.',
@@ -79,7 +75,9 @@ class PassengerHelpScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(PassengerStyle.radiusTile),
               clipBehavior: Clip.antiAlias,
               child: Theme(
-                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   tilePadding: const EdgeInsets.symmetric(horizontal: 14),
                   childrenPadding: const EdgeInsetsDirectional.fromSTEB(

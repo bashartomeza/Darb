@@ -72,7 +72,11 @@ class _PassengerChangePasswordScreenState
 
   String? _confirmError(BuildContext context) =>
       _submitted && _confirm.text != _new.text
-      ? authText(context, 'Passwords do not match.', 'كلمتا المرور غير متطابقتين.')
+      ? authText(
+          context,
+          'Passwords do not match.',
+          'كلمتا المرور غير متطابقتين.',
+        )
       : null;
 
   Future<void> _submit() async {
@@ -236,15 +240,9 @@ class _PassengerChangePasswordScreenState
         // dialog lets them prove ownership by email instead.
         TextButton(
           key: const ValueKey('passwordNoPassword'),
-          onPressed: _busy
-              ? null
-              : () => openCredentialAction(context, 'set'),
+          onPressed: _busy ? null : () => openCredentialAction(context, 'set'),
           child: Text(
-            authText(
-              context,
-              "I don't have a password",
-              'ليس لديّ كلمة مرور',
-            ),
+            authText(context, "I don't have a password", 'ليس لديّ كلمة مرور'),
           ),
         ),
       ],

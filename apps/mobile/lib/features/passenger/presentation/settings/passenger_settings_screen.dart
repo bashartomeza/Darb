@@ -154,7 +154,9 @@ class PassengerSettingsScreen extends ConsumerWidget {
       ),
     );
     if (chosen != null && chosen != current.languageCode) {
-      await ref.read(localeControllerProvider.notifier).setLocale(Locale(chosen));
+      await ref
+          .read(localeControllerProvider.notifier)
+          .setLocale(Locale(chosen));
     }
   }
 

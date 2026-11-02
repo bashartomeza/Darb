@@ -93,7 +93,9 @@ class _PassengerProfileScreenState
       setState(() => _editing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authText(context, 'Profile updated.', 'تم تحديث الملف.')),
+          content: Text(
+            authText(context, 'Profile updated.', 'تم تحديث الملف.'),
+          ),
         ),
       );
     } catch (error) {
