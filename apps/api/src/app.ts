@@ -44,6 +44,8 @@ import type { LegacyDriverOnlineStateService } from "./services/legacyDriverOnli
 import { createRouteProvider } from "./maps/liveProviders.js";
 import { createRoutePreviewService, type RoutePreviewService } from "./maps/previewService.js";
 import { createRoutePreviewRouter } from "./modules/routePreview.js";
+import { createPassengerAssistantRouter } from "./modules/passengerAssistant.js";
+import { createAiServicesClientFromEnv, type AiServicesClient } from "./services/aiServicesClient.js";
 
 export const HTTP_JSON_LIMIT = "64kb";
 export const HTTP_FORM_LIMIT = "16kb";
@@ -59,6 +61,7 @@ type AppDependencies = {
   canonicalSharedMatchingService?: CanonicalSharedMatchingService;
   legacyDriverOnlineStateService?: LegacyDriverOnlineStateService;
   routePreviewService?: RoutePreviewService;
+  aiServicesClient?: AiServicesClient | null;
 };
 
 export function createApp(
@@ -110,6 +113,15 @@ export function createApp(
     ),
   );
   app.use("/api/v1", passengerRouter);
+  app.use(
+    "/api/v1",
+    createPassengerAssistantRouter(
+      appConfig,
+      undefined,
+      undefined,
+      dependencies.aiServicesClient === undefined ? createAiServicesClientFromEnv() : dependencies.aiServicesClient,
+    ),
+  );
   app.use(
     "/api/v1",
     createDriverAvailabilityRouter(
