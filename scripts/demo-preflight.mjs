@@ -11,6 +11,19 @@ const adminUrl = process.env.DEMO_ADMIN_URL ?? "http://localhost:5173";
 const emulatorApiUrl = "http://10.0.2.2:3000";
 const checks = [];
 
+function resetAllowedDatabase(databaseUrl) {
+  try {
+    const name = new URL(databaseUrl).pathname.replace(/^\//, "");
+    const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    return name.toLowerCase() !== "darb" && /^[A-Za-z0-9_]+$/.test(name) && allowed.includes(name) ? name : null;
+  } catch {
+    return null;
+  }
+}
+
 function pass(name, detail) {
   checks.push({ name, ok: true, detail });
   console.log(`[pass] ${name}: ${detail}`);
@@ -64,6 +77,8 @@ if (process.env.DATABASE_URL) {
   try {
     const databaseUrl = new URL(process.env.DATABASE_URL);
     if (databaseUrl.protocol !== "mysql:") throw new Error("unexpected provider");
+    const resetDatabase = resetAllowedDatabase(process.env.DATABASE_URL);
+    if (!resetDatabase) throw new Error("database is not explicitly reset-safe");
     connection = await mariadb.createConnection({
       host: databaseUrl.hostname,
       port: Number(databaseUrl.port || 3306),
@@ -74,10 +89,10 @@ if (process.env.DATABASE_URL) {
     const rows = await connection.query(
       "SELECT DATABASE() AS database_name, @@character_set_database AS character_set, @@collation_database AS collation"
     );
-    if (rows[0]?.database_name !== "masari") throw new Error("unexpected database");
+    if (rows[0]?.database_name !== resetDatabase) throw new Error("unexpected database");
     if (rows[0]?.character_set !== "utf8mb4") throw new Error("unexpected character set");
     pass("database provider", "mysql");
-    pass("MySQL", "reachable; masari uses utf8mb4");
+    pass("MySQL", "reachable; dedicated reset-safe database uses utf8mb4");
     pass("MySQL collation", String(rows[0]?.collation ?? "configured"));
   } catch {
     fail("MySQL", "connection or provider verification failed");
@@ -88,7 +103,7 @@ if (process.env.DATABASE_URL) {
 
 await checkHttp("API health", `${apiBaseUrl}/api/v1/health`, async (response) => {
   const body = await response.json().catch(() => null);
-  return body?.ok === true && body?.service === "masari-api" && body?.request_id ? undefined : "is not the Masari API";
+  return body?.ok === true && body?.service === "darb-api" && body?.request_id ? undefined : "is not the Darb API";
 });
 await checkHttp("API readiness", `${apiBaseUrl}/api/v1/health/ready`, async (response) => {
   const body = await response.json().catch(() => null);
@@ -96,7 +111,7 @@ await checkHttp("API readiness", `${apiBaseUrl}/api/v1/health/ready`, async (res
 });
 await checkHttp("admin console", adminUrl, async (response) => {
   const body = await response.text();
-  return body.includes("<title>Masari Admin Console</title>") ? undefined : "is not the Masari admin console";
+  return /<title>(Darb|Darb) Admin Console<\/title>/.test(body) ? undefined : "is not the Darb admin console";
 });
 
 const adminExample = readFileSync(resolve(root, "apps/admin/.env.example"), "utf8");

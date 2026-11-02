@@ -19,6 +19,7 @@ function check(value: unknown, message: string) {
 const demoConfig = createConfig({
   APP_ENV: "demo",
   DATABASE_URL: process.env.DATABASE_URL!,
+  DEMO_RESET_ALLOWED_DATABASES: databaseName,
   JWT_SECRET: "m7h1-association-jwt-secret-at-least-thirty-two-characters",
   ENABLE_DEMO_FEATURES: "true",
   DEMO_RESET_KEY: "m7h1-association-reset-key",
@@ -63,11 +64,13 @@ try {
       password_hash: "synthetic-not-a-login-secret",
       role: "passenger",
       account_status: "active",
+      demo_account: true,
     },
     update: {
       name: "M7H1 other passenger",
       role: "passenger",
       account_status: "active",
+      demo_account: true,
     },
   });
   const route = await prisma.driverRoute.findFirstOrThrow({

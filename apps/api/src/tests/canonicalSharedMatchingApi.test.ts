@@ -16,7 +16,7 @@ const { createCanonicalSharedMatchingService } = await import(
 
 const environment = {
   APP_ENV: "local",
-  DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+  DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
   JWT_SECRET: "test-only-jwt-secret-with-at-least-thirty-two-characters",
   CORS_ORIGINS: "http://localhost:5173",
   LOG_LEVEL: "silent",
@@ -118,7 +118,7 @@ describe("M7C3C1 shared canonical APIs and gate", () => {
         return {
           id: where.id,
           user_id: id,
-          user: { id, role, account_status: "active", security_version: 1 },
+          user: { email_verified_at: new Date(), id, role, account_status: "active", security_version: 1 },
           security_version_at_issue: 1,
           expires_at: new Date(Date.now() + 60_000),
           revoked_at: null
@@ -151,7 +151,7 @@ describe("M7C3C1 shared canonical APIs and gate", () => {
     expect(() => createConfig({
       ...environment,
       APP_ENV: "production",
-      CORS_ORIGINS: "https://admin.masari.example",
+      CORS_ORIGINS: "https://admin.darb.example",
       APP_RELEASE: "test",
       REFRESH_TOKEN_PEPPER: "distinct-refresh-pepper-with-thirty-two-characters",
       TRUST_PROXY: "1"
@@ -159,7 +159,7 @@ describe("M7C3C1 shared canonical APIs and gate", () => {
     expect(() => createConfig({
       ...environment,
       APP_ENV: "staging",
-      CORS_ORIGINS: "https://admin.staging.masari.example",
+      CORS_ORIGINS: "https://admin.staging.darb.example",
       APP_RELEASE: "test",
       REFRESH_TOKEN_PEPPER: "distinct-refresh-pepper-with-thirty-two-characters",
       TRUST_PROXY: "1"

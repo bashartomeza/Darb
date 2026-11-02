@@ -2,7 +2,7 @@ import type { Comparison } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
 import { BentoGrid, Button, Card, CardHeader, EmptyState, KpiCard, MeterBar, StatusBadge } from "../../ui";
 
-/** Masari versus the nearest-driver baseline. */
+/** Darb versus the nearest-driver baseline. */
 export function ComparisonPanel({
   comparison,
   canAct,
@@ -30,22 +30,22 @@ export function ComparisonPanel({
     );
   }
 
-  const masariTrips = Number(comparison.masari_trips);
+  const darbTrips = Number(comparison.darb_trips);
   const baselineTrips = Number(comparison.nearest_driver_trips);
-  const peakTrips = Math.max(1, masariTrips, baselineTrips);
-  const masariDistance = Number(comparison.masari_estimated_distance);
+  const peakTrips = Math.max(1, darbTrips, baselineTrips);
+  const darbDistance = Number(comparison.darb_estimated_distance);
   const baselineDistance = Number(comparison.nearest_estimated_distance);
-  const peakDistance = Math.max(1, masariDistance, baselineDistance);
-  const masariCost = Number(comparison.masari_estimated_cost);
+  const peakDistance = Math.max(1, darbDistance, baselineDistance);
+  const darbCost = Number(comparison.darb_estimated_cost);
   const baselineCost = Number(comparison.nearest_estimated_cost);
-  const peakCost = Math.max(1, masariCost, baselineCost);
+  const peakCost = Math.max(1, darbCost, baselineCost);
 
   return (
     <>
       <section className="kpi-row">
-        <KpiCard icon="route" tone="info" label={t("trips")} value={number(comparison.masari_trips)} />
-        <KpiCard icon="near_me" tone="success" label={t("estimatedDistance")} value={number(comparison.masari_estimated_distance)} />
-        <KpiCard icon="analytics" tone="warning" label={t("estimatedCost")} value={number(comparison.masari_estimated_cost)} />
+        <KpiCard icon="route" tone="info" label={t("trips")} value={number(comparison.darb_trips)} />
+        <KpiCard icon="near_me" tone="success" label={t("estimatedDistance")} value={number(comparison.darb_estimated_distance)} />
+        <KpiCard icon="analytics" tone="warning" label={t("estimatedCost")} value={number(comparison.darb_estimated_cost)} />
         <KpiCard icon="directions_car" tone="neutral" label={t("driverUtilization")} value={number(comparison.driver_utilization)} />
       </section>
 
@@ -54,8 +54,8 @@ export function ComparisonPanel({
           <CardHeader
             title={t("comparison")}
             badge={
-              <StatusBadge tone={comparison.winner === "masari" ? "success" : "neutral"}>
-                {comparison.winner === "masari" ? t("masari") : t("nearestDriver")}
+              <StatusBadge tone={comparison.winner === "darb" ? "success" : "neutral"}>
+                {comparison.winner === "darb" ? t("darb") : t("nearestDriver")}
               </StatusBadge>
             }
             action={
@@ -65,11 +65,11 @@ export function ComparisonPanel({
             }
           />
           <div className="stack stack--tight">
-            <MeterBar label={`${t("trips")} — ${t("masari")}`} value={(masariTrips / peakTrips) * 100} display={number(masariTrips)} tone="success" />
+            <MeterBar label={`${t("trips")} — ${t("darb")}`} value={(darbTrips / peakTrips) * 100} display={number(darbTrips)} tone="success" />
             <MeterBar label={`${t("trips")} — ${t("nearestDriver")}`} value={(baselineTrips / peakTrips) * 100} display={number(baselineTrips)} tone="neutral" />
-            <MeterBar label={`${t("estimatedDistance")} — ${t("masari")}`} value={(masariDistance / peakDistance) * 100} display={number(masariDistance)} tone="success" />
+            <MeterBar label={`${t("estimatedDistance")} — ${t("darb")}`} value={(darbDistance / peakDistance) * 100} display={number(darbDistance)} tone="success" />
             <MeterBar label={`${t("estimatedDistance")} — ${t("nearestDriver")}`} value={(baselineDistance / peakDistance) * 100} display={number(baselineDistance)} tone="neutral" />
-            <MeterBar label={`${t("estimatedCost")} — ${t("masari")}`} value={(masariCost / peakCost) * 100} display={number(masariCost)} tone="success" />
+            <MeterBar label={`${t("estimatedCost")} — ${t("darb")}`} value={(darbCost / peakCost) * 100} display={number(darbCost)} tone="success" />
             <MeterBar label={`${t("estimatedCost")} — ${t("nearestDriver")}`} value={(baselineCost / peakCost) * 100} display={number(baselineCost)} tone="neutral" />
           </div>
         </Card>

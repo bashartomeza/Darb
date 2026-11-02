@@ -7,6 +7,14 @@ import {
   canonicalDemandService,
   type CanonicalDemandService
 } from "../services/canonicalDemand.js";
+import {
+  orderFareResponse,
+  parcelFareResponse,
+  passengerFareResponse,
+  routeFareService,
+  type FareView,
+  type RouteFareService
+} from "../services/routeFares.js";
 
 const idempotencyKeySchema = z.string().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/);
 const dateTime = z.string().datetime({ offset: true }).transform((value) => new Date(value));
@@ -51,6 +59,8 @@ function passengerResponse(resource: Record<string, unknown>) {
     requested_departure_from: resource.requested_departure_from,
     requested_departure_until: resource.requested_departure_until,
     passenger_count: resource.passenger_count,
+    // Snapshot taken when the request was created; null if no tariff existed then.
+    fare: passengerFareResponse(resource),
     created_at: resource.canonical_created_at
   };
 }
@@ -65,6 +75,7 @@ function merchantResponse(resource: Record<string, unknown>) {
     requested_departure_from: resource.requested_departure_from,
     requested_departure_until: resource.requested_departure_until,
     created_at: resource.canonical_created_at,
+    fare: orderFareResponse(resource.parcels as Array<Record<string, unknown>> | undefined),
     parcels: ((resource.parcels as Array<Record<string, unknown>> | undefined) ?? []).map((parcel) => ({
       id: parcel.id,
       status: parcel.status,
@@ -72,7 +83,8 @@ function merchantResponse(resource: Record<string, unknown>) {
       route_version_id: parcel.route_version_id,
       destination_stop_id: parcel.destination_stop_id,
       size: parcel.size,
-      priority: parcel.priority
+      priority: parcel.priority,
+      fare: parcelFareResponse(parcel)
     }))
   };
 }
@@ -92,7 +104,7 @@ const availableDepartureQuery = z.strictObject({
  * score — the fields the passenger needs to choose a ride. Phone number and
  * every other account attribute stay server-side.
  */
-function availableDepartureResponse(availability: Record<string, any>) {
+function availableDepartureResponse(availability: Record<string, any>, fares?: FareView | null) {
   const version = availability.route_version;
   return {
     id: availability.id,
@@ -103,6 +115,7 @@ function availableDepartureResponse(availability: Record<string, any>) {
           name_ar: version.name_ar,
           name_en: version.name_en,
           direction: version.service_route?.direction,
+          fares: fares ?? null,
           stops: (version.stops ?? []).map((membership: Record<string, any>) => ({
             id: membership.stop?.id,
             name_ar: membership.stop?.name_ar,
@@ -130,7 +143,8 @@ function availableDepartureResponse(availability: Record<string, any>) {
 
 export function createCanonicalDemandRouter(
   appConfig: AppConfig,
-  service: CanonicalDemandService = canonicalDemandService
+  service: CanonicalDemandService = canonicalDemandService,
+  fareService: RouteFareService = routeFareService
 ) {
   const router = Router();
   if (!appConfig.multiRouteEntryEnabled) {
@@ -154,10 +168,17 @@ export function createCanonicalDemandRouter(
           seats: query.seats,
           limit: query.limit
         });
+        const fares = await fareService.fareViewsForRoutes(
+          availabilities.flatMap((availability) => {
+            const routeId = (availability as unknown as Record<string, any>).route_version?.service_route_id;
+            return typeof routeId === "string" ? [routeId] : [];
+          })
+        );
         res.json({
-          departures: availabilities.map((availability) =>
-            availableDepartureResponse(availability as unknown as Record<string, any>)
-          ),
+          departures: availabilities.map((availability) => {
+            const record = availability as unknown as Record<string, any>;
+            return availableDepartureResponse(record, fares.get(record.route_version?.service_route_id));
+          }),
           server_now: new Date(),
           request_id: req.requestId
         });

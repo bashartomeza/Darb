@@ -13,6 +13,8 @@ export async function claimIdempotency(
     requestDigest: string;
     expiresAt: Date;
     now?: Date;
+    preserveCompleted?: boolean;
+    retainCompleted?: boolean;
   }
 ) {
   if (![input.scopeDigest, input.keyDigest, input.requestDigest].every((digest) => /^[a-f0-9]{64}$/.test(digest))) {
@@ -43,7 +45,7 @@ export async function claimIdempotency(
         }
       }
     });
-    if (record.expires_at <= now) {
+    if (record.expires_at <= now && !((input.preserveCompleted || input.retainCompleted) && record.state === "completed")) {
       const reclaimed = await db.idempotencyRecord.updateMany({
         where: { id: record.id, claim_version: record.claim_version, expires_at: { lte: now } },
         data: {

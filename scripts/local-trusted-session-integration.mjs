@@ -9,9 +9,9 @@ import {
 } from "./lib/mysql-tools.mjs";
 import { run } from "./lib/process.mjs";
 
-const database = "masari_m6c1a_ci";
+const database = "darb_m6c1a_ci";
 const root = resolve(new URL("../", import.meta.url).pathname.replace(/^\/(\w:)/, "$1"));
-const envPath = resolve(root, process.env.MASARI_ENV_FILE ?? "apps/api/.env");
+const envPath = resolve(root, process.env.DARB_ENV_FILE ?? "apps/api/.env");
 const flags = new Set(process.argv.slice(2));
 let defaults;
 let databaseCreated = false;
@@ -32,7 +32,7 @@ function expectCount(sql, expected, message) {
 
 try {
   if (!flags.has("--confirm-disposable")) {
-    throw new Error("Use --confirm-disposable for the dedicated masari_m6c1a_ci database");
+    throw new Error("Use --confirm-disposable for the dedicated darb_m6c1a_ci database");
   }
   const parsedEnvironment = parse(readFileSync(envPath));
   const { url, database: configuredDatabase } = loadDatabaseEnvironment(envPath);
@@ -58,6 +58,7 @@ try {
     ENABLE_DEMO_FEATURES: "true",
     APP_RELEASE: "m6c1a-local-integration",
     DATABASE_URL: databaseUrlFor(url, database),
+    DEMO_RESET_ALLOWED_DATABASES: database,
     ACCESS_TOKEN_TTL_SECONDS: "3600",
     REFRESH_TOKEN_TTL_DAYS: "30",
     CORS_ORIGINS: "http://localhost:5173",

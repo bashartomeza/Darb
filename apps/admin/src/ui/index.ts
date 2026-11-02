@@ -9,4 +9,12 @@ export { Timeline, StatusRail, type TimelineStep } from "./Timeline";
 export { MeterBar, BarChart } from "./MeterBar";
 export { AlertItem, Notice } from "./AlertItem";
 export { RouteChip, TechnicalValue } from "./RouteChip";
-export { AppShell, SideNav, TopBar, Avatar, initialOf } from "./AppShell";
+export {
+  AppShell,
+  SideNav,
+  TopBar,
+  NotificationControl,
+  Avatar,
+  initialOf,
+  notificationPanelState
+} from "./AppShell";

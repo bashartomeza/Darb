@@ -24,7 +24,7 @@ describe("M7D1 protected canonical route preview API", () => {
     vi.clearAllMocks();
     prismaMock.authSession.findUnique.mockImplementation(({ where }: { where: { id: string } }) => {
       const id = where.id.replace("session_", ""); const role = users[id]; if (!role) return null;
-      return { id: where.id, user_id: id, user: { id, role, account_status: id === "disabled_1" ? "disabled" : "active", security_version: 1 }, security_version_at_issue: 1, expires_at: new Date(Date.now() + 60_000), revoked_at: id === "revoked_1" ? new Date() : null };
+      return { id: where.id, user_id: id, user: { email_verified_at: new Date(), id, role, account_status: id === "disabled_1" ? "disabled" : "active", security_version: 1 }, security_version_at_issue: 1, expires_at: new Date(Date.now() + 60_000), revoked_at: id === "revoked_1" ? new Date() : null };
     });
     prismaMock.authSession.update.mockResolvedValue({});
   });

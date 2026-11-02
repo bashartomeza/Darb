@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
+
+import '../../../notifications/presentation/notification_bell.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/semantic_colors.dart';
 import '../../../../core/widgets/entity_cards.dart';
-import '../../../../core/widgets/masari_bottom_nav.dart';
-import '../../../../core/widgets/masari_card.dart';
-import '../../../../core/widgets/state_views.dart';
+import '../../../../core/widgets/darb_card.dart';
 import '../../../../core/widgets/trust_score_ring.dart';
 import '../../domain/driver_home_stats.dart';
 
@@ -23,28 +23,10 @@ class DriverTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
     return Row(
       textDirection: TextDirection.ltr,
       children: [
-        IconButton(
-          key: const ValueKey('driverNotifications'),
-          tooltip: l10n.notifications,
-          onPressed: () => showMasariBottomSheet<void>(
-            context: context,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: AppTokens.spaceMedium),
-              child: EmptyState(
-                title: l10n.notifications,
-                message: l10n.noNotifications,
-                icon: Icons.notifications_none,
-              ),
-            ),
-          ),
-          icon: const Icon(Icons.notifications_none, size: 28),
-          color: AppTheme.primary,
-        ),
+        const NotificationBell(key: ValueKey('driverNotifications')),
         Expanded(
           child: Text(
             title,
@@ -89,7 +71,7 @@ class DriverStatusCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return MasariCard(
+    return DarbCard(
       padding: EdgeInsets.zero,
       // IntrinsicHeight gives the row a bounded height from its content, so
       // the status stripe can stretch to match it. Without it, `stretch`
@@ -158,7 +140,7 @@ class DriverStatusCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isOnline ? SemanticColors.success : AppTheme.outline,
                 borderRadius: const BorderRadiusDirectional.horizontal(
-                  end: Radius.circular(AppTokens.radiusLarge),
+                  end: Radius.circular(AppTokens.radiusMedium),
                 ),
               ),
             ),
@@ -187,7 +169,7 @@ class TrustScoreCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final score = stats.trustOutOfFive;
 
-    return MasariCard(
+    return DarbCard(
       child: SizedBox(
         height: 150,
         child: Center(
@@ -251,8 +233,8 @@ class EarningsCard extends StatelessWidget {
       height: 150,
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       decoration: BoxDecoration(
-        color: AppTheme.primaryContainer,
-        borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
+        color: AppTheme.primary,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

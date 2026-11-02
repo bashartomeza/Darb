@@ -31,7 +31,7 @@ describe("legacy driver online-state API", () => {
         return {
           id: where.id,
           user_id: id,
-          user: { id, role, account_status: "active", security_version: 1 },
+          user: { email_verified_at: new Date(), id, role, account_status: "active", security_version: 1 },
           security_version_at_issue: 1,
           expires_at: new Date(Date.now() + 60_000),
           revoked_at: null,

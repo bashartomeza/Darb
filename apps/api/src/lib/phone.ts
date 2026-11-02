@@ -1,10 +1,14 @@
-import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js/max";
+import {
+  isSupportedCountry,
+  parsePhoneNumberFromString,
+  type CountryCode
+} from "libphonenumber-js/max";
 
-export const SUPPORTED_PHONE_REGIONS = ["PS"] as const satisfies readonly CountryCode[];
+export const PHONE_INPUT_MAX_LENGTH = 32;
 
 export class PhoneNormalizationError extends Error {
   constructor() {
-    super("Phone number is invalid or outside the supported regions");
+    super("Phone number is invalid");
     this.name = "PhoneNormalizationError";
   }
 }
@@ -17,29 +21,36 @@ function latinDigits(value: string) {
 
 export function normalizePhoneToE164(
   input: string,
-  options: { region?: CountryCode; supportedRegions?: readonly CountryCode[] } = {}
+  options: { region?: string } = {}
 ) {
-  if (/[\u0000-\u001f\u007f]/.test(input)) throw new PhoneNormalizationError();
+  if (input.length > PHONE_INPUT_MAX_LENGTH || /[\u0000-\u001f\u007f]/.test(input)) {
+    throw new PhoneNormalizationError();
+  }
   let value = latinDigits(input.trim());
-  if (!value || /[^0-9+()\-\s]/.test(value)) throw new PhoneNormalizationError();
-  value = value.replace(/[()\-\s]/g, "");
-  if (value.startsWith("00")) value = `+${value.slice(2)}`;
+  if (!value || /[^0-9+()\- ]/.test(value)) throw new PhoneNormalizationError();
+  const explicitInternational = value.startsWith("+");
+  value = value.replace(/[()\- ]/g, "");
   if ((value.match(/\+/g) ?? []).length > 1 || (value.includes("+") && !value.startsWith("+"))) {
     throw new PhoneNormalizationError();
   }
-  const supportedRegions = options.supportedRegions ?? SUPPORTED_PHONE_REGIONS;
-  if (!value.startsWith("+") && !options.region) throw new PhoneNormalizationError();
-  if (options.region && !supportedRegions.includes(options.region)) throw new PhoneNormalizationError();
-  const phone = parsePhoneNumberFromString(value, {
-    ...(options.region ? { defaultCountry: options.region } : {}),
-    extract: false
-  });
 
-  if (!phone || !phone.isValid() || !supportedRegions.includes(phone.country as CountryCode)) {
+  const region = options.region?.trim().toUpperCase();
+  if (!explicitInternational && !region) throw new PhoneNormalizationError();
+  if (region && (!/^[A-Z]{2}$/.test(region) || !isSupportedCountry(region))) {
     throw new PhoneNormalizationError();
   }
 
-  return phone.number;
+  try {
+    const phone = parsePhoneNumberFromString(value, {
+      ...(region ? { defaultCountry: region as CountryCode } : {}),
+      extract: false
+    });
+    if (!phone?.isValid() || phone.number.length > 16) throw new PhoneNormalizationError();
+    return phone.number;
+  } catch (error) {
+    if (error instanceof PhoneNormalizationError) throw error;
+    throw new PhoneNormalizationError();
+  }
 }
 
 export function phoneLast4(phoneE164: string) {
@@ -47,7 +58,13 @@ export function phoneLast4(phoneE164: string) {
 }
 
 export function maskPhone(phoneE164: string) {
-  return `+${phoneE164.slice(1, 4)} ••• •• ${phoneLast4(phoneE164)}`;
+  try {
+    const phone = parsePhoneNumberFromString(phoneE164, { extract: false });
+    if (!phone?.isValid()) throw new PhoneNormalizationError();
+    return `+${phone.countryCallingCode} ••• •• ${phoneLast4(phone.number)}`;
+  } catch {
+    throw new PhoneNormalizationError();
+  }
 }
 
 export function analyzePhoneNormalization(rows: readonly { id: string; phone: string }[]) {

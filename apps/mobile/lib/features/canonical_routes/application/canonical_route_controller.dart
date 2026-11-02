@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,6 +85,7 @@ class DriverAvailabilitiesNotifier
   Future<DriverAvailability> create(
     Map<String, dynamic> payload, {
     required String actorId,
+    void Function(CanonicalOperationBundle bundle)? onBundle,
   }) async {
     if (_mutating) throw StateError('operation_in_progress');
     _mutating = true;
@@ -92,12 +94,30 @@ class DriverAvailabilitiesNotifier
           .read(canonicalMutationRunnerProvider)
           .run<DriverAvailability>(
             operation: 'driver_availability_create',
+            allowExpiredReplay: true,
             scope: 'driver',
             actorId: actorId,
             payload: payload,
-            preflight: () => ref
-                .read(canonicalRouteRepositoryProvider)
-                .requireFreshRoute(payload['route_version_id'] as String),
+            onBundle: onBundle,
+            preflight: () async {
+              final departure = DateTime.parse(
+                payload['departure_at'] as String,
+              );
+              final windowEnd = payload['availability_window_end'] is String
+                  ? DateTime.parse(payload['availability_window_end'] as String)
+                  : null;
+              if (!departure.isAfter(DateTime.now()) ||
+                  (windowEnd != null && !windowEnd.isAfter(departure))) {
+                throw const ApiException(
+                  ApiErrorType.validation,
+                  'invalid_availability_window',
+                  statusCode: 400,
+                );
+              }
+              await ref
+                  .read(canonicalRouteRepositoryProvider)
+                  .requireFreshRoute(payload['route_version_id'] as String);
+            },
             send: (bundle) => ref
                 .read(canonicalRouteRepositoryProvider)
                 .createAvailability(
@@ -170,6 +190,12 @@ final canonicalMutationRunnerProvider = Provider<CanonicalMutationRunner>((
   );
 });
 
+class CanonicalMutationReceipt<T> {
+  const CanonicalMutationReceipt({required this.value, required this.bundle});
+  final T value;
+  final CanonicalOperationBundle bundle;
+}
+
 class CanonicalMutationRunner {
   CanonicalMutationRunner({required this.storage, DateTime Function()? now})
     : _now = now ?? DateTime.now;
@@ -177,6 +203,50 @@ class CanonicalMutationRunner {
   final CanonicalOperationStorage storage;
   final DateTime Function() _now;
   bool _busy = false;
+  static final Map<String, Future<void>> _storageTails = {};
+
+  Future<T> _serialize<T>(Future<T> Function() action) async {
+    final namespace = storage.namespace;
+    final previous = _storageTails[namespace] ?? Future<void>.value();
+    final released = Completer<void>();
+    _storageTails[namespace] = released.future;
+    await previous;
+    try {
+      return await action();
+    } finally {
+      released.complete();
+      if (identical(_storageTails[namespace], released.future)) {
+        _storageTails.remove(namespace);
+      }
+    }
+  }
+
+  Future<CanonicalMutationReceipt<T>> runWithReceipt<T>({
+    required String operation,
+    required String scope,
+    required String actorId,
+    required Map<String, dynamic> payload,
+    Future<void> Function()? preflight,
+    bool allowExpiredReplay = false,
+    void Function(CanonicalOperationBundle bundle)? onBundle,
+    required Future<T> Function(CanonicalOperationBundle bundle) send,
+  }) async {
+    CanonicalOperationBundle? selected;
+    final value = await run<T>(
+      operation: operation,
+      scope: scope,
+      actorId: actorId,
+      payload: payload,
+      preflight: preflight,
+      allowExpiredReplay: allowExpiredReplay,
+      onBundle: (bundle) {
+        selected = bundle;
+        onBundle?.call(bundle);
+      },
+      send: send,
+    );
+    return CanonicalMutationReceipt(value: value, bundle: selected!);
+  }
 
   Future<T> run<T>({
     required String operation,
@@ -184,38 +254,44 @@ class CanonicalMutationRunner {
     required String actorId,
     required Map<String, dynamic> payload,
     Future<void> Function()? preflight,
+    bool allowExpiredReplay = false,
+    void Function(CanonicalOperationBundle bundle)? onBundle,
     required Future<T> Function(CanonicalOperationBundle bundle) send,
   }) async {
     if (_busy) throw StateError('operation_in_progress');
     _busy = true;
     try {
-      final candidate = CanonicalOperationBundle.create(
-        operation: operation,
-        scope: scope,
-        actorId: actorId,
-        payload: payload,
-        now: _now(),
-      );
-      final pending = await storage.read();
-      final bundle = pending == null
-          ? candidate
-          : _requireExactPending(
-              pending,
-              candidate,
-              actorId: actorId,
-              operation: operation,
-              scope: scope,
-            );
-      if (pending == null) {
-        await preflight?.call();
-        await storage.save(bundle);
-      }
-      try {
-        return await send(bundle);
-      } catch (error) {
-        if (pending == null && !_ambiguous(error)) await storage.clear();
-        rethrow;
-      }
+      return await _serialize<T>(() async {
+        final candidate = CanonicalOperationBundle.create(
+          operation: operation,
+          scope: scope,
+          actorId: actorId,
+          payload: payload,
+          now: _now(),
+        );
+        final pending = await storage.read();
+        final bundle = pending == null
+            ? candidate
+            : _requireExactPending(
+                pending,
+                candidate,
+                actorId: actorId,
+                operation: operation,
+                scope: scope,
+                allowExpiredReplay: allowExpiredReplay,
+              );
+        if (pending == null) {
+          await preflight?.call();
+          await storage.save(bundle);
+        }
+        try {
+          onBundle?.call(bundle);
+          return await send(bundle);
+        } catch (error) {
+          if (pending == null && !_ambiguous(error)) await storage.clear();
+          rethrow;
+        }
+      });
     } finally {
       _busy = false;
     }
@@ -227,8 +303,9 @@ class CanonicalMutationRunner {
     required String actorId,
     required String operation,
     required String scope,
+    required bool allowExpiredReplay,
   }) {
-    if (pending.recoveryWindowExpired(_now())) {
+    if (!allowExpiredReplay && pending.recoveryWindowExpired(_now())) {
       throw const CanonicalOperationBlocked('canonical_recovery_expired');
     }
     if (pending.actorId != actorId) {
@@ -248,16 +325,19 @@ class CanonicalMutationRunner {
   Future<void> acknowledge({
     required String actorId,
     required String operation,
-  }) async {
+    required String idempotencyKey,
+  }) => _serialize<void>(() async {
     final pending = await storage.read();
     if (pending == null) return;
-    if (pending.actorId != actorId || pending.operation != operation) {
+    if (pending.actorId != actorId ||
+        pending.operation != operation ||
+        pending.idempotencyKey != idempotencyKey) {
       throw const CanonicalOperationBlocked(
         'canonical_recovery_acknowledgement_mismatch',
       );
     }
     await storage.clear();
-  }
+  });
 }
 
 class CanonicalOperationBlocked implements Exception {

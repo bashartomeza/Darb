@@ -22,6 +22,7 @@ function environment(overrides: Record<string, string | undefined> = {}) {
   return {
     APP_ENV: "demo",
     DATABASE_URL: process.env.DATABASE_URL!,
+    DEMO_RESET_ALLOWED_DATABASES: databaseName,
     JWT_SECRET: "m7h1-reset-jwt-secret-at-least-thirty-two-characters",
     ENABLE_DEMO_FEATURES: "true",
     DEMO_RESET_KEY: "m7h1-reset-key",
@@ -163,7 +164,7 @@ try {
   requireConfigurationFailure(environment({ MULTI_ROUTE_ENTRY_ENABLED: "yes" }), "malformed boolean");
   requireConfigurationFailure(environment({
     APP_ENV: "staging",
-    CORS_ORIGINS: "https://admin.staging.masari.invalid",
+    CORS_ORIGINS: "https://admin.staging.darb.invalid",
     APP_RELEASE: "m7h1-staging",
     TRUST_PROXY: "1",
     REFRESH_TOKEN_PEPPER: "m7h1-staging-refresh-pepper-at-least-thirty-two",
@@ -171,7 +172,7 @@ try {
   }), "staging canonical seed");
   requireConfigurationFailure(environment({
     APP_ENV: "production",
-    CORS_ORIGINS: "https://admin.masari.invalid",
+    CORS_ORIGINS: "https://admin.darb.invalid",
     APP_RELEASE: "m7h1-production",
     TRUST_PROXY: "1",
     REFRESH_TOKEN_PEPPER: "m7h1-production-refresh-pepper-at-least-thirty-two",
@@ -185,6 +186,50 @@ try {
   await resetDemoData(prisma, full);
   check(await fixtureSnapshot() === firstSnapshot, "repeated reset reproduces normalized fixture rows");
   check(JSON.stringify(await counts()) === firstCounts, "repeated reset reproduces counts");
+
+  const unsafeDatabaseUrl = new URL(process.env.DATABASE_URL!);
+  unsafeDatabaseUrl.pathname = `/${databaseName}_unlisted`;
+  const unsafeDatabase = createConfig(environment({ DATABASE_URL: unsafeDatabaseUrl.toString() }));
+  const beforeUnsafeDatabaseReset = `${await fixtureSnapshot()}|${JSON.stringify(await counts())}`;
+  try {
+    await resetDemoData(prisma, unsafeDatabase);
+    throw new Error("M7H1 reset-matrix assertion failed: unsafe database reset unexpectedly succeeded");
+  } catch (error) {
+    check(
+      error instanceof Error && error.message === "demo_reset_database_not_allowed",
+      "unlisted database identity blocks reset with the bounded safety code"
+    );
+  }
+  check(
+    `${await fixtureSnapshot()}|${JSON.stringify(await counts())}` === beforeUnsafeDatabaseReset,
+    "unsafe database block performs zero destructive writes"
+  );
+
+  const realUser = await prisma.user.create({
+    data: {
+      name: "QA Reset Safety User",
+      phone: "+972569990099",
+      password_hash: "not-used-by-reset-safety-test",
+      role: "passenger",
+      account_status: "active",
+      demo_account: false
+    }
+  });
+  const beforeBlockedReset = `${await fixtureSnapshot()}|${JSON.stringify(await counts())}`;
+  try {
+    await resetDemoData(prisma, full);
+    throw new Error("M7H1 reset-matrix assertion failed: non-demo user reset unexpectedly succeeded");
+  } catch (error) {
+    check(
+      error instanceof Error && error.message === "demo_reset_real_data_present",
+      "non-demo user blocks reset with the bounded safety code"
+    );
+  }
+  check(
+    `${await fixtureSnapshot()}|${JSON.stringify(await counts())}` === beforeBlockedReset,
+    "non-demo user block performs zero destructive writes"
+  );
+  await prisma.user.delete({ where: { id: realUser.id } });
 
   const passenger = await prisma.user.findUniqueOrThrow({ where: { phone: DEMO_ACCOUNTS.passenger.phone } });
   const route = await prisma.serviceRoute.findUniqueOrThrow({ where: { route_key: "hebron-ppu-bab-al-zawiya-to-bethlehem" } });

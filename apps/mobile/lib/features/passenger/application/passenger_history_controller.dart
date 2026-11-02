@@ -25,9 +25,11 @@ class PassengerHistoryState {
     'pickup_started',
     'picked_up',
     'in_transit',
+    'delivered',
   };
 
   /// Open requests whose preferred time has already arrived, newest first.
+  /// Expired requests are terminal history and never disappear.
   List<PassengerRequest> get active => _sorted(
     requests.where(
       (request) =>
@@ -49,8 +51,7 @@ class PassengerHistoryState {
 
   List<PassengerRequest> get past => _sorted(
     requests.where(
-      (request) =>
-          request.status == 'delivered' || request.status == 'completed',
+      (request) => request.status == 'completed' || request.status == 'expired',
     ),
   );
 

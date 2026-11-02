@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
+import '../presentation/localized_labels.dart';
 
 /// A compact "from → to" pill.
 ///
@@ -38,7 +39,7 @@ class RouteChip extends StatelessWidget {
       children: [
         Flexible(
           child: Text(
-            from,
+            localizedCorridorPlace(context, from),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: style,
@@ -54,7 +55,7 @@ class RouteChip extends StatelessWidget {
         ),
         Flexible(
           child: Text(
-            to,
+            localizedCorridorPlace(context, to),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: style,

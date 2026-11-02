@@ -1,7 +1,11 @@
+import '../../canonical_assignments/application/canonical_assignment_controller.dart';
+import '../../../core/widgets/darb_back_button.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/maps/darb_route_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -29,6 +33,7 @@ class _MerchantRouteOrderScreenState
   final List<_ParcelDraft> _parcels = [_ParcelDraft()];
   bool _busy = false;
   Object? _error;
+  CanonicalOperationBundle? _completedOperation;
   CanonicalMerchantOrder? _result;
 
   @override
@@ -50,15 +55,7 @@ class _MerchantRouteOrderScreenState
           bundle?.actorId != actorId) {
         return;
       }
-      if (bundle!.recoveryWindowExpired(DateTime.now())) {
-        setState(
-          () => _error = const CanonicalOperationBlocked(
-            'canonical_recovery_expired',
-          ),
-        );
-        return;
-      }
-      final payload = bundle.payload;
+      final payload = bundle!.payload;
       final parcels = payload['parcels'];
       if (parcels is! List) return;
       setState(() {
@@ -94,7 +91,10 @@ class _MerchantRouteOrderScreenState
     final l10n = AppLocalizations.of(context);
     if (_result != null) {
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.canonicalMerchantOrder)),
+        appBar: AppBar(
+          title: Text(l10n.canonicalMerchantOrder),
+          leading: const DarbBackButton(fallback: '/merchant'),
+        ),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(AppTokens.spaceLarge),
@@ -103,6 +103,7 @@ class _MerchantRouteOrderScreenState
                 title: l10n.orderRecorded,
                 body: l10n.batchingMatchingDisabledNotice,
               ),
+              fareSnapshotBox(context, _result!.fare),
               if (_error != null) Text(_merchantError(l10n, _error!)),
               FilledButton(
                 onPressed: _acknowledgeResult,
@@ -115,7 +116,10 @@ class _MerchantRouteOrderScreenState
     }
     return CanonicalFeatureGate(
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.canonicalMerchantOrder)),
+        appBar: AppBar(
+          title: Text(l10n.canonicalMerchantOrder),
+          leading: const DarbBackButton(fallback: '/merchant'),
+        ),
         body: SafeArea(
           child: ref
               .watch(canonicalRouteCatalogProvider)
@@ -172,6 +176,17 @@ class _MerchantRouteOrderScreenState
                                 }),
                         ),
                       if (route != null) ...[
+                        CanonicalRouteMap(
+                          key: const ValueKey('canonicalRouteMap'),
+                          route: route,
+                          highlightIds: {
+                            _pickupId,
+                            ..._parcels.map(
+                              (parcel) => parcel.destinationStopId,
+                            ),
+                          }.whereType<String>().toSet(),
+                        ),
+                        const SizedBox(height: AppTokens.spaceMedium),
                         OrderedStopTimeline(
                           stops: route.stops,
                           selectedIds: {
@@ -276,6 +291,9 @@ class _MerchantRouteOrderScreenState
                               ),
                             ),
                           ),
+                        parcelFareEstimate(context, route.fares, [
+                          for (final parcel in _parcels) parcel.size,
+                        ]),
                         OutlinedButton.icon(
                           key: const ValueKey('addCanonicalParcel'),
                           onPressed: !_busy && _parcels.length < 50
@@ -333,12 +351,7 @@ class _MerchantRouteOrderScreenState
   }
 
   Future<void> _submit() async {
-    if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
-      setState(
-        () => _error = AppLocalizations.of(context).invalidDepartureWindow,
-      );
-      return;
-    }
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -371,11 +384,22 @@ class _MerchantRouteOrderScreenState
           .run<CanonicalMerchantOrder>(
             operation: 'merchant_route_order_create',
             scope: 'merchant',
+            allowExpiredReplay: true,
+            onBundle: (bundle) => _completedOperation = bundle,
             actorId: actorId,
             payload: payload,
-            preflight: () => ref
-                .read(canonicalRouteRepositoryProvider)
-                .requireFreshRoute(_routeVersionId!),
+            preflight: () async {
+              if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
+                throw const ApiException(
+                  ApiErrorType.validation,
+                  'invalid_departure_window',
+                  statusCode: 400,
+                );
+              }
+              await ref
+                  .read(canonicalRouteRepositoryProvider)
+                  .requireFreshRoute(_routeVersionId!);
+            },
             send: (bundle) => ref
                 .read(canonicalRouteRepositoryProvider)
                 .createMerchantOrder(
@@ -383,6 +407,9 @@ class _MerchantRouteOrderScreenState
                   idempotencyKey: bundle.idempotencyKey,
                 ),
           );
+      // The order is saved and enters matching server-side; make the merchant's
+      // assignment list re-read so it appears without a manual pull.
+      ref.invalidate(merchantCanonicalAssignmentsProvider);
       if (mounted) setState(() => _result = result);
     } catch (error) {
       if (error is ApiException && error.statusCode == 404) {
@@ -398,12 +425,15 @@ class _MerchantRouteOrderScreenState
   Future<void> _acknowledgeResult() async {
     final actorId = ref.read(authControllerProvider).value?.user?.id;
     if (actorId == null) return;
+    final completed = _completedOperation;
+    if (completed == null || completed.actorId != actorId) return;
     try {
       await ref
           .read(canonicalMutationRunnerProvider)
           .acknowledge(
             actorId: actorId,
             operation: 'merchant_route_order_create',
+            idempotencyKey: completed.idempotencyKey,
           );
       if (mounted) context.go('/merchant');
     } catch (error) {
@@ -475,6 +505,9 @@ String _stopName(BuildContext context, CanonicalStop stop) =>
     : stop.nameEn;
 
 String _merchantError(AppLocalizations l10n, Object error) {
+  if (error is ApiException && error.message == 'invalid_departure_window') {
+    return l10n.invalidDepartureWindow;
+  }
   if (error is String) return error;
   if (error is CanonicalOperationBlocked ||
       error is CanonicalOperationStorageException) {

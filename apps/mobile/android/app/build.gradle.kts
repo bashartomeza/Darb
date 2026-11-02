@@ -1,11 +1,40 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Release signing. Credentials come from android/key.properties (git-ignored:
+// storeFile, storePassword, keyAlias, keyPassword) or, for CI, from the
+// environment variables DARB_KEYSTORE_FILE, DARB_KEYSTORE_PASSWORD,
+// DARB_KEY_ALIAS and DARB_KEY_PASSWORD. The file wins over the environment.
+// See docs/mobile/ANDROID_RELEASE.md.
+val keyProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.isFile) file.inputStream().use { load(it) }
+}
+
+fun signingValue(propertyName: String, envName: String): String? =
+    (keyProperties.getProperty(propertyName) ?: System.getenv(envName))?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("storeFile", "DARB_KEYSTORE_FILE")
+val releaseStorePassword = signingValue("storePassword", "DARB_KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "DARB_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "DARB_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword,
+).all { it != null }
+
+// CI-only escape hatch: `-PallowDebugSigning=true` signs the release build with
+// the debug key so CI can build and scan an APK without secrets. Never
+// distribute such an APK.
+val allowDebugSigning =
+    (project.findProperty("allowDebugSigning") ?: System.getenv("DARB_ALLOW_DEBUG_SIGNING"))?.toString() == "true"
+
 android {
-    namespace = "ps.masari.mobile"
+    namespace = "ps.darb.mobile"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,7 +44,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "ps.masari.mobile"
+        applicationId = "ps.darb.mobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -24,12 +53,45 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                // Absolute path, or relative to android/ (then to android/app).
+                val candidate = rootProject.file(releaseStoreFile!!)
+                storeFile = if (candidate.isFile) candidate else file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = when {
+                hasReleaseSigning -> signingConfigs.getByName("release")
+                allowDebugSigning -> signingConfigs.getByName("debug")
+                else -> null
+            }
+            // Minification/shrinking is intentionally left off: it has not been
+            // verified against the plugin set (see docs/mobile/ANDROID_RELEASE.md).
         }
+    }
+}
+
+// Fail packaging of a release build that would otherwise be unsigned.
+gradle.taskGraph.whenReady {
+    val releasePackaging = allTasks.any {
+        it.project == project && Regex("^(assemble|bundle|package)Release$").matches(it.name)
+    }
+    if (releasePackaging && !hasReleaseSigning && !allowDebugSigning) {
+        throw GradleException(
+            "Release signing is not configured. Provide android/key.properties " +
+                "(storeFile, storePassword, keyAlias, keyPassword) or the environment variables " +
+                "DARB_KEYSTORE_FILE, DARB_KEYSTORE_PASSWORD, DARB_KEY_ALIAS, " +
+                "DARB_KEY_PASSWORD. For a non-distributable CI build only, pass " +
+                "-PallowDebugSigning=true. See docs/mobile/ANDROID_RELEASE.md.",
+        )
     }
 }
 

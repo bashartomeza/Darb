@@ -1,10 +1,10 @@
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/features/auth/data/authenticated_api_client.dart';
-import 'package:masari_mobile/features/auth/data/session_coordinator.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
+import 'package:darb_mobile/features/auth/data/session_coordinator.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 
 class MemoryTokenStorage implements TokenStorage {
   MemoryTokenStorage({

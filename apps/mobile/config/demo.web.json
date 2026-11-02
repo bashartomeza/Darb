@@ -1,0 +1,8 @@
+{
+  "APP_ENV": "demo",
+  "API_BASE_URL": "http://localhost:3000",
+  "ENABLE_DEMO_FEATURES": false,
+  "GOOGLE_WEB_CLIENT_ID": "1022684049298-9b93jtqtip50jua3grjnrvovu90f7jho.apps.googleusercontent.com",
+  "GOOGLE_IOS_CLIENT_ID": "",
+  "GOOGLE_SERVER_CLIENT_ID": "1022684049298-9b93jtqtip50jua3grjnrvovu90f7jho.apps.googleusercontent.com"
+}

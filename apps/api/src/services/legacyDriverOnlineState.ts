@@ -5,20 +5,15 @@ import { auditEvent } from "../lib/audit.js";
 import { claimIdempotency, completeIdempotency } from "../lib/idempotency.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../middleware/error.js";
-import { LOCKED_CORRIDOR_KEY } from "../modules/demoReset.js";
+import {
+  LEGACY_DEFAULT_ROUTE_KEY,
+  driverRoutePlaces,
+  resolveOperatingRoute,
+  resolveOperatingRouteByKey,
+} from "./operatingRoutes.js";
 
 const OPERATION = "legacy_driver_online_state_v1";
 const IDEMPOTENCY_TTL_MS = 86_400_000;
-
-const LOCKED_ROUTE = {
-  origin_label: "Hebron / PPU / Bab Al-Zawiya",
-  origin_lat: "31.532600",
-  origin_lng: "35.099800",
-  destination_label: "Bethlehem",
-  destination_lat: "31.705400",
-  destination_lng: "35.202400",
-  corridor_key: LOCKED_CORRIDOR_KEY,
-} as const;
 
 function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
@@ -39,7 +34,11 @@ async function lockEligibleProfile(
   `;
   const profile = rows[0];
   if (!profile) throw new HttpError(403, "driver_unavailable");
-  if (!profile.verified) throw new HttpError(403, "driver_not_approved");
+  if (!profile.verified) {
+    const verification = await tx.driverVerification.findUnique({ where: { user_id: userId }, select: { status: true } });
+    if (verification?.status === "documents_expired") throw new HttpError(403, "driver_documents_expired");
+    throw new HttpError(403, "driver_not_approved");
+  }
   return profile;
 }
 
@@ -66,6 +65,8 @@ async function lockLegacyRoutes(
 export type LegacyOnlineStateInput = {
   online: boolean;
   expectedRouteId?: string | null;
+  /** The predefined route to drive; required to go online without an active route. */
+  serviceRouteId?: string;
 };
 
 export type LegacyOnlineActor = {
@@ -87,6 +88,8 @@ export function createLegacyDriverOnlineStateService(
               actor_id: actor.id,
               online: input.online,
               expected_route_id: input.expectedRouteId ?? null,
+              // Only present when sent, so earlier keys keep their digest.
+              ...(input.serviceRouteId ? { service_route_id: input.serviceRouteId } : {}),
             }),
           );
           const claim = await claimIdempotency(tx, {
@@ -133,12 +136,25 @@ export function createLegacyDriverOnlineStateService(
 
           if (input.online) {
             if (current) {
+              // Already online: a different route needs the current one ended first.
+              if (input.serviceRouteId) {
+                const onRoute = await tx.driverRoute.findFirst({
+                  where: { id: current.id, route_version: { is: { service_route_id: input.serviceRouteId } } },
+                  select: { id: true },
+                });
+                if (!onRoute) throw new HttpError(409, "route_already_active");
+              }
               routeId = current.id;
             } else {
+              // Older app builds name no route: they drive the Hebron → Bethlehem
+              // route, like their passenger and merchant bodies.
+              const operatingRoute = input.serviceRouteId
+                ? await resolveOperatingRoute(tx, input.serviceRouteId)
+                : await resolveOperatingRouteByKey(tx, LEGACY_DEFAULT_ROUTE_KEY);
               const route = await tx.driverRoute.create({
                 data: {
                   driver_id: profile.id,
-                  ...LOCKED_ROUTE,
+                  ...driverRoutePlaces(operatingRoute),
                   seats_available: 1,
                   parcel_capacity_available: 0,
                   status: "active",

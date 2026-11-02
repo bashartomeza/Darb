@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/presentation/localized_labels.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/darb_card.dart';
+import '../application/driver_controller.dart';
 import '../data/driver_models.dart';
 
 String driverStatusLabel(AppLocalizations l10n, String status) =>
@@ -17,6 +22,7 @@ String driverStatusLabel(AppLocalizations l10n, String status) =>
       'delivered' => l10n.statusDelivered,
       'completed' => l10n.statusCompleted,
       'cancelled' => l10n.statusCancelled,
+      'failed' => l10n.requestFailed,
       'rejected' => l10n.statusRejected,
       'expired' => l10n.statusExpired,
       'active' => l10n.statusActive,
@@ -28,6 +34,7 @@ String driverStatusLabel(AppLocalizations l10n, String status) =>
     };
 
 String driverErrorLabel(AppLocalizations l10n, Object error) {
+  if (error is DriverRouteRequired) return l10n.orderRouteRequired;
   if (error is! ApiException) return l10n.requestFailed;
   if (error.type == ApiErrorType.network) return l10n.networkUnavailable;
   if (error.type == ApiErrorType.timeout) return l10n.requestTimedOut;
@@ -39,8 +46,159 @@ String driverErrorLabel(AppLocalizations l10n, Object error) {
     'match_cannot_be_rejected' ||
     'duplicate_active_trip' => l10n.matchCannotChange,
     'invalid_trip_status_transition' => l10n.tripTransitionConflict,
+    'route_unavailable' => l10n.orderRouteUnavailable,
+    'route_required' => l10n.orderRouteRequired,
     _ => l10n.requestFailed,
   };
+}
+
+bool _arabic(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar';
+
+/// The predefined route a driver route runs on, or for routes from before
+/// routes existed, its two ends.
+String driverRouteName(BuildContext context, DriverRoute route) =>
+    route.routeName(arabic: _arabic(context)) ??
+    '${localizedCorridorPlace(context, route.originLabel)} → '
+        '${localizedCorridorPlace(context, route.destinationLabel)}';
+
+/// Where to collect the passenger: their own words, or the old place label.
+String driverPassengerPickupText(
+  BuildContext context,
+  DriverPassengerSummary passenger,
+) =>
+    passenger.pickupDetails ??
+    localizedCorridorPlace(context, passenger.pickupLabel);
+
+/// Where the passenger gets off: their own words, or the old place label.
+String driverPassengerDropoffText(
+  BuildContext context,
+  DriverPassengerSummary passenger,
+) =>
+    passenger.dropoffDetails ??
+    localizedCorridorPlace(context, passenger.destinationLabel);
+
+/// Where to collect a merchant's parcels: their words, or the old place label.
+String driverMerchantPickupText(
+  BuildContext context,
+  DriverMerchantSummary order,
+) => order.pickupDetails ?? localizedCorridorPlace(context, order.pickupLabel);
+
+/// Where one parcel goes: the merchant's words, or the old place label.
+String? driverParcelDropoffText(BuildContext context, DriverParcelStop parcel) {
+  final label = parcel.destinationLabel;
+  return parcel.dropoffDetails ??
+      (label == null ? null : localizedCorridorPlace(context, label));
+}
+
+/// Pickup and drop-off for every passenger and parcel on a match or trip, so
+/// the driver can find them. Parcels show their receiver when given.
+class DriverStopDetailsCard extends StatelessWidget {
+  const DriverStopDetailsCard({
+    required this.passenger,
+    required this.merchantOrder,
+    super.key,
+  });
+
+  final DriverPassengerSummary? passenger;
+  final DriverMerchantSummary? merchantOrder;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final passenger = this.passenger;
+    final order = merchantOrder;
+    final parcels = order?.parcels ?? const <DriverParcelStop>[];
+
+    Widget line(IconData icon, String label, String value, {Key? key}) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppTokens.spaceExtraSmall,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 20, color: AppTheme.primary),
+              const SizedBox(width: AppTokens.spaceSmall),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      value,
+                      key: key,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+
+    return DarbCard(
+      key: const ValueKey('driverStopDetails'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.driverWhereToFindTitle, style: theme.textTheme.titleMedium),
+          const SizedBox(height: AppTokens.spaceSmall),
+          if (passenger != null) ...[
+            line(
+              Icons.person_pin_circle_outlined,
+              l10n.driverPickupDetailsLabel,
+              driverPassengerPickupText(context, passenger),
+              key: const ValueKey('driverPassengerPickup'),
+            ),
+            line(
+              Icons.flag_outlined,
+              l10n.driverDropoffDetailsLabel,
+              driverPassengerDropoffText(context, passenger),
+              key: const ValueKey('driverPassengerDropoff'),
+            ),
+          ],
+          if (order != null) ...[
+            if (passenger != null) const Divider(),
+            line(
+              Icons.storefront_outlined,
+              l10n.driverMerchantPickupLabel,
+              driverMerchantPickupText(context, order),
+              key: const ValueKey('driverMerchantPickup'),
+            ),
+            if (parcels.isNotEmpty) ...[
+              const SizedBox(height: AppTokens.spaceSmall),
+              Text(
+                l10n.driverParcelStopsTitle,
+                style: theme.textTheme.labelLarge,
+              ),
+              for (final (index, parcel) in parcels.indexed)
+                if (driverParcelDropoffText(context, parcel) case final place?)
+                  line(
+                    Icons.inventory_2_outlined,
+                    l10n.driverParcelStopLabel(index + 1),
+                    [
+                      place,
+                      if (parcel.receiverName != null ||
+                          parcel.receiverPhone != null)
+                        '${l10n.driverReceiverLabel}: ${[parcel.receiverName, parcel.receiverPhone].nonNulls.join(' · ')}',
+                    ].join('\n'),
+                    key: ValueKey('driverParcelStop-$index'),
+                  ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 String matchTypeLabel(AppLocalizations l10n, DriverMatch match) {
@@ -68,8 +226,5 @@ Widget technicalText(String value, {Key? key, bool selectable = false}) {
   );
 }
 
-String localizedOrigin(BuildContext context, String fallback) {
-  return Localizations.localeOf(context).languageCode == 'ar'
-      ? 'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية'
-      : fallback;
-}
+String localizedOrigin(BuildContext context, String fallback) =>
+    localizedCorridorPlace(context, fallback);

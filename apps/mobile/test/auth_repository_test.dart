@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/auth/data/auth_repository.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/auth/data/auth_repository.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 
 import 'support/auth_test_support.dart';
 
@@ -12,13 +12,13 @@ void main() {
   test('successful login parsing', () async {
     final repository = _repository((request) async {
       return http.Response(
-        '{"token":"jwt-token","access_token":"jwt-token","access_token_expires_in":900,"refresh_token":"refresh-value","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:00:00.000Z","expires_at":"2026-07-17T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"user_1","name":"Demo Passenger","phone":"+970590000001","role":"passenger","demo_account":true}}',
+        '{"token":"jwt-token","access_token":"jwt-token","access_token_expires_in":900,"refresh_token":"refresh-value","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:00:00.000Z","expires_at":"2026-07-17T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"user_1","name":"Demo Passenger","phone":"+970590000001","role":"passenger","demo_account":true}}',
         200,
       );
     });
 
     final result = await repository.login(
-      phone: '+970590000001',
+      email: 'passenger@example.com',
       password: 'mobile-test-passenger-secret',
     );
 
@@ -40,7 +40,7 @@ void main() {
     });
 
     final result = await repository.login(
-      phone: '+970590000005',
+      email: 'admin@example.com',
       password: 'password-value',
     );
 
@@ -58,7 +58,10 @@ void main() {
     });
 
     await expectLater(
-      repository.login(phone: '+970590000001', password: 'password-value'),
+      repository.login(
+        email: 'passenger@example.com',
+        password: 'password-value',
+      ),
       throwsA(
         isA<ApiException>()
             .having((error) => error.type, 'type', ApiErrorType.validation)
@@ -80,9 +83,37 @@ void main() {
     });
 
     await expectLater(
-      repository.login(phone: '+970590000001', password: 'password-value'),
+      repository.login(
+        email: 'passenger@example.com',
+        password: 'password-value',
+      ),
       throwsA(isA<ApiException>()),
     );
+  });
+
+  test('login sends a phone number as phone and an email as email', () async {
+    final bodies = <String>[];
+    final repository = _repository((request) async {
+      bodies.add(request.body);
+      return http.Response(
+        '{"token":"jwt-token","access_token":"jwt-token","access_token_expires_in":900,"refresh_token":"refresh-value","refresh_token_expires_in":3600,"session":{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:00:00.000Z","expires_at":"2026-07-17T11:00:00.000Z","is_current":true,"revoked":false},"user":{"id":"user_1","name":"Invited","phone":"+970590003001","role":"passenger","demo_account":false}}',
+        200,
+      );
+    });
+
+    await repository.login(
+      email: '+970590003001',
+      password: 'a-long-passphrase',
+    );
+    await repository.login(
+      email: 'a@example.com',
+      password: 'a-long-passphrase',
+    );
+
+    expect(bodies[0], contains('"phone":"+970590003001"'));
+    expect(bodies[0], isNot(contains('"email"')));
+    expect(bodies[1], contains('"email":"a@example.com"'));
+    expect(bodies[1], isNot(contains('"phone"')));
   });
 
   test('failed login error mapping', () async {
@@ -91,7 +122,7 @@ void main() {
     });
 
     await expectLater(
-      repository.login(phone: '+970590000001', password: 'bad'),
+      repository.login(email: 'passenger@example.com', password: 'bad'),
       throwsA(
         isA<ApiException>().having(
           (error) => error.type,

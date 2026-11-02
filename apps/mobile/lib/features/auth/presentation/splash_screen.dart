@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../application/auth_controller.dart';
 
@@ -29,11 +29,8 @@ class SplashScreen extends ConsumerWidget {
                 child: LanguageSwitch(),
               ),
               const Spacer(),
-              Text(
-                l10n.appTitle,
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineLarge?.copyWith(color: AppTheme.deepGreen),
+              Center(
+                child: BrandLogo(width: 220, semanticLabel: l10n.appTitle),
               ),
               const SizedBox(height: AppTokens.spaceMedium),
               if (auth?.status == AuthStatus.restoreFailed) ...[

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/passenger_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/semantic_colors.dart';
-import 'masari_button.dart';
+import 'darb_button.dart';
 
 /// Empty state: a monochromatic teal icon, a short explanation, and a single
 /// clear action underneath.
@@ -40,11 +41,19 @@ class EmptyState extends StatelessWidget {
           Container(
             width: 72,
             height: 72,
-            decoration: const BoxDecoration(
-              color: AppTheme.surfaceContainer,
+            decoration: BoxDecoration(
+              color: PassengerTheme.isActive(context)
+                  ? PassengerStyle.panel
+                  : AppTheme.surfaceContainer,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 32, color: AppTheme.primary),
+            child: Icon(
+              icon,
+              size: 32,
+              color: PassengerTheme.isActive(context)
+                  ? PassengerStyle.orange
+                  : AppTheme.primary,
+            ),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
           Text(
@@ -64,11 +73,7 @@ class EmptyState extends StatelessWidget {
           ],
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppTokens.spaceLarge),
-            MasariButton(
-              label: actionLabel!,
-              onPressed: onAction,
-              expand: false,
-            ),
+            DarbButton(label: actionLabel!, onPressed: onAction, expand: false),
           ],
         ],
       ),
@@ -137,7 +142,7 @@ class ErrorStateView extends StatelessWidget {
           ],
           if (retryLabel != null && onRetry != null) ...[
             const SizedBox(height: AppTokens.spaceLarge),
-            MasariButton.outline(
+            DarbButton.outline(
               label: retryLabel!,
               onPressed: onRetry,
               icon: Icons.refresh,
@@ -166,7 +171,7 @@ class LoadingSkeleton extends StatefulWidget {
   const LoadingSkeleton.card({super.key})
     : height = 120,
       width = double.infinity,
-      radius = AppTokens.radiusLarge;
+      radius = AppTokens.radiusDefault;
 
   final double height;
   final double? width;
@@ -198,8 +203,12 @@ class _LoadingSkeletonState extends State<LoadingSkeleton>
         width: widget.width,
         decoration: BoxDecoration(
           color: Color.lerp(
-            AppTheme.surfaceContainer,
-            AppTheme.surfaceContainerHighest,
+            PassengerTheme.isActive(context)
+                ? PassengerStyle.panel
+                : AppTheme.surfaceContainer,
+            PassengerTheme.isActive(context)
+                ? PassengerStyle.border
+                : AppTheme.surfaceContainerHighest,
             _controller.value,
           ),
           borderRadius: BorderRadius.circular(widget.radius),

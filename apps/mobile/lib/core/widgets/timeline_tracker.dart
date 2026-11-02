@@ -27,7 +27,7 @@ class TimelineStep {
 
 /// A vertical progress tracker for trips and parcel journeys.
 ///
-/// Completed steps are teal, the current step is warm orange (the design
+/// Completed steps are navy, the current step is warm orange (the design
 /// system's kinetic colour), and upcoming steps recede to grey. The connector
 /// sits on the start edge, so it runs down the right-hand side under Arabic
 /// and the left under English without any per-locale branching.
@@ -144,7 +144,7 @@ class _Connector extends StatelessWidget {
               color: color,
               shape: BoxShape.circle,
               border: isCurrent
-                  ? Border.all(color: SemanticColors.actionBright, width: 3)
+                  ? Border.all(color: AppTheme.primaryContainer, width: 3)
                   : null,
             ),
           ),

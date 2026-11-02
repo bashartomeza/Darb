@@ -1,28 +1,79 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { auditEvent } from "../lib/audit.js";
-import { clamp01, haversineKm, LOCKED_DESTINATION, LOCKED_ORIGIN, round, toNumber } from "../lib/geo.js";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { compareRankedRoutes, scoreDriverRoute } from "../lib/routeScoring.js";
+
+import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
+import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { LOCKED_CORRIDOR_KEY, LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { AuditAction, MatchStatus } from "../generated/prisma/enums.js";
+import { notifyMatchOffered } from "../services/notifications.js";
+import { isLegacyRouteTimely, legacyRouteTimingWhere, reserveLegacyCapacity, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
+import {
+  LEGACY_DEFAULT_ROUTE_KEY,
+  resolveOperatingRoute,
+  resolveOperatingRouteByKey,
+  routeFields,
+  routeSummarySelect,
+  serviceRouteIdSchema,
+  withRouteFields
+} from "../services/operatingRoutes.js";
 
 const runMatchSchema = z
   .object({
     passengerRequestId: z.string().optional(),
-    merchantOrderId: z.string().optional()
+    merchantOrderId: z.string().optional(),
+    driverRouteId: z.string().optional()
   })
   .refine((value) => value.passengerRequestId || value.merchantOrderId, {
     message: "passengerRequestId or merchantOrderId is required"
+  })
+  .refine((value) => !value.driverRouteId || value.passengerRequestId, {
+    message: "driverRouteId requires passengerRequestId"
   });
 
-type MatchInput = z.infer<typeof runMatchSchema>;
+export type MatchInput = z.infer<typeof runMatchSchema>;
+
+/** Older app builds search with coordinates; they ride the Hebron → Bethlehem route. */
+const passengerMatchSearchSchema = z.object({
+  pickup_label: z.string().trim().min(1).max(191),
+  pickup_lat: latitudeSchema,
+  pickup_lng: longitudeSchema,
+  destination_label: z.string().trim().min(1).max(191),
+  destination_lat: latitudeSchema,
+  destination_lng: longitudeSchema,
+  preferred_time: z.coerce.date(),
+  passenger_count: z.coerce.number().int().min(1).max(4)
+}).strict();
+
+const routeMatchSearchSchema = z.object({
+  service_route_id: serviceRouteIdSchema,
+  preferred_time: z.coerce.date(),
+  passenger_count: z.coerce.number().int().min(1).max(4)
+}).strict();
+
+function parseMatchSearch(body: unknown) {
+  return body && typeof body === "object" && "service_route_id" in body
+    ? routeMatchSearchSchema.parse(body)
+    : passengerMatchSearchSchema.parse(body);
+}
 
 const listMatchesQuerySchema = z.object({
   status: z.enum(MatchStatus).optional()
 });
+
+/** What a driver needs to deliver a parcel. Receiver details are never part of a match. */
+const matchParcelSelect = {
+  id: true,
+  order_id: true,
+  destination_label: true,
+  dropoff_details: true,
+  size: true,
+  priority: true,
+  status: true
+} satisfies Prisma.ParcelSelect;
 
 const matchSummarySelect = {
   id: true,
@@ -44,9 +95,11 @@ const matchSummarySelect = {
       seats_available: true,
       parcel_capacity_available: true,
       status: true,
+      route_version: routeSummarySelect,
       driver: {
         select: {
           user_id: true,
+          user: { select: { name: true } },
           vehicle_type: true,
           verified: true,
           trust_score: true
@@ -63,7 +116,10 @@ const matchSummarySelect = {
       preferred_time: true,
       passenger_count: true,
       status: true,
-      created_at: true
+      created_at: true,
+      pickup_details: true,
+      dropoff_details: true,
+      route_version: routeSummarySelect
     }
   },
   merchant_order: {
@@ -71,8 +127,11 @@ const matchSummarySelect = {
       id: true,
       merchant_id: true,
       pickup_label: true,
+      pickup_details: true,
       status: true,
       created_at: true,
+      route_version: routeSummarySelect,
+      parcels: { select: matchParcelSelect, orderBy: { id: "asc" as const } },
       _count: { select: { parcels: true } }
     }
   },
@@ -82,12 +141,27 @@ const matchSummarySelect = {
       status: true,
       estimated_distance_saved: true,
       explanation: true,
-      created_at: true
+      created_at: true,
+      members: {
+        select: {
+          merchant_order: {
+            select: {
+              id: true,
+              pickup_label: true,
+              pickup_details: true,
+              parcels: { select: matchParcelSelect, orderBy: { id: "asc" as const } },
+              _count: { select: { parcels: true } }
+            }
+          }
+        }
+      }
     }
   }
 } satisfies Prisma.MatchSelect;
 
 type MatchSummaryRecord = Prisma.MatchGetPayload<{ select: typeof matchSummarySelect }>;
+
+export { scoreDriverRoute };
 
 export const matchingRouter = Router();
 
@@ -120,7 +194,9 @@ function toMatchSummary(match: MatchSummaryRecord) {
       seats_available: match.driver_route.seats_available,
       parcel_capacity_available: match.driver_route.parcel_capacity_available,
       status: match.driver_route.status,
+      ...routeFields(match.driver_route.route_version),
       driver: {
+        name: match.driver_route.driver.user.name,
         vehicle_type: match.driver_route.driver.vehicle_type,
         verified: match.driver_route.driver.verified,
         trust_score: match.driver_route.driver.trust_score
@@ -134,7 +210,10 @@ function toMatchSummary(match: MatchSummaryRecord) {
           preferred_time: match.passenger_request.preferred_time,
           passenger_count: match.passenger_request.passenger_count,
           status: match.passenger_request.status,
-          created_at: match.passenger_request.created_at
+          created_at: match.passenger_request.created_at,
+          ...routeFields(match.passenger_request.route_version),
+          pickup_details: match.passenger_request.pickup_details ?? null,
+          dropoff_details: match.passenger_request.dropoff_details ?? null
         }
       : null,
     merchant_order: match.merchant_order
@@ -143,7 +222,10 @@ function toMatchSummary(match: MatchSummaryRecord) {
           pickup_label: match.merchant_order.pickup_label,
           status: match.merchant_order.status,
           parcel_count: match.merchant_order._count.parcels,
-          created_at: match.merchant_order.created_at
+          created_at: match.merchant_order.created_at,
+          ...routeFields(match.merchant_order.route_version),
+          pickup_details: match.merchant_order.pickup_details ?? null,
+          parcels: match.merchant_order.parcels ?? []
         }
       : null,
     parcel_batch: match.parcel_batch
@@ -152,150 +234,409 @@ function toMatchSummary(match: MatchSummaryRecord) {
           status: match.parcel_batch.status,
           estimated_distance_saved: match.parcel_batch.estimated_distance_saved,
           explanation: match.parcel_batch.explanation,
-          created_at: match.parcel_batch.created_at
+          created_at: match.parcel_batch.created_at,
+          parcel_count: match.parcel_batch.members?.reduce((count, member) => count + member.merchant_order._count.parcels, 0) ?? match.merchant_order?._count.parcels ?? 0,
+          // Each member order's pickup text and its parcels' drop-off text, for the driver.
+          orders: (match.parcel_batch.members ?? []).map((member) => ({
+            id: member.merchant_order.id,
+            pickup_label: member.merchant_order.pickup_label,
+            pickup_details: member.merchant_order.pickup_details ?? null,
+            parcels: member.merchant_order.parcels ?? []
+          }))
         }
       : null
   };
 }
 
-async function loadAuthorizedInput(req: AuthenticatedRequest, input: MatchInput) {
+/** Who asks for a match: the signed-in user, or the server acting for them (passenger parcels). */
+export type MatchActor = { id: string; role: string };
+
+async function loadAuthorizedInput(actor: MatchActor, input: MatchInput) {
   const passengerRequest = input.passengerRequestId
-    ? await prisma.passengerRequest.findUnique({ where: { id: input.passengerRequestId } })
+    ? await prisma.passengerRequest.findUnique({
+        where: { id: input.passengerRequestId },
+        include: { route_version: { select: { service_route_id: true } } }
+      })
     : null;
   const merchantOrder = input.merchantOrderId
     ? await prisma.merchantOrder.findUnique({
         where: { id: input.merchantOrderId },
         include: {
+          route_version: { select: { service_route_id: true } },
+          passenger_parcel: { select: { sender_id: true } },
           parcels: true,
-          parcel_batches: { select: { id: true }, orderBy: { created_at: "desc" }, take: 1 }
+          parcel_batches: {
+            where: { status: { notIn: ["cancelled", "failed", "expired"] } },
+            select: { id: true },
+            orderBy: { created_at: "desc" },
+            take: 1
+          },
+          batch_members: {
+            where: { active: true },
+            select: { parcel_batch_id: true },
+            orderBy: { created_at: "desc" },
+            take: 1
+          }
         }
       })
     : null;
 
   if (input.passengerRequestId && !passengerRequest) throw new HttpError(404, "passenger_request_not_found");
   if (input.merchantOrderId && !merchantOrder) throw new HttpError(404, "merchant_order_not_found");
-  if (req.user!.role !== "admin") {
-    if (passengerRequest && (req.user!.role !== "passenger" || passengerRequest.passenger_id !== req.user!.id)) {
+  if (actor.role !== "admin") {
+    if (passengerRequest && (actor.role !== "passenger" || passengerRequest.passenger_id !== actor.id)) {
       throw new HttpError(403, "forbidden");
     }
-    if (merchantOrder && (req.user!.role !== "merchant" || merchantOrder.merchant_id !== req.user!.id)) {
+    // A passenger parcel is an order whose owner is the passenger who sent it.
+    const ownsOrder =
+      merchantOrder?.merchant_id === actor.id &&
+      (actor.role === "merchant" || (actor.role === "passenger" && merchantOrder.passenger_parcel?.sender_id === actor.id));
+    if (merchantOrder && !ownsOrder) {
       throw new HttpError(403, "forbidden");
     }
   }
   if (passengerRequest?.canonical_entry_version || merchantOrder?.canonical_entry_version) {
     throw new HttpError(409, "canonical_matching_not_enabled");
   }
+  const passengerRoute = passengerRequest?.route_version?.service_route_id ?? null;
+  const orderRoute = merchantOrder?.route_version?.service_route_id ?? null;
+  if (passengerRequest && merchantOrder && passengerRoute !== orderRoute) {
+    throw new HttpError(409, "demand_route_mismatch");
+  }
 
-  return { passengerRequest, merchantOrder };
+  return { passengerRequest, merchantOrder, serviceRouteId: passengerRequest ? passengerRoute : orderRoute };
 }
 
-export function scoreDriverRoute(input: {
-  route: {
-    origin_label: string;
-    destination_label: string;
-    origin_lat: unknown;
-    origin_lng: unknown;
-    seats_available: number;
-    parcel_capacity_available: number;
-    driver: { trust_score: number };
-  };
-  passengerRequest?: { pickup_lat: unknown; pickup_lng: unknown; passenger_count: number; preferred_time: Date | string } | null;
+type PassengerDemand = {
+  pickup_lat: unknown;
+  pickup_lng: unknown;
+  passenger_count: number;
+  preferred_time: Date | string;
+};
+
+/**
+ * Supply on the demand's own service route, compared through the route
+ * version so republishing a route never splits its drivers from its orders.
+ * Demand stored before routes existed (no route) keeps matching the locked
+ * corridor's driver routes, and only those.
+ */
+export function sameServiceRouteWhere(serviceRouteId: string | null): Prisma.DriverRouteWhereInput {
+  return serviceRouteId
+    ? { route_version: { is: { service_route_id: serviceRouteId } } }
+    : { corridor_key: LOCKED_CORRIDOR_KEY };
+}
+
+async function rankDriverRoutes(input: {
+  serviceRouteId: string | null;
+  passengerRequest?: PassengerDemand | null;
   parcelCount: number;
+  excludeRouteIds?: ReadonlySet<string>;
 }) {
-  const isForwardCorridor =
-    input.route.origin_label === "Hebron / PPU / Bab Al-Zawiya" && input.route.destination_label === "Bethlehem";
-  const corridorOverlap = isForwardCorridor ? 0.95 : 0.3;
-  const pickupPoint = input.passengerRequest
-    ? { lat: toNumber(input.passengerRequest.pickup_lat), lng: toNumber(input.passengerRequest.pickup_lng) }
-    : LOCKED_ORIGIN;
-  const routeOrigin = { lat: toNumber(input.route.origin_lat), lng: toNumber(input.route.origin_lng) };
-  const pickupDistanceKm = haversineKm(routeOrigin, pickupPoint);
-  const pickupDistanceScore = clamp01(1 - pickupDistanceKm / 25);
-  const timingFit = 0.9;
-  const trustScore = clamp01(input.route.driver.trust_score / 100);
-  const seatFit = input.passengerRequest ? input.route.seats_available / Math.max(1, input.passengerRequest.passenger_count) : 1;
-  const parcelFit = input.parcelCount > 0 ? input.route.parcel_capacity_available / input.parcelCount : 1;
-  const capacityFit = clamp01(Math.min(seatFit, parcelFit));
-  const finalScore = round(
-    0.4 * corridorOverlap + 0.25 * pickupDistanceScore + 0.15 * timingFit + 0.1 * trustScore + 0.1 * capacityFit
-  );
-
-  return {
-    corridorOverlap: round(corridorOverlap),
-    pickupDistanceScore: round(pickupDistanceScore),
-    timingFit: round(timingFit),
-    trustScore: round(trustScore),
-    capacityFit: round(capacityFit),
-    finalScore,
-    estimatedDeviationKm: round(pickupDistanceKm, 2)
-  };
-}
-
-async function createBestMatch(req: AuthenticatedRequest, input: MatchInput) {
-  const { passengerRequest, merchantOrder } = await loadAuthorizedInput(req, input);
-  const parcelCount = merchantOrder?.parcels.length ?? 0;
+  const now = new Date();
   const routes = await prisma.driverRoute.findMany({
     where: {
       status: "active",
-      corridor_key: LOCKED_CORRIDOR_KEY,
+      ...sameServiceRouteWhere(input.serviceRouteId),
       canonical_availability_version: null,
       operational_mode: "legacy",
-      driver: { verified: true }
+      driver: { verified: true, user: { role: "driver", account_status: "active" } },
+      ...legacyRouteTimingWhere(now)
     },
-    include: { driver: true },
+    include: {
+      route_version: routeSummarySelect,
+      driver: {
+        include: {
+          user: { select: { name: true } }
+        }
+      }
+    },
     orderBy: { id: "asc" }
   });
 
-  const candidates = routes
-    .filter((route) => !passengerRequest || route.seats_available >= passengerRequest.passenger_count)
-    .filter((route) => parcelCount === 0 || route.parcel_capacity_available >= parcelCount)
-    .map((route) => ({ route, breakdown: scoreDriverRoute({ route, passengerRequest, parcelCount }) }))
-    .sort((a, b) => {
-      if (b.breakdown.finalScore !== a.breakdown.finalScore) return b.breakdown.finalScore - a.breakdown.finalScore;
-      if (a.breakdown.estimatedDeviationKm !== b.breakdown.estimatedDeviationKm) {
-        return a.breakdown.estimatedDeviationKm - b.breakdown.estimatedDeviationKm;
-      }
-      if (b.route.driver.trust_score !== a.route.driver.trust_score) return b.route.driver.trust_score - a.route.driver.trust_score;
-      return a.route.id.localeCompare(b.route.id);
-    });
+  return routes
+    .filter((route) => isLegacyRouteTimely(route, now))
+    .filter((route) => !input.excludeRouteIds?.has(route.id))
+    .filter((route) => !input.passengerRequest || route.seats_available >= input.passengerRequest.passenger_count)
+    .filter((route) => input.parcelCount === 0 || route.parcel_capacity_available >= input.parcelCount)
+    .map((route) => ({
+      route,
+      breakdown: scoreDriverRoute({
+        route,
+        passengerRequest: input.passengerRequest,
+        parcelCount: input.parcelCount,
+        sameRoute: true
+      })
+    }))
+    .sort(compareRankedRoutes);
+}
 
-  const best = candidates[0];
-  if (!best) throw new HttpError(404, "no_compatible_driver_route");
+type RankedDriverRoute = Awaited<ReturnType<typeof rankDriverRoutes>>[number];
 
+function passengerSearchResult(candidate: RankedDriverRoute) {
+  return {
+    id: candidate.route.id,
+    origin_label: candidate.route.origin_label,
+    destination_label: candidate.route.destination_label,
+    departure_at: candidate.route.departure_at,
+    availability_window_end: candidate.route.availability_window_end,
+    seats_available: candidate.route.seats_available,
+    ...routeFields(candidate.route.route_version),
+    score: candidate.breakdown.finalScore,
+    scoring_breakdown: candidate.breakdown,
+    driver: {
+      name: candidate.route.driver.user.name,
+      vehicle_type: candidate.route.driver.vehicle_type,
+      trust_score: candidate.route.driver.trust_score,
+      verified: candidate.route.driver.verified
+    }
+  };
+}
+
+/**
+ * Finds and offers the best driver route on the demand's own service route.
+ * Exported for the passenger parcel creation, which asks for a match on the
+ * sender's behalf right after the parcel is saved.
+ */
+export async function createBestMatch(actor: MatchActor, input: MatchInput) {
+  const { passengerRequest, merchantOrder, serviceRouteId } = await loadAuthorizedInput(actor, input);
+  // A route picked at booking is saved on the request; matching never swaps it.
+  const pinnedRouteId = passengerRequest?.selected_driver_route_id ?? null;
+  if (pinnedRouteId && input.driverRouteId && input.driverRouteId !== pinnedRouteId) {
+    throw new HttpError(409, "selected_driver_route_unavailable");
+  }
+  const driverRouteId = pinnedRouteId ?? input.driverRouteId;
+  if (merchantOrder && !["submitted", "batched", "matched"].includes(merchantOrder.status)) {
+    throw new HttpError(409, "merchant_order_not_matchable");
+  }
+  if (passengerRequest && passengerRequest.preferred_time <= new Date()) {
+    throw new HttpError(409, "passenger_request_expired");
+  }
+  const merchantBatchId = merchantOrder?.parcel_batches[0]?.id ?? merchantOrder?.batch_members[0]?.parcel_batch_id ?? null;
+  const parcelCount = merchantOrder
+    ? merchantBatchId
+      ? await prisma.parcel.count({ where: { batch_id: merchantBatchId, status: { notIn: ["cancelled", "failed", "expired"] } } })
+      : merchantOrder.parcels.length
+    : 0;
+  const rejectedRoutes = passengerRequest
+    ? await prisma.match.findMany({
+        where: {
+          passenger_request_id: passengerRequest.id,
+          operational_mode: "legacy",
+          status: { in: [MatchStatus.rejected, MatchStatus.expired, MatchStatus.invalidated] }
+        },
+        select: { driver_route_id: true }
+      })
+    : [];
+  const candidates = await rankDriverRoutes({
+    serviceRouteId,
+    passengerRequest,
+    parcelCount,
+    excludeRouteIds: new Set(rejectedRoutes.map((item) => item.driver_route_id))
+  });
+
+  const best = driverRouteId
+    ? candidates.find((candidate) => candidate.route.id === driverRouteId)
+    : candidates[0];
+  if (!best) {
+    throw new HttpError(
+      driverRouteId ? 409 : 404,
+      driverRouteId ? "selected_driver_route_unavailable" : "no_compatible_driver_route"
+    );
+  }
+
+  const routeName = best.route.route_version ? `${best.route.route_version.name_en} route` : `${LOCKED_CORRIDOR_LABEL} corridor`;
   const explanation =
-    `Driver selected because the route matches the ${LOCKED_CORRIDOR_LABEL} corridor, ` +
+    `Driver selected because the route matches the ${routeName}, ` +
     "pickup is near the route, capacity is available, and trust score is high.";
 
-  const match = await prisma.match.create({
-    data: {
-      driver_route_id: best.route.id,
-      passenger_request_id: passengerRequest?.id,
-      merchant_order_id: merchantOrder?.id,
-      parcel_batch_id: merchantOrder?.parcel_batches[0]?.id,
-      score: best.breakdown.finalScore.toFixed(4),
-      method: "masari_route_score",
-      explanation,
-      scoring_breakdown: best.breakdown,
-      status: "proposed"
+  if (passengerRequest && !["pending", "matched"].includes(passengerRequest.status)) {
+    throw new HttpError(409, "passenger_request_not_matchable");
+  }
+  if (merchantOrder && !["submitted", "batched", "matched"].includes(merchantOrder.status)) {
+    throw new HttpError(409, "merchant_order_not_matchable");
+  }
+
+  let match;
+  try {
+    match = await prisma.$transaction(async (tx) => {
+      if (passengerRequest) {
+        const claimedRequest = await tx.passengerRequest.updateMany({
+          where: {
+            id: passengerRequest.id,
+            passenger_id: passengerRequest.passenger_id,
+            status: { in: ["pending", "matched"] },
+            canonical_entry_version: null,
+            preferred_time: { gt: new Date() }
+          },
+          data: { status: "matched" }
+        });
+        if (claimedRequest.count !== 1) {
+          throw new HttpError(409, "passenger_request_not_matchable");
+        }
+
+        const active = await tx.match.findFirst({
+          where: {
+            passenger_request_id: passengerRequest.id,
+            operational_mode: "legacy",
+            status: { in: [MatchStatus.proposed, MatchStatus.sent_to_driver, MatchStatus.accepted] }
+          }
+        });
+        if (active) throw new HttpError(409, "passenger_request_already_matched");
+      }
+
+      if (merchantOrder) {
+        const active = await tx.match.findFirst({
+          where: merchantBatchId
+            ? {
+                parcel_batch_id: merchantBatchId,
+                operational_mode: "legacy",
+                status: { in: [MatchStatus.proposed, MatchStatus.sent_to_driver, MatchStatus.accepted] }
+              }
+            : {
+                merchant_order_id: merchantOrder.id,
+                operational_mode: "legacy",
+                status: { in: [MatchStatus.proposed, MatchStatus.sent_to_driver, MatchStatus.accepted] }
+              }
+        });
+        if (active) throw new HttpError(409, "merchant_order_already_matched");
+
+        if (merchantBatchId) {
+          const members = await tx.parcelBatchOrder.findMany({
+            where: { parcel_batch_id: merchantBatchId },
+            select: { merchant_order_id: true }
+          });
+          if (!members.length) throw new HttpError(409, "batch_not_matchable");
+          const orderIds = members.map((item) => item.merchant_order_id);
+          const claimed = await tx.merchantOrder.updateMany({
+            where: { id: { in: orderIds }, status: { in: ["batched", "submitted"] } },
+            data: { status: "matched" }
+          });
+          if (claimed.count !== orderIds.length) throw new HttpError(409, "batch_not_matchable");
+        } else {
+          const claimed = await tx.merchantOrder.updateMany({
+            where: { id: merchantOrder.id, status: "submitted" },
+            data: { status: "matched" }
+          });
+          if (claimed.count !== 1) throw new HttpError(409, "merchant_order_not_matchable");
+        }
+
+        if (merchantBatchId) {
+          await tx.parcelBatch.update({ where: { id: merchantBatchId }, data: { driver_route_id: best.route.id, status: "proposed" } });
+        }
+      }
+
+      const seatsToReserve = passengerRequest?.passenger_count ?? 0;
+      if (seatsToReserve || parcelCount) {
+        await reserveLegacyCapacity(tx, {
+          driverRouteId: best.route.id,
+          seats: seatsToReserve,
+          parcelUnits: parcelCount,
+          passengerRequestId: passengerRequest?.id
+        });
+      }
+
+      // Batch/order writes may themselves wait on locks. Recheck approved
+      // supply and demand with a separate DB clock after all those waits.
+      await requireEligibleLegacyRoute(tx, best.route.id, { passengerRequestId: passengerRequest?.id });
+
+      const created = await tx.match.create({
+        data: {
+          driver_route_id: best.route.id,
+          passenger_request_id: passengerRequest?.id,
+          merchant_order_id: merchantOrder?.id,
+          parcel_batch_id: merchantBatchId,
+          score: best.breakdown.finalScore.toFixed(4),
+          method: "darb_route_score",
+          explanation,
+          scoring_breakdown: best.breakdown,
+          status: MatchStatus.proposed,
+          expires_at: new Date(Date.now() + 10 * 60 * 1000),
+          legacy_capacity_held: true,
+          legacy_demand_key: passengerRequest
+            ? `passenger:${passengerRequest.id}`
+            : null
+        },
+        include: {
+          driver_route: { include: { driver: true, route_version: routeSummarySelect } },
+          passenger_request: { include: { route_version: routeSummarySelect } },
+          merchant_order: { include: { route_version: routeSummarySelect } },
+          parcel_batch: true
+        }
+      });
+
+      await tx.auditEvent.create({
+        data: {
+          user_id: actor.id,
+          action: AuditAction.match_decision,
+          entity_type: "Match",
+          entity_id: created.id,
+          metadata: { method: created.method, score: best.breakdown.finalScore }
+        }
+      });
+      return created;
+    });
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      throw new HttpError(409, passengerRequest ? "passenger_request_already_matched" : "match_conflict");
+    }
+    throw error;
+  }
+
+  await notifyMatchOffered(prisma, match);
+
+  return {
+    match: {
+      ...match,
+      driver_route: withRouteFields(match.driver_route),
+      passenger_request: match.passenger_request ? withRouteFields(match.passenger_request) : null,
+      merchant_order: match.merchant_order ? withRouteFields(match.merchant_order) : null
     },
-    include: { driver_route: { include: { driver: true } }, passenger_request: true, merchant_order: true, parcel_batch: true }
-  });
-
-  await auditEvent(prisma, {
-    userId: req.user!.id,
-    action: AuditAction.match_decision,
-    entityType: "Match",
-    entityId: match.id,
-    metadata: { method: match.method, score: best.breakdown.finalScore }
-  });
-
-  return { match, scoringBreakdown: best.breakdown, candidatesConsidered: candidates.length };
+    scoringBreakdown: best.breakdown,
+    candidatesConsidered: candidates.length
+  };
 }
+
+matchingRouter.post(
+  "/matches/search",
+  requireAuth,
+  requireRole("passenger"),
+  async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const input = parseMatchSearch(req.body);
+      if (input.preferred_time <= new Date()) throw new HttpError(400, "preferred_time_in_past");
+      // Older builds search with coordinates; they ride the Hebron → Bethlehem route.
+      const route = "service_route_id" in input
+        ? await resolveOperatingRoute(prisma, input.service_route_id)
+        : await resolveOperatingRouteByKey(prisma, LEGACY_DEFAULT_ROUTE_KEY);
+      const pickup = "service_route_id" in input
+        ? { lat: route.origin.latitude, lng: route.origin.longitude }
+        : { lat: input.pickup_lat, lng: input.pickup_lng };
+
+      const candidates = await rankDriverRoutes({
+        serviceRouteId: route.serviceRouteId,
+        passengerRequest: {
+          pickup_lat: pickup.lat,
+          pickup_lng: pickup.lng,
+          passenger_count: input.passenger_count,
+          preferred_time: input.preferred_time
+        },
+        parcelCount: 0
+      });
+
+      res.json({
+        results: candidates.map(passengerSearchResult),
+        request_id: req.requestId
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 matchingRouter.post("/matches/run", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const input = runMatchSchema.parse(req.body);
-    const result = await createBestMatch(req, input);
+    const result = await createBestMatch({ id: req.user!.id, role: req.user!.role }, input);
     res.status(201).json(result);
   } catch (error) {
     next(error);

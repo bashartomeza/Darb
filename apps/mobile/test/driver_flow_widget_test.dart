@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,13 +8,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/app.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/core/widgets/masari_section.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/app.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/operating_routes_fixture.dart';
 import 'test_app_config.dart';
 
 void main() {
@@ -33,7 +34,7 @@ void main() {
       TextDirection.rtl,
     );
 
-    await tester.tap(find.text('English'));
+    await tester.tap(find.byTooltip('English'));
     await tester.pumpAndSettle();
     expect(find.text('View route'), findsOneWidget);
     expect(
@@ -44,24 +45,156 @@ void main() {
     );
   });
 
-  testWidgets('route form uses locked corridor without editable coordinates', (
+  testWidgets('route form offers the running routes and sends the chosen one', (
     tester,
   ) async {
-    await _pumpApp(tester, handler: _DriverHandler(routesEmpty: true).call);
+    final handler = _DriverHandler(routesEmpty: true);
+    await _pumpApp(tester, handler: handler.call);
     GoRouter.of(
       tester.element(find.byKey(const ValueKey('driverHome'))),
     ).go('/driver/route');
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining(
-        'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم',
-      ),
-      findsWidgets,
-    );
+    expect(find.byKey(const ValueKey('driverRouteField')), findsOneWidget);
     expect(find.byKey(const ValueKey('driverSeatsField')), findsOneWidget);
     expect(find.byKey(const ValueKey('driverParcelField')), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
+    // Nothing is sent until a route is chosen.
+    VoidCallback? activate() => tester
+        .widget<FilledButton>(find.byKey(const ValueKey('activateRouteButton')))
+        .onPressed;
+    expect(activate(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('driverRouteField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('بيت لحم ← الخليل').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('activateRouteButton')));
+    await tester.pumpAndSettle();
+
+    expect(handler.createBodies, [
+      {
+        'service_route_id': 'route-bth-heb',
+        'seats_available': 2,
+        'parcel_capacity_available': 5,
+      },
+    ]);
+    expect(handler.paths.where((path) => path.contains('corridor')), isEmpty);
+    // The new route is shown by name.
+    expect(find.byKey(const ValueKey('driverActiveRouteName')), findsOneWidget);
+    expect(find.textContaining('الخليل ← بيت لحم'), findsWidgets);
+  });
+
+  testWidgets('route form shows a retry when the routes cannot load', (
+    tester,
+  ) async {
+    final handler = _DriverHandler(routesEmpty: true)..routesFail = true;
+    await _pumpApp(tester, handler: handler.call);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('driverHome'))),
+    ).go('/driver/route');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('driverRoutesError')), findsOneWidget);
+    handler.routesFail = false;
+    await tester.tap(find.byKey(const ValueKey('driverRoutesRetry')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('driverRouteField')), findsOneWidget);
+  });
+
+  testWidgets('going online without a route asks the driver to choose one', (
+    tester,
+  ) async {
+    final handler = _DriverHandler(routesEmpty: true);
+    await _pumpApp(tester, handler: handler.call);
+    expect(find.textContaining('لم تختر مساراً بعد'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('driverOnlineSwitch')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('driverRoutePicker')), findsOneWidget);
+    expect(handler.onlineBodies, isEmpty);
+
+    await tester.tap(
+      find.byKey(const ValueKey('driverRouteOption-route-heb-bth')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('driverRoutePickConfirm')));
+    await tester.pumpAndSettle();
+
+    expect(handler.onlineBodies, [
+      {'online': true, 'service_route_id': 'route-heb-bth'},
+    ]);
+    // Home names the chosen route.
+    expect(find.textContaining('الخليل ← بيت لحم'), findsWidgets);
+  });
+
+  testWidgets('dismissing the route question keeps the driver offline', (
+    tester,
+  ) async {
+    final handler = _DriverHandler(routesEmpty: true);
+    await _pumpApp(tester, handler: handler.call);
+    await tester.tap(find.byKey(const ValueKey('driverOnlineSwitch')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إلغاء'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('driverRoutePicker')), findsNothing);
+    expect(handler.onlineBodies, isEmpty);
+  });
+
+  testWidgets('match and trip show where to collect and drop each customer', (
+    tester,
+  ) async {
+    final handler = _DriverHandler()..routeBased = true;
+    await _pumpApp(tester, handler: handler.call);
+    final router = GoRouter.of(
+      tester.element(find.byKey(const ValueKey('driverHome'))),
+    );
+
+    router.go('/driver/matches');
+    await tester.pumpAndSettle();
+    expect(find.text('قرب البوابة الرئيسية لجامعة البوليتكنك'), findsWidgets);
+    expect(find.text('محطة باصات بيت لحم'), findsWidgets);
+
+    router.go('/driver/match/match_1');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('driverMatchRoute')), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('driverPassengerPickup')))
+          .data,
+      'قرب البوابة الرئيسية لجامعة البوليتكنك',
+    );
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('driverPassengerDropoff')))
+          .data,
+      'محطة باصات بيت لحم',
+    );
+
+    router.go('/driver/trip/trip_1');
+    await tester.pumpAndSettle();
+    final sheet = find.byType(DraggableScrollableSheet);
+    await tester.drag(sheet, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('driverTripRouteTitle')))
+          .data,
+      'الخليل ← بيت لحم',
+    );
+    expect(find.byKey(const ValueKey('driverPassengerPickup')), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('driverMerchantPickup')))
+          .data,
+      'متجر الأمل، شارع عين سارة',
+    );
+    final parcel = tester
+        .widget<Text>(find.byKey(const ValueKey('driverParcelStop-0')))
+        .data!;
+    expect(parcel, contains('شارع المهد، البوابة الزرقاء'));
+    expect(parcel, contains('سارة'));
+    expect(parcel, contains('+970599123456'));
   });
 
   testWidgets('match inbox and detail display safe summary and scoring', (
@@ -74,7 +207,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('طلب مسافر'), findsOneWidget);
-    expect(find.textContaining('PPU Main Gate'), findsOneWidget);
+    expect(find.textContaining('بوابة البوليتكنك'), findsOneWidget);
     expect(find.textContaining('93.2%'), findsOneWidget);
     expect(find.textContaining('password'), findsNothing);
 
@@ -125,10 +258,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('رحلة السائق'), findsOneWidget);
+    expect(find.byKey(const ValueKey('driverTrip')), findsOneWidget);
   });
 
-  testWidgets('trip shows only valid next action and updates simulation', (
+  testWidgets('trip shows only valid next action without simulation', (
     tester,
   ) async {
     final handler = _DriverHandler();
@@ -143,24 +276,11 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('tripAction-picked_up')), findsNothing);
-    expect(find.textContaining('31.5326'), findsWidgets);
-    expect(find.byKey(const ValueKey('routeProgress')), findsOneWidget);
+    expect(find.byKey(const ValueKey('driverTrip')), findsOneWidget);
+    expect(find.byKey(const ValueKey('driverTrip')), findsOneWidget);
 
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('simulateStepButton')),
-    );
-    await tester.tap(find.byKey(const ValueKey('simulateStepButton')));
-    await tester.pumpAndSettle();
-
-    // The label and its value are separate Texts in a DetailRow, so the
-    // assertion pairs them rather than matching one interpolated string.
-    expect(
-      find.descendant(
-        of: find.widgetWithText(DetailRow, 'التسلسل'),
-        matching: find.text('1'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('simulateStepButton')), findsNothing);
+    expect(find.byKey(const ValueKey('resetSimulationButton')), findsNothing);
   });
 
   testWidgets('production driver trip hides tracking simulation controls', (
@@ -177,7 +297,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('simulateStepButton')), findsNothing);
     expect(find.byKey(const ValueKey('resetSimulationButton')), findsNothing);
-    expect(find.textContaining('31.5326'), findsWidgets);
+    expect(find.byKey(const ValueKey('driverTrip')), findsOneWidget);
   });
 
   testWidgets('passenger cannot access driver routes', (tester) async {
@@ -208,7 +328,7 @@ void main() {
       authenticated: false,
       handler: _roleHandler('driver'),
     );
-    GoRouter.of(tester.element(find.text('مساري'))).go('/driver/route');
+    GoRouter.of(tester.element(find.text('أهلاً بعودتك'))).go('/driver/route');
     await tester.pumpAndSettle();
     expect(find.text('تسجيل الدخول'), findsWidgets);
     expect(find.text('تفاصيل المسار'), findsNothing);
@@ -221,7 +341,7 @@ Future<void> _pumpApp(
   bool authenticated = true,
   AppConfig config = demoTestAppConfig,
 }) async {
-  tester.view.physicalSize = const Size(900, 2000);
+  tester.view.physicalSize = const Size(900, 2200);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -235,7 +355,7 @@ Future<void> _pumpApp(
         appConfigProvider.overrideWithValue(config),
         httpClientProvider.overrideWithValue(MockClient(handler)),
       ],
-      child: const MasariApp(),
+      child: const DarbApp(),
     ),
   );
   await tester.pumpAndSettle();
@@ -243,24 +363,61 @@ Future<void> _pumpApp(
 
 class _DriverHandler {
   _DriverHandler({this.routesEmpty = false, this.acceptResponse});
-  final bool routesEmpty;
+  bool routesEmpty;
   final Completer<http.Response>? acceptResponse;
   int locationSequence = 0;
+  bool routesFail = false;
+
+  /// Serve route-based match and trip payloads with typed details.
+  bool routeBased = false;
+  final paths = <String>[];
+  final createBodies = <Map<String, dynamic>>[];
+  final onlineBodies = <Map<String, dynamic>>[];
+
+  http.Response _utf8(String body, int status) => http.Response(
+    body,
+    status,
+    headers: const {'content-type': 'application/json; charset=utf-8'},
+  );
 
   Future<http.Response> call(http.Request request) async {
     final path = request.url.path;
+    paths.add(path);
     if (path.endsWith('/me')) return http.Response(_meBody('driver'), 200);
-    if (path.endsWith('/driver/routes/active')) {
+    if (path.endsWith('/operating-routes')) {
+      return routesFail
+          ? http.Response('{"error":"internal_error"}', 500)
+          : _utf8(jsonEncode(operatingRoutesJson()), 200);
+    }
+    if (path.endsWith('/driver/online-state') && request.method == 'PUT') {
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      onlineBodies.add(body);
+      routesEmpty = body['online'] != true;
       return http.Response(
-        routesEmpty ? '{"routes":[]}' : '{"routes":[$_routeJson]}',
+        '{"online":${body['online']},"route_id":"route_1","replayed":false}',
         200,
       );
     }
-    if (path.endsWith('/driver/routes')) {
-      return http.Response(
-        routesEmpty ? '{"routes":[]}' : '{"routes":[$_routeJson]}',
-        200,
-      );
+    if (path.endsWith('/driver/routes') && request.method == 'POST') {
+      createBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+      routesEmpty = false;
+      return _utf8('{"route":$_namedRouteJson}', 201);
+    }
+    if (path.endsWith('/driver/routes/active') ||
+        path.endsWith('/driver/routes')) {
+      if (routesEmpty) return http.Response('{"routes":[]}', 200);
+      return createBodies.isEmpty && onlineBodies.isEmpty
+          ? http.Response('{"routes":[$_routeJson]}', 200)
+          : _utf8('{"routes":[$_namedRouteJson]}', 200);
+    }
+    if (routeBased && path.endsWith('/matches/match_1')) {
+      return _utf8('{"match":$_routeMatchJson}', 200);
+    }
+    if (routeBased && path.endsWith('/matches')) {
+      return _utf8('{"matches":[$_routeMatchJson]}', 200);
+    }
+    if (routeBased && path.endsWith('/trips/trip_1')) {
+      return _utf8('{"trip":$_routeTripJson}', 200);
     }
     if (path.endsWith('/matches/match_1/accept')) {
       return acceptResponse?.future ??
@@ -338,10 +495,25 @@ const _assignedRouteJson =
     '{"id":"route_1","origin_label":"Hebron / PPU / Bab Al-Zawiya","origin_lat":"31.532600","origin_lng":"35.099800","destination_label":"Bethlehem","destination_lat":"31.705400","destination_lng":"35.202400","corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":2,"parcel_capacity_available":5,"status":"assigned","activated_at":"2026-07-13T08:00:00.000Z","completed_at":null}';
 
 const _matchJson =
-    '{"id":"match_1","status":"proposed","score":"0.9317","method":"masari_route_score","explanation":"Safe explanation","scoring_breakdown":{"corridorOverlap":0.95,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317},"created_at":"2026-07-13T08:10:00.000Z","driver_route":{"id":"route_1","origin_label":"Hebron / PPU / Bab Al-Zawiya","destination_label":"Bethlehem","corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":2,"parcel_capacity_available":5,"status":"active","driver":{"vehicle_type":"sedan","verified":true,"trust_score":86}},"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","preferred_time":"2026-07-13T09:00:00.000Z","passenger_count":1,"status":"pending","created_at":"2026-07-13T08:00:00.000Z"},"merchant_order":null,"parcel_batch":null}';
+    '{"id":"match_1","status":"proposed","score":"0.9317","method":"darb_route_score","explanation":"Safe explanation","scoring_breakdown":{"corridorOverlap":0.95,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317},"created_at":"2026-07-13T08:10:00.000Z","driver_route":{"id":"route_1","origin_label":"Hebron / PPU / Bab Al-Zawiya","destination_label":"Bethlehem","corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":2,"parcel_capacity_available":5,"status":"active","driver":{"vehicle_type":"sedan","verified":true,"trust_score":86}},"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","preferred_time":"2026-07-13T09:00:00.000Z","passenger_count":1,"status":"pending","created_at":"2026-07-13T08:00:00.000Z"},"merchant_order":null,"parcel_batch":null}';
 
 const _tripJson =
     '{"id":"trip_1","status":"accepted","created_at":"2026-07-13T08:20:00.000Z","started_at":"2026-07-13T08:20:00.000Z","completed_at":null,"driver_route":$_assignedRouteJson,"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","passenger_count":1,"status":"accepted"},"merchant_order":null,"parcel_batch":null}';
+
+const _routeFields =
+    '"service_route_id":"route-heb-bth","route_name_ar":"الخليل ← بيت لحم","route_name_en":"Hebron → Bethlehem"';
+
+const _namedRouteJson =
+    '{"id":"route_1","origin_label":"Hebron","origin_lat":31.5326,"origin_lng":35.0998,"destination_label":"Bethlehem","destination_lat":31.7054,"destination_lng":35.2024,"corridor_key":"hebron-to-bethlehem",$_routeFields,"seats_available":2,"parcel_capacity_available":5,"status":"active","activated_at":"2026-07-13T08:00:00.000Z","completed_at":null}';
+
+const _routePassengerJson =
+    '{"id":"request_1","pickup_label":"Hebron","destination_label":"Bethlehem",$_routeFields,"pickup_details":"قرب البوابة الرئيسية لجامعة البوليتكنك","dropoff_details":"محطة باصات بيت لحم","pickup_lat":31.5326,"pickup_lng":35.0998,"destination_lat":31.7054,"destination_lng":35.2024,"passenger_count":1,"status":"accepted"}';
+
+const _routeMatchJson =
+    '{"id":"match_1","status":"proposed","score":"0.9317","method":"darb_route_score","explanation":"Same route","scoring_breakdown":{"corridorOverlap":1,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317},"created_at":"2026-07-13T08:10:00.000Z","driver_route":{"id":"route_1","origin_label":"Hebron","destination_label":"Bethlehem","corridor_key":"hebron-to-bethlehem",$_routeFields,"seats_available":2,"parcel_capacity_available":5,"status":"active"},"passenger_request":$_routePassengerJson,"merchant_order":null,"parcel_batch":null}';
+
+const _routeTripJson =
+    '{"id":"trip_1","status":"accepted","created_at":"2026-07-13T08:20:00.000Z","started_at":"2026-07-13T08:20:00.000Z","completed_at":null,"driver_route":$_namedRouteJson,"passenger_request":$_routePassengerJson,"merchant_order":{"id":"order_1","pickup_label":"Hebron",$_routeFields,"pickup_details":"متجر الأمل، شارع عين سارة","status":"assigned","parcels":[{"id":"p1","destination_label":"Bethlehem","dropoff_details":"شارع المهد، البوابة الزرقاء","receiver_name":"سارة","receiver_phone":"+970599123456","size":"S","priority":"normal","status":"pending"}]},"parcel_batch":null}';
 
 String _locationJson(int sequence) =>
     '{"lat":"31.532600","lng":"35.099800","source":"simulated","sequence":$sequence,"recorded_at":"2026-07-13T08:21:00.000Z"}';

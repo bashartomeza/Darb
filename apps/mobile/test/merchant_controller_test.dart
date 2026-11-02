@@ -1,11 +1,12 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/matching/data/matching_models.dart';
-import 'package:masari_mobile/features/merchant/application/merchant_controller.dart';
-import 'package:masari_mobile/features/merchant/data/merchant_models.dart';
-import 'package:masari_mobile/features/merchant/data/merchant_repository.dart';
-import 'package:masari_mobile/features/trips/data/trip_models.dart';
+import 'package:darb_mobile/features/matching/data/matching_models.dart';
+import 'package:darb_mobile/features/merchant/application/merchant_controller.dart';
+import 'package:darb_mobile/features/merchant/data/merchant_models.dart';
+import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 import 'support/auth_test_support.dart';
 
@@ -65,6 +66,47 @@ void main() {
     expect(container.read(merchantOrderDraftProvider), hasLength(9));
   });
 
+  test('parcel drop-offs are typed details with an optional receiver', () {
+    final container = _container(_FakeMerchantRepository());
+    addTearDown(container.dispose);
+    final controller = container.read(merchantOrderDraftProvider.notifier);
+
+    controller.addParcel();
+    controller.addParcel();
+    controller.updateParcel(0, dropoffDetails: ' Manger Street ');
+    controller.updateParcel(
+      1,
+      dropoffDetails: 'Near the university gate',
+      receiverName: 'Sara',
+      receiverPhone: '+970599123456',
+    );
+    final parcels = container.read(merchantOrderDraftProvider);
+    expect(parcels[0].toJson(), {
+      'dropoff_details': 'Manger Street',
+      'size': 'S',
+      'priority': 'normal',
+    });
+    expect(parcels[1].toJson()['receiver_phone'], '+970599123456');
+    // Every parcel keeps its own identity, so its fields follow it when an
+    // earlier parcel is removed.
+    expect(parcels.map((parcel) => parcel.id).toSet(), hasLength(3));
+    final second = parcels[1].id;
+    controller.removeParcel(0);
+    expect(container.read(merchantOrderDraftProvider).first.id, second);
+  });
+
+  test('details and receiver phone validation', () {
+    expect(routeDetailsValid('ab'), isFalse);
+    expect(routeDetailsValid('  abc  '), isTrue);
+    expect(routeDetailsValid('x' * 300), isTrue);
+    expect(routeDetailsValid('x' * 301), isFalse);
+    expect(receiverPhoneValid(''), isTrue);
+    expect(receiverPhoneValid('+970 599-123456'), isTrue);
+    expect(receiverPhoneValid('0599123456'), isTrue);
+    expect(receiverPhoneValid('call me'), isFalse);
+    expect(receiverPhoneValid('12'), isFalse);
+  });
+
   test(
     'order controller batches, then matches, without driver actions',
     () async {
@@ -113,6 +155,96 @@ void main() {
     controller.resumePolling();
     expect(controller.activeTimerCount, 3);
   });
+  test(
+    'queued refresh cannot publish an older merchant order snapshot',
+    () async {
+      final fake = _FakeMerchantRepository(orders: [_order()]);
+      final container = _container(fake);
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        merchantOrderProvider('order_1'),
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await container.read(merchantOrderProvider('order_1').future);
+      final old = Completer<MerchantOrder>();
+      final fresh = Completer<MerchantOrder>();
+      fake.pendingOrders.addAll([old.future, fresh.future]);
+      final controller = container.read(
+        merchantOrderProvider('order_1').notifier,
+      );
+      final first = controller.refresh();
+      final second = controller.refresh();
+      old.complete(_order(status: 'matched'));
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        container.read(merchantOrderProvider('order_1')).value!.order.status,
+        'batched',
+      );
+      fresh.complete(_order(status: 'assigned'));
+      await Future.wait([first, second]);
+      expect(
+        container.read(merchantOrderProvider('order_1')).value!.order.status,
+        'assigned',
+      );
+    },
+  );
+
+  test(
+    'refresh failure retains authoritative merchant dashboard records',
+    () async {
+      final fake = _FakeMerchantRepository(orders: [_order()]);
+      final container = _container(fake);
+      addTearDown(container.dispose);
+      await container.read(merchantDashboardProvider.future);
+      fake.failLists = true;
+      await expectLater(
+        container.read(merchantDashboardProvider.notifier).refresh(),
+        throwsStateError,
+      );
+      expect(
+        container.read(merchantDashboardProvider).value?.orders.single.id,
+        'order_1',
+      );
+    },
+  );
+  test('terminal merchant orders never expose manual matching', () {
+    for (final status in ['cancelled', 'expired', 'completed', 'assigned']) {
+      final state = MerchantOrderViewState(
+        order: _order(status: status),
+        matches: const [],
+        trip: null,
+      );
+      expect(state.canRunMatch, isFalse, reason: status);
+    }
+  });
+  test(
+    'secondary batch order retains the root match and assigned trip',
+    () async {
+      final batch = _batch();
+      final order = MerchantOrder(
+        id: 'secondary',
+        pickupLabel: 'Bab Al-Zawiya',
+        status: 'assigned',
+        createdAt: _time,
+        parcels: const [],
+        batches: [batch],
+      );
+      final fake = _FakeMerchantRepository(
+        orders: [order],
+        matches: [_match(batch: batch)],
+        trips: [_trip(batch: batch)],
+      );
+      final container = _container(fake);
+      addTearDown(container.dispose);
+      final state = await container.read(
+        merchantOrderProvider('secondary').future,
+      );
+      expect(state.latestMatch?.id, 'match_1');
+      expect(state.trip?.id, 'trip_1');
+      expect(state.canRunMatch, isFalse);
+    },
+  );
 }
 
 ProviderContainer _container(_FakeMerchantRepository fake) => ProviderContainer(
@@ -137,6 +269,7 @@ class _FakeMerchantRepository extends MerchantRepository {
   List<MerchantMatch> matches;
   List<MerchantTrip> trips;
   bool failLists = false;
+  final pendingOrders = <Future<MerchantOrder>>[];
   int batchCalls = 0;
   int matchCalls = 0;
 
@@ -147,7 +280,8 @@ class _FakeMerchantRepository extends MerchantRepository {
   }
 
   @override
-  Future<MerchantOrder> orderDetail(String id) async => orders.first;
+  Future<MerchantOrder> orderDetail(String id) async =>
+      pendingOrders.isEmpty ? orders.first : await pendingOrders.removeAt(0);
 
   @override
   Future<List<MerchantMatch>> listMatches({String? status}) async {
@@ -216,7 +350,7 @@ MerchantOrder _order({
   List<MerchantBatch>? batches,
 }) => MerchantOrder(
   id: 'order_1',
-  pickupLabel: merchantPickupLabel,
+  pickupLabel: 'Bab Al-Zawiya',
   status: status,
   createdAt: _time,
   parcels: const [
@@ -231,11 +365,11 @@ MerchantOrder _order({
   batches: batches ?? [_batch()],
 );
 
-MerchantMatch _match() => MerchantMatch(
+MerchantMatch _match({MerchantBatch? batch}) => MerchantMatch(
   id: 'match_1',
   status: 'proposed',
   score: 0.93,
-  method: 'masari_route_score',
+  method: 'darb_route_score',
   explanation: 'Safe explanation',
   breakdown: const ScoringBreakdown(
     corridorOverlap: 0.95,
@@ -249,18 +383,18 @@ MerchantMatch _match() => MerchantMatch(
   route: _route(),
   order: const MerchantOrderSummary(
     id: 'order_1',
-    pickupLabel: merchantPickupLabel,
+    pickupLabel: 'Bab Al-Zawiya',
     status: 'batched',
     parcelCount: 1,
   ),
-  batch: null,
+  batch: batch,
 );
 
-MerchantTrip _trip() => MerchantTrip(
+MerchantTrip _trip({MerchantBatch? batch}) => MerchantTrip(
   id: 'trip_1',
   status: 'accepted',
   createdAt: _time,
   route: _route(),
   order: _order(status: 'assigned'),
-  batch: null,
+  batch: batch,
 );

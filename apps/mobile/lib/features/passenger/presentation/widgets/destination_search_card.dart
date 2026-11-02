@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/app_tokens.dart';
@@ -24,20 +24,38 @@ class DestinationSearchCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppTokens.spaceMedium),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
         border: Border.all(color: AppTheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
+            Localizations.localeOf(context).languageCode == 'ar'
+                ? 'رحلة جديدة'
+                : 'NEW RIDE',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppTheme.tertiary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
             l10n.whereToGo,
             textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge?.copyWith(
+            style: theme.textTheme.headlineMedium?.copyWith(
               color: AppTheme.primary,
               fontWeight: FontWeight.w700,
             ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            Localizations.localeOf(context).languageCode == 'ar'
+                ? 'حدد نقطة الانطلاق والوجهة، لنساعدك في إيجاد الرحلة المناسبة.'
+                : 'Choose your pickup and destination to find a suitable ride.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: AppTokens.spaceMedium),
           Material(
@@ -84,6 +102,13 @@ class DestinationSearchCard extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            key: const ValueKey('searchForTripCta'),
+            onPressed: onTap,
+            icon: const Icon(Icons.search, size: 20),
+            label: Text(l10n.searchForTrip),
+          ),
         ],
       ),
     );
@@ -104,15 +129,16 @@ class _SmartSearchBadge extends StatelessWidget {
         vertical: AppTokens.spaceExtraSmall + 2,
       ),
       decoration: BoxDecoration(
-        // Warm accent, reserved by the design system for movement and
-        // high-priority action.
-        color: AppTheme.tertiaryContainer,
+        // A highlight badge, not an action — orange is reserved for the one
+        // actionable element per screen, so this stays on the structural
+        // navy accent instead.
+        color: AppTheme.primaryContainer,
         borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
       ),
       child: Text(
         l10n.smartSearch,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: AppTheme.onTertiary,
+          color: AppTheme.onPrimaryContainer,
           fontWeight: FontWeight.w700,
         ),
         maxLines: 1,

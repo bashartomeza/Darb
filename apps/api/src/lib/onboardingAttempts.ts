@@ -11,7 +11,7 @@ export async function createOnboardingAttempt(
     invitationId: string;
     intendedRole: OnboardingRole;
     phone: string;
-    region?: "PS";
+    region?: string;
     phoneKey: VersionedKey;
     expiresAt: Date;
     requestIpDigest?: string;

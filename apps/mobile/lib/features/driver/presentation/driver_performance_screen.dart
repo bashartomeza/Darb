@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/driver_controller.dart';
+import '../data/driver_repository.dart';
 import '../data/driver_stats_source.dart';
 import '../domain/driver_home_stats.dart';
 import 'driver_ui.dart';
@@ -22,9 +22,10 @@ import 'widgets/driver_home_widgets.dart';
 /// - earnings — **nothing**. There is no fare, price or tariff column anywhere
 ///   in the schema, so the card states that instead of showing a figure.
 ///
-/// Acceptance rate is in the flow diagram and is also absent: rejected matches
-/// are not retained per driver in a way that yields a rate, so it is named as
-/// unavailable rather than approximated from the inbox.
+/// Acceptance rate — real, from `GET /driver/performance`: accepted over
+/// accepted-plus-rejected offers the driver answered, withheld until the server
+/// has a minimum sample. Offers that expired unanswered are not counted, and the
+/// card says so. It falls back to "unavailable" if the request fails.
 class DriverPerformanceScreen extends ConsumerWidget {
   const DriverPerformanceScreen({super.key});
 
@@ -39,13 +40,6 @@ class DriverPerformanceScreen extends ConsumerWidget {
         .length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.performanceTitle),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
       body: SafeArea(
         top: false,
         bottom: false,
@@ -78,9 +72,9 @@ class DriverPerformanceScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: AppTokens.spaceLarge),
-              MasariSection(
+              DarbSection(
                 title: l10n.driverDashboard,
-                child: MasariInfoCard(
+                child: DarbInfoCard(
                   // The card carries two lifetime figures, so it is titled for
                   // the pair rather than for the live trip it does not show.
                   title: l10n.completedTripsTotal,
@@ -107,9 +101,9 @@ class DriverPerformanceScreen extends ConsumerWidget {
               // Named explicitly so the gap reads as a known limit of the
               // system rather than a screen that failed to load.
               const SizedBox(height: AppTokens.spaceLarge),
-              MasariSection(
+              DarbSection(
                 title: l10n.todayEarnings,
-                child: MasariInfoCard(
+                child: DarbInfoCard(
                   title: l10n.earningsNotTracked,
                   subtitle: l10n.earningsNotTrackedBody,
                   icon: Icons.account_balance_wallet_outlined,
@@ -117,10 +111,38 @@ class DriverPerformanceScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: AppTokens.spaceMedium),
-              OfflineBanner(
-                message: l10n.acceptanceRateUnavailable,
-                icon: Icons.info_outline,
-              ),
+              ref
+                  .watch(driverPerformanceProvider)
+                  .when(
+                    loading: () => const LoadingSkeleton(height: 90),
+                    error: (_, _) => OfflineBanner(
+                      message: l10n.acceptanceRateUnavailable,
+                      icon: Icons.info_outline,
+                    ),
+                    data: (value) => value == null
+                        ? OfflineBanner(
+                            message: l10n.acceptanceRateUnavailable,
+                            icon: Icons.info_outline,
+                          )
+                        : DarbInfoCard(
+                            title: l10n.acceptanceRateTitle,
+                            icon: Icons.thumb_up_alt_outlined,
+                            subtitle: value.acceptanceRate == null
+                                ? l10n.acceptanceRateNeedMore(
+                                    value.minSample,
+                                    value.responded,
+                                  )
+                                : l10n.acceptanceRateDetail(
+                                    value.accepted,
+                                    value.responded,
+                                  ),
+                            statusLabel: value.acceptanceRate == null
+                                ? null
+                                : l10n.acceptanceRateValue(
+                                    value.acceptanceRate!,
+                                  ),
+                          ),
+                  ),
             ],
           ),
         ),

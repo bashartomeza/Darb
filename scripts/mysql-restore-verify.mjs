@@ -35,11 +35,11 @@ function mysql(args, settings = {}) {
 }
 try {
   if (!dumpPath || !destination || !flags.has("--confirm-isolated")) {
-    throw new Error("Use --dump <file> --database masari_restore_<name> --confirm-isolated");
+    throw new Error("Use --dump <file> --database darb_restore_<name> --confirm-isolated");
   }
   if (!existsSync(dumpPath)) throw new Error("The requested dump file does not exist");
-  if (!safeRestoreDatabaseName(destination)) throw new Error("Restore database must match masari_restore_[a-z0-9_]+");
-  const { url, database: source } = loadDatabaseEnvironment(resolve(root, process.env.MASARI_ENV_FILE ?? "apps/api/.env"));
+  if (!safeRestoreDatabaseName(destination)) throw new Error("Restore database must match darb_restore_[a-z0-9_]+");
+  const { url, database: source } = loadDatabaseEnvironment(resolve(root, process.env.DARB_ENV_FILE ?? "apps/api/.env"));
   if (destination === source) throw new Error("Refusing to restore into the configured source database");
   defaults = createMysqlDefaults(url);
   const existingTables = Number(mysql(["--batch", "--skip-column-names", "-e",
@@ -89,7 +89,7 @@ try {
   ];
   const tableCount = Number(mysql(["--batch", "--skip-column-names", "--database", destination, "-e",
     `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN (${expectedTables.map((name) => `'${name}'`).join(",")})`]));
-  if (tableCount !== expectedTables.length) throw new Error("Restored database does not have the expected Masari table identity");
+  if (tableCount !== expectedTables.length) throw new Error("Restored database does not have the expected Darb table identity");
   const check = mysql(["--batch", "--skip-column-names", "--database", destination, "-e", "SELECT 1"]);
   if (check !== "1") throw new Error("Restored database connectivity verification failed");
   console.log(`Restore verification passed for isolated database ${destination}.`);

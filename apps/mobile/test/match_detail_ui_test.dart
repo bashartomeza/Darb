@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/presentation/localized_labels.dart';
-import 'package:masari_mobile/features/matching/presentation/match_detail_screen.dart';
-import 'package:masari_mobile/l10n/app_localizations_ar.dart';
-import 'package:masari_mobile/l10n/app_localizations_en.dart';
+import 'package:darb_mobile/core/presentation/localized_labels.dart';
+import 'package:darb_mobile/features/matching/presentation/match_detail_screen.dart';
+import 'package:darb_mobile/l10n/app_localizations_ar.dart';
+import 'package:darb_mobile/l10n/app_localizations_en.dart';
 
 void main() {
   test('passenger match statuses use localized presentation labels', () {
@@ -11,7 +11,7 @@ void main() {
     expect(localizedMatchStatus(AppLocalizationsEn(), 'unknown'), 'unknown');
     expect(
       AppLocalizationsAr().routeMatchExplanation,
-      contains('اختار مساري هذا السائق'),
+      contains('اختار درب هذا السائق'),
     );
     expect(
       AppLocalizationsAr().parcelBatchExplanationDemo(5),

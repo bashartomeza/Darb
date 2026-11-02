@@ -1,0 +1,6 @@
+"CFBundleDisplayName" = "Darb";
+"NSCameraUsageDescription" = "Darb uses the camera so you can photograph your driver documents for verification.";
+"NSLocationWhenInUseUsageDescription" = "Darb uses your location to show nearby routes and your position on the map.";
+"NSPhotoLibraryUsageDescription" = "Darb needs access to your photos so you can choose a driver document to upload.";
+"NSMicrophoneUsageDescription" = "Darb uses the microphone so you can speak your trip request to the assistant.";
+"NSSpeechRecognitionUsageDescription" = "Darb uses speech recognition to turn your voice into text for the assistant.";

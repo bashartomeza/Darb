@@ -1,12 +1,12 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/merchant_controller.dart';
@@ -29,93 +29,96 @@ class MerchantShipmentsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final dashboard = ref.watch(merchantDashboardProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.shipmentsTitle),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () =>
-              ref.read(merchantDashboardProvider.notifier).refresh(),
-          child: ListView(
-            key: const ValueKey('merchantShipmentsList'),
-            padding: const EdgeInsets.fromLTRB(
-              AppTokens.marginMobile,
-              AppTokens.spaceMedium,
-              AppTokens.marginMobile,
-              AppTokens.spaceExtraLarge,
-            ),
-            children: [
-              dashboard.when(
-                loading: () => const Column(
-                  children: [
-                    LoadingSkeleton.card(),
-                    SizedBox(height: AppTokens.spaceMedium),
-                    LoadingSkeleton.card(),
-                  ],
-                ),
-                error: (error, _) => ErrorStateView(
-                  title: l10n.shipmentsFailed,
-                  message: merchantErrorLabel(l10n, error),
-                  retryLabel: l10n.retry,
-                  onRetry: () =>
-                      ref.read(merchantDashboardProvider.notifier).refresh(),
-                ),
-                data: (state) => state.orders.isEmpty
-                    ? EmptyState(
-                        title: l10n.noShipments,
-                        message: l10n.noShipmentsBody,
-                        icon: Icons.inventory_2_outlined,
-                        actionLabel: l10n.createShipment,
-                        onAction: () => context.go('/merchant/order/new'),
-                      )
-                    : Column(
-                        children: [
-                          for (final (index, order)
-                              in state.orders.indexed) ...[
-                            if (index > 0)
-                              const SizedBox(height: AppTokens.spaceMedium),
-                            _OrderCard(
-                              order: order,
-                              // Only the live trip gets a tracking action; the
-                              // trips endpoint carries no order id, so tying it
-                              // to any other row would be a guess.
-                              tripId: index == 0 ? state.activeTrip?.id : null,
-                            ),
-                          ],
-                        ],
-                      ),
+    return ForegroundRefresh(
+      refresh: () async {
+        await ref.read(merchantDashboardProvider.notifier).refresh();
+      },
+      child: Scaffold(
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: () =>
+                ref.read(merchantDashboardProvider.notifier).refresh(),
+            child: ListView(
+              key: const ValueKey('merchantShipmentsList'),
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.marginMobile,
+                AppTokens.spaceMedium,
+                AppTokens.marginMobile,
+                AppTokens.spaceExtraLarge,
               ),
-
-              const SizedBox(height: AppTokens.spaceLarge),
-              MasariSection(
-                title: l10n.merchantMatchInbox,
-                child: MasariInfoCard(
-                  title: l10n.matchInbox,
-                  icon: Icons.inbox_outlined,
-                  body: StatStrip(
-                    stats: [
-                      (
-                        label: l10n.waitingForDriver,
-                        value: '${dashboard.value?.waitingMatchCount ?? 0}',
-                        valueKey: const ValueKey('shipmentsWaitingMatchCount'),
-                      ),
+              children: [
+                dashboard.when(
+                  skipError: dashboard.hasValue,
+                  loading: () => const Column(
+                    children: [
+                      LoadingSkeleton.card(),
+                      SizedBox(height: AppTokens.spaceMedium),
+                      LoadingSkeleton.card(),
                     ],
                   ),
-                  primaryAction: CardAction(
-                    key: const ValueKey('openMerchantMatchesFromShipments'),
-                    label: l10n.viewDetails,
-                    onPressed: () => context.go('/merchant/matches'),
+                  error: (error, _) => ErrorStateView(
+                    title: l10n.shipmentsFailed,
+                    message: merchantErrorLabel(l10n, error),
+                    retryLabel: l10n.retry,
+                    onRetry: () =>
+                        ref.read(merchantDashboardProvider.notifier).refresh(),
+                  ),
+                  data: (state) => state.orders.isEmpty
+                      ? EmptyState(
+                          title: l10n.noShipments,
+                          message: l10n.noShipmentsBody,
+                          icon: Icons.inventory_2_outlined,
+                          actionLabel: l10n.createShipment,
+                          onAction: () => context.go('/merchant/order/new'),
+                        )
+                      : Column(
+                          children: [
+                            for (final (index, order)
+                                in state.orders.indexed) ...[
+                              if (index > 0)
+                                const SizedBox(height: AppTokens.spaceMedium),
+                              _OrderCard(
+                                order: order,
+                                // Only the live trip gets a tracking action; the
+                                // trips endpoint carries no order id, so tying it
+                                // to any other row would be a guess.
+                                tripId: index == 0
+                                    ? state.activeTrip?.id
+                                    : null,
+                              ),
+                            ],
+                          ],
+                        ),
+                ),
+
+                const SizedBox(height: AppTokens.spaceLarge),
+                DarbSection(
+                  title: l10n.merchantMatchInbox,
+                  child: DarbInfoCard(
+                    title: l10n.matchInbox,
+                    icon: Icons.inbox_outlined,
+                    body: StatStrip(
+                      stats: [
+                        (
+                          label: l10n.waitingForDriver,
+                          value: '${dashboard.value?.waitingMatchCount ?? 0}',
+                          valueKey: const ValueKey(
+                            'shipmentsWaitingMatchCount',
+                          ),
+                        ),
+                      ],
+                    ),
+                    primaryAction: CardAction(
+                      key: const ValueKey('openMerchantMatchesFromShipments'),
+                      label: l10n.viewDetails,
+                      onPressed: () => context.go('/merchant/matches'),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -134,6 +137,9 @@ class _OrderCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final material = MaterialLocalizations.of(context);
     final batch = order.latestBatch;
+    final routeName = order.routeName(
+      arabic: Localizations.localeOf(context).languageCode == 'ar',
+    );
 
     // Parcels can fan out to several destinations, so the card names the set
     // rather than pretending there is one.
@@ -142,7 +148,7 @@ class _OrderCard extends StatelessWidget {
         merchantDestinationLabel(context, parcel.destinationLabel),
     };
 
-    return MasariInfoCard(
+    return DarbInfoCard(
       key: ValueKey('merchantShipment-${order.id}'),
       title: l10n.orderReference(order.id.substring(0, 6)),
       icon: Icons.inventory_2_outlined,
@@ -150,15 +156,29 @@ class _OrderCard extends StatelessWidget {
       statusTone: statusToneFor(order.status),
       body: Column(
         children: [
-          RouteChip(
-            from: localizedCorridorPlace(context, order.pickupLabel),
-            // A bare count would read as a place name, so the plural case is
-            // spelled out.
-            to: destinations.length == 1
-                ? destinations.first
-                : l10n.destinationCount(destinations.length),
-            compact: true,
-          ),
+          // Route orders are named by their route and the merchant's own
+          // pickup words; older orders keep their corridor places.
+          if (routeName != null) ...[
+            DetailRow(
+              label: l10n.orderRouteLabel,
+              value: routeName,
+              icon: Icons.route_outlined,
+            ),
+            DetailRow(
+              label: l10n.pickup,
+              value: merchantPickupText(context, order),
+              icon: Icons.storefront_outlined,
+            ),
+          ] else
+            RouteChip(
+              from: localizedCorridorPlace(context, order.pickupLabel),
+              // A bare count would read as a place name, so the plural case
+              // is spelled out.
+              to: destinations.length == 1
+                  ? destinations.first
+                  : l10n.destinationCount(destinations.length),
+              compact: true,
+            ),
           const SizedBox(height: AppTokens.spaceSmall),
           DetailRow(
             label: l10n.parcelCount,

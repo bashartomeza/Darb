@@ -1,11 +1,12 @@
+import '../../../core/widgets/darb_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/canonical_route_controller.dart';
 import '../data/canonical_operation_storage.dart';
@@ -22,7 +23,7 @@ class DriverAvailabilityListScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: Text(l10n.driverAvailabilities)),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.go('/driver/availability/new'),
+          onPressed: () => context.push('/driver/availability/new'),
           icon: const Icon(Icons.add),
           label: Text(l10n.newAvailability),
         ),
@@ -43,7 +44,7 @@ class DriverAvailabilityListScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(AppTokens.spaceLarge),
                     children: [
                       if (values.isEmpty)
-                        MasariCard(child: Text(l10n.noAvailabilities))
+                        DarbCard(child: Text(l10n.noAvailabilities))
                       else
                         for (final value in values)
                           Card(
@@ -59,7 +60,7 @@ class DriverAvailabilityListScreen extends ConsumerWidget {
                                 '${availabilityStatusLabel(l10n, value.status)} · ${dateTimeLabel(context, value.departureAt)}',
                               ),
                               trailing: const Icon(Icons.chevron_right),
-                              onTap: () => context.go(
+                              onTap: () => context.push(
                                 '/driver/availability/${value.id}',
                               ),
                             ),
@@ -113,15 +114,7 @@ class _DriverAvailabilityFormScreenState
           bundle?.actorId != actorId) {
         return;
       }
-      if (bundle!.recoveryWindowExpired(DateTime.now())) {
-        setState(
-          () => _error = const CanonicalOperationBlocked(
-            'canonical_recovery_expired',
-          ),
-        );
-        return;
-      }
-      final payload = bundle.payload;
+      final payload = bundle!.payload;
       setState(() {
         _restoredRouteVersionId = payload['route_version_id'] as String?;
         _departure =
@@ -143,7 +136,10 @@ class _DriverAvailabilityFormScreenState
     final l10n = AppLocalizations.of(context);
     return CanonicalFeatureGate(
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.newAvailability)),
+        appBar: AppBar(
+          title: Text(l10n.newAvailability),
+          leading: const DarbBackButton(fallback: '/driver'),
+        ),
         body: SafeArea(
           child: ref
               .watch(canonicalRouteCatalogProvider)
@@ -184,7 +180,7 @@ class _DriverAvailabilityFormScreenState
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     if (routes.isEmpty)
-                      MasariCard(child: Text(l10n.noPublishedRoutes))
+                      DarbCard(child: Text(l10n.noPublishedRoutes))
                     else
                       for (final route in routes)
                         RouteCard(
@@ -275,12 +271,7 @@ class _DriverAvailabilityFormScreenState
   }
 
   Future<void> _submit() async {
-    final l10n = AppLocalizations.of(context);
-    if (!_departure.isAfter(DateTime.now()) ||
-        (_windowEnd != null && !_windowEnd!.isAfter(_departure))) {
-      setState(() => _error = l10n.invalidDepartureWindow);
-      return;
-    }
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -294,16 +285,39 @@ class _DriverAvailabilityFormScreenState
           statusCode: 401,
         );
       }
+      CanonicalOperationBundle? sent;
+      final runner = ref.read(canonicalMutationRunnerProvider);
       final value = await ref
           .read(driverAvailabilitiesProvider.notifier)
-          .create({
-            'route_version_id': _route!.versionId,
-            'departure_at': _departure.toUtc().toIso8601String(),
-            'availability_window_end': _windowEnd?.toUtc().toIso8601String(),
-            'total_seats': _seats,
-            'total_parcel_capacity': _parcels,
-          }, actorId: actorId);
-      if (mounted) context.go('/driver/availability/${value.id}');
+          .create(
+            {
+              'route_version_id': _route!.versionId,
+              'departure_at': _departure.toUtc().toIso8601String(),
+              'availability_window_end': _windowEnd?.toUtc().toIso8601String(),
+              'total_seats': _seats,
+              'total_parcel_capacity': _parcels,
+            },
+            actorId: actorId,
+            onBundle: (bundle) => sent = bundle,
+          );
+      if (!mounted ||
+          ref.read(authControllerProvider).value?.user?.id != actorId) {
+        return;
+      }
+      final completed = sent;
+      if (completed == null) {
+        throw const FormatException('Missing creation receipt');
+      }
+      await runner.acknowledge(
+        actorId: completed.actorId,
+        operation: completed.operation,
+        idempotencyKey: completed.idempotencyKey,
+      );
+      if (!mounted ||
+          ref.read(authControllerProvider).value?.user?.id != actorId) {
+        return;
+      }
+      if (mounted) context.pushReplacement('/driver/availability/${value.id}');
     } catch (error) {
       if (error is ApiException && error.statusCode == 404) {
         ref.invalidate(mobileCapabilitiesProvider);
@@ -331,7 +345,6 @@ class DriverAvailabilityDetailScreen extends ConsumerStatefulWidget {
 class _DriverAvailabilityDetailScreenState
     extends ConsumerState<DriverAvailabilityDetailScreen> {
   bool _busy = false;
-  bool _acknowledgementScheduled = false;
   Object? _error;
 
   @override
@@ -357,16 +370,10 @@ class _DriverAvailabilityDetailScreenState
                   if (value == null) {
                     return Center(child: Text(l10n.routeCatalogUnavailable));
                   }
-                  if (!_acknowledgementScheduled) {
-                    _acknowledgementScheduled = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _acknowledgeCreate(value);
-                    });
-                  }
                   return ListView(
                     padding: const EdgeInsets.all(AppTokens.spaceLarge),
                     children: [
-                      MasariCard(
+                      DarbCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -447,27 +454,6 @@ class _DriverAvailabilityDetailScreenState
       if (mounted) setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _acknowledgeCreate(DriverAvailability availability) async {
-    final actorId = ref.read(authControllerProvider).value?.user?.id;
-    if (actorId == null) return;
-    try {
-      final pending = await ref.read(canonicalOperationStorageProvider).read();
-      if (pending == null ||
-          pending.actorId != actorId ||
-          !canonicalAvailabilityResultMatches(pending, availability)) {
-        return;
-      }
-      await ref
-          .read(canonicalMutationRunnerProvider)
-          .acknowledge(
-            actorId: actorId,
-            operation: 'driver_availability_create',
-          );
-    } catch (error) {
-      if (mounted) setState(() => _error = error);
     }
   }
 }
@@ -598,6 +584,27 @@ String _safeError(AppLocalizations l10n, Object error) {
           error.statusCode == 502 ||
           error.statusCode == 503)) {
     return l10n.operationTemporaryFailure;
+  }
+  if (error is ApiException) {
+    switch (error.message) {
+      case 'departure_too_soon':
+        return l10n.availabilityDepartureTooSoon;
+      case 'departure_too_far':
+        return l10n.availabilityDepartureTooFar;
+      case 'invalid_availability_window':
+        return l10n.availabilityInvalidWindow;
+      case 'availability_exceeds_vehicle_capacity':
+        return l10n.availabilityExceedsVehicleCapacity;
+      case 'driver_documents_expired':
+        return l10n.availabilityDocumentsExpired;
+      case 'driver_not_approved':
+        return l10n.availabilityDriverNotApproved;
+      case 'route_unavailable':
+      case 'canonical_entry_disabled':
+        return l10n.availabilityRouteNoLongerEligible;
+      case 'duplicate_driver_availability':
+        return l10n.availabilityDuplicate;
+    }
   }
   return l10n.requestFailed;
 }

@@ -5,14 +5,16 @@ import { LocaleProvider } from "../i18n/LocaleContext";
 import type { Locale } from "../i18n/translations";
 import { NAV_ITEMS } from "../navigation";
 import { translate } from "../i18n/locale";
-import { SideNav, initialOf } from "./AppShell";
+import { NotificationControl, SideNav, initialOf, notificationPanelState } from "./AppShell";
 import { toneForStatus } from "./StatusBadge";
 import { ModuleUnavailable } from "../features/placeholder/ModuleUnavailable";
 import { OverviewDashboard, deriveAlerts } from "../features/overview/OverviewDashboard";
+import { OVERVIEW_RESOURCE_KEYS, type OverviewResourcePhase, type OverviewResourceStates } from "../features/overview/overviewState";
 import { matchesSearch } from "../features/search";
 import { railSteps } from "../features/trips/TripsTracking";
 import { parcelSteps } from "../features/batching/BatchingWorkspace";
 import { scorePercent } from "../features/matching/MatchingWorkspace";
+import { ProfilePanel } from "../features/profile/ProfilePanel";
 
 /**
  * The suite runs in a node environment, so the provider is given explicit
@@ -35,10 +37,25 @@ function escapeHtml(value: string) {
 
 /** Visible text only — strips tags so SVG path data is not mistaken for content. */
 function textOf(markup: string) {
-  return markup.replace(/<[^>]*>/g, " ");
+  return markup.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-const emptyOverview = { dashboard: null, routes: [], requests: [], orders: [], trips: [] };
+function resourceStates(phase: OverviewResourcePhase, hasData: boolean): OverviewResourceStates {
+  return Object.fromEntries(OVERVIEW_RESOURCE_KEYS.map((key) => [key, { phase, hasData }])) as OverviewResourceStates;
+}
+
+const zeroDashboard = {
+  counts: { users: 0, drivers: 0, routes: 0, passenger_requests: 0, merchant_orders: 0, parcels: 0, active_drivers: 0, pending_driver_approvals: 0, open_incidents: 0 }
+};
+const emptyOverview = {
+  dashboard: zeroDashboard,
+  drivers: [],
+  routes: [],
+  requests: [],
+  orders: [],
+  trips: [],
+  resources: resourceStates("ready", true)
+};
 
 describe("admin shell", () => {
   it("renders every sidebar tab label in Arabic and English", () => {
@@ -49,10 +66,11 @@ describe("admin shell", () => {
           active="overview"
           onSelect={() => undefined}
           labels={{
-            brand: "Masari",
+            brand: "Darb",
             subtitle: "",
             navigation: "nav",
-            label: (item) => translate(locale, item.labelKey)
+            label: (item) => translate(locale, item.labelKey),
+            groupLabel: (labelKey) => translate(locale, labelKey)
           }}
           footer={null}
         />
@@ -69,7 +87,13 @@ describe("admin shell", () => {
         items={NAV_ITEMS}
         active="trips"
         onSelect={() => undefined}
-        labels={{ brand: "", subtitle: "", navigation: "nav", label: (item) => item.id }}
+        labels={{
+          brand: "",
+          subtitle: "",
+          navigation: "nav",
+          label: (item) => item.id,
+          groupLabel: (labelKey) => labelKey
+        }}
         footer={null}
       />
     );
@@ -81,6 +105,42 @@ describe("admin shell", () => {
     expect(initialOf("أحمد محمود")).toBe("أ");
     expect(initialOf("Sara Mansour")).toBe("S");
     expect(initialOf(undefined)).toBe("؟");
+  });
+
+  it("renders a real read-only profile view in both supported directions", () => {
+    const admin = { id: "admin_1", name: "Bashar Admin", phone: "+970590000005", role: "admin" };
+    const english = withLocale("en", <ProfilePanel admin={admin} />);
+    const arabic = withLocale("ar", <ProfilePanel admin={admin} />);
+
+    expect(english).toContain("Account details");
+    expect(english).toContain("Profile editing is not available yet");
+    expect(arabic).toContain("تفاصيل الحساب");
+    expect(arabic).toContain("تعديل الملف الشخصي غير متاح بعد");
+    expect(english).toContain("Bashar Admin");
+    expect(english).not.toContain("<input");
+  });
+
+  it("opens an accessible notification panel without an invented count or unread marker", () => {
+    expect(notificationPanelState(false, "toggle")).toBe(true);
+    expect(notificationPanelState(true, "toggle")).toBe(false);
+    expect(notificationPanelState(true, "close")).toBe(false);
+
+    const markup = renderToStaticMarkup(
+      <NotificationControl
+        label="Notifications"
+        title="Notifications"
+        description="No notification service is currently connected."
+        closeLabel="Close notifications"
+        initiallyOpen
+      />
+    );
+    expect(markup).toContain('aria-haspopup="dialog"');
+    expect(markup).toContain('aria-expanded="true"');
+    expect(markup).toContain('role="dialog"');
+    expect(markup).toContain("No notification service is currently connected.");
+    expect(markup).toContain('aria-label="Close notifications"');
+    expect(markup).not.toContain("topbar__dot");
+    expect(markup).not.toMatch(/Notifications \(\d+\)/);
   });
 });
 
@@ -117,14 +177,138 @@ describe("modules without a backing endpoint", () => {
 });
 
 describe("overview dashboard", () => {
-  it("renders empty states rather than placeholder numbers when the API returned nothing", () => {
+  it("renders genuine zero states when successful APIs return no records", () => {
     const markup = withLocale(
       "en",
       <OverviewDashboard data={emptyOverview} search="" busy={false} onRefresh={() => undefined} />
     );
-    expect(markup).toContain("No active operations right now.");
+    expect(markup).toContain("No trips are currently in progress.");
     expect(markup).toContain("No critical alerts");
-    expect(markup).toContain("—");
+    expect(markup).toContain("No active drivers");
+    expect(markup).toContain("No active trips");
+    expect(markup).toContain("No pending approvals");
+    expect(markup).toContain("No orders");
+    expect(markup).toContain("No requests");
+    expect(markup).toContain("No open incidents");
+  });
+
+  it("renders only supported metric values from their owning API resources", () => {
+    const user = (id: string, account_status: "active" | "pending") => ({
+      id,
+      name: id,
+      phone: `+97059${id}`,
+      role: "driver",
+      account_status,
+      status_reason: null,
+      status_updated_at: "2026-08-19T00:00:00.000Z",
+      last_login_at: null,
+      demo_account: false,
+      created_at: "2026-08-19T00:00:00.000Z"
+    });
+    const data = {
+      ...emptyOverview,
+      dashboard: { ...zeroDashboard, counts: { ...zeroDashboard.counts, merchant_orders: 12, passenger_requests: 8, active_drivers: 3, pending_driver_approvals: 2 } },
+      drivers: [
+        { id: "d1", vehicle_type: "sedan", seats_total: 4, parcel_capacity: 2, verified: true, trust_score: 80, created_at: "", user: user("1", "active") },
+        { id: "d2", vehicle_type: "van", seats_total: 6, parcel_capacity: 8, verified: false, trust_score: 70, created_at: "", user: user("2", "pending") }
+      ],
+      trips: [
+        { id: "trip_accepted", status: "accepted", driver_route_id: "route_1" },
+        { id: "trip_active", status: "in_transit", driver_route_id: "route_1" },
+        { id: "trip_delivered", status: "delivered", driver_route_id: "route_1" }
+      ]
+    };
+    const markup = withLocale("en", <OverviewDashboard data={data} search="" busy={false} onRefresh={() => undefined} />);
+
+    expect(markup).toContain('data-metric="active-drivers"');
+    expect(markup).toContain('data-metric="active-trips"');
+    expect(markup).toContain('data-metric="pending-approvals"');
+    expect(textOf(markup)).toContain("Active drivers 3");
+    expect(textOf(markup)).toContain("Active trips 1");
+    expect(textOf(markup)).toContain("Pending approvals 2");
+    expect(textOf(markup)).toContain("Total orders 12");
+    expect(textOf(markup)).toContain("Total passenger requests 8");
+  });
+
+  it("keeps zero-state metric semantics equivalent in Arabic", () => {
+    const markup = withLocale("ar", <OverviewDashboard data={emptyOverview} search="" busy={false} onRefresh={() => undefined} />);
+    const text = textOf(markup);
+
+    expect(text).toContain("السائقون النشطون ٠ لا يوجد سائقون نشطون");
+    expect(text).toContain("الموافقات المعلقة ٠ لا توجد موافقات معلقة");
+    expect(text).toContain("إجمالي طلبات التجار ٠");
+    expect(text).toContain("إجمالي طلبات الركاب ٠");
+  });
+
+  it("shows stable loading states without flashing fake zero values", () => {
+    const loading = {
+      ...emptyOverview,
+      dashboard: null,
+      resources: resourceStates("loading", false)
+    };
+    const markup = withLocale("en", <OverviewDashboard data={loading} search="" busy onRefresh={() => undefined} />);
+
+    expect(markup).toContain('aria-label="Loading data"');
+    expect(markup).toContain("Refreshing...");
+    expect(markup).not.toContain("No active drivers");
+    expect(markup).not.toContain("No active trips");
+  });
+
+  it("distinguishes a total API error from an empty dashboard and exposes retry", () => {
+    const failed = {
+      ...emptyOverview,
+      dashboard: null,
+      resources: resourceStates("error", false)
+    };
+    const markup = withLocale("en", <OverviewDashboard data={failed} search="" busy={false} onRefresh={() => undefined} />);
+
+    expect(markup).toContain("Data could not be loaded");
+    expect(markup).toContain("This section could not be loaded");
+    expect(markup).toContain("Retry");
+    expect(markup).not.toContain("internal_server_error");
+    expect(markup).not.toContain("No active drivers");
+  });
+
+  it("keeps successful metrics visible during a partial resource failure", () => {
+    const resources = resourceStates("ready", true);
+    resources.dashboard = { phase: "error", hasData: false };
+    const partial = {
+      ...emptyOverview,
+      dashboard: null,
+      drivers: [{
+        id: "d1",
+        vehicle_type: "sedan",
+        seats_total: 4,
+        parcel_capacity: 2,
+        verified: true,
+        trust_score: 80,
+        created_at: "",
+        user: {
+          id: "u1", name: "Driver", phone: "+970590000001", role: "driver", account_status: "active" as const,
+          status_reason: null, status_updated_at: "", last_login_at: null, demo_account: false, created_at: ""
+        }
+      }],
+      trips: [{ id: "trip_1", status: "in_transit", driver_route_id: "route_1" }],
+      resources
+    };
+    const markup = withLocale("en", <OverviewDashboard data={partial} search="" busy={false} onRefresh={() => undefined} />);
+
+    expect(textOf(markup)).toContain("Active drivers — Data could not be loaded");
+    expect(textOf(markup)).toContain("Active trips 1");
+    expect(textOf(markup)).toContain("Total orders — Data could not be loaded");
+  });
+
+  it("shows the open-incident count from the API and localizes the empty state", () => {
+    const data = {
+      ...emptyOverview,
+      dashboard: { ...zeroDashboard, counts: { ...zeroDashboard.counts, open_incidents: 4 } }
+    };
+    const english = withLocale("en", <OverviewDashboard data={data} search="" busy={false} onRefresh={() => undefined} />);
+    const incidentCardText = textOf(english.split('data-metric="incidents"')[1].split("</section>")[0]);
+    expect(incidentCardText).toContain("Incidents 4");
+
+    const empty = withLocale("ar", <OverviewDashboard data={emptyOverview} search="" busy={false} onRefresh={() => undefined} />);
+    expect(empty).toContain("لا توجد بلاغات مفتوحة");
   });
 
   it("derives alerts only from data the API actually returned", () => {
@@ -151,7 +335,7 @@ describe("overview dashboard", () => {
           driver: { verified: false }
         }
       ],
-      orders: [{ id: "o1", status: "created", pickup_label: "a" }]
+      orders: [{ id: "o1", status: "submitted", pickup_label: "a" }]
     });
     expect(alerts).toEqual({ unmatchedRequests: 1, unverifiedDriverRoutes: 1, unbatchedOrders: 1 });
   });

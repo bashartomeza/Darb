@@ -1,19 +1,19 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/i18n/locale_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../application/onboarding_controller.dart';
 import '../domain/onboarding_models.dart';
+import 'driver_documents_card.dart';
 
 class OnboardingFlowScreen extends ConsumerStatefulWidget {
   const OnboardingFlowScreen({super.key});
@@ -24,8 +24,8 @@ class OnboardingFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
-  final _invitation = TextEditingController();
   final _phone = TextEditingController();
+  final _email = TextEditingController();
   final _otp = TextEditingController();
   final _displayName = TextEditingController();
   final _password = TextEditingController();
@@ -35,6 +35,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   bool _adult = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
+  Set<String> _uploadedKinds = const {};
   Timer? _timer;
   DateTime _now = DateTime.now().toUtc();
 
@@ -42,17 +43,23 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(onboardingControllerProvider.notifier).refreshAvailability();
+      if (!mounted) return;
+      // Arriving from the register screen with a role already chosen: keep it.
+      final current = ref.read(onboardingControllerProvider).value;
+      if (current?.enabled == true &&
+          current?.stage == OnboardingStage.enteringContact &&
+          current?.selectedRole != null) {
+        return;
       }
+      ref.read(onboardingControllerProvider.notifier).refreshAvailability();
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _invitation.dispose();
     _phone.dispose();
+    _email.dispose();
     _otp.dispose();
     _displayName.dispose();
     _password.dispose();
@@ -113,7 +120,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           leading: warnBeforeLeaving
               ? BackButton(onPressed: () => Navigator.of(context).maybePop())
               : null,
-          title: Text(l10n.createInvitedAccount),
+          title: Text(l10n.createAccount),
           actions: const [LanguageSwitch()],
         ),
         body: SafeArea(
@@ -153,7 +160,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       ),
       OnboardingStage.unavailable => _Unavailable(l10n: l10n),
       OnboardingStage.choosingRole => _roleStep(context, state),
-      OnboardingStage.enteringInvitation ||
+      OnboardingStage.enteringContact ||
       OnboardingStage.enteringPhone ||
       OnboardingStage.starting => _startStep(context, state),
       OnboardingStage.otpSent ||
@@ -208,7 +215,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   Widget _startStep(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -220,21 +227,32 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           Directionality(
             textDirection: TextDirection.ltr,
             child: TextField(
-              key: const ValueKey('invitationCodeField'),
-              controller: _invitation,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(labelText: l10n.invitationCode),
+              key: const ValueKey('onboardingPhoneField'),
+              controller: _phone,
+              keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.done,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[+0-9٠-٩۰-۹ ()-]')),
+                LengthLimitingTextInputFormatter(32),
+              ],
+              decoration: InputDecoration(
+                labelText: l10n.phoneNumber,
+                hintText: '+[country code][number]',
+              ),
             ),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
           Directionality(
             textDirection: TextDirection.ltr,
             child: TextField(
-              key: const ValueKey('onboardingPhoneField'),
-              controller: _phone,
-              keyboardType: TextInputType.phone,
+              key: const ValueKey('onboardingEmailField'),
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
-              decoration: InputDecoration(labelText: l10n.phoneNumber),
+              autocorrect: false,
+              enableSuggestions: false,
+              inputFormatters: [LengthLimitingTextInputFormatter(191)],
+              decoration: InputDecoration(labelText: l10n.emailForCode),
             ),
           ),
           const SizedBox(height: AppTokens.spaceLarge),
@@ -267,7 +285,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     final remaining =
         state.resendAvailableAt?.difference(_now) ?? Duration.zero;
     final canResend = remaining <= Duration.zero && !state.busy;
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -275,6 +293,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             l10n.enterVerificationCode,
             style: Theme.of(context).textTheme.titleLarge,
           ),
+          const SizedBox(height: AppTokens.spaceSmall),
+          Text(l10n.codeSentToEmail, key: const ValueKey('codeSentToEmail')),
           if (state.maskedPhone != null) ...[
             const SizedBox(height: AppTokens.spaceSmall),
             Directionality(
@@ -343,7 +363,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     final l10n = AppLocalizations.of(context);
     final docs = state.documents;
     if (docs.isEmpty && !state.busy) {
-      return MasariCard(
+      return DarbCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -359,7 +379,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         ),
       );
     }
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -471,7 +491,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   Widget _passengerResult(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     _clearSecrets();
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -494,7 +514,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   Widget _approvedResult(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     _clearSecrets();
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -517,18 +537,74 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   Widget _pendingCard(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
     _clearSecrets();
-    return MasariCard(
+    final role = state.selectedRole;
+    final isApplicant =
+        role == OnboardingRole.driver || role == OnboardingRole.merchant;
+    final needsDocuments = isApplicant && !state.applicationSubmitted;
+    final required = role == OnboardingRole.merchant
+        ? merchantRequiredDocumentKinds
+        : driverRequiredDocumentKinds;
+    final missing = required
+        .where((kind) => !_uploadedKinds.contains(kind))
+        .toList(growable: false);
+    final card = DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            l10n.applicationUnderReview,
+            state.applicationRejected
+                ? l10n.applicationRejectedTitle
+                : needsDocuments
+                ? l10n.applicationDocumentsRequiredTitle
+                : l10n.applicationUnderReview,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: AppTokens.spaceMedium),
-          Text(l10n.pendingReviewBody),
-          if (state.selectedRole != null)
-            Text(_roleLabel(l10n, state.selectedRole!)),
+          Text(
+            state.applicationRejected
+                ? l10n.applicationRejectedBody
+                : needsDocuments
+                ? l10n.applicationDocumentsRequiredBody
+                : l10n.pendingReviewBody,
+          ),
+          if (state.applicationRejected &&
+              (state.rejectionReason ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppTokens.spaceSmall),
+              child: Text(
+                l10n.applicationRejectedReason(state.rejectionReason!),
+                key: const ValueKey('applicationRejectionReason'),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          if (role != null) Text(_roleLabel(l10n, role)),
+          if (needsDocuments) ...[
+            const SizedBox(height: AppTokens.spaceMedium),
+            if (missing.isNotEmpty)
+              Text(
+                l10n.documentsStillNeeded(
+                  missing
+                      .map((kind) => documentKindLabel(l10n, kind))
+                      .join(', '),
+                ),
+                key: const ValueKey('documentsStillNeeded'),
+              ),
+            const SizedBox(height: AppTokens.spaceSmall),
+            FilledButton(
+              key: const ValueKey('submitApplicationButton'),
+              onPressed: state.busy || missing.isNotEmpty
+                  ? null
+                  : () => ref
+                        .read(onboardingControllerProvider.notifier)
+                        .submitApplication(),
+              child: state.busy
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.submitApplication),
+            ),
+          ],
           const SizedBox(height: AppTokens.spaceMedium),
           OutlinedButton(
             onPressed: () => ref
@@ -546,11 +622,25 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         ],
       ),
     );
+    if (!isApplicant) return card;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        card,
+        const SizedBox(height: AppTokens.spaceMedium),
+        DriverDocumentsCard(
+          merchant: role == OnboardingRole.merchant,
+          onKindsChanged: (kinds) {
+            if (mounted) setState(() => _uploadedKinds = kinds);
+          },
+        ),
+      ],
+    );
   }
 
   Widget _retryStep(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -571,7 +661,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   Widget _terminalStep(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -595,14 +685,14 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     await ref
         .read(onboardingControllerProvider.notifier)
         .start(
-          invitationCode: _invitation.text,
           phone: _phone.text,
+          email: _email.text,
           locale: locale == 'en' ? 'en' : 'ar',
         );
     final result = ref.read(onboardingControllerProvider).value;
     if (result?.stage == OnboardingStage.otpSent) {
-      _invitation.clear();
       _phone.clear();
+      _email.clear();
     }
   }
 
@@ -616,8 +706,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     _otp.clear();
     _password.clear();
     _confirmPassword.clear();
-    _invitation.clear();
     _phone.clear();
+    _email.clear();
     _displayName.clear();
     _terms = false;
     _privacy = false;
@@ -632,7 +722,7 @@ class _Unavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MasariCard(
+    return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -658,7 +748,7 @@ class _ErrorBox extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTokens.spaceMedium),
-      child: MasariCard(
+      child: DarbCard(
         child: Text(
           _safeError(l10n, code),
           style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -699,9 +789,9 @@ class _RoleOptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MasariCard(
+    return DarbCard(
       onTap: onTap,
-      level: selected ? MasariCardLevel.floating : MasariCardLevel.card,
+      level: selected ? DarbCardLevel.floating : DarbCardLevel.card,
       background: selected
           ? AppTheme.surfaceContainerLow
           : AppTheme.surfaceContainerLowest,
@@ -715,7 +805,7 @@ class _RoleOptionCard extends StatelessWidget {
             width: AppTokens.minTouchTarget,
             height: AppTokens.minTouchTarget,
             decoration: BoxDecoration(
-              color: AppTheme.secondaryContainer,
+              color: AppTheme.primaryContainer,
               borderRadius: BorderRadius.circular(AppTokens.radiusFull),
             ),
             child: Icon(icon, color: AppTheme.primary, size: 22),
@@ -783,17 +873,12 @@ String _safeError(AppLocalizations l10n, String? code) => switch (code) {
   'verification_temporarily_unavailable' => l10n.requestFailed,
   'registration_grant_invalid' => l10n.requestFailed,
   'registration_conflict' => l10n.requestFailed,
+  'documents_required' => l10n.documentsRequiredError,
   _ => l10n.requestFailed,
 };
 
 String _safeConsentText(String value) {
-  try {
-    final decoded = jsonDecode(value);
-    if (decoded is Map) {
-      return decoded.values.whereType<String>().join('\n');
-    }
-  } catch (_) {
-    // Treat content_reference as plain text; never execute markup.
-  }
+  // Consent releases are canonical plain text. Flutter's Text widget renders
+  // the exact value without interpreting HTML, Markdown, JSON, or scripts.
   return value;
 }

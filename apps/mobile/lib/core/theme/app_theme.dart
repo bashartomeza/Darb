@@ -3,16 +3,14 @@ import 'package:flutter/material.dart';
 import 'app_tokens.dart';
 import 'semantic_colors.dart';
 
-/// Masari's Material 3 theme.
+/// Darb's Material 3 theme.
 ///
-/// Built from the Masari design system: a deep teal base for stability and the
-/// "Masar" (path), with warm orange reserved strictly for movement and
-/// high-priority action. The type scale uses IBM Plex Sans Arabic, bundled in
-/// `assets/fonts/` so it renders offline in low-bandwidth areas.
-///
-/// The scheme is written out explicitly rather than generated from a seed, so
-/// the values match the design system exactly instead of being approximated by
-/// Material's tonal-palette algorithm.
+/// The visual source is the Darb brand kit in `brand/darb/` (README plus the
+/// login, new-trip, available-rides and confirm-booking references): a white
+/// page, near-black ink, light-grey rounded cards with a thin border, and one
+/// orange accent for every primary action. The bundled IBM Plex Sans Arabic
+/// font is kept so Arabic renders offline. Shared Material components stay in
+/// one theme so feature screens do not need a second parallel styling system.
 class AppTheme {
   const AppTheme._();
 
@@ -20,47 +18,77 @@ class AppTheme {
   static const fontFamily = 'IBMPlexSansArabic';
 
   // ---------------------------------------------------------------------------
-  // Brand palette.
+  // Darb palette (brand/darb/README.md).
+  //
+  // Contrast: white on the brand orange #FA5F12 is about 3.1:1, which passes
+  // WCAG AA only for large text. Filled buttons therefore use a 19px bold
+  // label. Orange *text* on white (links, selected labels) would fail, so it
+  // uses [primaryText], a darker orange at about 5.2:1.
   // ---------------------------------------------------------------------------
 
-  static const primary = Color(0xFF004B4C);
+  /// Brand orange: filled actions, selected navigation, focus ring.
+  static const primary = Color(0xFFFA5F12);
   static const onPrimary = Color(0xFFFFFFFF);
-  static const primaryContainer = Color(0xFF116466);
-  static const onPrimaryContainer = Color(0xFF97DEE0);
+  static const primaryContainer = Color(0xFFFFE8DC);
+  static const onPrimaryContainer = Color(0xFF7A2A05);
 
-  static const secondary = Color(0xFF006A6A);
+  /// Orange safe for small text on white or on the grey card (AA, ~5.2:1).
+  static const primaryText = Color(0xFFC2410C);
+
+  /// Secondary controls (outlined/text buttons, progress) use the accessible
+  /// orange so they read as part of the same family.
+  static const secondary = primaryText;
   static const onSecondary = Color(0xFFFFFFFF);
-  static const secondaryContainer = Color(0xFF90F3F2);
-  static const onSecondaryContainer = Color(0xFF007070);
+  static const secondaryContainer = Color(0xFFFFEFE6);
+  static const onSecondaryContainer = Color(0xFF7A2A05);
 
-  static const tertiary = Color(0xFF5F3A00);
+  /// Highlights share the brand orange.
+  static const tertiary = primary;
   static const onTertiary = Color(0xFFFFFFFF);
-  static const tertiaryContainer = Color(0xFF7F4F00);
-  static const onTertiaryContainer = Color(0xFFFFC784);
+  static const tertiaryContainer = Color(0xFFFFE8DC);
+  static const onTertiaryContainer = Color(0xFF7A2A05);
 
-  static const background = Color(0xFFF4FAFF);
-  static const surface = Color(0xFFF4FAFF);
-  static const surfaceDim = Color(0xFFD1DCE2);
+  static const background = Color(0xFFFFFFFF);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceDim = Color(0xFFE0E0E0);
   static const surfaceContainerLowest = Color(0xFFFFFFFF);
-  static const surfaceContainerLow = Color(0xFFEAF5FC);
-  static const surfaceContainer = Color(0xFFE5EFF6);
-  static const surfaceContainerHigh = Color(0xFFDFEAF1);
-  static const surfaceContainerHighest = Color(0xFFD9E4EB);
 
-  static const onSurface = Color(0xFF131D22);
-  static const onSurfaceVariant = Color(0xFF3F4949);
-  static const inverseSurface = Color(0xFF283237);
-  static const inverseOnSurface = Color(0xFFE8F2F9);
-  static const inversePrimary = Color(0xFF8CD3D4);
+  /// Light-grey card fill (#F6F6F6), used with a thin [outlineVariant] border.
+  static const surfaceContainerLow = Color(0xFFF6F6F6);
+  static const surfaceContainer = Color(0xFFF3F3F3);
+  static const surfaceContainerHigh = Color(0xFFEDEDED);
+  static const surfaceContainerHighest = Color(0xFFE0E0E0);
 
-  static const outline = Color(0xFF6F7979);
-  static const outlineVariant = Color(0xFFBEC8C8);
+  /// Near-black ink (#1C1A1A).
+  static const onSurface = Color(0xFF1C1A1A);
 
-  /// Legacy alias. The pre-redesign theme exposed `deepGreen` as the brand
-  /// colour; it now points at the design system's teal [primary] so existing
-  /// call sites pick up the new palette without a sweeping rename. Prefer
-  /// `Theme.of(context).colorScheme.primary` in new code.
-  static const deepGreen = primary;
+  /// Grey body text (#707070, about 5:1 on white).
+  static const onSurfaceVariant = Color(0xFF707070);
+  static const inverseSurface = Color(0xFF1C1A1A);
+  static const inverseOnSurface = Color(0xFFFFFFFF);
+  static const inversePrimary = Color(0xFFFFB590);
+
+  /// Hint grey (#AEAEAE): placeholder icons and decoration. Not for text that
+  /// must be read; use [onSurfaceVariant] for that.
+  static const hint = Color(0xFFAEAEAE);
+  static const outline = hint;
+  static const outlineVariant = Color(0xFFE0E0E0);
+
+  /// Price green (#3A7C07).
+  static const price = Color(0xFF3A7C07);
+
+  /// Route origin dot.
+  static const routeOrigin = Color(0xFF5A6B3A);
+
+  /// Route destination dot (#EB3223).
+  static const routeDestination = Color(0xFFEB3223);
+
+  /// Dark red used for destructive/failure emphasis.
+  static const darkTerracotta = Color(0xFF9B2A1B);
+
+  /// Legacy alias for headings that were set in the old brand colour. Uses the
+  /// accessible orange because it is always applied to text.
+  static const deepGreen = primaryText;
 
   static const colorScheme = ColorScheme(
     brightness: Brightness.light,
@@ -83,7 +111,7 @@ class AppTheme {
     surface: surface,
     onSurface: onSurface,
     surfaceDim: surfaceDim,
-    surfaceBright: surface,
+    surfaceBright: Color(0xFFFFFFFF),
     surfaceContainerLowest: surfaceContainerLowest,
     surfaceContainerLow: surfaceContainerLow,
     surfaceContainer: surfaceContainer,
@@ -98,100 +126,98 @@ class AppTheme {
   );
 
   // ---------------------------------------------------------------------------
-  // Type scale.
-  //
-  // Line heights are expressed as multiples of the font size to match the
-  // design system's px pairs (e.g. 32/40 -> 1.25). Arabic script needs the
-  // generous leading, so these are not reduced.
+  // Type scale. Arabic text keeps the bundled IBM Plex Sans Arabic family so
+  // the app still renders without downloading fonts at runtime.
   // ---------------------------------------------------------------------------
 
   static const textTheme = TextTheme(
-    // display-lg 32/40
     displayLarge: TextStyle(
       fontSize: 32,
       fontWeight: FontWeight.w700,
-      height: 1.25,
+      height: 40 / 32,
     ),
-    // display-lg-mobile 28/36
     displayMedium: TextStyle(
       fontSize: 28,
       fontWeight: FontWeight.w700,
-      height: 1.29,
+      height: 36 / 28,
     ),
-    // headline-md 24/32
-    headlineLarge: TextStyle(
+    displaySmall: TextStyle(
       fontSize: 24,
+      fontWeight: FontWeight.w700,
+      height: 32 / 24,
+    ),
+    headlineLarge: TextStyle(
+      fontSize: 22,
       fontWeight: FontWeight.w600,
-      height: 1.33,
+      height: 30 / 22,
     ),
     headlineMedium: TextStyle(
-      fontSize: 24,
-      fontWeight: FontWeight.w600,
-      height: 1.33,
-    ),
-    // headline-sm 20/28
-    headlineSmall: TextStyle(
       fontSize: 20,
       fontWeight: FontWeight.w600,
-      height: 1.4,
+      height: 28 / 20,
+    ),
+    headlineSmall: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      height: 28 / 18,
     ),
     titleLarge: TextStyle(
-      fontSize: 20,
+      fontSize: 17,
       fontWeight: FontWeight.w600,
-      height: 1.4,
+      height: 26 / 17,
     ),
-    // body-lg 18/28
     titleMedium: TextStyle(
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: FontWeight.w600,
-      height: 1.5,
+      height: 24 / 15,
     ),
     titleSmall: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w600,
-      height: 1.43,
+      height: 22 / 14,
     ),
     bodyLarge: TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.w400,
-      height: 1.56,
-    ),
-    // body-md 16/24
-    bodyMedium: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
-      height: 1.5,
+      height: 1.6,
     ),
-    // body-sm 14/20
-    bodySmall: TextStyle(
+    bodyMedium: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
-      height: 1.43,
+      height: 1.6,
     ),
-    // label-md 12/16, +0.5 tracking
+    bodySmall: TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+      height: 18 / 12,
+    ),
     labelLarge: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w600,
-      height: 1.43,
+      height: 20 / 14,
     ),
     labelMedium: TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      height: 1.33,
-      letterSpacing: 0.5,
-    ),
-    // label-sm 10/14
-    labelSmall: TextStyle(
-      fontSize: 10,
+      fontSize: 13,
       fontWeight: FontWeight.w500,
-      height: 1.4,
+      height: 20 / 13,
+    ),
+    labelSmall: TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+      height: 16 / 11,
     ),
   );
 
   static ThemeData get light {
-    final baseShape = RoundedRectangleBorder(
+    final buttonShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
     );
+
+    OutlineInputBorder fieldBorder(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
+          borderSide: BorderSide(color: color, width: width),
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -200,75 +226,88 @@ class AppTheme {
       scaffoldBackgroundColor: background,
       textTheme: textTheme.apply(bodyColor: onSurface, displayColor: onSurface),
 
-      // Level 1: a 1px stroke rather than a heavy shadow, so cards stay flat
-      // and legible in bright outdoor light.
+      // Light-grey card with a thin border and no shadow, as in the Darb
+      // references.
       cardTheme: CardThemeData(
-        color: surfaceContainerLowest,
+        color: surfaceContainerLow,
         elevation: AppTokens.elevationBase,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusLarge),
+          borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
           side: const BorderSide(color: outlineVariant),
         ),
       ),
 
+      // White app bar, ink title, no divider: the page content is the focus.
       appBarTheme: const AppBarTheme(
         backgroundColor: background,
+        surfaceTintColor: Colors.transparent,
         foregroundColor: onSurface,
         elevation: AppTokens.elevationBase,
-        scrolledUnderElevation: AppTokens.elevationCard,
+        scrolledUnderElevation: AppTokens.elevationBase,
         centerTitle: true,
         titleTextStyle: TextStyle(
           fontFamily: fontFamily,
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w700,
-          color: primary,
+          color: onSurface,
         ),
       ),
 
+      // Large orange filled buttons. White on #FA5F12 is ~3.1:1, so the label
+      // is 19px bold (WCAG "large text", AA 3:1).
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: onPrimary,
+          disabledBackgroundColor: surfaceContainerHighest,
+          disabledForegroundColor: onSurfaceVariant,
           minimumSize: const Size.fromHeight(AppTokens.buttonHeight),
-          shape: baseShape,
+          shape: buttonShape,
           textStyle: const TextStyle(
             fontFamily: fontFamily,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
 
+      // Outlined buttons: white with a thin grey border and ink label (the
+      // Google button in the reference).
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primary,
-          minimumSize: const Size.fromHeight(AppTokens.minTouchTarget),
-          side: const BorderSide(color: primary, width: 1.5),
-          shape: baseShape,
+          foregroundColor: onSurface,
+          minimumSize: const Size(0, AppTokens.minTouchTarget),
+          side: const BorderSide(color: outlineVariant),
+          shape: buttonShape,
           textStyle: const TextStyle(
             fontFamily: fontFamily,
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
       ),
 
+      // Low-emphasis text actions use the accessible orange.
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primary,
+          foregroundColor: primaryText,
           minimumSize: const Size(0, AppTokens.minTouchTarget),
-          shape: baseShape,
+          shape: buttonShape,
           textStyle: const TextStyle(
             fontFamily: fontFamily,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
 
-      // Arabic placeholder text aligns to the start of the reading direction;
-      // Flutter handles that automatically under RTL.
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: SemanticColors.action,
+        foregroundColor: SemanticColors.onAction,
+      ),
+
+      // Rounded white fields with a thin outline; orange focus ring.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceContainerLowest,
@@ -276,40 +315,26 @@ class AppTheme {
           horizontal: AppTokens.spaceMedium,
           vertical: AppTokens.spaceMedium,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: outlineVariant),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: SemanticColors.error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
-          borderSide: const BorderSide(color: SemanticColors.error, width: 2),
-        ),
+        border: fieldBorder(outlineVariant),
+        enabledBorder: fieldBorder(outlineVariant),
+        focusedBorder: fieldBorder(primary, 2),
+        errorBorder: fieldBorder(SemanticColors.error),
+        focusedErrorBorder: fieldBorder(SemanticColors.error, 2),
         hintStyle: const TextStyle(color: onSurfaceVariant),
+        prefixIconColor: hint,
+        suffixIconColor: hint,
       ),
 
-      // Pill shape keeps status chips visually distinct from buttons.
+      // Pill shape keeps chips visually distinct from buttons.
       chipTheme: ChipThemeData(
-        backgroundColor: surfaceContainerHigh,
+        backgroundColor: surfaceContainerLow,
         labelStyle: const TextStyle(
           fontFamily: fontFamily,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-          color: onSurfaceVariant,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: onSurface,
         ),
-        side: BorderSide.none,
+        side: const BorderSide(color: outlineVariant),
         shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(
           horizontal: AppTokens.spaceSmall + AppTokens.spaceExtraSmall,
@@ -317,29 +342,45 @@ class AppTheme {
         ),
       ),
 
-      // Level 3 — pulls focus from the map behind it.
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
         elevation: AppTokens.elevationOverlay,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppTokens.radiusLarge),
+            top: Radius.circular(AppTokens.radiusMedium),
           ),
         ),
         showDragHandle: true,
       ),
 
+      dialogTheme: const DialogThemeData(
+        backgroundColor: surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+        elevation: AppTokens.elevationOverlay,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(
+            Radius.circular(AppTokens.radiusMedium),
+          ),
+        ),
+      ),
+
       // Labels are mandatory: icon-only navigation is ambiguous in Arabic.
+      // The selected item is orange with no pill indicator, as in the
+      // references. The selected label uses the accessible orange.
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surfaceContainerLowest,
-        indicatorColor: secondaryContainer,
-        elevation: AppTokens.elevationCard,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: Colors.transparent,
+        elevation: AppTokens.elevationBase,
         height: 72,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             size: AppTokens.navIconSize,
-            color: states.contains(WidgetState.selected) ? primary : outline,
+            color: states.contains(WidgetState.selected)
+                ? primary
+                : onSurfaceVariant,
           ),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
@@ -349,7 +390,9 @@ class AppTheme {
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w600
                 : FontWeight.w500,
-            color: states.contains(WidgetState.selected) ? primary : outline,
+            color: states.contains(WidgetState.selected)
+                ? primaryText
+                : onSurfaceVariant,
           ),
         ),
       ),
@@ -366,7 +409,9 @@ class AppTheme {
           fontFamily: fontFamily,
           color: inverseOnSurface,
         ),
-        shape: baseShape,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTokens.radiusDefault),
+        ),
         behavior: SnackBarBehavior.floating,
       ),
 

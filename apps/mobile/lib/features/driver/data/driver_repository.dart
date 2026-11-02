@@ -31,6 +31,56 @@ final driverTrustScoreProvider = FutureProvider.family<int?, String>((
   }
 });
 
+/// How the driver answered the offers they responded to. The percentage is
+/// null until the server has a large enough sample to report one.
+class DriverPerformance {
+  const DriverPerformance({
+    required this.responded,
+    required this.accepted,
+    required this.minSample,
+    this.acceptanceRate,
+  });
+
+  final int responded;
+  final int accepted;
+  final int minSample;
+  final int? acceptanceRate;
+
+  factory DriverPerformance.fromJson(Map<String, dynamic> json) {
+    final responded = json['offers_responded'];
+    final accepted = json['offers_accepted'];
+    final minSample = json['min_sample'];
+    final rate = json['acceptance_rate'];
+    if (responded is! int ||
+        accepted is! int ||
+        minSample is! int ||
+        (rate != null && rate is! int)) {
+      throw const FormatException('Invalid performance response');
+    }
+    return DriverPerformance(
+      responded: responded,
+      accepted: accepted,
+      minSample: minSample,
+      acceptanceRate: rate as int?,
+    );
+  }
+}
+
+final driverPerformanceProvider = FutureProvider<DriverPerformance?>((
+  ref,
+) async {
+  final binding = ref.watch(authenticatedActorBindingProvider);
+  final actorId = binding.actorId;
+  if (actorId == null) return null;
+  try {
+    final result = await ref.watch(driverRepositoryProvider).performance();
+    return binding.actorId == actorId ? result : null;
+  } catch (error, stackTrace) {
+    if (binding.actorId != actorId) return null;
+    Error.throwWithStackTrace(error, stackTrace);
+  }
+});
+
 class DriverRepository {
   const DriverRepository({required this.apiClient});
 
@@ -53,24 +103,47 @@ class DriverRepository {
     return value is num ? value.toInt() : null;
   }
 
+  Future<DriverPerformance> performance() async {
+    final json = await apiClient.getJson('/driver/performance');
+    return DriverPerformance.fromJson(json);
+  }
+
   Future<List<DriverRoute>> activeRoutes() async {
     final json = await apiClient.getJson('/driver/routes/active');
     return _routes(json);
   }
 
-  Future<DriverRoute> createRoute({
+  /// The driver's route for today on one predefined route; the server fills
+  /// the ends from the route's cities.
+  ///
+  /// [serviceRouteId] is null only when resending a route saved by a build
+  /// before routes existed: that send is a replay of its idempotency key.
+  static Map<String, dynamic> createRouteBody({
+    required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
+  }) => {
+    'service_route_id': ?serviceRouteId,
+    'seats_available': seatsAvailable,
+    'parcel_capacity_available': parcelCapacityAvailable,
+  };
+
+  Future<DriverRoute> createRoute({
+    required String? serviceRouteId,
+    required int seatsAvailable,
+    required int parcelCapacityAvailable,
+    String? idempotencyKey,
+    Future<void> Function()? beforeRetry,
   }) async {
     final json = await apiClient.postJson(
       '/driver/routes',
-      body: {
-        'origin_label': lockedDriverOriginLabel,
-        'destination_label': lockedDriverDestinationLabel,
-        'corridor_key': lockedDriverCorridorKey,
-        'seats_available': seatsAvailable,
-        'parcel_capacity_available': parcelCapacityAvailable,
-      },
+      headers: {'Idempotency-Key': ?idempotencyKey},
+      beforeRetry: beforeRetry,
+      body: createRouteBody(
+        serviceRouteId: serviceRouteId,
+        seatsAvailable: seatsAvailable,
+        parcelCapacityAvailable: parcelCapacityAvailable,
+      ),
     );
     return DriverRoute.fromJson(json['route'] as Map<String, dynamic>);
   }
@@ -80,15 +153,21 @@ class DriverRepository {
     return DriverRoute.fromJson(json['route'] as Map<String, dynamic>);
   }
 
+  /// Going online without an active route needs [serviceRouteId]: the route
+  /// the driver chose to drive.
   Future<LegacyDriverOnlineResult> setLegacyOnlineState({
     required bool online,
     required String idempotencyKey,
     String? expectedRouteId,
+    String? serviceRouteId,
     Future<void> Function()? beforeRetry,
   }) async {
     final body = <String, dynamic>{'online': online};
     if (expectedRouteId != null) {
       body['expected_route_id'] = expectedRouteId;
+    }
+    if (serviceRouteId != null) {
+      body['service_route_id'] = serviceRouteId;
     }
     final json = await apiClient.putJson(
       '/driver/online-state',
@@ -148,7 +227,10 @@ class DriverRepository {
 
   Future<DriverTrip> tripDetail(String id) async {
     final json = await apiClient.getJson('/trips/$id');
-    return DriverTrip.fromJson(json['trip'] as Map<String, dynamic>);
+    return DriverTrip.fromJson({
+      ...(json['trip'] as Map<String, dynamic>),
+      'delivery_confirmation': json['delivery_confirmation'],
+    });
   }
 
   Future<void> updateTripStatus(String id, String status) async {

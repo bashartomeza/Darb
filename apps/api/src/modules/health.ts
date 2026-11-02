@@ -5,7 +5,7 @@ import { checkDatabaseReadiness, runWithTimeout, type ReadinessCheck } from "../
 function identity(appConfig: AppConfig, requestId: string) {
   return {
     ok: true,
-    service: "masari-api",
+    service: "darb-api",
     environment: appConfig.appEnv,
     release: appConfig.appRelease,
     request_id: requestId
@@ -29,7 +29,7 @@ export function createHealthRouter(appConfig: AppConfig, readinessCheck: Readine
       req.operationalLog.warn({ event: "readiness_check_failed" }, "Database readiness check failed");
       res.status(503).json({
         ok: false,
-        service: "masari-api",
+        service: "darb-api",
         status: "not_ready",
         request_id: req.requestId
       });

@@ -1,3 +1,4 @@
+import { isAbsolute } from "node:path";
 import { z } from "zod";
 
 export const APP_ENVIRONMENTS = ["local", "test", "demo", "staging", "production"] as const;
@@ -8,6 +9,7 @@ export type RouteProviderId = (typeof ROUTE_PROVIDERS)[number];
 const MINIMUM_JWT_SECRET_LENGTH = 32;
 const MINIMUM_REFRESH_PEPPER_LENGTH = 32;
 const MINIMUM_ONBOARDING_PEPPER_LENGTH = 32;
+const MINIMUM_AUTH_ACTION_PEPPER_LENGTH = 32;
 const PRODUCTION_ACCESS_TOKEN_MIN_SECONDS = 300;
 const PRODUCTION_ACCESS_TOKEN_MAX_SECONDS = 1_800;
 const PRODUCTION_REFRESH_TOKEN_MAX_DAYS = 90;
@@ -27,6 +29,24 @@ function isUnsafeRouteProviderSecret(value: string) {
   return isUnsafeSecret(value) || unsafeRouteProviderSecretMarkers.some((marker) => normalized.includes(marker));
 }
 
+const optionalXaiApiKey = z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().trim().min(20).optional()
+);
+const optionalGeminiApiKey = z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().trim().min(20).optional()
+);
+const optionalGroqApiKey = z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().trim().min(20).optional()
+);
+
+const optionalText = (max: number) => z.preprocess(
+  (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
+  z.string().trim().max(max).optional()
+);
+
 const rawSchema = z.object({
   APP_ENV: z.enum(APP_ENVIRONMENTS),
   DATABASE_URL: z.string().min(1),
@@ -34,6 +54,8 @@ const rawSchema = z.object({
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).optional(),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).optional(),
   REFRESH_TOKEN_PEPPER: z.string().min(MINIMUM_REFRESH_PEPPER_LENGTH).optional(),
+  AUTH_ACTION_TOKEN_PEPPER: z.string().min(MINIMUM_AUTH_ACTION_PEPPER_LENGTH).optional(),
+  AUTH_ACTION_TOKEN_KEY_VERSION: z.coerce.number().int().positive().default(1),
   CORS_ORIGINS: z.string().optional(),
   APP_RELEASE: z.string().min(1).optional(),
   ENABLE_DEMO_FEATURES: z.string().optional(),
@@ -43,6 +65,18 @@ const rawSchema = z.object({
   CANONICAL_TRIP_CREATION_ENABLED: z.string().optional(),
   CANONICAL_SHARED_TRIPS_ENABLED: z.string().optional(),
   CANONICAL_SHARED_TRIP_MOBILE_ENABLED: z.string().optional(),
+  MAPS_ENABLED: z.string().optional(),
+  CHECKPOINTS_ENABLED: z.string().optional(),
+  AWEENRAYEH_LIMITED_DIRECTORY_ENABLED: z.string().optional(),
+  PARTNER_CHECKPOINT_MAP_ENABLED: z.string().optional(),
+  AWEENRAYEH_PARTNER_API_KEY: z.string().trim().min(20).optional(),
+  AWEENRAYEH_PARTNER_TIMEOUT_MS: z.coerce.number().int().min(500).max(15_000).default(6_000),
+  CHECKPOINT_DIRECTORY_ENABLED: z.string().optional(),
+  CHECKPOINT_DIRECTORY_FILE: z.string().min(1).optional(),
+  CHECKPOINTS_URL: z.string().url().optional(),
+  CHECKPOINTS_API_KEY: z.string().min(20).optional(),
+  CHECKPOINTS_TIMEOUT_MS: z.coerce.number().int().min(500).max(15_000).default(6_000),
+  CHECKPOINTS_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(3_600).default(60),
   ROUTE_MAPS_ENABLED: z.string().optional(),
   ROUTE_PROVIDER: z.enum(ROUTE_PROVIDERS).default("disabled"),
   ROUTE_PROVIDER_SECRET: z.string().trim().min(8).optional(),
@@ -53,6 +87,7 @@ const rawSchema = z.object({
   ROUTE_PROVIDER_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(900_000),
   ROUTE_PROVIDER_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100).default(20),
   DEMO_RESET_KEY: z.string().min(8).optional(),
+  DEMO_RESET_ALLOWED_DATABASES: z.string().optional(),
   DEMO_PASSENGER_PASSWORD: z.string().min(12).optional(),
   DEMO_DRIVER_PASSWORD: z.string().min(12).optional(),
   DEMO_MERCHANT_PASSWORD: z.string().min(12).optional(),
@@ -60,15 +95,49 @@ const rawSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
   TRUST_PROXY: z.string().optional(),
+  APPROACH_ALERT_RADIUS_KM: z.coerce.number().min(0.05).max(25).default(1),
+  APPROACH_ALERT_ETA_MINUTES: z.coerce.number().min(0).max(120).default(0),
+  APPROACH_ALERT_ASSUMED_SPEED_KMH: z.coerce.number().min(5).max(120).default(30),
   READINESS_TIMEOUT_MS: z.coerce.number().int().min(10).max(10_000).default(2_000),
   RATE_LIMIT_GLOBAL_WINDOW_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(900_000),
   RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().min(1).max(10_000).optional(),
   RATE_LIMIT_LOGIN_WINDOW_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(900_000),
   RATE_LIMIT_LOGIN_MAX: z.coerce.number().int().min(1).max(500).optional(),
+  EMAIL_CODE_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().min(0).max(3600).default(60),
+  EMAIL_CODE_MAX_PER_EMAIL_PER_DAY: z.coerce.number().int().min(1).max(100).default(10),
   INVITATIONS_ENABLED: z.string().optional(),
   PUBLIC_ONBOARDING_ENABLED: z.string().optional(),
-  OTP_PROVIDER: z.enum(["disabled", "fake"]).default("disabled"),
+  EMAIL_VERIFICATION_DISABLED: z.string().optional(),
+  PHONE_VERIFICATION_DISABLED: z.string().optional(),
+  OPEN_SIGNUP_MAX_STARTS_PER_HOUR: z.coerce.number().int().min(1).max(10_000).default(200),
+  DRIVER_DOCUMENTS_ENABLED: z.string().optional(),
+  DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
+  DRIVER_DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  OTP_PROVIDER: z.enum(["disabled", "fake", "email"]).default("disabled"),
+  EMAIL_DELIVERY: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.enum(["disabled", "smtp"]).default("disabled")),
+  SMTP_HOST: optionalText(255),
+  SMTP_PORT: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.coerce.number().int().min(1).max(65_535).optional()),
+  SMTP_SECURE: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.enum(["starttls", "tls"]).default("starttls")),
+  SMTP_USER: optionalText(255),
+  SMTP_PASSWORD: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.string().max(512).optional()),
+  EMAIL_FROM_ADDRESS: optionalText(255),
+  EMAIL_FROM_NAME: optionalText(100),
   SUPPORTED_PHONE_REGIONS: z.string().default("PS"),
+  GOOGLE_OAUTH_CLIENT_IDS: z.string().optional(),
+  GOOGLE_MOBILE_SERVER_CLIENT_ID: z.string().trim().min(1).refine((v) => !v.includes(",")).optional(),
+  GOOGLE_ADMIN_WEB_CLIENT_ID: z.string().trim().min(1).refine((v) => !v.includes(",")).optional(),
+  GOOGLE_PASSENGER_SIGNUP_MODE: z.enum(["disabled", "allowlist", "open"]).default("disabled"),
+  GOOGLE_PASSENGER_ALLOWLIST_HMACS: z.string().optional(),
+  XAI_API_KEY: optionalXaiApiKey,
+  XAI_MODEL: z.string().trim().min(1).max(100).default("grok-4.6"),
+  XAI_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(15_000),
+  ASSISTANT_PROVIDER: z.enum(["xai", "gemini", "groq"]).default("groq"),
+  GEMINI_API_KEY: optionalGeminiApiKey,
+  GEMINI_MODEL: z.string().trim().min(1).max(100).default("gemini-2.5-flash-lite"),
+  GEMINI_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(15_000),
+  GROQ_API_KEY: optionalGroqApiKey,
+  GROQ_MODEL: z.string().trim().min(1).max(100).default("openai/gpt-oss-20b"),
+  GROQ_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(15_000),
   INVITATION_CODE_PEPPER: z.string().min(MINIMUM_ONBOARDING_PEPPER_LENGTH).optional(),
   INVITATION_CODE_KEY_VERSION: z.coerce.number().int().positive().default(1),
   PHONE_DIGEST_PEPPER: z.string().min(MINIMUM_ONBOARDING_PEPPER_LENGTH).optional(),
@@ -101,7 +170,7 @@ export type AppConfig = ReturnType<typeof createConfig>;
 
 export class ConfigurationError extends Error {
   constructor(problems: string[]) {
-    super(`Invalid Masari configuration: ${problems.join("; ")}`);
+    super(`Invalid Darb configuration: ${problems.join("; ")}`);
     this.name = "ConfigurationError";
   }
 }
@@ -157,14 +226,44 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     "CANONICAL_SHARED_TRIP_MOBILE_ENABLED",
     raw.CANONICAL_SHARED_TRIP_MOBILE_ENABLED
   );
+  const mapsEnabled = parseBoolean("MAPS_ENABLED", raw.MAPS_ENABLED);
+  const checkpointsEnabled = parseBoolean("CHECKPOINTS_ENABLED", raw.CHECKPOINTS_ENABLED);
+  const checkpointDirectoryEnabled = parseBoolean("CHECKPOINT_DIRECTORY_ENABLED", raw.CHECKPOINT_DIRECTORY_ENABLED);
   const routeMapsEnabled = parseBoolean("ROUTE_MAPS_ENABLED", raw.ROUTE_MAPS_ENABLED);
   const invitationsEnabled = parseBoolean("INVITATIONS_ENABLED", raw.INVITATIONS_ENABLED);
+  const driverDocumentsEnabled = parseBoolean("DRIVER_DOCUMENTS_ENABLED", raw.DRIVER_DOCUMENTS_ENABLED);
   const publicOnboardingEnabled = parseBoolean("PUBLIC_ONBOARDING_ENABLED", raw.PUBLIC_ONBOARDING_ENABLED);
   const testLegalFixturesEnabled = parseBoolean(
     "ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED",
     raw.ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED
   );
+  const limitedCheckpointDirectoryEnabled = parseBoolean("AWEENRAYEH_LIMITED_DIRECTORY_ENABLED", raw.AWEENRAYEH_LIMITED_DIRECTORY_ENABLED);
   const problems: string[] = [];
+  if (limitedCheckpointDirectoryEnabled && (!raw.AWEENRAYEH_PARTNER_API_KEY || isUnsafeRouteProviderSecret(raw.AWEENRAYEH_PARTNER_API_KEY))) {
+    problems.push("AWEENRAYEH_PARTNER_API_KEY is required and must be securely configured");
+  }
+  // Demo reset keeps the partner budget rows (see modules/demoReset.ts), so the
+  // provider's rate limit survives a reset and the gate can run in demo/test.
+  const partnerCheckpointMapEnabled = parseBoolean("PARTNER_CHECKPOINT_MAP_ENABLED", raw.PARTNER_CHECKPOINT_MAP_ENABLED);
+  if (partnerCheckpointMapEnabled && !limitedCheckpointDirectoryEnabled) {
+    problems.push("PARTNER_CHECKPOINT_MAP_ENABLED requires AWEENRAYEH_LIMITED_DIRECTORY_ENABLED");
+  }
+  if (driverDocumentsEnabled && (!raw.DRIVER_DOCUMENTS_DIR || !isAbsolute(raw.DRIVER_DOCUMENTS_DIR))) {
+    problems.push("DRIVER_DOCUMENTS_DIR must be an absolute path when driver documents are enabled");
+  }
+  if (checkpointDirectoryEnabled && !raw.CHECKPOINT_DIRECTORY_FILE) {
+    problems.push("CHECKPOINT_DIRECTORY_FILE is required when the directory is enabled");
+  }
+  const demoResetAllowedDatabases = (raw.DEMO_RESET_ALLOWED_DATABASES ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (demoResetAllowedDatabases.some((name) => !/^[A-Za-z0-9_]+$/.test(name))) {
+    problems.push("DEMO_RESET_ALLOWED_DATABASES must contain exact comma-separated database names");
+  }
+  if (new Set(demoResetAllowedDatabases).size !== demoResetAllowedDatabases.length) {
+    problems.push("DEMO_RESET_ALLOWED_DATABASES must not contain duplicate database names");
+  }
 
   if (productionLike && explicitlyEnabled) {
     problems.push("ENABLE_DEMO_FEATURES cannot be enabled in staging or production");
@@ -209,14 +308,40 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
       "CANONICAL_SHARED_TRIP_MOBILE_ENABLED requires MULTI_ROUTE_ENTRY_ENABLED, MULTI_ROUTE_MATCHING_ENABLED, CANONICAL_TRIP_CREATION_ENABLED, and CANONICAL_SHARED_TRIPS_ENABLED"
     );
   }
-  if (publicOnboardingEnabled && productionLike) {
-    problems.push("PUBLIC_ONBOARDING_ENABLED cannot be enabled in staging or production without an approved provider");
+  // Coordinates and geometry only ever reach clients through the canonical
+  // catalog, so maps cannot be switched on without it.
+  if (mapsEnabled && !routeManagementEnabled) {
+    problems.push("MAPS_ENABLED requires ROUTE_MANAGEMENT_ENABLED");
   }
-  if (publicOnboardingEnabled && !invitationsEnabled) {
-    problems.push("PUBLIC_ONBOARDING_ENABLED requires INVITATIONS_ENABLED");
+  // Barriers are drawn on the map and have no textual fallback surface.
+  if (checkpointsEnabled && !mapsEnabled) {
+    problems.push("CHECKPOINTS_ENABLED requires MAPS_ENABLED");
   }
-  if (publicOnboardingEnabled && raw.OTP_PROVIDER !== "fake") {
-    problems.push("PUBLIC_ONBOARDING_ENABLED requires the fake provider in local, test, or demo");
+  if (checkpointsEnabled && !raw.CHECKPOINTS_URL) {
+    problems.push("CHECKPOINTS_URL is required when checkpoints are enabled");
+  }
+  if (checkpointsEnabled && !raw.CHECKPOINTS_API_KEY) {
+    problems.push("CHECKPOINTS_API_KEY is required when checkpoints are enabled");
+  }
+  if (raw.CHECKPOINTS_URL && !raw.CHECKPOINTS_URL.startsWith("https://")) {
+    problems.push("CHECKPOINTS_URL must use HTTPS");
+  }
+  if (raw.CHECKPOINTS_API_KEY && isUnsafeSecret(raw.CHECKPOINTS_API_KEY)) {
+    problems.push("CHECKPOINTS_API_KEY uses a known placeholder or default value");
+  }
+  if (publicOnboardingEnabled && productionLike && raw.OTP_PROVIDER !== "email") {
+    problems.push("PUBLIC_ONBOARDING_ENABLED in staging or production requires OTP_PROVIDER=email");
+  }
+  if (raw.OTP_PROVIDER === "email" && raw.EMAIL_DELIVERY !== "smtp") {
+    problems.push("OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp (and the SMTP_* settings)");
+  }
+  // Driver and shop-owner registration is self-service: applicants upload their own documents
+  // before the application reaches the Admin review queue, so storage must be configured.
+  if (publicOnboardingEnabled && !driverDocumentsEnabled) {
+    problems.push("PUBLIC_ONBOARDING_ENABLED requires DRIVER_DOCUMENTS_ENABLED so applicants can upload their documents");
+  }
+  if (publicOnboardingEnabled && raw.OTP_PROVIDER !== "fake" && raw.OTP_PROVIDER !== "email") {
+    problems.push("PUBLIC_ONBOARDING_ENABLED requires OTP_PROVIDER=email (or fake in local, test, or demo)");
   }
   if (productionLike && testLegalFixturesEnabled) {
     problems.push("ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED is forbidden in staging and production");
@@ -245,6 +370,15 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (routeMapsEnabled && raw.ROUTE_PROVIDER_SECRET && [raw.JWT_SECRET, raw.REFRESH_TOKEN_PEPPER].includes(raw.ROUTE_PROVIDER_SECRET)) {
     problems.push("ROUTE_PROVIDER_SECRET must be distinct from operational secrets");
   }
+  if (raw.XAI_API_KEY && isUnsafeSecret(raw.XAI_API_KEY)) {
+    problems.push("XAI_API_KEY uses a known placeholder or default value");
+  }
+  if (raw.GEMINI_API_KEY && isUnsafeSecret(raw.GEMINI_API_KEY)) {
+    problems.push("GEMINI_API_KEY uses a known placeholder or default value");
+  }
+  if (raw.GROQ_API_KEY && isUnsafeSecret(raw.GROQ_API_KEY)) {
+    problems.push("GROQ_API_KEY uses a known placeholder or default value");
+  }
   if (productionLike && raw.ROUTE_PROVIDER_CACHE_TTL_SECONDS !== 0) {
     problems.push("ROUTE_PROVIDER_CACHE_TTL_SECONDS must remain 0 until provider cache rights are approved");
   }
@@ -259,6 +393,36 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     problems.push("SUPPORTED_PHONE_REGIONS must be PS in M6C2B1");
   }
 
+  const googleOAuthClientIds = (raw.GOOGLE_OAUTH_CLIENT_IDS ?? "")
+    .split(",")
+    .map((clientId) => clientId.trim())
+    .filter(Boolean);
+  const googleMobileClientIds = raw.GOOGLE_MOBILE_SERVER_CLIENT_ID ? [raw.GOOGLE_MOBILE_SERVER_CLIENT_ID] : [];
+  const googleAdminClientIds = raw.GOOGLE_ADMIN_WEB_CLIENT_ID ? [raw.GOOGLE_ADMIN_WEB_CLIENT_ID] : [];
+  const googlePassengerAllowlist = (raw.GOOGLE_PASSENGER_ALLOWLIST_HMACS ?? "").split(",").map((v) => v.trim()).filter(Boolean);
+  if (googlePassengerAllowlist.some((v) => !/^[a-f0-9]{64}$/.test(v))) problems.push("GOOGLE_PASSENGER_ALLOWLIST_HMACS must contain SHA-256 HMAC digests");
+  if ([...googleMobileClientIds, ...googleAdminClientIds].some(isUnsafeSecret)) problems.push("Google endpoint client IDs contain a placeholder value");
+  if (googleMobileClientIds.some((id) => googleAdminClientIds.includes(id))) problems.push("Google mobile and admin audiences must be distinct");
+  if (raw.GOOGLE_PASSENGER_SIGNUP_MODE !== "disabled" && (!googleMobileClientIds.length || !raw.AUTH_ACTION_TOKEN_PEPPER)) problems.push("Google passenger signup requires mobile audiences and AUTH_ACTION_TOKEN_PEPPER");
+  if (raw.GOOGLE_PASSENGER_SIGNUP_MODE === "allowlist" && googlePassengerAllowlist.length === 0) problems.push("Google passenger signup requires nonempty HMAC allowlist");
+  // No approved email/SMS adapter is currently wired into the application.
+  // A configuration assertion cannot substitute for delivery, published legal
+  // releases, and a completed runtime rehearsal. Keep rollout closed until the
+  // approved adapters and their startup checks are implemented together.
+  if (productionLike && raw.GOOGLE_PASSENGER_SIGNUP_MODE !== "disabled") {
+    problems.push("google_signup_prerequisite_missing: approved delivery providers, published legal releases, and runtime rehearsal required");
+  }
+  // Local development only: email sign-up skips the emailed code and unverified
+  // email accounts may sign in. Staging and production always verify.
+  const emailVerificationDisabled = parseBoolean("EMAIL_VERIFICATION_DISABLED", raw.EMAIL_VERIFICATION_DISABLED);
+  if (productionLike && emailVerificationDisabled) problems.push("EMAIL_VERIFICATION_DISABLED is only allowed outside staging and production");
+  // Local development only: adding a phone to the profile needs no code. The number is stored unverified.
+  const phoneVerificationDisabled = parseBoolean("PHONE_VERIFICATION_DISABLED", raw.PHONE_VERIFICATION_DISABLED);
+  if (productionLike && phoneVerificationDisabled) problems.push("PHONE_VERIFICATION_DISABLED is only allowed outside staging and production");
+  if (googleOAuthClientIds.some((clientId) => isUnsafeSecret(clientId))) {
+    problems.push("GOOGLE_OAUTH_CLIENT_IDS contains a placeholder value");
+  }
+
   const onboardingSecrets = {
     invitationCode: raw.INVITATION_CODE_PEPPER,
     phoneDigest: raw.PHONE_DIGEST_PEPPER,
@@ -267,9 +431,13 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     idempotency: raw.IDEMPOTENCY_KEY_PEPPER,
     abuse: raw.ABUSE_KEY_PEPPER
   };
-  if (invitationsEnabled) {
+  // Registration no longer needs invitations. The invitation-code pepper is only required
+  // when the (optional) Admin invitation feature itself is switched on.
+  const onboardingEnabled = publicOnboardingEnabled || invitationsEnabled;
+  if (onboardingEnabled) {
     for (const [name, value] of Object.entries(onboardingSecrets)) {
-      if (!value) problems.push(`${name} pepper is required when invitations are enabled`);
+      if (name === "invitationCode" && !invitationsEnabled && !value) continue;
+      if (!value) problems.push(`${name} pepper is required when onboarding is enabled`);
       else if (isUnsafeSecret(value)) problems.push(`${name} pepper uses a known placeholder or default value`);
     }
     const configuredSecrets = Object.values(onboardingSecrets).filter((value): value is string => Boolean(value));
@@ -305,6 +473,49 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   }
   if (productionLike && !raw.REFRESH_TOKEN_PEPPER) {
     problems.push("REFRESH_TOKEN_PEPPER is required in staging and production");
+  }
+  if (raw.AUTH_ACTION_TOKEN_PEPPER && isUnsafeSecret(raw.AUTH_ACTION_TOKEN_PEPPER)) {
+    problems.push("AUTH_ACTION_TOKEN_PEPPER uses a known placeholder or default value");
+  }
+  if (raw.AUTH_ACTION_TOKEN_PEPPER && [raw.JWT_SECRET, raw.REFRESH_TOKEN_PEPPER].includes(raw.AUTH_ACTION_TOKEN_PEPPER)) {
+    problems.push("AUTH_ACTION_TOKEN_PEPPER must be distinct from JWT and refresh-token secrets");
+  }
+
+  // Production email delivery over SMTP. Problems name variables only, never values.
+  let email: { delivery: "disabled" | "smtp"; smtp?: { host: string; port: number; secure: "starttls" | "tls"; user?: string; password?: string; fromAddress: string; fromName: string } } = { delivery: raw.EMAIL_DELIVERY };
+  if (raw.EMAIL_DELIVERY === "smtp") {
+    const missing: string[] = [];
+    if (!raw.SMTP_HOST) missing.push("SMTP_HOST");
+    if (!raw.EMAIL_FROM_ADDRESS) missing.push("EMAIL_FROM_ADDRESS");
+    if (productionLike) {
+      if (!raw.SMTP_USER) missing.push("SMTP_USER");
+      if (!raw.SMTP_PASSWORD) missing.push("SMTP_PASSWORD");
+    } else if (Boolean(raw.SMTP_USER) !== Boolean(raw.SMTP_PASSWORD)) {
+      problems.push("SMTP_USER and SMTP_PASSWORD must be set together");
+    }
+    if (missing.length) problems.push(`EMAIL_DELIVERY=smtp requires ${missing.join(", ")}`);
+    if (raw.SMTP_HOST && !/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$|^\[[0-9A-Fa-f:.]+\]$/.test(raw.SMTP_HOST)) {
+      problems.push("SMTP_HOST must be a bare host name or IP address");
+    }
+    if (raw.SMTP_HOST && productionLike && ["localhost", "127.0.0.1", "[::1]"].includes(raw.SMTP_HOST.toLowerCase())) {
+      problems.push("SMTP_HOST must not be a loopback address in staging and production");
+    }
+    if (raw.EMAIL_FROM_ADDRESS && !z.string().email().safeParse(raw.EMAIL_FROM_ADDRESS).success) {
+      problems.push("EMAIL_FROM_ADDRESS must be a valid email address");
+    }
+    if (raw.EMAIL_FROM_NAME && /[\u0000-\u001f]/.test(raw.EMAIL_FROM_NAME)) {
+      problems.push("EMAIL_FROM_NAME must not contain control characters");
+    }
+    if (raw.SMTP_USER && /[\u0000-\u001f]/.test(raw.SMTP_USER)) problems.push("SMTP_USER must not contain control characters");
+    if (raw.SMTP_PASSWORD && /[\u0000-\u001f]/.test(raw.SMTP_PASSWORD)) problems.push("SMTP_PASSWORD must not contain control characters");
+    if (raw.SMTP_PASSWORD && productionLike && isUnsafeSecret(raw.SMTP_PASSWORD)) problems.push("SMTP_PASSWORD uses a known placeholder value");
+    if (productionLike && !raw.AUTH_ACTION_TOKEN_PEPPER) problems.push("EMAIL_DELIVERY=smtp requires AUTH_ACTION_TOKEN_PEPPER");
+    if (!missing.length) {
+      email = { delivery: "smtp", smtp: {
+        host: raw.SMTP_HOST!, port: raw.SMTP_PORT ?? (raw.SMTP_SECURE === "tls" ? 465 : 587), secure: raw.SMTP_SECURE,
+        user: raw.SMTP_USER, password: raw.SMTP_PASSWORD, fromAddress: raw.EMAIL_FROM_ADDRESS!, fromName: raw.EMAIL_FROM_NAME ?? "Darb"
+      } };
+    }
   }
 
   const accessTokenTtlSeconds = raw.ACCESS_TOKEN_TTL_SECONDS ?? (productionLike ? 900 : 28_800);
@@ -391,7 +602,16 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     jwtSecret: raw.JWT_SECRET,
     accessTokenTtlSeconds,
     refreshTokenTtlDays,
-    refreshTokenPepper: raw.REFRESH_TOKEN_PEPPER ?? `masari-non-production:${raw.JWT_SECRET}`,
+    refreshTokenPepper: raw.REFRESH_TOKEN_PEPPER ?? `darb-non-production:${raw.JWT_SECRET}`,
+    authActions: raw.AUTH_ACTION_TOKEN_PEPPER
+      ? {
+          key: {
+            secret: raw.AUTH_ACTION_TOKEN_PEPPER,
+            version: raw.AUTH_ACTION_TOKEN_KEY_VERSION
+          }
+        }
+      : undefined,
+    email,
     corsOrigins,
     appRelease: raw.APP_RELEASE ?? "unreleased",
     port: raw.PORT,
@@ -401,12 +621,46 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     isStaging,
     isProduction,
     demoFeaturesEnabled,
+    demoResetAllowedDatabases,
     routeManagementEnabled,
     multiRouteEntryEnabled,
     multiRouteMatchingEnabled,
     canonicalTripCreationEnabled,
     canonicalSharedTripsEnabled,
     canonicalSharedTripMobileEnabled,
+    assistant: {
+      provider: raw.ASSISTANT_PROVIDER,
+      apiKey: raw.ASSISTANT_PROVIDER === "groq"
+        ? raw.GROQ_API_KEY
+        : raw.ASSISTANT_PROVIDER === "gemini"
+          ? raw.GEMINI_API_KEY
+          : raw.XAI_API_KEY,
+      model: raw.ASSISTANT_PROVIDER === "groq"
+        ? raw.GROQ_MODEL
+        : raw.ASSISTANT_PROVIDER === "gemini"
+          ? raw.GEMINI_MODEL
+          : raw.XAI_MODEL,
+      timeoutMs: raw.ASSISTANT_PROVIDER === "groq"
+        ? raw.GROQ_TIMEOUT_MS
+        : raw.ASSISTANT_PROVIDER === "gemini"
+          ? raw.GEMINI_TIMEOUT_MS
+          : raw.XAI_TIMEOUT_MS
+    },
+    mapsEnabled,
+    checkpointsEnabled,
+    limitedCheckpointDirectoryEnabled,
+    partnerCheckpointMapEnabled,
+    limitedCheckpointDirectory: limitedCheckpointDirectoryEnabled ? { apiKey: raw.AWEENRAYEH_PARTNER_API_KEY!, timeoutMs: raw.AWEENRAYEH_PARTNER_TIMEOUT_MS } : undefined,
+    checkpointDirectoryEnabled,
+    checkpointDirectoryFile: raw.CHECKPOINT_DIRECTORY_FILE,
+    checkpoints: checkpointsEnabled
+      ? {
+          url: raw.CHECKPOINTS_URL!,
+          apiKey: raw.CHECKPOINTS_API_KEY!,
+          timeoutMs: raw.CHECKPOINTS_TIMEOUT_MS,
+          cacheTtlSeconds: raw.CHECKPOINTS_CACHE_TTL_SECONDS
+        }
+      : undefined,
     routeMaps: {
       enabled: routeMapsEnabled,
       provider: raw.ROUTE_PROVIDER,
@@ -421,7 +675,14 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
       }
     },
     invitationsEnabled,
+    otpProvider: raw.OTP_PROVIDER,
     publicOnboardingEnabled,
+    emailVerificationDisabled,
+    phoneVerificationDisabled,
+    openSignupMaxStartsPerHour: raw.OPEN_SIGNUP_MAX_STARTS_PER_HOUR,
+    driverDocuments: driverDocumentsEnabled
+      ? { dir: raw.DRIVER_DOCUMENTS_DIR!, retentionDays: raw.DRIVER_DOCUMENT_RETENTION_DAYS }
+      : undefined,
     publicRegistration: publicOnboardingEnabled
       ? {
           attemptTtlSeconds: raw.ONBOARDING_ATTEMPT_TTL_SECONDS,
@@ -435,7 +696,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           }
         }
       : undefined,
-    onboarding: invitationsEnabled
+    onboarding: onboardingEnabled
       ? {
           otpProvider: raw.OTP_PROVIDER,
           supportedRegions: ["PS"] as const,
@@ -447,7 +708,9 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           otpMaxSendsPerPhoneDay: raw.OTP_MAX_SENDS_PER_PHONE_DAY,
           adminInvitationMaxPerHour: raw.ADMIN_INVITATION_MAX_PER_HOUR,
           keys: {
-            invitationCode: { secret: onboardingSecrets.invitationCode!, version: raw.INVITATION_CODE_KEY_VERSION },
+            invitationCode: onboardingSecrets.invitationCode
+              ? { secret: onboardingSecrets.invitationCode, version: raw.INVITATION_CODE_KEY_VERSION }
+              : undefined,
             phoneDigest: { secret: onboardingSecrets.phoneDigest!, version: raw.PHONE_DIGEST_KEY_VERSION },
             otpCode: { secret: onboardingSecrets.otpCode!, version: raw.OTP_CODE_KEY_VERSION },
             onboardingSession: {
@@ -460,12 +723,20 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
         }
       : undefined,
     logLevel: raw.LOG_LEVEL ?? (isTest ? "silent" : "info"),
+    googleOAuthClientIds,
+    googleAuth: { mobileClientIds: googleMobileClientIds, adminClientIds: googleAdminClientIds, passengerSignupMode: raw.GOOGLE_PASSENGER_SIGNUP_MODE, passengerAllowlist: googlePassengerAllowlist },
     trustProxy,
+    approachingAlert: {
+      radiusKm: raw.APPROACH_ALERT_RADIUS_KM,
+      etaMinutes: raw.APPROACH_ALERT_ETA_MINUTES,
+      assumedSpeedKmh: raw.APPROACH_ALERT_ASSUMED_SPEED_KMH
+    },
     readinessTimeoutMs: raw.READINESS_TIMEOUT_MS,
     rateLimits: {
       global: { windowMs: raw.RATE_LIMIT_GLOBAL_WINDOW_MS, max: globalRateLimitMax },
       login: { windowMs: raw.RATE_LIMIT_LOGIN_WINDOW_MS, max: loginRateLimitMax }
     },
+    emailCodeLimits: { resendCooldownSeconds: raw.EMAIL_CODE_RESEND_COOLDOWN_SECONDS, maxPerDay: raw.EMAIL_CODE_MAX_PER_EMAIL_PER_DAY },
     demo: demoFeaturesEnabled
       ? {
           resetKey: demoValues.resetKey!,

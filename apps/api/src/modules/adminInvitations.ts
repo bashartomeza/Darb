@@ -6,8 +6,9 @@ import { consumeAbuseCounter } from "../lib/abuseCounters.js";
 import { auditEvent } from "../lib/audit.js";
 import { abuseSubjectDigest } from "../lib/keyedDigest.js";
 import { createInvitation } from "../lib/invitations.js";
-import { normalizePhoneToE164 } from "../lib/phone.js";
+import { PHONE_INPUT_MAX_LENGTH, normalizePhoneToE164 } from "../lib/phone.js";
 import { phoneDigest } from "../lib/keyedDigest.js";
+import { contactEmailSchema, maskEmail } from "../lib/contactEmail.js";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
@@ -17,8 +18,10 @@ const cleanOptional = (maximum: number) =>
 
 const createSchema = z.strictObject({
   role: z.enum([OnboardingRole.passenger, OnboardingRole.driver, OnboardingRole.merchant]),
-  phone: z.string().trim().min(7).max(32),
-  region: z.literal("PS"),
+  phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH),
+  // Darb sends no SMS: the one-time code is emailed here. The phone number stays the admin-vouched identity.
+  contact_email: contactEmailSchema,
+  region: z.string().trim().regex(/^[A-Za-z]{2}$/).optional(),
   campaign: cleanOptional(100),
   source: cleanOptional(100),
   expires_in_days: z.number().int().min(1).max(30).optional()
@@ -29,8 +32,8 @@ const listSchema = z.object({
   role: z.enum([OnboardingRole.passenger, OnboardingRole.driver, OnboardingRole.merchant]).optional(),
   campaign: cleanOptional(100),
   source: cleanOptional(100),
-  phone: z.string().trim().min(7).max(32).optional(),
-  region: z.literal("PS").optional(),
+  phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH).optional(),
+  region: z.string().trim().regex(/^[A-Za-z]{2}$/).optional(),
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(25)
 });
@@ -50,6 +53,7 @@ function serializeInvitation(invitation: {
   id: string;
   intended_role: string;
   phone_last4: string | null;
+  contact_email?: string | null;
   campaign: string | null;
   source: string | null;
   max_uses: number;
@@ -65,7 +69,8 @@ function serializeInvitation(invitation: {
   return {
     id: invitation.id,
     role: invitation.intended_role,
-    phone: invitation.phone_last4 ? `+970 ••• •• ${invitation.phone_last4}` : null,
+    phone: invitation.phone_last4 ? `••• •• ${invitation.phone_last4}` : null,
+    contact_email: maskEmail(invitation.contact_email),
     campaign: invitation.campaign,
     source: invitation.source,
     max_uses: invitation.max_uses,
@@ -83,7 +88,8 @@ function serializeInvitation(invitation: {
 
 export function createAdminInvitationRouter(appConfig: AppConfig) {
   const onboarding = appConfig.onboarding;
-  if (!appConfig.invitationsEnabled || !onboarding) throw new Error("invitation_router_requires_enabled_configuration");
+  const invitationKey = onboarding?.keys.invitationCode;
+  if (!appConfig.invitationsEnabled || !onboarding || !invitationKey) throw new Error("invitation_router_requires_enabled_configuration");
   const router = Router();
   router.use("/admin/invitations", requireAuth, requireRole("admin"));
 
@@ -102,15 +108,21 @@ export function createAdminInvitationRouter(appConfig: AppConfig) {
 
       const expiresInDays = input.expires_in_days ?? onboarding.invitationExpiryDays;
       const result = await prisma.$transaction(async (tx) => {
+        // The OTP goes to this mailbox and it becomes the sign-in identity: refuse one that already has an account,
+        // otherwise registration would 409 forever after the invitation was redeemed.
+        if (await tx.user.findUnique({ where: { email: input.contact_email }, select: { id: true } })) {
+          throw new HttpError(409, "invitation_email_in_use");
+        }
         const created = await createInvitation(tx, {
           createdById: req.user!.id,
           intendedRole: input.role,
           intendedPhone: input.phone,
+          contactEmail: input.contact_email,
           phoneRegion: input.region,
           campaign: input.campaign,
           source: input.source,
           expiresAt: new Date(Date.now() + expiresInDays * 86_400_000),
-          keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+          keys: { code: invitationKey, phone: onboarding.keys.phoneDigest }
         });
         await auditEvent(tx, {
           userId: req.user!.id,
@@ -131,7 +143,6 @@ export function createAdminInvitationRouter(appConfig: AppConfig) {
     try {
       const input = listSchema.parse(req.query);
       const now = new Date();
-      if (input.phone && !input.region) throw new HttpError(400, "phone_region_required");
       const exactPhoneDigest = input.phone
         ? phoneDigest(normalizePhoneToE164(input.phone, { region: input.region }), onboarding.keys.phoneDigest)
         : undefined;
@@ -165,10 +176,28 @@ export function createAdminInvitationRouter(appConfig: AppConfig) {
         const current = await tx.invitation.findUnique({ where: { id } });
         if (!current) throw new HttpError(404, "invitation_not_found");
         if (current.revoked_at) return current;
-        if (current.used_count > 0) throw new HttpError(409, "invitation_not_revocable");
+        const now = new Date();
+        if (current.used_count > 0) {
+          // A redeemed invitation can still be revoked while its attempt never completed (e.g. a stuck registration).
+          // Lock the attempt first so a concurrent completion cannot slip past the revocation.
+          // A locking read sees the latest committed row, never a stale snapshot.
+          const rows = await tx.$queryRaw<Array<{ id: string; status: string; completed_user_id: string | null }>>`
+            SELECT id, status, completed_user_id FROM onboarding_attempts WHERE invitation_id = ${id} FOR UPDATE`;
+          const locked = rows[0];
+          if (!locked) throw new HttpError(409, "invitation_not_revocable");
+          const redeemed = await tx.invitationRedemption.findFirst({ where: { onboarding_attempt_id: locked.id, user_id: { not: null } }, select: { id: true } });
+          if (locked.status === "completed" || locked.completed_user_id || redeemed) {
+            throw new HttpError(409, "invitation_not_revocable");
+          }
+          await tx.onboardingAttempt.update({ where: { id: locked.id }, data: { status: "cancelled", registration_grant_digest: null, registration_grant_key_version: null, registration_grant_expires_at: null } });
+          await tx.onboardingSession.updateMany({
+            where: { onboarding_attempt_id: locked.id, revoked_at: null },
+            data: { revoked_at: now, revoke_reason: "invitation_revoked" }
+          });
+        }
         const updated = await tx.invitation.updateMany({
-          where: { id, revoked_at: null, used_count: 0 },
-          data: { revoked_at: new Date(), revoked_by_id: req.user!.id, revoke_reason: input.reason }
+          where: { id, revoked_at: null },
+          data: { revoked_at: now, revoked_by_id: req.user!.id, revoke_reason: input.reason }
         });
         if (updated.count !== 1) {
           throw new HttpError(409, "invitation_revoke_conflict");

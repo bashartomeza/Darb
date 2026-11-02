@@ -1,8 +1,8 @@
 {
   "@@locale": "ar",
-  "appTitle": "مساري",
+  "appTitle": "درب",
   "tagline": "لوجستيات ذكية لتشارك المسار",
-  "welcomeTitle": "مرحباً بك في مساري",
+  "welcomeTitle": "مرحباً بك في درب",
   "welcomeBody": "هذا تطبيق أندرويد التجريبي المخصص للمسافر والسائق والتاجر. تم تجهيز الهيكل الأساسي فقط في هذه المرحلة.",
   "arabic": "العربية",
   "english": "English",
@@ -15,17 +15,52 @@
   "configuredApiBaseUrl": "رابط API المضبوط",
   "androidOnly": "هدف أندرويد فقط",
   "businessFlowsPending": "تدفقات المسافر والسائق والتاجر ستضاف في مراحل لاحقة.",
-  "lockedCorridor": "الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم",
   "diagnostics": "تشخيصات تقنية",
   "loadingSession": "جارٍ استعادة الجلسة...",
   "sessionRestoreFailed": "تعذرت استعادة الجلسة. يرجى إعادة المحاولة.",
   "retry": "إعادة المحاولة",
+  "whereToGo": "إلى أين تريد الذهاب؟",
+  "selectPickupLocation": "اختاري موقع الانطلاق",
+  "selectDestination": "اختاري الوجهة",
+  "selectPickupLocationTitle": "اختيار موقع الانطلاق",
+  "selectDestinationTitle": "اختيار الوجهة",
+  "selectBothLocations": "اختاري موقع الانطلاق والوجهة أولاً",
+  "timeField": "الوقت",
+  "dateField": "التاريخ",
+  "searchRide": "ابحث عن رحلة",
+  "increasePassengers": "إضافة راكب",
+  "decreasePassengers": "إزالة راكب",
+  "loginWelcomeBack": "أهلاً بعودتك",
+  "loginWelcomeSubtitle": "يسعدنا عودتك",
   "signInWelcome": "سجل الدخول للمتابعة إلى مساحة عمل دورك.",
   "signIn": "تسجيل الدخول",
   "phone": "رقم الهاتف",
+  "email": "البريد الإلكتروني",
+  "fullName": "الاسم الكامل",
   "password": "كلمة المرور",
   "showPassword": "إظهار كلمة المرور",
   "hidePassword": "إخفاء كلمة المرور",
+  "signUp": "إنشاء الحساب",
+  "createAccount": "إنشاء الحساب",
+  "createAccountSubtitle": "أنشئ حساب مسافر للبدء.",
+  "newToDarb": "جديد في درب؟ أنشئ حساباً",
+  "alreadyHaveAccount": "لديك حساب؟ سجّل الدخول",
+  "continueWithGoogle": "المتابعة عبر Google",
+  "welcomeBack": "أهلاً بعودتك",
+  "welcomeBackSubtitle": "يسعدنا عودتك",
+  "login": "تسجيل الدخول",
+  "noAccountPrompt": "ليس لديك حساب؟",
+  "registerAction": "سجّل الآن",
+  "haveAccountPrompt": "لديك حساب بالفعل؟",
+  "orSeparator": "أو",
+  "emailRequired": "أدخل بريدك الإلكتروني.",
+  "emailInvalid": "أدخل بريداً إلكترونياً صحيحاً.",
+  "nameRequired": "أدخل اسمك.",
+  "passwordRequired": "أدخل كلمة المرور.",
+  "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
+  "emailAlreadyRegistered": "هذا البريد الإلكتروني مسجّل بالفعل. حاول تسجيل الدخول.",
+  "googleSignInFailed": "فشل تسجيل الدخول عبر Google. حاول مرة أخرى.",
+  "googleSignInUnavailable": "تسجيل الدخول عبر Google غير متاح حالياً.",
   "demoAccounts": "حسابات تجريبية",
   "passenger": "مسافر",
   "driver": "سائق",
@@ -34,7 +69,7 @@
   "unsupportedRole": "دور غير مدعوم",
   "logout": "تسجيل الخروج",
   "sessionExpired": "انتهت جلستك، يرجى تسجيل الدخول مرة أخرى",
-  "invalidCredentials": "رقم الهاتف أو كلمة المرور غير صحيحة.",
+  "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
   "networkUnavailable": "الشبكة غير متاحة. تحقق من اتصال واجهة API ثم أعد المحاولة.",
   "requestTimedOut": "انتهت مهلة الطلب. يرجى إعادة المحاولة.",
   "validationError": "يرجى التحقق من البيانات المدخلة.",
@@ -75,6 +110,7 @@
   "noConnectedTrip": "لا توجد رحلة مرتبطة بعد.",
   "matchResult": "نتيجة المطابقة",
   "selectedDriver": "السائق المختار",
+  "selectedDriverUnavailable": "مسار السائق المختار لم يعد متاحاً. اختر رحلة أخرى.",
   "selectedRoute": "المسار المختار",
   "matchScore": "درجة المطابقة",
   "scoringBreakdown": "تفصيل الدرجات",
@@ -84,7 +120,7 @@
   "trustScore": "درجة الثقة",
   "capacityFit": "ملاءمة السعة",
   "matchExplanation": "شرح المطابقة",
-  "routeMatchExplanation": "اختار مساري هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.",
+  "routeMatchExplanation": "اختار درب هذا السائق لأنه يسلك نفس المسار الذي اخترته، ولديه مقعد متاح لك، ودرجة الثقة لديه مرتفعة.",
   "passengerTrip": "رحلة المسافر",
   "tripTimeline": "خط الرحلة الزمني",
   "latestLocation": "آخر موقع",
@@ -117,7 +153,7 @@
   "seatsAvailable": "المقاعد المتاحة",
   "parcelCapacity": "سعة الطرود",
   "activateRoute": "تفعيل المسار",
-  "deactivateRoute": "إلغاء تفعيل المسار",
+  "deactivateRoute": "إيقاف المسار",
   "routeActivated": "تم تفعيل المسار",
   "routeDeactivated": "تم إلغاء تفعيل المسار",
   "routeStatus": "حالة المسار",
@@ -161,7 +197,7 @@
   "statusSentToDriver": "أرسلت إلى السائق",
   "statusRejected": "مرفوضة",
   "statusExpired": "منتهية",
-  "statusActive": "نشط",
+  "statusActive": "نشطة",
   "statusInactive": "غير نشط",
   "statusAssigned": "مخصص",
   "statusOnTrip": "في رحلة",
@@ -188,7 +224,7 @@
   "createBatch": "إنشاء دفعة طرود",
   "batchCreated": "تم إنشاء دفعة الطرود",
   "batchExplanation": "شرح الدفعة",
-  "parcelBatchExplanationDemo": "يمكن تجميع {parcelCount} طرود متوافقة في رحلة واحدة على ممر مساري بدلاً من رحلات منفصلة، مما يقلل المسافة والتكلفة.",
+  "parcelBatchExplanationDemo": "يمكن تجميع {parcelCount} طرود متوافقة في رحلة واحدة على ممر درب بدلاً من رحلات منفصلة، مما يقلل المسافة والتكلفة.",
   "@parcelBatchExplanationDemo": {
     "placeholders": {
       "parcelCount": {
@@ -236,13 +272,21 @@
   "localLogout": "تسجيل الخروج من هذا الجهاز",
   "noActiveSessions": "لم يتم إرجاع جلسات نشطة.",
   "sessionActionFailed": "تعذر إكمال إجراء الجلسة. يرجى إعادة المحاولة.",
-  "createInvitedAccount": "إنشاء حساب بدعوة",
   "selectAccountType": "اختر نوع الحساب",
   "passengerActiveAfterRegistration": "يصبح الحساب نشطاً بعد التسجيل",
   "pendingAfterRegistration": "يبقى الحساب قيد المراجعة حتى الموافقة",
-  "invitationCode": "رمز الدعوة",
+  "registerChooseTitle": "كيف ستستخدم درب؟",
+  "registerChooseSubtitle": "اختر ما يناسبك وسنأخذك عبر الخطوات الصحيحة.",
+  "registerPassengerTitle": "مستخدم عادي",
+  "registerPassengerHelp": "اطلب رحلات وتوصيلات. يصبح حسابك جاهزاً مباشرة بعد التسجيل.",
+  "registerDriverTitle": "سائق",
+  "registerDriverHelp": "انقل الرحلات والتوصيلات. ترفع مستنداتك ويوافق المشرف على حسابك.",
+  "registerMerchantTitle": "صاحب متجر",
+  "registerMerchantHelp": "أرسل طلبات من متجرك. ترفع مستنداتك ويوافق المشرف على حسابك.",
   "phoneNumber": "رقم الهاتف",
   "sendVerificationCode": "إرسال رمز التحقق",
+  "emailForCode": "البريد الإلكتروني (نرسل الرمز إليه)",
+  "codeSentToEmail": "أرسلنا رمزاً من ستة أرقام إلى بريدك الإلكتروني. تحقق من بريدك، بما في ذلك مجلد الرسائل غير المرغوبة.",
   "enterVerificationCode": "أدخل رمز التحقق",
   "resendCode": "إعادة إرسال الرمز",
   "resendAvailableIn": "تتوفر إعادة الإرسال خلال",
@@ -254,14 +298,16 @@
   "privacyNotice": "إشعار الخصوصية",
   "confirmAdult": "أؤكد أن عمري 18 عاماً أو أكثر",
   "acceptAndContinue": "قبول ومتابعة",
-  "createAccount": "إنشاء الحساب",
   "accountCreated": "تم إنشاء الحساب",
   "signInToContinue": "تم إنشاء حسابك. سجّل الدخول للمتابعة.",
   "applicationUnderReview": "الطلب قيد المراجعة",
-  "pendingReviewBody": "تم إنشاء حسابك وهو قيد المراجعة. ستتمكن من تسجيل الدخول بعد الموافقة على الحساب.",
+  "pendingReviewBody": "تم إرسال طلبك إلى المشرف وهو بانتظار الموافقة. يستغرق ذلك عادةً حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.",
+  "merchantDocumentsHint": "للحصول على الموافقة، ارفع صوراً واضحة أو ملفات PDF للسجل التجاري (أو رخصة المتجر) والهوية الوطنية وصورة للمتجر. تُحفظ الملفات على خادمنا ولا يفتحها إلا فريق المراجعة.",
+  "documentKindCommercialRegister": "السجل التجاري",
+  "documentKindShopPhoto": "صورة المتجر",
   "checkApplicationStatus": "متابعة حالة طلب سابق",
   "registrationUnavailable": "التسجيل غير متاح مؤقتاً.",
-  "unableToStartRegistration": "تعذر بدء التسجيل. تحقق من بيانات الدعوة وحاول مرة أخرى.",
+  "unableToStartRegistration": "تعذر بدء التسجيل. تحقق من رقم الهاتف والبريد الإلكتروني وحاول مرة أخرى.",
   "incorrectVerificationCode": "رمز التحقق غير صحيح.",
   "codeExpired": "انتهت صلاحية الرمز.",
   "tooManyAttempts": "محاولات كثيرة جداً. يرجى المحاولة لاحقاً.",
@@ -278,6 +324,41 @@
   "canonicalRoutesBody": "اختر من المسارات الحالية والمحطات المعتمدة.",
   "featureUnavailable": "هذه الخدمة غير متاحة في هذه البيئة.",
   "routeCatalogUnavailable": "المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.",
+  "orderRouteLabel": "المسار",
+  "orderRouteChoose": "اختر المسار",
+  "orderRoutesLoadFailed": "تعذّر تحميل المسارات. تحقّق من الاتصال وحاول مرة أخرى.",
+  "orderRoutesEmpty": "لا توجد مسارات تعمل حالياً. حاول لاحقاً.",
+  "orderRouteRequired": "اختر المسار أولاً.",
+  "orderRouteUnavailable": "هذا المسار لم يعد يعمل. اختر مساراً آخر.",
+  "orderRouteSaved": "المسار المحفوظ",
+  "orderDetailsTooShort": "اكتب 3 أحرف على الأقل ليجد السائق المكان.",
+  "merchantPickupDetailsLabel": "تفاصيل مكان الاستلام",
+  "merchantPickupDetailsHint": "مثال: اسم المتجر والشارع",
+  "merchantDropoffDetailsLabel": "تفاصيل مكان التسليم",
+  "merchantDropoffDetailsHint": "مثال: الحي والشارع وأقرب معلم",
+  "merchantReceiverNameLabel": "اسم المستلم (اختياري)",
+  "merchantReceiverPhoneLabel": "هاتف المستلم (اختياري)",
+  "merchantReceiverPhoneInvalid": "أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.",
+  "merchantReceiverLabel": "المستلم",
+  "merchantPendingOrderTitle": "طلب بانتظار التأكيد",
+  "driverRoutePickTitle": "اختر مسارك",
+  "driverRoutePickBody": "ستصلك طلبات الركاب والطرود على هذا المسار فقط.",
+  "driverRoutePickConfirm": "ابدأ العمل",
+  "driverRouteNone": "لم تختر مساراً بعد",
+  "driverPickupDetailsLabel": "مكان الصعود",
+  "driverDropoffDetailsLabel": "مكان النزول",
+  "driverMerchantPickupLabel": "استلم الطرود من",
+  "driverParcelStopsTitle": "أماكن تسليم الطرود",
+  "driverParcelStopLabel": "الطرد {number}",
+  "@driverParcelStopLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "driverReceiverLabel": "المستلم",
+  "driverWhereToFindTitle": "أماكن الاستلام والتسليم",
   "noPublishedRoutes": "لا توجد مسارات منشورة ومؤهلة حالياً.",
   "selectRoute": "اختر المسار",
   "routeDirection": "الاتجاه",
@@ -286,18 +367,32 @@
   "directionLoop": "دائري",
   "orderedStops": "المحطات بالترتيب",
   "stopSequence": "المحطة {sequence}",
-  "@stopSequence": {"placeholders": {"sequence": {"type": "int"}}},
+  "@stopSequence": {
+    "placeholders": {
+      "sequence": {
+        "type": "int"
+      }
+    }
+  },
   "driverAvailabilities": "إتاحة المسار",
   "newAvailability": "إنشاء إتاحة لمسار",
   "noAvailabilities": "لم تُنشأ إتاحة لمسار بعد.",
   "departureTime": "وقت الانطلاق",
   "availabilityWindowEnd": "نهاية نافذة الإتاحة (اختياري)",
   "seatCapacity": "سعة المقاعد",
-  "parcelCapacity": "سعة الطرود",
   "reviewAndConfirm": "مراجعة وتأكيد",
   "availabilityRecorded": "تم تسجيل الإتاحة",
   "remainingCapacity": "المتبقي: {seats} مقاعد، {parcels} طرود",
-  "@remainingCapacity": {"placeholders": {"seats": {"type": "int"}, "parcels": {"type": "int"}}},
+  "@remainingCapacity": {
+    "placeholders": {
+      "seats": {
+        "type": "int"
+      },
+      "parcels": {
+        "type": "int"
+      }
+    }
+  },
   "activateAvailability": "تفعيل الإتاحة",
   "pauseAvailability": "إيقاف الإتاحة مؤقتاً",
   "resumeAvailability": "استئناف الإتاحة",
@@ -309,38 +404,35 @@
   "dropoffStop": "محطة النزول",
   "departureFrom": "بداية وقت الانطلاق",
   "departureUntil": "نهاية وقت الانطلاق",
-  "passengerCount": "عدد الركاب",
   "requestRecorded": "تم تسجيل طلب المسار.",
   "matchingDisabledNotice": "المطابقة غير مفعلة في هذه المرحلة. لم يُعيَّن سائق ولم تُنشأ رحلة.",
   "canonicalMerchantOrder": "طلب طرود عبر مسار",
   "canonicalMerchantOrderBody": "أنشئ طلباً واحداً متكاملاً على مسار معتمد.",
   "parcelPickupStop": "محطة استلام الطرود",
-  "addParcel": "إضافة طرد",
-  "removeParcel": "إزالة الطرد",
   "parcelDestination": "وجهة الطرد",
-  "parcelSize": "حجم الطرد",
   "parcelPriority": "أولوية الطرد",
-  "priorityLow": "منخفضة",
-  "priorityNormal": "عادية",
-  "priorityHigh": "مرتفعة",
   "orderRecorded": "تم تسجيل طلب الطرود عبر المسار.",
   "batchingMatchingDisabledNotice": "التجميع والمطابقة غير مفعلين في هذه المرحلة. لم يُعيَّن سائق ولم تُنشأ رحلة توصيل.",
-  "submitRequest": "إرسال الطلب",
-  "submitOrder": "إرسال الطلب",
   "submitAvailability": "إرسال الإتاحة",
   "selectDateTime": "اختر التاريخ والوقت",
   "invalidDepartureWindow": "اختر نافذة انطلاق مستقبلية وصحيحة.",
+  "availabilityDepartureTooSoon": "وقت الانطلاق قريب جداً. اختر وقتاً بعد 10 دقائق على الأقل من الآن.",
+  "availabilityDepartureTooFar": "وقت الانطلاق بعيد جداً. اختر وقتاً خلال الـ30 يوماً القادمة.",
+  "availabilityInvalidWindow": "نهاية نافذة الإتاحة يجب أن تكون بعد الانطلاق بساعتين كحد أقصى.",
+  "availabilityExceedsVehicleCapacity": "سعة المقاعد أو الطرود التي اخترتها تتجاوز سعة مركبتك المسجلة.",
+  "availabilityDriverNotApproved": "حسابك كسائق لم يُعتمد بعد. تواصل مع الدعم لإتمام التحقق.",
+  "availabilityRouteNoLongerEligible": "لم يعد هذا المسار متاحاً. اختر مساراً آخر.",
+  "availabilityDuplicate": "لديك بالفعل إتاحة مطابقة لهذا المسار والوقت.",
   "invalidStopOrder": "اختر محطة معتمدة لاحقة في المسار.",
   "operationTemporaryFailure": "نتيجة العملية غير مؤكدة. أعد محاولة العملية نفسها عند توفر الاتصال.",
   "canonicalRecoveryRequired": "توجد عملية سابقة غير محسومة. سجّل الدخول بالحساب الأصلي وأعد العملية نفسها، أو تواصل مع الدعم إذا انتهت مهلة الاسترداد.",
   "transactionRetryRequired": "حدث تعارض مؤقت في المعاملة. أعد محاولة هذه العملية.",
   "refreshRoutes": "تحديث المسارات",
-  "statusActive": "نشطة",
   "statusPaused": "متوقفة مؤقتاً",
   "statusFilled": "ممتلئة",
   "statusDeparted": "انطلقت",
-  "statusExpired": "منتهية",
   "returnToDashboard": "العودة إلى لوحة التحكم",
+  "viewRouteRequests": "عرض طلبات المسار الخاصة بي",
   "canonicalDriverOffers": "عروض المسار",
   "canonicalDriverOffersBody": "راجع طلبات الركاب والطرود الحالية المرتبطة بإتاحة مسارك.",
   "noCanonicalOffers": "لا توجد عروض مسار حالياً.",
@@ -406,7 +498,6 @@
       }
     }
   },
-  "whereToGo": "إلى أين تريد الذهاب؟",
   "smartSearch": "بحث ذكي",
   "destinationSearchHint": "مثال: من البوليتكنك إلى بيت لحم",
   "quickDestinations": "الوجهات السريعة",
@@ -423,7 +514,7 @@
   "departure": "المغادرة",
   "bookSeat": "احجز",
   "noAvailableTrips": "لا توجد رحلات متاحة حالياً",
-  "noAvailableTripsBody": "أنشئ طلباً وسيقوم مساري بمطابقتك مع سائق على المسار.",
+  "noAvailableTripsBody": "أنشئ طلباً وسيقوم درب بمطابقتك مع سائق على المسار.",
   "seatsRemaining": "{count} مقاعد متاحة",
   "@seatsRemaining": {
     "placeholders": {
@@ -463,7 +554,6 @@
   },
   "activateYourRoute": "فعّل مسارك",
   "activateRouteHint": "قم بتحديد وجهتك لاستقبال الطلبات على طريقك",
-  "deactivateRoute": "إيقاف المسار",
   "mapNoLocation": "لا توجد بيانات موقع بعد.",
   "batchSavings": "توفير التجميع",
   "batchSavingsCaption": "تم توفيرها عبر دمج الشحنات",
@@ -511,7 +601,6 @@
       }
     }
   },
-
   "navRequests": "الطلبات",
   "navMyTrip": "رحلتي",
   "navPerformance": "الأرباح والأداء",
@@ -519,7 +608,6 @@
   "navMapAlerts": "الخرائط والبلاغات",
   "navShipments": "الشحنات",
   "navReports": "التقارير",
-
   "myTrips": "رحلاتي",
   "tripsActiveSection": "الرحلة النشطة",
   "tripsUpcomingSection": "الرحلات القادمة",
@@ -528,20 +616,17 @@
   "noTripsYet": "لا توجد رحلات بعد",
   "noTripsYetBody": "ستظهر رحلاتك هنا بعد إنشاء أول طلب.",
   "tripHistoryFailed": "تعذّر تحميل سجل الرحلات.",
-
   "mapsUnavailable": "الخريطة غير متاحة",
   "mapsUnavailableBody": "لم يتم تفعيل خدمة الخرائط في هذه النسخة، لذلك لا يمكن عرض موقع مباشر.",
   "incidentReports": "البلاغات",
   "incidentReportingUnavailable": "الإبلاغ عن حادث غير متاح",
   "incidentReportingUnavailableBody": "لا يوجد حتى الآن نظام خلفي لاستقبال البلاغات، ولن يتم إرسال أي بلاغ من هنا.",
   "notificationsUnavailableBody": "لا يوجد نظام إشعارات في هذه النسخة. ستصلك التحديثات داخل شاشة الرحلة.",
-
   "performanceTitle": "الأرباح والأداء",
   "earningsNotTracked": "لا يتم احتساب الأرباح",
   "earningsNotTrackedBody": "لا تحتوي قاعدة البيانات على أي بيانات أسعار أو أجرة، لذلك لا يمكن عرض رقم أرباح حقيقي.",
   "completedTripsTotal": "إجمالي الرحلات المكتملة",
   "acceptanceRateUnavailable": "نسبة القبول غير متاحة",
-
   "destinationCount": "{count} وجهات",
   "@destinationCount": {
     "placeholders": {
@@ -556,7 +641,6 @@
   "shipmentsFailed": "تعذّر تحميل الشحنات.",
   "reportsUnavailable": "التقارير غير متاحة",
   "reportsUnavailableBody": "لا يوجد نظام خلفي لتوليد التقارير أو تصديرها بصيغة PDF أو Excel.",
-
   "accountProfile": "الملف الشخصي",
   "accountSupport": "الدعم",
   "supportUnavailable": "الدعم داخل التطبيق غير متاح",
@@ -603,5 +687,569 @@
   "actionDisabledUncertain": "الإجراء غير متاح حتى تتم مطابقة نتيجة العملية السابقة.",
   "sharedFeatureUnavailable": "عروض الرحلات المشتركة غير متاحة في هذه البيئة.",
   "sharedAssignmentUnavailable": "تفاصيل إسناد الرحلة المشتركة غير متاحة في هذه البيئة.",
-  "notLiveNotice": "هذه الشاشة ليست مباشرة. استخدم التحديث للتحقق من المستجدات."
+  "notLiveNotice": "هذه الشاشة ليست مباشرة. استخدم التحديث للتحقق من المستجدات.",
+  "assistantTitle": "مساعد درب",
+  "assistantHomeTitle": "اسأل مساعد درب",
+  "assistantHomeBody": "استفسر عن رحلاتك والمسارات المتاحة.",
+  "assistantWelcomeTitle": "كيف يمكنني مساعدتك؟",
+  "assistantWelcomeBody": "اسأل عن بيانات رحلاتك أو المسارات المتاحة في درب. إذا كانت التفاصيل ناقصة، سأطلب منك توضيحها.",
+  "assistantTryAsking": "جرّب أن تسأل",
+  "assistantExampleTripTime": "متى موعد رحلتي القادمة؟",
+  "assistantExampleAvailableTrip": "هل توجد رحلة إلى بيت لحم؟",
+  "assistantInputHint": "اكتب سؤالك هنا",
+  "assistantVoiceStart": "تحدّث بطلبك",
+  "assistantVoiceStop": "إيقاف الاستماع",
+  "assistantVoiceListening": "جارٍ الاستماع…",
+  "assistantVoicePermissionDenied": "نحتاج إذن الميكروفون للإدخال الصوتي. يمكنك كتابة طلبك بدلًا من ذلك.",
+  "assistantVoicePermissionPermanent": "إذن الميكروفون أو التعرف على الكلام معطّل. افتح الإعدادات للسماح به أو اكتب طلبك.",
+  "assistantVoiceOpenSettings": "فتح الإعدادات",
+  "assistantVoiceUnavailable": "الإدخال الصوتي غير متاح على هذا الجهاز. يرجى كتابة طلبك.",
+  "assistantVoiceNoSpeech": "لم أسمعك جيدًا. اضغط على الميكروفون وحاول مجددًا أو اكتب طلبك.",
+  "assistantVoiceOffline": "يحتاج الإدخال الصوتي إلى اتصال حاليًا. اكتب طلبك أو حاول لاحقًا.",
+  "assistantVoiceError": "توقف الإدخال الصوتي بشكل غير متوقع. حاول مجددًا أو اكتب طلبك.",
+  "assistantSend": "إرسال",
+  "assistantProcessing": "جارٍ التحقق من بيانات درب…",
+  "assistantErrorTitle": "تعذّر إكمال الطلب",
+  "assistantErrorBody": "لم يتمكن المساعد من إكمال طلبك. حاول مرة أخرى.",
+  "assistantUnavailable": "خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.",
+  "assistantHistoryErrorTitle": "تعذّر تحميل المحادثة",
+  "assistantHistoryErrorBody": "محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.",
+  "assistantNewChat": "محادثة جديدة",
+  "assistantNewChatTitle": "بدء محادثة جديدة؟",
+  "assistantNewChatBody": "سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.",
+  "assistantNewChatFailed": "تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.",
+  "passengerRouteLabel": "المسار",
+  "passengerRouteHint": "اختر المسار",
+  "passengerRoutesLoading": "جارٍ تحميل المسارات…",
+  "passengerRoutesLoadFailed": "تعذّر تحميل المسارات. تحقّق من اتصالك وحاول مرة أخرى.",
+  "passengerRoutesEmpty": "لا توجد مسارات متاحة حاليًا. يُرجى المحاولة لاحقًا.",
+  "passengerRouteRequired": "اختر المسار للمتابعة.",
+  "passengerRouteUnavailable": "هذا المسار لم يعد متاحًا. اختر مسارًا آخر.",
+  "passengerPickupDetailsLabel": "مكان الصعود بالتحديد",
+  "passengerPickupDetailsHint": "مثال: أمام البوابة الرئيسية لجامعة بوليتكنك فلسطين",
+  "passengerDropoffDetailsLabel": "مكان النزول بالتحديد",
+  "passengerDropoffDetailsHint": "مثال: مجمّع سيارات بيت لحم، بجانب الصيدلية",
+  "passengerDetailsHelper": "صِف المكان بوضوح ليصل إليه السائق بسهولة.",
+  "passengerDetailsTooShort": "اكتب 3 أحرف على الأقل.",
+  "passengerPickupPoint": "مكان الصعود",
+  "passengerDropoffPoint": "مكان النزول",
+  "assistantRouteChoose": "اختر المسار المناسب لرحلتك، ثم تأكّد من مكانَي الصعود والنزول.",
+  "passengerParcelRouteIntro": "اختر المسار، وصِف مكان استلام الطرد ومكان تسليمه، ثم أخبرنا من سيستلمه.",
+  "passengerParcelPickupDetailsLabel": "مكان استلام الطرد منك",
+  "passengerParcelPickupDetailsHint": "مثال: المحل المجاور لدوار ابن رشد في الخليل",
+  "passengerParcelDropoffDetailsLabel": "مكان تسليم الطرد",
+  "passengerParcelDropoffDetailsHint": "مثال: بيت المستلم، قرب كنيسة المهد",
+  "passengerParcelPreferredTime": "الوقت المفضّل للاستلام",
+  "welcomeRoutesTitle": "المسارات التي نخدمها",
+  "welcomeRoutesMore": "و{count} أخرى",
+  "@welcomeRoutesMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeRoutesOffline": "ستظهر المسارات عند الاتصال بالإنترنت.",
+  "assistantClarificationLabel": "يحتاج مساعد درب إلى توضيح",
+  "assistantResultLabel": "رد مساعد درب",
+  "assistantPassengerMessage": "رسالتك",
+  "assistantExampleFindTrip": "ابحث لي عن رحلة من باب الزاوية إلى بيت لحم الساعة 3 لشخص واحد",
+  "assistantReviewTitle": "راجع معلومات الرحلة",
+  "assistantReviewBody": "تأكد من المعلومات وعدّلها قبل بدء البحث الحقيقي.",
+  "assistantConfirmSearch": "تأكيد وبدء البحث",
+  "assistantSearching": "جارٍ البحث عن رحلة…",
+  "assistantSearchError": "تعذّر إنشاء الطلب أو العثور على مسار مناسب. لم يتم إنشاء نتيجة وهمية.",
+  "assistantFutureTimeRequired": "اختر وقتاً قادماً قبل بدء البحث.",
+  "mapAttribution": "© مساهمو OpenStreetMap",
+  "mapLoading": "جارٍ تحميل الخريطة...",
+  "mapLoadFailed": "تعذّر تحميل الخريطة",
+  "mapLoadFailedBody": "تعذّر جلب بيانات المسار. تحقق من اتصالك ثم أعد المحاولة.",
+  "mapYourLocation": "موقعك الحالي",
+  "mapRequestedRoute": "المسار المطلوب",
+  "mapDriverRoute": "مسار السائق المتاح",
+  "mapOriginLabel": "نقطة الانطلاق: {name}",
+  "@mapOriginLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapDestinationLabel": "الوجهة: {name}",
+  "@mapDestinationLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapStopLabel": "محطة: {name}",
+  "@mapStopLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapLegend": "دليل الرموز",
+  "locationServiceDisabled": "خدمة الموقع متوقفة على الجهاز. فعّلها لعرض موقعك على الخريطة.",
+  "locationPermissionDenied": "لم يُسمح بالوصول إلى الموقع. اسمح بالوصول لعرض موقعك.",
+  "locationPermanentlyDenied": "الوصول إلى الموقع مرفوض نهائياً. فعّله من إعدادات النظام.",
+  "locationUnavailable": "تعذّر تحديد موقعك الآن.",
+  "locationEnable": "تفعيل الموقع",
+  "checkpoints": "الحواجز",
+  "checkpointsUnavailable": "بيانات الحواجز غير متاحة",
+  "checkpointsUnavailableBody": "تعذّر جلب حالة الحواجز. المسار معروض بدونها.",
+  "checkpointsDisabled": "خدمة الحواجز غير مفعّلة في هذا الإصدار.",
+  "checkpointsStale": "هذه آخر حالة مؤكدة للحواجز، وقد لا تكون محدّثة الآن.",
+  "checkpointsEmpty": "لا توجد حواجز مسجّلة على هذا المسار.",
+  "checkpointCount": "{count, plural, =0{لا حواجز} =1{حاجز واحد} =2{حاجزان} few{{count} حواجز} other{{count} حاجزاً}}",
+  "@checkpointCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "checkpointOpen": "مفتوح",
+  "checkpointCongested": "ازدحام",
+  "checkpointClosed": "مغلق",
+  "checkpointUnknown": "الحالة غير معروفة",
+  "checkpointLabel": "{name} — {status}",
+  "@checkpointLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointUnnamed": "حاجز",
+  "mapRouteMissingCoordinates": "لا توجد إحداثيات لهذا المسار، لذلك لا يمكن رسمه على الخريطة.",
+  "mapSelectRoute": "اختر مساراً لعرضه على الخريطة.",
+  "recoverMerchantOrder": "استعادة الطلب",
+  "merchantOrderUncertain": "قد يكون الطلب قد حُفظ. استعده قبل إنشاء طلب آخر.",
+  "merchantOrderRecoveryExpired": "انتهت مهلة إعادة المحاولة. يُسمح فقط بالتحقق من الطلب المحفوظ. تواصل مع الدعم إذا لم تُحسم نتيجة الطلب.",
+  "merchantOrderRecoveryUnavailable": "استعادة الطلب غير متاحة. سجّل الدخول إلى حساب التاجر الأصلي أو تواصل مع الدعم. لا ترسل طلباً بديلاً.",
+  "bookingTimePassed": "وقت المغادرة هذا قد مضى. اختر وقتاً قادماً.",
+  "bookingOutcomeUnknown": "قد يكون الحجز محفوظًا بالفعل. سنتحقق منه عند عودة الاتصال. لا تنشئ حجزًا آخر.",
+  "verifyBooking": "التحقق من الحجز",
+  "checkpointDirectoryTitle": "دليل الحواجز",
+  "checkpointDirectoryDisabled": "دليل الحواجز غير مفعّل.",
+  "checkpointDirectoryLoadFailed": "تعذر تحميل دليل الحواجز.",
+  "checkpointDirectorySearch": "ابحث عن حاجز أو مدينة",
+  "checkpointDirectoryNoResults": "لا توجد حواجز مطابقة",
+  "checkpointDirectoryTrafficUnavailable": "حالة المرور غير متاحة",
+  "checkpointDirectoryLimitedNotice": "بيانات محدودة من المزود: حتى سبع نقاط في كل مدينة. هذه ليست القائمة الكاملة.",
+  "checkpointDirectoryGenerated": "وقت إنشاء استجابة المزود",
+  "checkpointDirectoryEnteringUpdated": "آخر تغيير لحالة الدخول (الحالة غير متاحة)",
+  "checkpointDirectoryLeavingUpdated": "آخر تغيير لحالة الخروج (الحالة غير متاحة)",
+  "checkpointDirectoryTimezoneUnspecified": "المنطقة الزمنية غير محددة",
+  "notifMatchOfferedTitle": "عرض مطابقة جديد",
+  "notifMatchOfferedBody": "لديك طلب جديد بانتظار ردّك.",
+  "notifMatchAcceptedTitle": "تم قبول طلبك",
+  "notifMatchAcceptedBody": "قَبِل أحد السائقين طلبك.",
+  "notifMatchRejectedTitle": "اعتذر السائق",
+  "notifMatchRejectedBody": "اعتذر السائق عن الطلب. يمكنك البحث عن مطابقة أخرى.",
+  "notifTripStatusTitle": "تحديث على الرحلة",
+  "notifTripStatusBody": "حالة الرحلة الآن: {status}",
+  "@notifTripStatusBody": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "notifVerificationApprovedTitle": "تمت الموافقة على حسابك",
+  "notifVerificationApprovedBody": "تمت الموافقة على حساب السائق. يمكنك الآن البدء بالعمل.",
+  "notifVerificationRejectedTitle": "تم رفض طلب التحقق",
+  "notifVerificationRejectedBody": "لم تتم الموافقة على طلب التحقق من حسابك.",
+  "notifVerificationRejectedReason": "السبب: {reason}",
+  "@notifVerificationRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "notifUnknownTitle": "إشعار جديد",
+  "notificationsMarkAllRead": "تعليم الكل كمقروء",
+  "notificationsLoadError": "تعذّر تحميل الإشعارات.",
+  "notificationsUnreadCount": "{count} غير مقروءة",
+  "@notificationsUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportsDeliveries": "التوصيلات",
+  "reportsLoadError": "تعذّر تحميل التقرير.",
+  "reportsOrdersByStatus": "الطلبات حسب الحالة",
+  "reportsDeliveriesByStatus": "التوصيلات حسب الحالة",
+  "reportsNoRecords": "لا توجد سجلات بعد.",
+  "incidentReportAction": "الإبلاغ عن مشكلة",
+  "incidentReportTitle": "الإبلاغ عن مشكلة",
+  "incidentReportNotice": "يُسجَّل بلاغك لتراجعه الإدارة. هذه ليست خدمة طوارئ؛ في حال الخطر اتصل بالجهات المختصة مباشرة.",
+  "incidentDescriptionLabel": "صف المشكلة",
+  "incidentSubmit": "إرسال البلاغ",
+  "incidentSubmitted": "تم إرسال البلاغ.",
+  "incidentSubmitFailed": "تعذّر إرسال البلاغ. حاول مرة أخرى.",
+  "incidentTooMany": "لديك عدة بلاغات قيد المراجعة. انتظر معالجتها قبل إرسال بلاغ جديد.",
+  "incidentCategorySafety": "السلامة",
+  "incidentCategoryDelay": "تأخير",
+  "incidentCategoryParcelDamage": "تلف طرد",
+  "incidentCategoryBehavior": "سلوك",
+  "incidentCategoryOther": "أخرى",
+  "myIncidentReports": "بلاغاتي",
+  "myIncidentReportsEmpty": "لم ترسل أي بلاغ بعد.",
+  "myIncidentReportsFailed": "تعذّر تحميل بلاغاتك.",
+  "incidentStatusOpen": "مفتوح",
+  "incidentStatusReviewing": "قيد المراجعة",
+  "incidentStatusResolved": "تمت المعالجة",
+  "notifIncidentUpdatedTitle": "تحديث على بلاغك",
+  "notifIncidentReviewingBody": "بلاغك قيد المراجعة.",
+  "notifIncidentResolvedBody": "تمت معالجة بلاغك.",
+  "verificationDocuments": "مستندات التوثيق",
+  "verificationDocumentsHint": "للحصول على الموافقة، ارفع صوراً واضحة أو ملفات PDF لرخصة القيادة وتسجيل المركبة والهوية الوطنية. تُحفظ الملفات على خادمنا ولا يفتحها إلا فريق المراجعة.",
+  "documentKind": "نوع المستند",
+  "documentKindDriverLicence": "رخصة القيادة",
+  "documentKindVehicleRegistration": "ترخيص المركبة",
+  "documentKindVehiclePhoto": "صورة المركبة",
+  "documentKindNationalId": "الهوية الوطنية",
+  "documentKindInsurance": "التأمين",
+  "documentKindOther": "مستند آخر",
+  "addDocument": "إضافة مستند",
+  "removeDocument": "إزالة المستند",
+  "documentTooLarge": "الملف كبير جدًا. الحد الأقصى 5 ميغابايت.",
+  "documentTypeUnsupported": "يمكن رفع ملفات JPEG أو PNG أو PDF فقط.",
+  "documentLimitReached": "وصلت إلى الحد الأقصى لعدد المستندات.",
+  "acceptanceRateTitle": "نسبة القبول",
+  "acceptanceRateValue": "{percent}%",
+  "@acceptanceRateValue": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "acceptanceRateDetail": "تم قبول {accepted} من {responded} عرضًا أجبت عنها. العروض التي انتهت دون رد لا تُحتسب.",
+  "@acceptanceRateDetail": {
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      },
+      "responded": {
+        "type": "int"
+      }
+    }
+  },
+  "acceptanceRateNeedMore": "تظهر نسبتك بعد {needed} عروض تم الرد عليها ({responded} حتى الآن).",
+  "@acceptanceRateNeedMore": {
+    "placeholders": {
+      "needed": {
+        "type": "int"
+      },
+      "responded": {
+        "type": "int"
+      }
+    }
+  },
+  "emailOrPhone": "البريد الإلكتروني أو رقم الهاتف",
+  "emailOrPhoneRequired": "أدخل بريدك الإلكتروني أو رقم هاتفك.",
+  "emailOrPhoneInvalid": "أدخل بريدًا إلكترونيًا صحيحًا، أو رقم هاتف يبدأ بـ + ورمز الدولة.",
+  "mapLegendStart": "البداية",
+  "mapLegendDestination": "الوصول",
+  "sendParcelTitle": "إرسال طرد",
+  "sendParcelEntryBody": "أرسل طردًا صغيرًا مع سائق يسير أصلًا على مسار معتمد.",
+  "sendParcelIntro": "اختر المسار والمحطتين ثم أخبرنا من سيستلم الطرد. سيحمله سائق متجه في هذا الاتجاه.",
+  "sendParcelPickupHint": "سلّم الطرد للسائق عند هذه المحطة.",
+  "parcelSizeSmallHint": "S - صغير، يكفي لحقيبة",
+  "parcelSizeMediumHint": "M - متوسط، بحجم علبة حذاء تقريبًا",
+  "parcelSizeLargeNotAllowed": "الطرود الكبيرة مخصصة للمتاجر ولا يمكن إرسالها من حساب شخصي.",
+  "receiverNameLabel": "اسم المستلم",
+  "receiverPhoneLabel": "هاتف المستلم",
+  "receiverPrivacyNote": "المستلم لا يحتاج إلى التطبيق. يُستخدم اسمه ورقمه لهذا التوصيل فقط، ولا يظهران لأي مستخدم آخر، ويُمسحان بعد انتهاء المدة.",
+  "parcelNoteLabel": "ملاحظة للسائق (اختياري)",
+  "forbiddenItemsAck": "أقرّ بأن الطرد لا يحتوي على نقود أو أشياء ثمينة أو أدوية أو أسلحة أو مواد قابلة للاشتعال أو ممنوعة أو سريعة التلف.",
+  "sendParcelSubmit": "إرسال الطرد",
+  "sendParcelRecorded": "تم تسجيل طلب الطرد.",
+  "sendParcelRecordedBody": "نبحث عن سائق على هذا المسار. يمكنك الإلغاء ما لم يُعرض الطرد على سائق.",
+  "myParcelsTitle": "طرودي",
+  "myParcelsEmpty": "لم ترسل أي طرد بعد.",
+  "parcelTrackSearching": "جارٍ البحث عن سائق",
+  "parcelTrackAssigned": "تم تعيين سائق",
+  "parcelTrackPickedUp": "تم استلامه منك",
+  "parcelTrackInTransit": "في الطريق",
+  "parcelTrackDelivered": "تم التسليم",
+  "parcelTrackCancelled": "ملغى",
+  "parcelTrackFailed": "تعذّر التوصيل",
+  "parcelTrackExpired": "انتهت المهلة",
+  "parcelCancelAction": "إلغاء الطرد",
+  "parcelCancelConfirm": "هل تريد إلغاء هذا الطرد؟ سيتم مسح بيانات المستلم.",
+  "parcelCancelledNotice": "تم إلغاء الطرد.",
+  "parcelCannotCancel": "عُرض الطرد على سائق بالفعل، لذلك لم يعد الإلغاء ممكنًا.",
+  "parcelReceiverLine": "المستلم: {name} ({phone})",
+  "@parcelReceiverLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelReceiverRemoved": "تم مسح بيانات المستلم.",
+  "parcelLimitReached": "لديك الحد الأقصى من الطرود قيد التوصيل. انتظر انتهاء أحدها أو ألغِ واحدًا.",
+  "parcelDailyLimit": "تم بلوغ حد الطرود اليومي. حاول غدًا.",
+  "invalidReceiverPhone": "أدخل رقم هاتف صحيحًا للمستلم.",
+  "receiverNameInvalid": "أدخل اسم المستلم.",
+  "parcelAckRequired": "أكّد الإقرار الخاص بالمواد الممنوعة للمتابعة.",
+  "keepParcel": "إبقاء الطرد",
+  "mapOfflineSaved": "بدون اتصال - تُعرض الخريطة المحفوظة",
+  "clearMapCache": "مسح الخريطة المحفوظة",
+  "clearMapCacheHint": "يحذف مربعات الخريطة المحفوظة على هذا الجهاز. تُحفظ من جديد أثناء التصفح.",
+  "mapCacheCleared": "تم مسح الخريطة المحفوظة",
+  "mapCacheClearFailed": "تعذّر مسح الخريطة المحفوظة",
+  "notifDocsExpiringTitle": "مستند على وشك الانتهاء",
+  "notifDocsExpiringBody": "ينتهي {document} بتاريخ {date}. أرسل مستندات مجددة قبل ذلك لتواصل العمل دون انقطاع.",
+  "@notifDocsExpiringBody": {
+    "placeholders": {
+      "document": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notifDocsExpiredTitle": "انتهت صلاحية مستنداتك",
+  "notifDocsExpiredBody": "تم تقييد حسابك ولا يمكنك الاتصال أو قبول رحلات جديدة حتى تُرسل مستندات مجددة وتتم الموافقة عليها. رحلاتك المقبولة سابقاً لا تتأثر.",
+  "notifDocsRenewalSubmittedTitle": "تم إرسال مستندات التجديد",
+  "notifDocsRenewalSubmittedBody": "سيراجعها فريقنا وتصلك رسالة عند اتخاذ القرار.",
+  "documentKindContract": "العقد",
+  "availabilityDocumentsExpired": "انتهت صلاحية مستنداتك. أرسل مستندات مجددة لاستعادة الوصول.",
+  "applicationDocumentsRequiredTitle": "ارفع مستنداتك",
+  "applicationDocumentsRequiredBody": "تم إنشاء حسابك لكنه ليس قيد المراجعة بعد. ارفع كل المستندات المطلوبة ثم أرسل طلبك. تستغرق المراجعة عادةً حتى 24 ساعة.",
+  "applicationRejectedTitle": "تم رفض الطلب",
+  "applicationRejectedBody": "تمت مراجعة طلبك كسائق ولم تتم الموافقة عليه. لا يمكنك استخدام ميزات السائق. تواصل مع الدعم إذا كنت ترى أن هذا خطأ.",
+  "applicationRejectedReason": "السبب: {reason}",
+  "@applicationRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsStillNeeded": "ما زال مطلوباً: {documents}",
+  "@documentsStillNeeded": {
+    "placeholders": {
+      "documents": {
+        "type": "String"
+      }
+    }
+  },
+  "submitApplication": "إرسال للمراجعة",
+  "documentsRequiredError": "ارفع كل المستندات المطلوبة قبل إرسال طلبك.",
+  "fareEstimatedTitle": "الأجرة التقديرية",
+  "fareBookedTitle": "الأجرة التقديرية عند الطلب",
+  "fareDisclaimer": "تقديرية، وتُدفع مباشرة إلى السائق. لا تتم معالجة أي مدفوعات داخل التطبيق.",
+  "fareNotSet": "لم تُحدَّد أجرة تقديرية لهذا المسار بعد.",
+  "farePerSeat": "للمقعد الواحد",
+  "fareSeatsLine": "المقاعد × {count}",
+  "@fareSeatsLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fareParcelLine": "طرد {size}",
+  "@fareParcelLine": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "fareTotal": "الإجمالي",
+  "notifDriverApproachingTitle": "سائقك يقترب",
+  "notifDriverApproachingBody": "سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.",
+  "ratingPromptTitle": "كيف كانت رحلتك؟",
+  "ratingPromptBody": "قيّم السائق من 1 إلى 5 نجوم. تقييمك سري: لا يرى السائق التقييم ولا من قدّمه.",
+  "ratingStarLabel": "{count} نجوم",
+  "@ratingStarLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingSubmit": "إرسال التقييم",
+  "ratingThanks": "شكرًا لتقييمك الرحلة.",
+  "ratingFailed": "تعذّر إرسال التقييم. حاول مرة أخرى.",
+  "ratingAlreadyRated": "لقد قيّمت هذه الرحلة من قبل.",
+  "renewalTitle": "جدّد مستنداتك",
+  "renewalOpen": "تجديد المستندات",
+  "renewalBannerTitle": "انتهت صلاحية مستنداتك",
+  "renewalBannerBody": "لا يمكنك الاتصال بالإنترنت أو قبول رحلات جديدة حتى ترسل مستنداتك المجدَّدة وتتم الموافقة عليها.",
+  "renewalBannerSubmittedTitle": "التجديد قيد المراجعة",
+  "renewalBannerSubmittedBody": "مستنداتك المجدَّدة بانتظار المراجعة.",
+  "renewalIntro": "ارفع صوراً واضحة أو ملفات PDF لرخصة القيادة وترخيص المركبة والتأمين المجدَّدة، ثم أرسلها للمراجعة. الرحلات التي قبلتها سابقاً لا تتأثر.",
+  "renewalUploaded": "المستندات المرفوعة",
+  "renewalNoDocuments": "لم يتم رفع أي مستندات مجدَّدة بعد.",
+  "renewalSubmit": "إرسال للمراجعة",
+  "renewalSubmittedTitle": "بانتظار المراجعة",
+  "renewalSubmittedBody": "استلمنا مستنداتك المجدَّدة. سيتم إشعارك عندما يوافق فريق المراجعة عليها.",
+  "renewalDocumentsRequired": "ارفع مستنداً مجدَّداً واحداً على الأقل قبل الإرسال.",
+  "renewalStateConflict": "تغيّرت حالة التجديد. اسحب للتحديث وحاول مرة أخرى.",
+  "renewalLoadError": "تعذّر تحميل حالة التجديد.",
+  "renewalNothingToRenew": "مستنداتك محدّثة. لا يوجد ما يتطلب التجديد.",
+  "passengerNavHome": "الرئيسية",
+  "passengerNavTrips": "رحلاتي",
+  "passengerNavMaps": "الخرائط",
+  "passengerNavSettings": "الإعدادات",
+  "passengerGreetingMorning": "صباح الخير",
+  "passengerGreetingAfternoon": "نهارك سعيد",
+  "passengerGreetingEvening": "مساء الخير",
+  "passengerPlanTripTitle": "خطّط لرحلتك القادمة",
+  "passengerPlanTripBody": "ابحث عن رحلة، شارك الطريق، وصل إلى وجهتك",
+  "passengerSearchRide": "ابحث عن رحلة",
+  "passengerUpcomingTrips": "الرحلات القادمة",
+  "passengerNoUpcomingTitle": "لا توجد رحلات قادمة",
+  "passengerNoUpcomingBody": "ابحث عن رحلة جديدة واحجز مقعدك.",
+  "passengerWeekStrip": "هذا الأسبوع",
+  "tripsStatTotal": "الإجمالي",
+  "tripsStatActive": "نشطة",
+  "tripsStatUpcoming": "قادمة",
+  "tripsStatPast": "سابقة",
+  "tripsFilterAll": "الكل",
+  "communityReportsTitle": "بلاغات المجتمع",
+  "communityReportsNote": "بلاغات غير مؤكدة من المستخدمين. التصويت رأي المجتمع فقط ولا يغيّر حالة الحواجز أو الطرق.",
+  "communityReportsAdd": "إضافة بلاغ",
+  "communityReportsEmpty": "لا توجد بلاغات حالياً.",
+  "communityReportsLoadFailed": "تعذّر تحميل البلاغات.",
+  "communityFilterAll": "الكل",
+  "communityGroupRoad": "الطرق",
+  "communityGroupCheckpoint": "الحواجز",
+  "communityGroupSafety": "السلامة",
+  "communityGroupOther": "أخرى",
+  "communitySortRecent": "الأحدث",
+  "communitySortTop": "الأكثر تأييداً",
+  "communitySortDisputed": "المتنازع عليها",
+  "communityBadgeRecent": "حديث",
+  "communityBadgeDisputed": "محل خلاف",
+  "communityBadgeWellSupported": "مدعوم من المجتمع",
+  "communityAwaitingReview": "بانتظار تحقق الإدارة",
+  "communityUnverifiedPrefix": "بلاغ غير مؤكد: ",
+  "communityCategoryRoadClosure": "إغلاق طريق",
+  "communityCategoryRoadReopened": "إعادة فتح طريق",
+  "communityCategoryRoadCongestion": "ازدحام",
+  "communityCategoryCheckpointOpenMarkedClosed": "حاجز مفتوح لكنه معروض مغلقاً",
+  "communityCategoryCheckpointClosedMarkedOpen": "حاجز مغلق لكنه معروض مفتوحاً",
+  "communityCategoryCheckpointOutdated": "معلومات حاجز قديمة",
+  "communityCategorySafetyAlert": "تنبيه سلامة أو أمن",
+  "communityCategoryDriverReport": "ملاحظة عن رحلة أو سائق",
+  "communityCategoryIncorrectMapInfo": "معلومة خاطئة على الخريطة",
+  "communityCategoryOther": "أخرى",
+  "communitySheetTitle": "إضافة بلاغ",
+  "communitySensitiveNote": "صف ما رأيته فقط. لا تذكر اسم شخص أو رقم مركبة أو أي بيانات شخصية. سيظهر البلاغ للآخرين كبلاغ غير مؤكد.",
+  "communityFieldCategory": "نوع البلاغ",
+  "communityFieldDescription": "ماذا حدث؟",
+  "communityFieldLocation": "اسم المكان",
+  "communityAttachLocation": "إرفاق موقعي الحالي على الخريطة",
+  "communitySubmit": "إرسال البلاغ",
+  "communitySubmitted": "تم نشر البلاغ.",
+  "communitySubmitFailed": "تعذّر إرسال البلاغ. حاول مرة أخرى.",
+  "communityTooMany": "أرسلت بلاغات كثيرة. حاول لاحقاً.",
+  "communityUpvote": "أؤيد البلاغ",
+  "communityDownvote": "لا أؤيد البلاغ",
+  "communityVoteFailed": "تعذّر تسجيل صوتك.",
+  "communityOwnReportVote": "لا يمكنك التصويت على بلاغك.",
+  "communityFlag": "الإبلاغ عن بلاغ مضلّل",
+  "communityFlagged": "شكراً. سيراجع فريقنا البلاغ.",
+  "communityFlagFailed": "تعذّر إرسال الإشعار.",
+  "communityJustNow": "الآن",
+  "communityMinutesAgo": "{count, plural, =1{قبل دقيقة} =2{قبل دقيقتين} few{قبل {count} دقائق} other{قبل {count} دقيقة}}",
+  "@communityMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityHoursAgo": "{count, plural, =1{قبل ساعة} =2{قبل ساعتين} few{قبل {count} ساعات} other{قبل {count} ساعة}}",
+  "@communityHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityDaysAgo": "{count, plural, =1{قبل يوم} =2{قبل يومين} few{قبل {count} أيام} other{قبل {count} يوماً}}",
+  "@communityDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "communityVoteCounts": "{up} تأييد، {down} اعتراض",
+  "@communityVoteCounts": {
+    "placeholders": {
+      "up": {
+        "type": "int"
+      },
+      "down": {
+        "type": "int"
+      }
+    }
+  },
+  "mapStraightLineNote": "تعذر حساب الطريق: يظهر خط مستقيم",
+  "mapCheckpointsUnavailable": "بيانات الحواجز غير متوفرة",
+  "mapCheckpointsLoadFailed": "تعذر تحميل الحواجز",
+  "checkpointOfficialUnknown": "الحالة الرسمية: غير منشورة",
+  "checkpointEnteringChanged": "دخول: آخر تغيير {time}",
+  "@checkpointEnteringChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLeavingChanged": "خروج: آخر تغيير {time}",
+  "@checkpointLeavingChanged": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointCommunitySays": "المجتمع يقول: {status} (غير مؤكد)",
+  "@checkpointCommunitySays": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "communityStatusOpen": "مفتوح",
+  "communityStatusClosed": "مغلق",
+  "communityStatusOutdated": "قد تكون الحالة قديمة",
+  "checkpointPositionOsm": "الموقع: © مساهمو OpenStreetMap (ODbL)",
+  "checkpointsUnplacedTitle": "حواجز بلا موقع على الخريطة",
+  "checkpointsUnplacedBody": "يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.",
+  "communityPickLocation": "اضغط على الخريطة لتحديد المكان",
+  "communityUseMyLocation": "استخدام موقعي الحالي",
+  "communityLocationRequired": "حدد المكان على الخريطة لهذا النوع من البلاغات.",
+  "communityLocationOptional": "الموقع (اختياري)",
+  "communityLocationOutside": "هذا المكان خارج منطقة خدمة درب.",
+  "communityLocationUnavailable": "موقعك الحالي غير متاح.",
+  "communityLocationSet": "تم تحديد المكان على الخريطة",
+  "communityClearLocation": "إزالة المكان",
+  "mapRouteLabel": "المسار",
+  "merchantOrderMapTitle": "مسار الطلب"
 }

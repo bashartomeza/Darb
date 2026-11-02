@@ -4,9 +4,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/auth/data/session_coordinator.dart';
-import 'package:masari_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/auth/data/session_coordinator.dart';
+import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 
 import 'support/auth_test_support.dart';
 
@@ -555,7 +555,7 @@ String _refreshResponse(String accessToken, String refreshToken) {
     'session': {
       'id': 'session_1',
       'client_type': 'mobile',
-      'device_name': 'Masari Android',
+      'device_name': 'Darb Android',
       'created_at': '2026-07-17T10:00:00.000Z',
       'last_used_at': '2026-07-17T10:00:00.000Z',
       'expires_at': '2026-07-17T11:00:00.000Z',

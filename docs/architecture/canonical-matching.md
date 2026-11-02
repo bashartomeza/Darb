@@ -1,6 +1,6 @@
 # Canonical matching
 
-M7C3A adds a backend-only matcher for `canonical_route_v1`. It does not replace the deterministic `masari_route_score` legacy matcher.
+M7C3A adds a backend-only matcher for `canonical_route_v1`. It does not replace the deterministic `darb_route_score` legacy matcher.
 
 The internal runner processes at most 25 pending dispatches by default and 100 by explicit limit. It is unavailable outside local, test, and demo, has no HTTP endpoint, and requires all three gates:
 

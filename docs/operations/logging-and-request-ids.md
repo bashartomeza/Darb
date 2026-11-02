@@ -1,6 +1,6 @@
 # Operational logging and request IDs
 
-Masari uses one Pino JSON logger with an asynchronous destination. Base fields are `service`, `app_env`, and `release`. Every completed request adds `event`, `request_id`, `method`, normalized `path`, `status_code`, and `duration_ms`; authenticated requests also add `actor_id` and `actor_role`.
+Darb uses one Pino JSON logger with an asynchronous destination. Base fields are `service`, `app_env`, and `release`. Every completed request adds `event`, `request_id`, `method`, normalized `path`, `status_code`, and `duration_ms`; authenticated requests also add `actor_id` and `actor_role`.
 
 The path normalizer removes query strings and replaces non-allowlisted path segments with `:id`. Operational events include startup/shutdown, authentication or authorization rejection, readiness failure, and unhandled error type. Database `AuditEvent` rows remain business audit records and are not duplicated into operational payloads.
 

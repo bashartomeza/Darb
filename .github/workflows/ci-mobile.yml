@@ -25,6 +25,9 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ steps.versions.outputs.java }}
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: .nvmrc
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: ${{ steps.versions.outputs.flutter }}
@@ -40,12 +43,49 @@ jobs:
         working-directory: apps/mobile
       - run: flutter test
         working-directory: apps/mobile
-      - name: Build unsigned production-like APK
+      - name: Test compiled APK location policy
+        run: node --test scripts/tests/apk-location-policy.test.mjs scripts/tests/apk-build-tools.test.mjs
+        env:
+          DARB_TEST_ANDROID_TOOLS: "true"
+      - name: Build debug-signed production-like APK (CI only, not distributable)
         working-directory: apps/mobile
+        env:
+          # Release builds fail without real signing material. CI has none, so
+          # it opts in to debug signing explicitly. Never ship this APK.
+          DARB_ALLOW_DEBUG_SIGNING: "true"
         run: >-
           flutter build apk --release
           --dart-define=APP_ENV=production
           --dart-define=ENABLE_DEMO_FEATURES=false
-          --dart-define=API_BASE_URL=https://api.staging.masari.invalid
+          --dart-define=API_BASE_URL=https://api.staging.darb.invalid
       - name: Scan production-like APK
         run: npm run security:artifacts -- --apk apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+
+  # New, independent check: no other job depends on it. It only proves the iOS
+  # target compiles; signing, TestFlight and push need a Mac and an Apple
+  # Developer account (see docs/mobile/IOS.md).
+  ios-build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Read canonical Flutter version
+        id: versions
+        shell: bash
+        run: echo "flutter=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ steps.versions.outputs.flutter }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: apps/mobile
+      - run: flutter gen-l10n
+        working-directory: apps/mobile
+      - name: Build iOS without code signing
+        working-directory: apps/mobile
+        run: >-
+          flutter build ios --release --no-codesign
+          --dart-define=APP_ENV=production
+          --dart-define=ENABLE_DEMO_FEATURES=false
+          --dart-define=API_BASE_URL=https://api.staging.darb.invalid

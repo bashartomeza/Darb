@@ -1,11 +1,11 @@
-name: masari-staging-simulation
+name: darb-staging-simulation
 
 services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_DATABASE: masari_staging_sim
-      MYSQL_USER: masari_staging
+      MYSQL_DATABASE: darb_staging_sim
+      MYSQL_USER: darb_staging
       MYSQL_PASSWORD: ${MYSQL_STAGING_PASSWORD:?set MYSQL_STAGING_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_STAGING_ROOT_PASSWORD:?set MYSQL_STAGING_ROOT_PASSWORD}
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
@@ -46,6 +46,15 @@ services:
       REFRESH_TOKEN_PEPPER: ${REFRESH_TOKEN_PEPPER:?set REFRESH_TOKEN_PEPPER}
       CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS}
       TRUST_PROXY: ${TRUST_PROXY:?set TRUST_PROXY}
+      AUTH_ACTION_TOKEN_PEPPER: ${AUTH_ACTION_TOKEN_PEPPER:-}
+      EMAIL_DELIVERY: ${EMAIL_DELIVERY:-disabled}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-starttls}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-}
       LOG_LEVEL: info
       PORT: "3000"
     depends_on:

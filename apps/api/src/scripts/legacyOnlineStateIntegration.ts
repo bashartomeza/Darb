@@ -19,6 +19,7 @@ function check(value: unknown, message: string) {
 const demoConfig = createConfig({
   APP_ENV: "demo",
   DATABASE_URL: process.env.DATABASE_URL!,
+  DEMO_RESET_ALLOWED_DATABASES: databaseName,
   JWT_SECRET: "m7h1-online-jwt-secret-at-least-thirty-two-characters",
   ENABLE_DEMO_FEATURES: "true",
   DEMO_RESET_KEY: "m7h1-online-reset-key",

@@ -1,6 +1,6 @@
 # Pelias Palestine geocoding evidence
 
-Evidence date: 2026-08-08. This is a disposable, localhost-only engineering benchmark, not production sizing or legal advice. It used the unchanged 30-concept bilingual fixture (60 top-result queries), a three-candidate response limit, `lang`, country/rectangle bounds, and a fixed regional focus. No custom CSV, private Masari data, fixture record, alias overlay, or production configuration was used.
+Evidence date: 2026-08-08. This is a disposable, localhost-only engineering benchmark, not production sizing or legal advice. It used the unchanged 30-concept bilingual fixture (60 top-result queries), a three-candidate response limit, `lang`, country/rectangle bounds, and a fixed regional focus. No custom CSV, private Darb data, fixture record, alias overlay, or production configuration was used.
 
 ## Reproducible identity and data
 

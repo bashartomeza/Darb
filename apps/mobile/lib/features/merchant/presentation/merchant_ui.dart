@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/presentation/localized_labels.dart';
+import '../data/merchant_models.dart';
+import '../data/merchant_order_operation_storage.dart';
 
 String merchantStatusLabel(AppLocalizations l10n, String status) =>
     switch (status) {
@@ -18,6 +21,7 @@ String merchantStatusLabel(AppLocalizations l10n, String status) =>
       'delivered' => l10n.statusDelivered,
       'completed' => l10n.statusCompleted,
       'cancelled' => l10n.statusCancelled,
+      'failed' => l10n.requestFailed,
       'rejected' => l10n.statusRejected,
       'expired' => l10n.statusExpired,
       'assigned' => l10n.statusAssigned,
@@ -26,6 +30,14 @@ String merchantStatusLabel(AppLocalizations l10n, String status) =>
     };
 
 String merchantErrorLabel(AppLocalizations l10n, Object error) {
+  if (error is MerchantOrderRecoveryException) {
+    return switch (error.code) {
+      'merchant_order_recovery_expired' => l10n.merchantOrderRecoveryExpired,
+      'merchant_order_pending' ||
+      'merchant_order_in_progress' => l10n.merchantOrderUncertain,
+      _ => l10n.merchantOrderRecoveryUnavailable,
+    };
+  }
   if (error is! ApiException) return l10n.requestFailed;
   if (error.type == ApiErrorType.network) return l10n.networkUnavailable;
   if (error.type == ApiErrorType.timeout) return l10n.requestTimedOut;
@@ -35,9 +47,37 @@ String merchantErrorLabel(AppLocalizations l10n, Object error) {
     'order_not_batchable' => l10n.orderAlreadyBatched,
     'no_route_with_parcel_capacity' ||
     'no_compatible_driver_route' => l10n.noCompatibleDriverFound,
+    'route_unavailable' => l10n.orderRouteUnavailable,
+    'invalid_receiver_phone' => l10n.merchantReceiverPhoneInvalid,
     _ => l10n.requestFailed,
   };
 }
+
+bool _arabic(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar';
+
+/// The order's route ("Hebron → Bethlehem"), or for orders created before
+/// routes existed, the old pickup place and parcel destination(s).
+String merchantOrderRouteLabel(BuildContext context, MerchantOrder order) {
+  final name = order.routeName(arabic: _arabic(context));
+  if (name != null) return name;
+  final pickup = localizedCorridorPlace(context, order.pickupLabel);
+  final destinations = {
+    for (final parcel in order.parcels)
+      merchantDestinationLabel(context, parcel.destinationLabel),
+  };
+  return destinations.length == 1 ? '$pickup ← ${destinations.first}' : pickup;
+}
+
+/// Where the parcels are collected: the merchant's own words, or the old
+/// corridor place.
+String merchantPickupText(BuildContext context, MerchantOrder order) =>
+    order.pickupDetails ?? localizedCorridorPlace(context, order.pickupLabel);
+
+/// Where one parcel goes: the merchant's own words, or the old corridor place.
+String merchantParcelDropoffText(BuildContext context, MerchantParcel parcel) =>
+    parcel.dropoffDetails ??
+    merchantDestinationLabel(context, parcel.destinationLabel);
 
 String merchantDestinationLabel(BuildContext context, String value) {
   if (Localizations.localeOf(context).languageCode != 'ar') return value;

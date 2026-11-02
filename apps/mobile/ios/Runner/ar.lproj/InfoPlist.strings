@@ -1,0 +1,6 @@
+"CFBundleDisplayName" = "درب";
+"NSCameraUsageDescription" = "يستخدم تطبيق درب الكاميرا لتصوير مستندات السائق من أجل التحقق منها.";
+"NSLocationWhenInUseUsageDescription" = "يستخدم تطبيق درب موقعك لعرض الخطوط القريبة وموقعك على الخريطة.";
+"NSPhotoLibraryUsageDescription" = "يحتاج تطبيق درب إلى الوصول إلى صورك لتتمكن من اختيار مستند السائق ورفعه.";
+"NSMicrophoneUsageDescription" = "يستخدم تطبيق درب الميكروفون لتتمكن من قول طلب رحلتك للمساعد.";
+"NSSpeechRecognitionUsageDescription" = "يستخدم تطبيق درب التعرف على الكلام لتحويل صوتك إلى نص للمساعد.";

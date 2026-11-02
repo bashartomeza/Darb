@@ -38,7 +38,7 @@ function matchRecord(id: string, createdAt: string) {
     id,
     status: "proposed",
     score: "0.9317",
-    method: "masari_route_score",
+    method: "darb_route_score",
     explanation: "Safe explanation",
     scoring_breakdown: { corridorOverlap: 0.95, finalScore: 0.9317 },
     created_at: new Date(createdAt),
@@ -55,6 +55,7 @@ function matchRecord(id: string, createdAt: string) {
       status: "active",
       driver: {
         user_id: "driver_1",
+        user: { name: "Driver 1" },
         vehicle_type: "sedan",
         verified: true,
         trust_score: 86,
@@ -107,7 +108,7 @@ describe("role-filtered match inbox", () => {
         ? {
             id: where.id,
             user_id: user.id,
-            user: { ...user, account_status: "active", security_version: 1 },
+            user: { email_verified_at: new Date(), ...user, account_status: "active", security_version: 1 },
             security_version_at_issue: 1,
             expires_at: new Date(Date.now() + 60_000),
             revoked_at: null
@@ -169,7 +170,7 @@ describe("role-filtered match inbox", () => {
     const serialized = JSON.stringify(summary);
 
     expect(summary.scoring_breakdown.finalScore).toBe(0.9317);
-    expect(summary.driver_route.driver).toEqual({ vehicle_type: "sedan", verified: true, trust_score: 86 });
+    expect(summary.driver_route.driver).toEqual({ name: "Driver 1", vehicle_type: "sedan", verified: true, trust_score: 86 });
     expect(summary.passenger_request).toEqual(
       expect.objectContaining({ id: "request_1", pickup_label: "PPU Main Gate", passenger_count: 1 })
     );

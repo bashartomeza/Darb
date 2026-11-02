@@ -11,10 +11,18 @@ final authenticatedActorBindingProvider = Provider<AuthenticatedActorBinding>(
 
 class AuthenticatedActorBinding {
   String? _actorId;
+  int _revision = 0;
+  int get revision => _revision;
 
   String? get actorId => _actorId;
 
-  void bind(String actorId) => _actorId = actorId;
+  void bind(String actorId) {
+    _actorId = actorId;
+    _revision++;
+  }
 
-  void clear() => _actorId = null;
+  void clear() {
+    _actorId = null;
+    _revision++;
+  }
 }

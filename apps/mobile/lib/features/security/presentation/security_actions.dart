@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../../auth/application/auth_controller.dart';
 
 /// Quick account actions at the foot of a role dashboard.
@@ -23,39 +24,47 @@ class RoleSecurityActions extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: TextButton.icon(
-            key: const ValueKey('securitySessionsButton'),
-            onPressed: () => context.go(securitySessionsPath),
-            icon: const Icon(Icons.security_outlined, size: 18),
-            label: Text(
-              l10n.securityAndSessions,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          child: DarbCard(
+            padding: const EdgeInsets.all(8),
+            child: TextButton.icon(
+              key: const ValueKey('securitySessionsButton'),
+              onPressed: () => context.go(securitySessionsPath),
+              icon: const Icon(Icons.security_outlined, size: 18),
+              label: Text(
+                l10n.securityAndSessions,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ),
         const SizedBox(width: AppTokens.spaceSmall),
-        TextButton.icon(
-          key: const ValueKey('logoutButton'),
-          onPressed: () async {
-            final confirmed = await confirmSecurityAction(
-              context,
-              title: l10n.confirmLogout,
-              message: l10n.confirmLogoutMessage,
-              confirmLabel: l10n.logout,
-            );
-            if (confirmed && context.mounted) {
-              await ref.read(authControllerProvider.notifier).logout();
-            }
-          },
-          style: TextButton.styleFrom(
-            foregroundColor: Theme.of(context).colorScheme.error,
-          ),
-          icon: const Icon(Icons.logout, size: 18),
-          label: Text(
-            l10n.logout,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        Expanded(
+          child: DarbCard(
+            padding: const EdgeInsets.all(8),
+            child: TextButton.icon(
+              key: const ValueKey('logoutButton'),
+              onPressed: () async {
+                final confirmed = await confirmSecurityAction(
+                  context,
+                  title: l10n.confirmLogout,
+                  message: l10n.confirmLogoutMessage,
+                  confirmLabel: l10n.logout,
+                );
+                if (confirmed && context.mounted) {
+                  await ref.read(authControllerProvider.notifier).logout();
+                }
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              icon: const Icon(Icons.logout, size: 18),
+              label: Text(
+                l10n.logout,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ),
         ),
       ],

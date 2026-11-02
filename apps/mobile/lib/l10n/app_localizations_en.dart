@@ -9,13 +9,13 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Masari';
+  String get appTitle => 'Darb';
 
   @override
   String get tagline => 'Smart route-sharing logistics';
 
   @override
-  String get welcomeTitle => 'Welcome to Masari';
+  String get welcomeTitle => 'Welcome to Darb';
 
   @override
   String get welcomeBody =>
@@ -57,9 +57,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Passenger, driver, and merchant flows will be added in later milestones.';
 
   @override
-  String get lockedCorridor => 'Hebron / PPU / Bab Al-Zawiya -> Bethlehem';
-
-  @override
   String get diagnostics => 'Technical diagnostics';
 
   @override
@@ -73,6 +70,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Retry';
 
   @override
+  String get whereToGo => 'Where do you want to go?';
+
+  @override
+  String get selectPickupLocation => 'Select pickup location';
+
+  @override
+  String get selectDestination => 'Select destination';
+
+  @override
+  String get selectPickupLocationTitle => 'Select pickup location';
+
+  @override
+  String get selectDestinationTitle => 'Select destination';
+
+  @override
+  String get selectBothLocations =>
+      'Choose a pickup location and a destination first';
+
+  @override
+  String get timeField => 'Time';
+
+  @override
+  String get dateField => 'Date';
+
+  @override
+  String get searchRide => 'Search a Ride';
+
+  @override
+  String get increasePassengers => 'Add a passenger';
+
+  @override
+  String get decreasePassengers => 'Remove a passenger';
+
+  @override
+  String get loginWelcomeBack => 'Welcome Back';
+
+  @override
+  String get loginWelcomeSubtitle => 'We are so happy you are back';
+
+  @override
   String get signInWelcome => 'Sign in to continue to your role workspace.';
 
   @override
@@ -82,6 +119,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get phone => 'Phone';
 
   @override
+  String get email => 'Email';
+
+  @override
+  String get fullName => 'Full name';
+
+  @override
   String get password => 'Password';
 
   @override
@@ -89,6 +132,71 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hidePassword => 'Hide password';
+
+  @override
+  String get signUp => 'Sign up';
+
+  @override
+  String get createAccount => 'Create account';
+
+  @override
+  String get createAccountSubtitle => 'Sign up as a passenger to get started.';
+
+  @override
+  String get newToDarb => 'New to Darb? Create an account';
+
+  @override
+  String get alreadyHaveAccount => 'Already have an account? Sign in';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get welcomeBack => 'Welcome Back';
+
+  @override
+  String get welcomeBackSubtitle => 'We are so happy you are back';
+
+  @override
+  String get login => 'Login';
+
+  @override
+  String get noAccountPrompt => 'Don\'t have an account?';
+
+  @override
+  String get registerAction => 'Register';
+
+  @override
+  String get haveAccountPrompt => 'Already have an account?';
+
+  @override
+  String get orSeparator => 'or';
+
+  @override
+  String get emailRequired => 'Enter your email.';
+
+  @override
+  String get emailInvalid => 'Enter a valid email address.';
+
+  @override
+  String get nameRequired => 'Enter your name.';
+
+  @override
+  String get passwordRequired => 'Enter your password.';
+
+  @override
+  String get passwordTooShort => 'Password must be at least 8 characters.';
+
+  @override
+  String get emailAlreadyRegistered =>
+      'That email is already registered. Try signing in.';
+
+  @override
+  String get googleSignInFailed => 'Google sign-in failed. Please try again.';
+
+  @override
+  String get googleSignInUnavailable =>
+      'Google sign-in is not available right now.';
 
   @override
   String get demoAccounts => 'Demo accounts';
@@ -116,7 +224,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your session has expired. Please sign in again.';
 
   @override
-  String get invalidCredentials => 'Invalid phone or password.';
+  String get invalidCredentials => 'Invalid email or password.';
 
   @override
   String get networkUnavailable =>
@@ -245,6 +353,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectedDriver => 'Selected driver';
 
   @override
+  String get selectedDriverUnavailable =>
+      'The selected driver route is no longer available. Please search again.';
+
+  @override
   String get selectedRoute => 'Selected route';
 
   @override
@@ -273,7 +385,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routeMatchExplanation =>
-      'Masari selected this driver because the route matches the active corridor, pickup is near the route, capacity is available, and trust score is high.';
+      'Darb selected this driver because they drive the same route you chose, there is room for you, and their trust score is high.';
 
   @override
   String get passengerTrip => 'Passenger trip';
@@ -589,7 +701,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String parcelBatchExplanationDemo(int parcelCount) {
-    return '$parcelCount compatible parcels can use one Masari corridor trip instead of separate trips, reducing distance and cost.';
+    return '$parcelCount compatible parcels can use one Darb corridor trip instead of separate trips, reducing distance and cost.';
   }
 
   @override
@@ -719,9 +831,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'The session action could not be completed. Please retry.';
 
   @override
-  String get createInvitedAccount => 'Create an invited account';
-
-  @override
   String get selectAccountType => 'Select account type';
 
   @override
@@ -731,13 +840,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pendingAfterRegistration => 'Pending until review';
 
   @override
-  String get invitationCode => 'Invitation code';
+  String get registerChooseTitle => 'How will you use Darb?';
+
+  @override
+  String get registerChooseSubtitle =>
+      'Pick the option that fits you. We will take you through the right steps.';
+
+  @override
+  String get registerPassengerTitle => 'Normal user';
+
+  @override
+  String get registerPassengerHelp =>
+      'Request trips and deliveries. Your account is ready right after sign-up.';
+
+  @override
+  String get registerDriverTitle => 'Driver';
+
+  @override
+  String get registerDriverHelp =>
+      'Carry trips and deliveries. You upload your documents and an admin approves your account.';
+
+  @override
+  String get registerMerchantTitle => 'Shop owner';
+
+  @override
+  String get registerMerchantHelp =>
+      'Send orders from your shop. You upload your documents and an admin approves your account.';
 
   @override
   String get phoneNumber => 'Phone number';
 
   @override
   String get sendVerificationCode => 'Send verification code';
+
+  @override
+  String get emailForCode => 'Email address (we send the code here)';
+
+  @override
+  String get codeSentToEmail =>
+      'We emailed a six-digit code. Check your email, including the spam folder.';
 
   @override
   String get enterVerificationCode => 'Enter verification code';
@@ -773,9 +914,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get acceptAndContinue => 'Accept and continue';
 
   @override
-  String get createAccount => 'Create account';
-
-  @override
   String get accountCreated => 'Account created';
 
   @override
@@ -787,7 +925,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pendingReviewBody =>
-      'Your account was created and is under review. You can sign in after the account is approved.';
+      'Your application was sent to the admin and is awaiting approval. This usually takes up to 24 hours. You can sign in once it is approved.';
+
+  @override
+  String get merchantDocumentsHint =>
+      'To get approved, upload clear photos or PDFs of your commercial register (or shop licence), your national ID and a photo of your shop. Files are stored on our server and only the review team can open them.';
+
+  @override
+  String get documentKindCommercialRegister => 'Commercial register';
+
+  @override
+  String get documentKindShopPhoto => 'Shop photo';
 
   @override
   String get checkApplicationStatus => 'Check an existing application';
@@ -798,7 +946,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unableToStartRegistration =>
-      'Unable to start registration. Check your invitation details and try again.';
+      'Unable to start registration. Check your phone number and email and try again.';
 
   @override
   String get incorrectVerificationCode => 'Incorrect verification code.';
@@ -853,6 +1001,99 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get routeCatalogUnavailable =>
       'Routes are temporarily unavailable. Refresh before submitting.';
+
+  @override
+  String get orderRouteLabel => 'Route';
+
+  @override
+  String get orderRouteChoose => 'Choose a route';
+
+  @override
+  String get orderRoutesLoadFailed =>
+      'Couldn\'t load the routes. Check your connection and try again.';
+
+  @override
+  String get orderRoutesEmpty =>
+      'No routes are running right now. Try again later.';
+
+  @override
+  String get orderRouteRequired => 'Choose a route first.';
+
+  @override
+  String get orderRouteUnavailable =>
+      'This route is no longer running. Choose another route.';
+
+  @override
+  String get orderRouteSaved => 'Saved route';
+
+  @override
+  String get orderDetailsTooShort =>
+      'Write at least 3 characters so the driver can find the place.';
+
+  @override
+  String get merchantPickupDetailsLabel => 'Pickup details';
+
+  @override
+  String get merchantPickupDetailsHint => 'e.g. store name and street';
+
+  @override
+  String get merchantDropoffDetailsLabel => 'Drop-off details';
+
+  @override
+  String get merchantDropoffDetailsHint =>
+      'e.g. neighbourhood, street and a nearby landmark';
+
+  @override
+  String get merchantReceiverNameLabel => 'Receiver name (optional)';
+
+  @override
+  String get merchantReceiverPhoneLabel => 'Receiver phone (optional)';
+
+  @override
+  String get merchantReceiverPhoneInvalid =>
+      'Enter a valid phone number, e.g. +970599123456.';
+
+  @override
+  String get merchantReceiverLabel => 'Receiver';
+
+  @override
+  String get merchantPendingOrderTitle => 'Order waiting for confirmation';
+
+  @override
+  String get driverRoutePickTitle => 'Choose your route';
+
+  @override
+  String get driverRoutePickBody =>
+      'You\'ll get passengers and parcels on this route only.';
+
+  @override
+  String get driverRoutePickConfirm => 'Go online';
+
+  @override
+  String get driverRouteNone => 'No route chosen yet';
+
+  @override
+  String get driverPickupDetailsLabel => 'Pickup point';
+
+  @override
+  String get driverDropoffDetailsLabel => 'Drop-off point';
+
+  @override
+  String get driverMerchantPickupLabel => 'Collect parcels from';
+
+  @override
+  String get driverParcelStopsTitle => 'Parcel drop-offs';
+
+  @override
+  String driverParcelStopLabel(int number) {
+    return 'Parcel $number';
+  }
+
+  @override
+  String get driverReceiverLabel => 'Receiver';
+
+  @override
+  String get driverWhereToFindTitle => 'Where to pick up and drop off';
 
   @override
   String get noPublishedRoutes => 'No eligible published routes are available.';
@@ -984,6 +1225,34 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose a valid future departure window.';
 
   @override
+  String get availabilityDepartureTooSoon =>
+      'Departure is too soon. Choose a time at least 10 minutes from now.';
+
+  @override
+  String get availabilityDepartureTooFar =>
+      'Departure is too far out. Choose a time within the next 30 days.';
+
+  @override
+  String get availabilityInvalidWindow =>
+      'The availability window can end at most 2 hours after departure.';
+
+  @override
+  String get availabilityExceedsVehicleCapacity =>
+      'The seats or parcels you selected exceed your registered vehicle\'s capacity.';
+
+  @override
+  String get availabilityDriverNotApproved =>
+      'Your driver account isn\'t approved yet. Contact support to complete verification.';
+
+  @override
+  String get availabilityRouteNoLongerEligible =>
+      'This route is no longer available. Choose a different route.';
+
+  @override
+  String get availabilityDuplicate =>
+      'You already have a matching availability for this route and time.';
+
+  @override
   String get invalidStopOrder => 'Choose an approved downstream stop.';
 
   @override
@@ -1012,6 +1281,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get returnToDashboard => 'Return to dashboard';
+
+  @override
+  String get viewRouteRequests => 'View my route requests';
 
   @override
   String get canonicalDriverOffers => 'Route offers';
@@ -1161,9 +1433,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get whereToGo => 'Where do you want to go?';
-
-  @override
   String get smartSearch => 'Smart search';
 
   @override
@@ -1194,7 +1463,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noAvailableTripsBody =>
-      'Create a request and Masari will match you with a driver on the corridor.';
+      'Create a request and Darb will match you with a driver on the corridor.';
 
   @override
   String seatsRemaining(int count) {
@@ -1578,4 +1847,1277 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notLiveNotice =>
       'This screen is not live. Use Refresh to check for updates.';
+
+  @override
+  String get assistantTitle => 'Darb assistant';
+
+  @override
+  String get assistantHomeTitle => 'Ask Darb';
+
+  @override
+  String get assistantHomeBody => 'Ask about your trips and available routes.';
+
+  @override
+  String get assistantWelcomeTitle => 'How can I help?';
+
+  @override
+  String get assistantWelcomeBody =>
+      'Ask about your Darb trip data or available routes. If details are missing, I’ll ask you to clarify.';
+
+  @override
+  String get assistantTryAsking => 'Try asking';
+
+  @override
+  String get assistantExampleTripTime => 'When is my next trip?';
+
+  @override
+  String get assistantExampleAvailableTrip => 'Is there a trip to Bethlehem?';
+
+  @override
+  String get assistantInputHint => 'Type your question';
+
+  @override
+  String get assistantVoiceStart => 'Speak your request';
+
+  @override
+  String get assistantVoiceStop => 'Stop listening';
+
+  @override
+  String get assistantVoiceListening => 'Listening…';
+
+  @override
+  String get assistantVoicePermissionDenied =>
+      'Microphone access is needed for voice input. You can still type your request.';
+
+  @override
+  String get assistantVoicePermissionPermanent =>
+      'Microphone or speech access is turned off. Open settings to allow it, or type your request.';
+
+  @override
+  String get assistantVoiceOpenSettings => 'Open settings';
+
+  @override
+  String get assistantVoiceUnavailable =>
+      'Voice input isn’t available on this device. Please type your request.';
+
+  @override
+  String get assistantVoiceNoSpeech =>
+      'I didn’t catch that. Tap the microphone and try again, or type your request.';
+
+  @override
+  String get assistantVoiceOffline =>
+      'Voice input needs a connection right now. Please type your request or try again later.';
+
+  @override
+  String get assistantVoiceError =>
+      'Voice input stopped unexpectedly. Please try again or type your request.';
+
+  @override
+  String get assistantSend => 'Send';
+
+  @override
+  String get assistantProcessing => 'Checking Darb data…';
+
+  @override
+  String get assistantErrorTitle => 'Couldn’t complete the request';
+
+  @override
+  String get assistantErrorBody =>
+      'The assistant couldn’t complete your request. Try again.';
+
+  @override
+  String get assistantUnavailable =>
+      'The assistant service is not available in this build. No result was created.';
+
+  @override
+  String get assistantHistoryErrorTitle => 'Couldn’t load your chat';
+
+  @override
+  String get assistantHistoryErrorBody =>
+      'Your chat with the assistant is saved to your account. Check your connection and try again.';
+
+  @override
+  String get assistantNewChat => 'New chat';
+
+  @override
+  String get assistantNewChatTitle => 'Start a new chat?';
+
+  @override
+  String get assistantNewChatBody =>
+      'This chat will be deleted from your account. Trips you already booked are not affected.';
+
+  @override
+  String get assistantNewChatFailed =>
+      'Couldn\'t start a new chat. Check your connection and try again.';
+
+  @override
+  String get passengerRouteLabel => 'Route';
+
+  @override
+  String get passengerRouteHint => 'Choose your route';
+
+  @override
+  String get passengerRoutesLoading => 'Loading routes…';
+
+  @override
+  String get passengerRoutesLoadFailed =>
+      'Couldn\'t load the routes. Check your connection and try again.';
+
+  @override
+  String get passengerRoutesEmpty =>
+      'No routes are running right now. Please check again later.';
+
+  @override
+  String get passengerRouteRequired => 'Choose a route to continue.';
+
+  @override
+  String get passengerRouteUnavailable =>
+      'This route is no longer available. Choose another route.';
+
+  @override
+  String get passengerPickupDetailsLabel => 'Exact pickup point';
+
+  @override
+  String get passengerPickupDetailsHint =>
+      'e.g. In front of the main gate of Palestine Polytechnic University';
+
+  @override
+  String get passengerDropoffDetailsLabel => 'Exact drop-off point';
+
+  @override
+  String get passengerDropoffDetailsHint =>
+      'e.g. Bethlehem bus station, next to the pharmacy';
+
+  @override
+  String get passengerDetailsHelper =>
+      'Describe the place so the driver finds it easily.';
+
+  @override
+  String get passengerDetailsTooShort => 'Write at least 3 characters.';
+
+  @override
+  String get passengerPickupPoint => 'Pickup point';
+
+  @override
+  String get passengerDropoffPoint => 'Drop-off point';
+
+  @override
+  String get assistantRouteChoose =>
+      'Choose the route that matches your trip, then check the pickup and drop-off points.';
+
+  @override
+  String get passengerParcelRouteIntro =>
+      'Choose the route, describe where the driver collects the parcel and where it goes, then tell us who receives it.';
+
+  @override
+  String get passengerParcelPickupDetailsLabel =>
+      'Where the driver collects the parcel';
+
+  @override
+  String get passengerParcelPickupDetailsHint =>
+      'e.g. The shop next to Ibn Rushd roundabout, Hebron';
+
+  @override
+  String get passengerParcelDropoffDetailsLabel =>
+      'Where the parcel is delivered';
+
+  @override
+  String get passengerParcelDropoffDetailsHint =>
+      'e.g. The receiver\'s house, near the Church of the Nativity';
+
+  @override
+  String get passengerParcelPreferredTime => 'Preferred pickup time';
+
+  @override
+  String get welcomeRoutesTitle => 'Routes we serve';
+
+  @override
+  String welcomeRoutesMore(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get welcomeRoutesOffline =>
+      'The routes will appear once you\'re connected.';
+
+  @override
+  String get assistantClarificationLabel =>
+      'Darb assistant needs clarification';
+
+  @override
+  String get assistantResultLabel => 'Darb assistant reply';
+
+  @override
+  String get assistantPassengerMessage => 'Your message';
+
+  @override
+  String get assistantExampleFindTrip =>
+      'Find me a ride from Bab Al-Zawiya to Bethlehem at 3 PM for one passenger';
+
+  @override
+  String get assistantReviewTitle => 'Review trip information';
+
+  @override
+  String get assistantReviewBody =>
+      'Check and edit the information before starting the real search.';
+
+  @override
+  String get assistantConfirmSearch => 'Confirm and search';
+
+  @override
+  String get assistantSearching => 'Searching for a ride…';
+
+  @override
+  String get assistantSearchError =>
+      'The request could not be created or no compatible route was found. No result was fabricated.';
+
+  @override
+  String get assistantFutureTimeRequired =>
+      'Choose a future time before searching.';
+
+  @override
+  String get mapAttribution => '© OpenStreetMap contributors';
+
+  @override
+  String get mapLoading => 'Loading map...';
+
+  @override
+  String get mapLoadFailed => 'Map could not load';
+
+  @override
+  String get mapLoadFailedBody =>
+      'Route data could not be fetched. Check your connection and retry.';
+
+  @override
+  String get mapYourLocation => 'Your location';
+
+  @override
+  String get mapRequestedRoute => 'Requested route';
+
+  @override
+  String get mapDriverRoute => 'Available driver route';
+
+  @override
+  String mapOriginLabel(String name) {
+    return 'Origin: $name';
+  }
+
+  @override
+  String mapDestinationLabel(String name) {
+    return 'Destination: $name';
+  }
+
+  @override
+  String mapStopLabel(String name) {
+    return 'Stop: $name';
+  }
+
+  @override
+  String get mapLegend => 'Legend';
+
+  @override
+  String get locationServiceDisabled =>
+      'Location services are off on this device. Turn them on to show your position.';
+
+  @override
+  String get locationPermissionDenied =>
+      'Location access was not granted. Allow access to show your position.';
+
+  @override
+  String get locationPermanentlyDenied =>
+      'Location access is permanently denied. Enable it in system settings.';
+
+  @override
+  String get locationUnavailable =>
+      'Your position could not be determined right now.';
+
+  @override
+  String get locationEnable => 'Enable location';
+
+  @override
+  String get checkpoints => 'Barriers';
+
+  @override
+  String get checkpointsUnavailable => 'Barrier data unavailable';
+
+  @override
+  String get checkpointsUnavailableBody =>
+      'Barrier status could not be fetched. The route is shown without it.';
+
+  @override
+  String get checkpointsDisabled =>
+      'Barrier data is not enabled in this build.';
+
+  @override
+  String get checkpointsStale =>
+      'These are the last confirmed barrier states and may be out of date.';
+
+  @override
+  String get checkpointsEmpty => 'No barriers recorded on this route.';
+
+  @override
+  String checkpointCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count barriers',
+      one: '1 barrier',
+      zero: 'No barriers',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get checkpointOpen => 'Open';
+
+  @override
+  String get checkpointCongested => 'Congested';
+
+  @override
+  String get checkpointClosed => 'Closed';
+
+  @override
+  String get checkpointUnknown => 'Status unknown';
+
+  @override
+  String checkpointLabel(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
+  String get checkpointUnnamed => 'Barrier';
+
+  @override
+  String get mapRouteMissingCoordinates =>
+      'This route has no coordinates, so it cannot be drawn on the map.';
+
+  @override
+  String get mapSelectRoute => 'Choose a route to show it on the map.';
+
+  @override
+  String get recoverMerchantOrder => 'Recover order';
+
+  @override
+  String get merchantOrderUncertain =>
+      'The order may have been saved. Recover it before creating another order.';
+
+  @override
+  String get merchantOrderRecoveryExpired =>
+      'The retry window has expired. Only a saved-order lookup is allowed. Contact support if recovery remains unresolved.';
+
+  @override
+  String get merchantOrderRecoveryUnavailable =>
+      'Order recovery is unavailable. Sign in to the original merchant account or contact support. Do not submit a replacement order.';
+
+  @override
+  String get bookingTimePassed =>
+      'This departure time has passed. Choose an upcoming time.';
+
+  @override
+  String get bookingOutcomeUnknown =>
+      'The booking may already be saved. We will verify it when the connection returns. Do not create another booking.';
+
+  @override
+  String get verifyBooking => 'Verify booking';
+
+  @override
+  String get checkpointDirectoryTitle => 'Checkpoint directory';
+
+  @override
+  String get checkpointDirectoryDisabled =>
+      'Checkpoint directory is not enabled.';
+
+  @override
+  String get checkpointDirectoryLoadFailed =>
+      'Checkpoint directory could not be loaded.';
+
+  @override
+  String get checkpointDirectorySearch => 'Search checkpoints or cities';
+
+  @override
+  String get checkpointDirectoryNoResults => 'No matching checkpoints';
+
+  @override
+  String get checkpointDirectoryTrafficUnavailable =>
+      'Traffic status unavailable';
+
+  @override
+  String get checkpointDirectoryLimitedNotice =>
+      'Limited provider dataset: up to seven checkpoints per city. This is not the complete directory.';
+
+  @override
+  String get checkpointDirectoryGenerated => 'Provider response generated';
+
+  @override
+  String get checkpointDirectoryEnteringUpdated =>
+      'Entering status last changed (status unavailable)';
+
+  @override
+  String get checkpointDirectoryLeavingUpdated =>
+      'Leaving status last changed (status unavailable)';
+
+  @override
+  String get checkpointDirectoryTimezoneUnspecified => 'timezone unspecified';
+
+  @override
+  String get notifMatchOfferedTitle => 'New match offer';
+
+  @override
+  String get notifMatchOfferedBody =>
+      'A new request is waiting for your response.';
+
+  @override
+  String get notifMatchAcceptedTitle => 'Your request was accepted';
+
+  @override
+  String get notifMatchAcceptedBody => 'A driver accepted your request.';
+
+  @override
+  String get notifMatchRejectedTitle => 'Driver declined';
+
+  @override
+  String get notifMatchRejectedBody =>
+      'The driver declined the request. You can look for another match.';
+
+  @override
+  String get notifTripStatusTitle => 'Trip update';
+
+  @override
+  String notifTripStatusBody(String status) {
+    return 'The trip is now: $status';
+  }
+
+  @override
+  String get notifVerificationApprovedTitle => 'Account approved';
+
+  @override
+  String get notifVerificationApprovedBody =>
+      'Your driver account was approved. You can start working now.';
+
+  @override
+  String get notifVerificationRejectedTitle => 'Verification rejected';
+
+  @override
+  String get notifVerificationRejectedBody =>
+      'Your account verification was not approved.';
+
+  @override
+  String notifVerificationRejectedReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get notifUnknownTitle => 'New notification';
+
+  @override
+  String get notificationsMarkAllRead => 'Mark all as read';
+
+  @override
+  String get notificationsLoadError => 'Could not load notifications.';
+
+  @override
+  String notificationsUnreadCount(int count) {
+    return '$count unread';
+  }
+
+  @override
+  String get reportsDeliveries => 'Deliveries';
+
+  @override
+  String get reportsLoadError => 'Could not load the report.';
+
+  @override
+  String get reportsOrdersByStatus => 'Orders by status';
+
+  @override
+  String get reportsDeliveriesByStatus => 'Deliveries by status';
+
+  @override
+  String get reportsNoRecords => 'No records yet.';
+
+  @override
+  String get incidentReportAction => 'Report a problem';
+
+  @override
+  String get incidentReportTitle => 'Report a problem';
+
+  @override
+  String get incidentReportNotice =>
+      'Your report is recorded for Admin review. This is not an emergency service; if you are in danger, contact the authorities directly.';
+
+  @override
+  String get incidentDescriptionLabel => 'Describe the problem';
+
+  @override
+  String get incidentSubmit => 'Send report';
+
+  @override
+  String get incidentSubmitted => 'Report sent.';
+
+  @override
+  String get incidentSubmitFailed => 'The report could not be sent. Try again.';
+
+  @override
+  String get incidentTooMany =>
+      'You already have several reports under review. Wait for them to be handled before sending another.';
+
+  @override
+  String get incidentCategorySafety => 'Safety';
+
+  @override
+  String get incidentCategoryDelay => 'Delay';
+
+  @override
+  String get incidentCategoryParcelDamage => 'Damaged parcel';
+
+  @override
+  String get incidentCategoryBehavior => 'Behavior';
+
+  @override
+  String get incidentCategoryOther => 'Other';
+
+  @override
+  String get myIncidentReports => 'My reports';
+
+  @override
+  String get myIncidentReportsEmpty => 'You have not sent any reports yet.';
+
+  @override
+  String get myIncidentReportsFailed => 'Could not load your reports.';
+
+  @override
+  String get incidentStatusOpen => 'Open';
+
+  @override
+  String get incidentStatusReviewing => 'Under review';
+
+  @override
+  String get incidentStatusResolved => 'Resolved';
+
+  @override
+  String get notifIncidentUpdatedTitle => 'Update on your report';
+
+  @override
+  String get notifIncidentReviewingBody => 'Your report is under review.';
+
+  @override
+  String get notifIncidentResolvedBody => 'Your report has been resolved.';
+
+  @override
+  String get verificationDocuments => 'Verification documents';
+
+  @override
+  String get verificationDocumentsHint =>
+      'To get approved, upload clear photos or PDFs of your driving licence, your vehicle registration and your national ID. Files are stored on our server and only the review team can open them.';
+
+  @override
+  String get documentKind => 'Document type';
+
+  @override
+  String get documentKindDriverLicence => 'Driving licence';
+
+  @override
+  String get documentKindVehicleRegistration => 'Vehicle registration';
+
+  @override
+  String get documentKindVehiclePhoto => 'Vehicle photo';
+
+  @override
+  String get documentKindNationalId => 'National ID';
+
+  @override
+  String get documentKindInsurance => 'Insurance';
+
+  @override
+  String get documentKindOther => 'Other document';
+
+  @override
+  String get addDocument => 'Add a document';
+
+  @override
+  String get removeDocument => 'Remove document';
+
+  @override
+  String get documentTooLarge => 'That file is too large. The limit is 5 MB.';
+
+  @override
+  String get documentTypeUnsupported =>
+      'Only JPEG, PNG or PDF files can be uploaded.';
+
+  @override
+  String get documentLimitReached =>
+      'You have reached the maximum number of documents.';
+
+  @override
+  String get acceptanceRateTitle => 'Acceptance rate';
+
+  @override
+  String acceptanceRateValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String acceptanceRateDetail(int accepted, int responded) {
+    return '$accepted of $responded offers you answered were accepted. Offers that expired unanswered are not counted.';
+  }
+
+  @override
+  String acceptanceRateNeedMore(int needed, int responded) {
+    return 'Your rate appears after $needed answered offers ($responded so far).';
+  }
+
+  @override
+  String get emailOrPhone => 'Email or phone number';
+
+  @override
+  String get emailOrPhoneRequired => 'Enter your email or phone number.';
+
+  @override
+  String get emailOrPhoneInvalid =>
+      'Enter a valid email, or a phone number starting with + and the country code.';
+
+  @override
+  String get mapLegendStart => 'Start';
+
+  @override
+  String get mapLegendDestination => 'Destination';
+
+  @override
+  String get sendParcelTitle => 'Send a parcel';
+
+  @override
+  String get sendParcelEntryBody =>
+      'Send a small parcel with a driver already travelling an approved route.';
+
+  @override
+  String get sendParcelIntro =>
+      'Choose a route and stops, then tell us who receives the parcel. A driver travelling that way carries it.';
+
+  @override
+  String get sendParcelPickupHint =>
+      'Hand the parcel to the driver at this stop.';
+
+  @override
+  String get parcelSizeSmallHint => 'S - small, fits in a bag';
+
+  @override
+  String get parcelSizeMediumHint => 'M - medium, about a shoebox';
+
+  @override
+  String get parcelSizeLargeNotAllowed =>
+      'Large parcels are for shops and cannot be sent from a personal account.';
+
+  @override
+  String get receiverNameLabel => 'Receiver\'s name';
+
+  @override
+  String get receiverPhoneLabel => 'Receiver\'s phone';
+
+  @override
+  String get receiverPrivacyNote =>
+      'The receiver does not need the app. Their name and phone are used only for this delivery, are never shown to other users, and are erased afterwards.';
+
+  @override
+  String get parcelNoteLabel => 'Note for the driver (optional)';
+
+  @override
+  String get forbiddenItemsAck =>
+      'I confirm the parcel contains no cash, valuables, medicine, weapons, flammable, illegal or perishable items.';
+
+  @override
+  String get sendParcelSubmit => 'Send parcel';
+
+  @override
+  String get sendParcelRecorded => 'Your parcel request was recorded.';
+
+  @override
+  String get sendParcelRecordedBody =>
+      'We are looking for a driver on this route. You can cancel until a driver is offered the parcel.';
+
+  @override
+  String get myParcelsTitle => 'My parcels';
+
+  @override
+  String get myParcelsEmpty => 'You have not sent any parcels yet.';
+
+  @override
+  String get parcelTrackSearching => 'Finding a driver';
+
+  @override
+  String get parcelTrackAssigned => 'Driver assigned';
+
+  @override
+  String get parcelTrackPickedUp => 'Picked up from you';
+
+  @override
+  String get parcelTrackInTransit => 'On the way';
+
+  @override
+  String get parcelTrackDelivered => 'Delivered';
+
+  @override
+  String get parcelTrackCancelled => 'Cancelled';
+
+  @override
+  String get parcelTrackFailed => 'Delivery failed';
+
+  @override
+  String get parcelTrackExpired => 'Expired';
+
+  @override
+  String get parcelCancelAction => 'Cancel parcel';
+
+  @override
+  String get parcelCancelConfirm =>
+      'Cancel this parcel? The receiver\'s details will be erased.';
+
+  @override
+  String get parcelCancelledNotice => 'Parcel cancelled.';
+
+  @override
+  String get parcelCannotCancel =>
+      'A driver has already been offered this parcel, so it can no longer be cancelled.';
+
+  @override
+  String parcelReceiverLine(String name, String phone) {
+    return 'Receiver: $name ($phone)';
+  }
+
+  @override
+  String get parcelReceiverRemoved => 'Receiver details have been erased.';
+
+  @override
+  String get parcelLimitReached =>
+      'You already have the maximum number of parcels on the way. Wait for one to finish or cancel one.';
+
+  @override
+  String get parcelDailyLimit =>
+      'Daily parcel limit reached. Try again tomorrow.';
+
+  @override
+  String get invalidReceiverPhone =>
+      'Enter a valid phone number for the receiver.';
+
+  @override
+  String get receiverNameInvalid => 'Enter the receiver\'s name.';
+
+  @override
+  String get parcelAckRequired =>
+      'Confirm the statement about forbidden items to continue.';
+
+  @override
+  String get keepParcel => 'Keep parcel';
+
+  @override
+  String get mapOfflineSaved => 'Offline - showing saved map';
+
+  @override
+  String get clearMapCache => 'Clear saved map';
+
+  @override
+  String get clearMapCacheHint =>
+      'Deletes map tiles saved on this device. They are saved again as you browse.';
+
+  @override
+  String get mapCacheCleared => 'Saved map cleared';
+
+  @override
+  String get mapCacheClearFailed => 'Could not clear the saved map';
+
+  @override
+  String get notifDocsExpiringTitle => 'Document expiring soon';
+
+  @override
+  String notifDocsExpiringBody(String document, String date) {
+    return 'Your $document expires on $date. Send renewed documents before then to keep working without interruption.';
+  }
+
+  @override
+  String get notifDocsExpiredTitle => 'Your documents have expired';
+
+  @override
+  String get notifDocsExpiredBody =>
+      'Your account is restricted: you cannot go online or accept new trips until you send renewed documents and they are approved. Trips you already accepted are not affected.';
+
+  @override
+  String get notifDocsRenewalSubmittedTitle => 'Renewal documents sent';
+
+  @override
+  String get notifDocsRenewalSubmittedBody =>
+      'Our team will review them and you will be notified of the decision.';
+
+  @override
+  String get documentKindContract => 'Contract';
+
+  @override
+  String get availabilityDocumentsExpired =>
+      'Your documents have expired. Send renewed documents to restore access.';
+
+  @override
+  String get applicationDocumentsRequiredTitle => 'Upload your documents';
+
+  @override
+  String get applicationDocumentsRequiredBody =>
+      'Your account is created but is not under review yet. Upload every required document, then send your application. Review usually takes up to 24 hours.';
+
+  @override
+  String get applicationRejectedTitle => 'Application rejected';
+
+  @override
+  String get applicationRejectedBody =>
+      'Your driver application was reviewed and not approved. You cannot use driver features. Contact support if you think this is a mistake.';
+
+  @override
+  String applicationRejectedReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String documentsStillNeeded(String documents) {
+    return 'Still needed: $documents';
+  }
+
+  @override
+  String get submitApplication => 'Send for review';
+
+  @override
+  String get documentsRequiredError =>
+      'Upload all the required documents before sending your application.';
+
+  @override
+  String get fareEstimatedTitle => 'Estimated fare';
+
+  @override
+  String get fareBookedTitle => 'Estimated fare when requested';
+
+  @override
+  String get fareDisclaimer =>
+      'Estimated and paid directly to the driver. No payments are processed in the app.';
+
+  @override
+  String get fareNotSet => 'No estimated fare has been set for this route yet.';
+
+  @override
+  String get farePerSeat => 'Per seat';
+
+  @override
+  String fareSeatsLine(int count) {
+    return 'Seats × $count';
+  }
+
+  @override
+  String fareParcelLine(String size) {
+    return 'Parcel $size';
+  }
+
+  @override
+  String get fareTotal => 'Total';
+
+  @override
+  String get notifDriverApproachingTitle => 'Your driver is approaching';
+
+  @override
+  String get notifDriverApproachingBody =>
+      'Your driver is near your pickup point. Please get ready.';
+
+  @override
+  String get ratingPromptTitle => 'How was your trip?';
+
+  @override
+  String get ratingPromptBody =>
+      'Rate your driver from 1 to 5 stars. Your rating is private: the driver never sees it or who gave it.';
+
+  @override
+  String ratingStarLabel(int count) {
+    return '$count stars';
+  }
+
+  @override
+  String get ratingSubmit => 'Send rating';
+
+  @override
+  String get ratingThanks => 'Thanks for rating your trip.';
+
+  @override
+  String get ratingFailed => 'The rating could not be sent. Try again.';
+
+  @override
+  String get ratingAlreadyRated => 'You already rated this trip.';
+
+  @override
+  String get renewalTitle => 'Renew your documents';
+
+  @override
+  String get renewalOpen => 'Renew documents';
+
+  @override
+  String get renewalBannerTitle => 'Your documents have expired';
+
+  @override
+  String get renewalBannerBody =>
+      'You cannot go online or accept new trips until you send renewed documents and they are approved.';
+
+  @override
+  String get renewalBannerSubmittedTitle => 'Renewal under review';
+
+  @override
+  String get renewalBannerSubmittedBody =>
+      'Your renewed documents are waiting for review.';
+
+  @override
+  String get renewalIntro =>
+      'Upload clear photos or PDFs of your renewed driving licence, vehicle registration and insurance, then send them for review. Trips you already accepted are not affected.';
+
+  @override
+  String get renewalUploaded => 'Uploaded documents';
+
+  @override
+  String get renewalNoDocuments => 'No renewed documents uploaded yet.';
+
+  @override
+  String get renewalSubmit => 'Send for review';
+
+  @override
+  String get renewalSubmittedTitle => 'Waiting for review';
+
+  @override
+  String get renewalSubmittedBody =>
+      'We received your renewed documents. You will be notified once the review team approves them.';
+
+  @override
+  String get renewalDocumentsRequired =>
+      'Upload at least one renewed document before sending.';
+
+  @override
+  String get renewalStateConflict =>
+      'Your renewal status changed. Pull to refresh and try again.';
+
+  @override
+  String get renewalLoadError => 'Could not load your renewal status.';
+
+  @override
+  String get renewalNothingToRenew =>
+      'Your documents are up to date. Nothing to renew.';
+
+  @override
+  String get passengerNavHome => 'Home';
+
+  @override
+  String get passengerNavTrips => 'My Trips';
+
+  @override
+  String get passengerNavMaps => 'Maps';
+
+  @override
+  String get passengerNavSettings => 'Settings';
+
+  @override
+  String get passengerGreetingMorning => 'Good Morning';
+
+  @override
+  String get passengerGreetingAfternoon => 'Good Afternoon';
+
+  @override
+  String get passengerGreetingEvening => 'Good Evening';
+
+  @override
+  String get passengerPlanTripTitle => 'Plan Your Next Trip';
+
+  @override
+  String get passengerPlanTripBody =>
+      'Find a ride, share the journey, reach your destination';
+
+  @override
+  String get passengerSearchRide => 'Search a Ride';
+
+  @override
+  String get passengerUpcomingTrips => 'Upcoming Trips';
+
+  @override
+  String get passengerNoUpcomingTitle => 'No upcoming trips';
+
+  @override
+  String get passengerNoUpcomingBody =>
+      'Search for a new ride and book your seat.';
+
+  @override
+  String get passengerWeekStrip => 'This week';
+
+  @override
+  String get tripsStatTotal => 'Total';
+
+  @override
+  String get tripsStatActive => 'Active';
+
+  @override
+  String get tripsStatUpcoming => 'Upcoming';
+
+  @override
+  String get tripsStatPast => 'Past';
+
+  @override
+  String get tripsFilterAll => 'All';
+
+  @override
+  String get communityReportsTitle => 'Community reports';
+
+  @override
+  String get communityReportsNote =>
+      'Unverified reports from other users. Votes are community feedback only and never change a checkpoint or road status.';
+
+  @override
+  String get communityReportsAdd => 'Add a report';
+
+  @override
+  String get communityReportsEmpty => 'No reports right now.';
+
+  @override
+  String get communityReportsLoadFailed => 'Reports could not be loaded.';
+
+  @override
+  String get communityFilterAll => 'All';
+
+  @override
+  String get communityGroupRoad => 'Roads';
+
+  @override
+  String get communityGroupCheckpoint => 'Checkpoints';
+
+  @override
+  String get communityGroupSafety => 'Safety';
+
+  @override
+  String get communityGroupOther => 'Other';
+
+  @override
+  String get communitySortRecent => 'Newest';
+
+  @override
+  String get communitySortTop => 'Most supported';
+
+  @override
+  String get communitySortDisputed => 'Most disputed';
+
+  @override
+  String get communityBadgeRecent => 'Recent';
+
+  @override
+  String get communityBadgeDisputed => 'Disputed';
+
+  @override
+  String get communityBadgeWellSupported => 'Well supported';
+
+  @override
+  String get communityAwaitingReview => 'Awaiting admin verification';
+
+  @override
+  String get communityUnverifiedPrefix => 'Unverified report: ';
+
+  @override
+  String get communityCategoryRoadClosure => 'Road closed';
+
+  @override
+  String get communityCategoryRoadReopened => 'Road reopened';
+
+  @override
+  String get communityCategoryRoadCongestion => 'Congestion';
+
+  @override
+  String get communityCategoryCheckpointOpenMarkedClosed =>
+      'Checkpoint open but shown closed';
+
+  @override
+  String get communityCategoryCheckpointClosedMarkedOpen =>
+      'Checkpoint closed but shown open';
+
+  @override
+  String get communityCategoryCheckpointOutdated =>
+      'Outdated checkpoint information';
+
+  @override
+  String get communityCategorySafetyAlert => 'Safety or security alert';
+
+  @override
+  String get communityCategoryDriverReport => 'Trip or driver feedback';
+
+  @override
+  String get communityCategoryIncorrectMapInfo => 'Incorrect map information';
+
+  @override
+  String get communityCategoryOther => 'Other';
+
+  @override
+  String get communitySheetTitle => 'Add a report';
+
+  @override
+  String get communitySensitiveNote =>
+      'Describe only what you saw. Do not include a person\'s name, plate number or other personal details. Others will see this as an unverified report.';
+
+  @override
+  String get communityFieldCategory => 'Report type';
+
+  @override
+  String get communityFieldDescription => 'What happened?';
+
+  @override
+  String get communityFieldLocation => 'Place name';
+
+  @override
+  String get communityAttachLocation => 'Show my current location on the map';
+
+  @override
+  String get communitySubmit => 'Send report';
+
+  @override
+  String get communitySubmitted => 'Report posted.';
+
+  @override
+  String get communitySubmitFailed =>
+      'The report could not be sent. Try again.';
+
+  @override
+  String get communityTooMany => 'You have sent many reports. Try again later.';
+
+  @override
+  String get communityUpvote => 'Support this report';
+
+  @override
+  String get communityDownvote => 'Dispute this report';
+
+  @override
+  String get communityVoteFailed => 'Your vote could not be saved.';
+
+  @override
+  String get communityOwnReportVote => 'You cannot vote on your own report.';
+
+  @override
+  String get communityFlag => 'Flag as misleading';
+
+  @override
+  String get communityFlagged => 'Thanks. Our team will look at this report.';
+
+  @override
+  String get communityFlagFailed => 'The flag could not be sent.';
+
+  @override
+  String get communityJustNow => 'Just now';
+
+  @override
+  String communityMinutesAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes ago',
+      one: '1 minute ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityHoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours ago',
+      one: '1 hour ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days ago',
+      one: '1 day ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityVoteCounts(int up, int down) {
+    return '$up support, $down dispute';
+  }
+
+  @override
+  String get mapStraightLineNote =>
+      'Road route unavailable: showing a straight line';
+
+  @override
+  String get mapCheckpointsUnavailable => 'Checkpoint data unavailable';
+
+  @override
+  String get mapCheckpointsLoadFailed => 'Checkpoints could not be loaded';
+
+  @override
+  String get checkpointOfficialUnknown => 'Official status: not published';
+
+  @override
+  String checkpointEnteringChanged(String time) {
+    return 'Entering: last changed $time';
+  }
+
+  @override
+  String checkpointLeavingChanged(String time) {
+    return 'Leaving: last changed $time';
+  }
+
+  @override
+  String checkpointCommunitySays(String status) {
+    return 'Community says: $status (unverified)';
+  }
+
+  @override
+  String get communityStatusOpen => 'open';
+
+  @override
+  String get communityStatusClosed => 'closed';
+
+  @override
+  String get communityStatusOutdated => 'status may be outdated';
+
+  @override
+  String get checkpointPositionOsm =>
+      'Position: © OpenStreetMap contributors (ODbL)';
+
+  @override
+  String get checkpointsUnplacedTitle => 'Checkpoints without a map position';
+
+  @override
+  String get checkpointsUnplacedBody =>
+      'Listed by the provider, but no reliable position is known, so they are not pinned.';
+
+  @override
+  String get communityPickLocation => 'Tap the map to set where this is';
+
+  @override
+  String get communityUseMyLocation => 'Use my current location';
+
+  @override
+  String get communityLocationRequired =>
+      'Choose the place on the map for this kind of report.';
+
+  @override
+  String get communityLocationOptional => 'Location (optional)';
+
+  @override
+  String get communityLocationOutside =>
+      'That place is outside Darb\'s service area.';
+
+  @override
+  String get communityLocationUnavailable =>
+      'Your current location is not available.';
+
+  @override
+  String get communityLocationSet => 'Place set on the map';
+
+  @override
+  String get communityClearLocation => 'Remove place';
+
+  @override
+  String get mapRouteLabel => 'Route';
+
+  @override
+  String get merchantOrderMapTitle => 'Order route';
 }

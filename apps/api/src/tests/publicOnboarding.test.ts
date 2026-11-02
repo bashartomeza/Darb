@@ -7,7 +7,7 @@ import { idempotencyPayloadDigest, keyedDigest } from "../lib/keyedDigest.js";
 function disabledConfig() {
   return createConfig({
     APP_ENV: "local",
-    DATABASE_URL: "mysql://local:local@localhost:3306/masari",
+    DATABASE_URL: "mysql://local:local@localhost:3306/darb",
     JWT_SECRET: "public-onboarding-test-jwt-secret-longer-than-thirty-two",
     REFRESH_TOKEN_PEPPER: "public-onboarding-test-refresh-secret-longer-than-thirty-two",
     CORS_ORIGINS: "http://localhost:5173",
@@ -22,7 +22,7 @@ describe("public onboarding boundary", () => {
   it("keeps safe config registered and every mutation absent when disabled", async () => {
     const app = createApp(disabledConfig());
     const config = await request(app).get("/api/v1/onboarding/config").expect(200);
-    expect(config.body).toEqual({ enabled: false, registration_roles: [], request_id: expect.any(String) });
+    expect(config.body).toEqual({ enabled: false, registration_roles: [], open_registration_roles: [], request_id: expect.any(String) });
     expect(JSON.stringify(config.body)).not.toMatch(/provider|pepper|environment/);
     const consent = await request(app).get("/api/v1/onboarding/consents?locale=ar").expect(404);
     expect(consent.body).toEqual({ error: "not_found", request_id: expect.any(String) });
@@ -37,15 +37,17 @@ describe("public onboarding boundary", () => {
   it("rejects every production-like attempt to enable public onboarding or fake delivery", () => {
     const base = {
       APP_ENV: "production",
-      DATABASE_URL: "mysql://production:secret@db.internal:3306/masari",
+      DATABASE_URL: "mysql://production:secret@db.internal:3306/darb",
       JWT_SECRET: "production-jwt-secret-longer-than-thirty-two-characters",
       REFRESH_TOKEN_PEPPER: "production-refresh-secret-longer-than-thirty-two-characters",
-      CORS_ORIGINS: "https://admin.masari.example",
+      CORS_ORIGINS: "https://admin.darb.example",
       APP_RELEASE: "test",
       TRUST_PROXY: "none"
     };
-    expect(() => createConfig({ ...base, PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow(/cannot be enabled/);
+    expect(() => createConfig({ ...base, PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow(/requires OTP_PROVIDER=email/);
     expect(() => createConfig({ ...base, OTP_PROVIDER: "fake" })).toThrow(/forbidden/);
+    // Email delivery needs the SMTP settings; Darb sends no SMS.
+    expect(() => createConfig({ ...base, OTP_PROVIDER: "email" })).toThrow(/OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp/);
   });
 
   it("uses an isolated keyed digest for secret-bearing idempotency payloads", () => {

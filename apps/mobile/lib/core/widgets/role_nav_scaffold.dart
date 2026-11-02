@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import 'masari_bottom_nav.dart';
+import 'darb_bottom_nav.dart';
+import 'language_switch.dart';
+import 'darb_back_button.dart';
+import 'passenger_bottom_nav.dart';
+import '../theme/app_theme.dart';
+import '../theme/passenger_theme.dart';
 
 /// A bottom-nav destination. The branch it selects is its index in the list, so
 /// the order here must match the order of the shell's branches.
 class RoleNavDestination {
   const RoleNavDestination({required this.item});
 
-  final MasariNavItem item;
+  final DarbNavItem item;
 }
 
 /// The single Scaffold that owns the bottom navigation for a role.
@@ -25,11 +30,18 @@ class RoleShellScaffold extends StatelessWidget {
   const RoleShellScaffold({
     required this.navigationShell,
     required this.destinations,
+    this.passengerItems,
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
   final List<RoleNavDestination> destinations;
+
+  /// When set, the shell renders the passenger design: a white page with the
+  /// passenger bottom bar instead of the app bar and side menu used by the
+  /// other roles. Branches missing from this list (the notifications inbox)
+  /// stay reachable from within the screens — Home's bell opens it.
+  final List<PassengerNavItem>? passengerItems;
 
   void _onSelected(int index) {
     // `initialLocation: true` only when re-tapping the active tab: that pops
@@ -44,14 +56,264 @@ class RoleShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // The shell body is an IndexedStack, so each branch keeps its state while
-      // the others sit offstage.
-      body: navigationShell,
-      bottomNavigationBar: MasariBottomNav(
-        items: [for (final d in destinations) d.item],
-        currentIndex: navigationShell.currentIndex,
-        onSelected: _onSelected,
+    final passenger = passengerItems;
+    if (passenger != null) return _passengerShell(context, passenger);
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    final wide = MediaQuery.sizeOf(context).width >= 1024;
+    final path = GoRouterState.of(context).uri.path;
+    final roleHome =
+        '/${path.split('/').where((part) => part.isNotEmpty).first}';
+    const tabRoots = {
+      '/passenger',
+      '/passenger/trips',
+      '/passenger/map',
+      '/passenger/notifications',
+      '/driver',
+      '/driver/matches',
+      '/driver/my-trip',
+      '/driver/performance',
+      '/merchant',
+      '/merchant/shipments',
+      '/merchant/reports',
+      '/merchant/notifications',
+    };
+    final isDetail = !tabRoots.contains(path) && !path.endsWith('/account');
+    final l10n = AppLocalizations.of(context);
+    final title = path.endsWith('/assistant')
+        ? l10n.assistantTitle
+        : path.contains('/request/')
+        ? l10n.requestDetails
+        : path.contains('/match/')
+        ? l10n.navRequests
+        : destinations[navigationShell.currentIndex].item.label;
+    final panel = Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        centerTitle: false,
+        automaticallyImplyLeading: false,
+        leading: isDetail ? DarbBackButton(fallback: roleHome) : null,
+        actions: [const LanguageSwitch(), const SizedBox(width: 12)],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1),
+        ),
+      ),
+      body: ShellLanguageControl(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 840),
+            child: navigationShell,
+          ),
+        ),
+      ),
+      bottomNavigationBar: wide
+          ? null
+          : DarbBottomNav(
+              items: [for (final d in destinations) d.item],
+              currentIndex: navigationShell.currentIndex,
+              onSelected: _onSelected,
+            ),
+    );
+    return ColoredBox(
+      color: AppTheme.surfaceContainerLow,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: wide
+              ? Row(
+                  children: [
+                    SizedBox(width: 264, child: _sidebar(context, arabic)),
+                    Expanded(child: panel),
+                  ],
+                )
+              : panel,
+        ),
+      ),
+    );
+  }
+
+  Widget _passengerShell(BuildContext context, List<PassengerNavItem> items) {
+    final path = GoRouterState.of(context).uri.path;
+    final l10n = AppLocalizations.of(context);
+    // Request details is the only passenger screen in the shell that has no
+    // header of its own; every other screen draws its own top area.
+    final needsAppBar = path.startsWith('/passenger/request/');
+    return PassengerTheme(
+      child: Scaffold(
+        backgroundColor: PassengerStyle.surface,
+        appBar: needsAppBar
+            ? AppBar(
+                automaticallyImplyLeading: false,
+                leading: const DarbBackButton(fallback: '/passenger'),
+                title: Text(l10n.requestDetails),
+              )
+            : null,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 840),
+            child: navigationShell,
+          ),
+        ),
+        bottomNavigationBar: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 840),
+            child: PassengerBottomNav(
+              items: items,
+              currentBranch: navigationShell.currentIndex,
+              onSelected: _onSelected,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sidebar(
+    BuildContext context,
+    bool arabic, {
+    bool closeDrawer = false,
+  }) {
+    return Material(
+      color: Colors.white,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: AppTheme.tertiary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.route_rounded, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        arabic ? 'درب' : 'Darb',
+                        style: const TextStyle(
+                          color: AppTheme.onSurface,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Text(
+                        'D A R B',
+                        style: TextStyle(
+                          color: AppTheme.onSurfaceVariant,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 48),
+              Text(
+                arabic ? 'القائمة الرئيسية' : 'MAIN MENU',
+                style: const TextStyle(
+                  color: AppTheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: [
+                    for (var i = 0; i < destinations.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: ListTile(
+                          key: ValueKey('roleNavigation-$i'),
+                          selected: i == navigationShell.currentIndex,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          tileColor: i == navigationShell.currentIndex
+                              ? AppTheme.primaryContainer
+                              : Colors.transparent,
+                          leading: Icon(
+                            destinations[i].item.icon,
+                            color: i == navigationShell.currentIndex
+                                ? AppTheme.primary
+                                : AppTheme.onSurfaceVariant,
+                          ),
+                          title: Text(
+                            destinations[i].item.label,
+                            style: TextStyle(
+                              color: i == navigationShell.currentIndex
+                                  ? AppTheme.onPrimaryContainer
+                                  : AppTheme.onSurface,
+                              fontWeight: i == navigationShell.currentIndex
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                          onTap: () {
+                            if (closeDrawer) Navigator.of(context).pop();
+                            _onSelected(i);
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceContainerLow,
+                  border: Border.all(color: AppTheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.verified_user_outlined,
+                      color: AppTheme.primary,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            arabic ? 'رحلتك بأمان' : 'Travel with confidence',
+                            style: const TextStyle(
+                              color: AppTheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            arabic
+                                ? 'تابع رحلاتك وراجع جلسات حسابك.'
+                                : 'Follow your trips and manage your account sessions.',
+                            style: const TextStyle(
+                              color: AppTheme.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -66,7 +328,7 @@ class RoleShellScaffold extends StatelessWidget {
 /// the two disagree; each one renders an [UnavailableTab] that names the
 /// missing backend rather than an empty list that reads as a failed load.
 ///
-/// Five is the ceiling: [MasariBottomNav] and Material's own guidance both stop
+/// Five is the ceiling: [DarbBottomNav] and Material's own guidance both stop
 /// being legible past that, which is why the merchant's "create shipment" node
 /// stays a primary action on the home and shipments screens instead of a sixth
 /// tab.
@@ -77,35 +339,35 @@ class RoleNavDestinations {
 
   static List<RoleNavDestination> passenger(AppLocalizations l10n) => [
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.home_outlined,
         selectedIcon: Icons.home,
         label: l10n.navHome,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.route_outlined,
         selectedIcon: Icons.route,
         label: l10n.navTrips,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.map_outlined,
         selectedIcon: Icons.map,
         label: l10n.navMapAlerts,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.notifications_none,
         selectedIcon: Icons.notifications,
         label: l10n.navNotifications,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
         label: l10n.navAccount,
@@ -113,37 +375,67 @@ class RoleNavDestinations {
     ),
   ];
 
+  /// The four tabs of the passenger bottom bar, in the design's order. Each
+  /// points at its branch; notifications (branch 3) is opened from Home's bell.
+  static List<PassengerNavItem> passengerBar(AppLocalizations l10n) => [
+    PassengerNavItem(
+      branch: 0,
+      asset: 'assets/images/passenger/nav_home.svg',
+      iconSize: const Size(24, 24),
+      label: l10n.passengerNavHome,
+    ),
+    PassengerNavItem(
+      branch: 1,
+      asset: 'assets/images/passenger/nav_bus.svg',
+      iconSize: const Size(29, 27),
+      label: l10n.passengerNavTrips,
+    ),
+    PassengerNavItem(
+      branch: 2,
+      asset: 'assets/images/passenger/nav_maps.svg',
+      iconSize: const Size(24, 24),
+      label: l10n.passengerNavMaps,
+      flexible: false,
+    ),
+    PassengerNavItem(
+      branch: 4,
+      asset: 'assets/images/passenger/nav_settings.svg',
+      iconSize: const Size(24, 24),
+      label: l10n.passengerNavSettings,
+    ),
+  ];
+
   static List<RoleNavDestination> driver(AppLocalizations l10n) => [
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.home_outlined,
         selectedIcon: Icons.home,
         label: l10n.navHome,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.inbox_outlined,
         selectedIcon: Icons.inbox,
         label: l10n.navRequests,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.local_shipping_outlined,
         selectedIcon: Icons.local_shipping,
         label: l10n.navMyTrip,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.insights_outlined,
         selectedIcon: Icons.insights,
         label: l10n.navPerformance,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
         label: l10n.navAccount,
@@ -153,35 +445,35 @@ class RoleNavDestinations {
 
   static List<RoleNavDestination> merchant(AppLocalizations l10n) => [
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.home_outlined,
         selectedIcon: Icons.home,
         label: l10n.navHome,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.inventory_2_outlined,
         selectedIcon: Icons.inventory_2,
         label: l10n.navShipments,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.assessment_outlined,
         selectedIcon: Icons.assessment,
         label: l10n.navReports,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.notifications_none,
         selectedIcon: Icons.notifications,
         label: l10n.navNotifications,
       ),
     ),
     RoleNavDestination(
-      item: MasariNavItem(
+      item: DarbNavItem(
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
         label: l10n.navAccount,

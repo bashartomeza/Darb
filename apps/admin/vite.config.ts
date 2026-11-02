@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      __MASARI_ADMIN_CONFIG__: JSON.stringify(appConfig),
-      __MASARI_DEMO_BUILD__: JSON.stringify(appConfig.demoFeaturesEnabled)
+      __DARB_ADMIN_CONFIG__: JSON.stringify(appConfig),
+      __DARB_DEMO_BUILD__: JSON.stringify(appConfig.demoFeaturesEnabled)
     },
     server: {
       port: 5173

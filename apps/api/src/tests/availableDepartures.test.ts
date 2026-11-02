@@ -12,7 +12,7 @@ const { createApp } = await import("../app.js");
 
 const environment = {
   APP_ENV: "local",
-  DATABASE_URL: "mysql://test:test@localhost:3306/masari_test",
+  DATABASE_URL: "mysql://test:test@localhost:3306/darb_test",
   JWT_SECRET: "test-only-jwt-secret-with-at-least-thirty-two-characters",
   CORS_ORIGINS: "http://localhost:5173",
   LOG_LEVEL: "silent",
@@ -72,7 +72,7 @@ beforeEach(() => {
     return {
       id: where.id,
       user_id: id,
-      user: { id, role, account_status: "active", security_version: 1 },
+      user: { email_verified_at: new Date(), id, role, account_status: "active", security_version: 1 },
       security_version_at_issue: 1,
       expires_at: new Date(Date.now() + 60_000),
       revoked_at: null

@@ -61,7 +61,7 @@ const SAFE_PATH_SEGMENTS = new Set([
 ]);
 
 function normalizedRoute(req: Request) {
-  const pathname = new URL(req.originalUrl, "http://masari.invalid").pathname;
+  const pathname = new URL(req.originalUrl, "http://darb.invalid").pathname;
   return pathname
     .split("/")
     .map((segment) => (segment === "" || SAFE_PATH_SEGMENTS.has(segment) ? segment : ":id"))

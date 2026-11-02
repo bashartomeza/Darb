@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createConfig } from "../config.js";
-import { generateInvitationCode, normalizeInvitationCode } from "../lib/invitations.js";
-import { keyedDigest } from "../lib/keyedDigest.js";
+import { createInvitation, generateInvitationCode, normalizeInvitationCode } from "../lib/invitations.js";
+import { keyedDigest, phoneDigest } from "../lib/keyedDigest.js";
 import { FakeOtpProvider, generateOtpCode } from "../lib/otp.js";
 import { analyzePhoneNormalization, maskPhone, normalizePhoneToE164, PhoneNormalizationError } from "../lib/phone.js";
 
@@ -19,42 +19,100 @@ const enabledSecrets = {
 function localConfig(overrides: Record<string, string | undefined> = {}) {
   return createConfig({
     APP_ENV: "local",
-    DATABASE_URL: "mysql://local:local@localhost:3306/masari",
+    DATABASE_URL: "mysql://local:local@localhost:3306/darb",
     JWT_SECRET: "local-test-jwt-secret-longer-than-thirty-two-characters",
     REFRESH_TOKEN_PEPPER: "local-test-refresh-pepper-longer-than-thirty-two-characters",
     CORS_ORIGINS: "http://localhost:5173",
     TRUST_PROXY: "none",
     ...overrides
   });
+}
 
-  it("reports invalid rows and canonical collisions without returning phone values", () => {
+describe("onboarding foundation primitives", () => {
+  it("normalizes valid international numbers from representative numbering plans", () => {
+    const cases = [
+      ["+970599123456", "+970599123456"],
+      ["+972569523636", "+972569523636"],
+      ["+962790000000", "+962790000000"],
+      ["+966501234567", "+966501234567"],
+      ["+971501234567", "+971501234567"],
+      ["+12025550123", "+12025550123"],
+      ["+442079460018", "+442079460018"],
+      ["+33142345678", "+33142345678"]
+    ] as const;
+    for (const [input, canonical] of cases) expect(normalizePhoneToE164(input)).toBe(canonical);
+  });
+
+  it("normalizes safe formatting variants and explicit-region local input", () => {
+    expect(normalizePhoneToE164("059 000 0001", { region: "PS" })).toBe("+970590000001");
+    expect(normalizePhoneToE164("+970 59 000 0001")).toBe("+970590000001");
+    expect(normalizePhoneToE164("٠٥٩ ٠٠٠ ٠٠٠١", { region: "PS" })).toBe("+970590000001");
+    expect(normalizePhoneToE164("۰۵۹-۰۰۰-۰۰۰۱", { region: "PS" })).toBe("+970590000001");
+    expect(normalizePhoneToE164("+972 (56) 952-3636")).toBe("+972569523636");
+    expect(normalizePhoneToE164("(202) 555-0123", { region: "US" })).toBe("+12025550123");
+    expect(maskPhone("+970590000001")).toBe("+970 ••• •• 0001");
+    expect(maskPhone("+12025550123")).toBe("+1 ••• •• 0123");
+  });
+
+  it("rejects malformed, ambiguous, unsupported, and excessive input", () => {
+    const invalid = [
+      "",
+      "   ",
+      "0590000001",
+      "00970590000001",
+      "+999123456789",
+      "+970123",
+      "+970500000000",
+      "+120255501234567890",
+      "+970590000001\n",
+      "+970590000001 ext 2",
+      "++970590000001",
+      "+97+0590000001",
+      "＋９７２５６９５２３６３６",
+      "+97256\u200b9523636",
+      "not-a-phone"
+    ];
+    for (const input of invalid) {
+      expect(() => normalizePhoneToE164(input)).toThrow(PhoneNormalizationError);
+    }
+    expect(() => normalizePhoneToE164("0590000001", { region: "ZZ" })).toThrow(PhoneNormalizationError);
+  });
+
+  it("canonicalizes identity before digest and collision checks without exposing phone values", () => {
+    const canonical = normalizePhoneToE164("+972 56-952-3636");
+    expect(phoneDigest(canonical, key)).toBe(phoneDigest("+972569523636", key));
+    expect(normalizePhoneToE164("+970569523636")).not.toBe(canonical);
+    expect(phoneDigest(canonical, key)).not.toBe(phoneDigest("+970569523636", key));
     const result = analyzePhoneNormalization([
       { id: "one", phone: "+970590000001" },
-      { id: "two", phone: "00970 59 000 0001" },
+      { id: "two", phone: "+970 59 000 0001" },
       { id: "three", phone: "invalid" }
     ]);
     expect(result).toEqual({ total: 3, valid: 2, invalid: 1, collisions: 1 });
     expect(JSON.stringify(result)).not.toContain("970");
   });
-}
 
-describe("onboarding foundation primitives", () => {
-  it("normalizes only valid Palestinian numbers to canonical E.164", () => {
-    expect(normalizePhoneToE164("059 000 0001", { region: "PS" })).toBe("+970590000001");
-    expect(normalizePhoneToE164("+970 59 000 0001")).toBe("+970590000001");
-    expect(normalizePhoneToE164("٠٥٩ ٠٠٠ ٠٠٠١", { region: "PS" })).toBe("+970590000001");
-    expect(normalizePhoneToE164("۰۵۹-۰۰۰-۰۰۰۱", { region: "PS" })).toBe("+970590000001");
-    expect(normalizePhoneToE164("00970 (59) 000-0001")).toBe("+970590000001");
-    expect(normalizePhoneToE164("(+970) 59-000-0001")).toBe("+970590000001");
-    expect(maskPhone("+970590000001")).toBe("+970 ••• •• 0001");
-    expect(() => normalizePhoneToE164("+972501234567")).toThrow(PhoneNormalizationError);
-    expect(() => normalizePhoneToE164("0590000001")).toThrow(PhoneNormalizationError);
-    expect(() => normalizePhoneToE164("not-a-phone", { region: "PS" })).toThrow(PhoneNormalizationError);
-    expect(() => normalizePhoneToE164("+970500000000")).toThrow(PhoneNormalizationError);
-    expect(() => normalizePhoneToE164("+970123")).toThrow(PhoneNormalizationError);
-    expect(() => normalizePhoneToE164("+970590000001\n")).toThrow(PhoneNormalizationError);
-    expect(() => normalizePhoneToE164("+970590000001 ext 2")).toThrow(PhoneNormalizationError);
-    expect(() => normalizePhoneToE164("++970590000001")).toThrow(PhoneNormalizationError);
+  it("binds invitations to the global canonical phone digest", async () => {
+    const invitation = { id: "invitation_global" };
+    const create = vi.fn().mockResolvedValue(invitation);
+    const result = await createInvitation(
+      { invitation: { create } } as never,
+      {
+        createdById: "admin_global",
+        intendedRole: "passenger",
+        intendedPhone: "+972 (56) 952-3636",
+        expiresAt: new Date("2026-08-20T00:00:00.000Z"),
+        keys: { code: key, phone: key }
+      }
+    );
+
+    expect(result.invitation).toBe(invitation);
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        intended_phone_digest: phoneDigest("+972569523636", key),
+        phone_last4: "3636"
+      })
+    });
   });
 
   it("generates 100-bit Crockford codes and normalizes their display form", () => {
@@ -127,16 +185,25 @@ describe("onboarding configuration isolation", () => {
     })).toThrow(/distinct from JWT and refresh-token secrets/);
   });
 
-  it("rejects unsupported regions and enables public onboarding only with its isolated prerequisites", () => {
-    expect(() => localConfig({ SUPPORTED_PHONE_REGIONS: "PS,IL" })).toThrow(/must be PS/);
-    expect(() => localConfig({ PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow(/requires INVITATIONS_ENABLED/);
-    const parsed = localConfig({
-      INVITATIONS_ENABLED: "true",
+  it("enables public onboarding only with its isolated prerequisites", () => {
+    expect(() => localConfig({ PUBLIC_ONBOARDING_ENABLED: "true" })).toThrow(/pepper is required/);
+    expect(() => localConfig({
       PUBLIC_ONBOARDING_ENABLED: "true",
       OTP_PROVIDER: "fake",
-      ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: "true",
       ...enabledSecrets
+    })).toThrow(/requires DRIVER_DOCUMENTS_ENABLED/);
+    // Registration does not depend on invitations: no INVITATIONS_ENABLED and no invitation pepper.
+    const { INVITATION_CODE_PEPPER: _unused, ...withoutInvitationPepper } = enabledSecrets as Record<string, string>;
+    const parsed = localConfig({
+      PUBLIC_ONBOARDING_ENABLED: "true",
+      OTP_PROVIDER: "fake",
+      DRIVER_DOCUMENTS_ENABLED: "true",
+      DRIVER_DOCUMENTS_DIR: process.cwd(),
+      ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: "true",
+      ...withoutInvitationPepper
     });
+    expect(parsed.invitationsEnabled).toBe(false);
+    expect(parsed.onboarding).toBeDefined();
     expect(parsed.publicRegistration).toEqual(expect.objectContaining({
       attemptTtlSeconds: 1800,
       registrationGrantTtlSeconds: 900,
@@ -149,10 +216,10 @@ describe("onboarding configuration isolation", () => {
   it("rejects the fake provider in production even when no routes are enabled", () => {
     expect(() => createConfig({
       APP_ENV: "production",
-      DATABASE_URL: "mysql://production:secret@db.internal:3306/masari",
+      DATABASE_URL: "mysql://production:secret@db.internal:3306/darb",
       JWT_SECRET: "production-jwt-secret-longer-than-thirty-two-characters",
       REFRESH_TOKEN_PEPPER: "production-refresh-pepper-longer-than-thirty-two-characters",
-      CORS_ORIGINS: "https://admin.masari.example",
+      CORS_ORIGINS: "https://admin.darb.example",
       APP_RELEASE: "test",
       TRUST_PROXY: "none",
       OTP_PROVIDER: "fake"

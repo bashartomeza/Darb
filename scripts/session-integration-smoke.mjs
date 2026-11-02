@@ -11,8 +11,8 @@ const apiBaseUrl = `${apiOrigin}/api/v1`;
 const databaseUrl = process.env.DATABASE_URL;
 const databaseName = databaseUrl ? new URL(databaseUrl).pathname.slice(1) : "";
 const resetKey = process.env.DEMO_RESET_KEY;
-const passengerCredentials = ["+970590000001", process.env.DEMO_PASSENGER_PASSWORD];
-const adminCredentials = ["+970590000005", process.env.DEMO_ADMIN_PASSWORD];
+const passengerCredentials = ["demo.passenger@darb.app", process.env.DEMO_PASSENGER_PASSWORD];
+const adminCredentials = ["demo.admin@darb.app", process.env.DEMO_ADMIN_PASSWORD];
 let mysqlDefaults;
 
 function assert(condition, message) {
@@ -86,17 +86,20 @@ async function call(path, { token, method = "GET", body, headers = {}, expected 
 }
 
 async function reset() {
-  return call("/demo/reset", {
+  await call("/demo/reset", {
     method: "POST",
     body: {},
     headers: { "x-demo-reset-key": resetKey }
   });
+  const verified = mysql(`SELECT email_verified_at IS NOT NULL AND phone_verified_at IS NOT NULL AND profile_state='complete'
+    FROM users WHERE email='demo.passenger@darb.app'`);
+  assert(verified === "1", "Demo reset did not create a verified complete passenger");
 }
 
-async function login([phone, password], deviceName) {
+async function login([email, password], deviceName) {
   const { data } = await call("/auth/login", {
     method: "POST",
-    body: { phone, password, device_name: deviceName }
+    body: { email, password, device_name: deviceName }
   });
   return data;
 }
@@ -110,6 +113,8 @@ async function run() {
   assert(process.env.APP_ENV === "demo", "Trusted-session integration requires APP_ENV=demo");
   assert(databaseName.endsWith("_ci"), "Trusted-session integration refuses a database not ending in _ci");
   assert(/^[A-Za-z0-9_]+$/.test(databaseName), "Trusted-session integration requires a safe database name");
+  const resetAllowedDatabases = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
+  assert(databaseName.toLowerCase() !== "darb" && resetAllowedDatabases.includes(databaseName), "Trusted-session integration requires an explicitly reset-safe database");
   assert(resetKey && passengerCredentials[1] && adminCredentials[1], "Required demo credentials are unavailable");
   mysqlDefaults = createMysqlDefaults(new URL(databaseUrl));
   await reset();
@@ -196,18 +201,18 @@ async function run() {
   await call(`/admin/users/${target.user.id}/status`, {
     token: administrator.token,
     method: "PATCH",
-    body: { status: "suspended", reason: "Automated integration suspension" }
+    body: { status: "suspended", reason: "Automated integration suspension", expected_status: "active" }
   });
   await expectRejected("/me", target.token, [403]);
   await call("/auth/login", {
     method: "POST",
-    body: { phone: passengerCredentials[0], password: passengerCredentials[1] },
+    body: { email: passengerCredentials[0], password: passengerCredentials[1] },
     expected: [403]
   });
   await call(`/admin/users/${target.user.id}/status`, {
     token: administrator.token,
     method: "PATCH",
-    body: { status: "active" }
+    body: { status: "active", expected_status: "suspended" }
   });
   await expectRejected("/me", target.token);
   const reactivated = await login(passengerCredentials, "integration-reactivated");
@@ -216,23 +221,24 @@ async function run() {
   await reset();
   const concurrencyAdmin = await login(adminCredentials, "integration-admin-one");
   const secondAdminId = "integration_admin_2";
+  const secondAdminEmail = "integration.admin.2@darb.app";
   const secondAdminPhone = "+970590000006";
   const secondAdminHash = await bcrypt.hash(adminCredentials[1], 4);
   mysql(`INSERT INTO users
-    (id, name, phone, password_hash, role, account_status, security_version, status_updated_at, demo_account, created_at)
-    VALUES ('${secondAdminId}', 'Integration Admin 2', '${secondAdminPhone}', '${secondAdminHash}', 'admin', 'active', 1, CURRENT_TIMESTAMP(3), TRUE, CURRENT_TIMESTAMP(3))`);
-  const secondAdmin = await login([secondAdminPhone, adminCredentials[1]], "integration-admin-two");
+    (id, name, phone, phone_verified_at, email, email_verified_at, password_hash, profile_state, role, account_status, security_version, status_updated_at, demo_account, created_at)
+    VALUES ('${secondAdminId}', 'Integration Admin 2', '${secondAdminPhone}', CURRENT_TIMESTAMP(3), '${secondAdminEmail}', CURRENT_TIMESTAMP(3), '${secondAdminHash}', 'complete', 'admin', 'active', 1, CURRENT_TIMESTAMP(3), TRUE, CURRENT_TIMESTAMP(3))`);
+  const secondAdmin = await login([secondAdminEmail, adminCredentials[1]], "integration-admin-two");
   const adminStatusRace = await Promise.all([
     call(`/admin/users/${secondAdminId}/status`, {
       token: concurrencyAdmin.token,
       method: "PATCH",
-      body: { status: "disabled", reason: "Concurrent admin invariant test" },
+      body: { status: "disabled", reason: "Concurrent admin invariant test", expected_status: "active" },
       expected: [200, 403, 409]
     }),
     call(`/admin/users/${safeDatabaseId(concurrencyAdmin.user.id, "primary admin")}/status`, {
       token: secondAdmin.token,
       method: "PATCH",
-      body: { status: "disabled", reason: "Concurrent admin invariant test" },
+      body: { status: "disabled", reason: "Concurrent admin invariant test", expected_status: "active" },
       expected: [200, 403, 409]
     })
   ]);
@@ -253,13 +259,13 @@ async function run() {
   const loginStatusRace = await Promise.all([
     call("/auth/login", {
       method: "POST",
-      body: { phone: passengerCredentials[0], password: passengerCredentials[1], device_name: "integration-login-race" },
+      body: { email: passengerCredentials[0], password: passengerCredentials[1], device_name: "integration-login-race" },
       expected: [200, 403]
     }),
     call(`/admin/users/${safeDatabaseId(existingPassenger.user.id, "login-race passenger")}/status`, {
       token: raceAdministrator.token,
       method: "PATCH",
-      body: { status: "suspended", reason: "Concurrent login suspension test" }
+      body: { status: "suspended", reason: "Concurrent login suspension test", expected_status: "active" }
     })
   ]);
   assert(loginStatusRace[1].status === 200, "Concurrent suspension did not complete");

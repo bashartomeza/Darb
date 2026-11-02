@@ -4,10 +4,12 @@ import type { AppConfig } from "../config.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError, notFoundHandler } from "../middleware/error.js";
 import {
+  ADMIN_ROUTE_VERSION_HISTORY_LIMIT,
   routeManagementService,
   type RouteManagementService,
   type VersionStopInput
 } from "../services/routeManagement.js";
+import { routeFareService, type RouteFareService } from "../services/routeFares.js";
 
 const cleanText = (maximum: number) =>
   z.string().trim().min(1).max(maximum).regex(/^[^\u0000-\u001f\u007f]+$/).transform((value) => value.normalize("NFC"));
@@ -80,6 +82,14 @@ const publishSchema = z.strictObject({
   expected_revision: z.number().int().positive(),
   expected_current_version_id: id.nullable()
 });
+const currentVersionExpectation = z.strictObject({ expected_current_version_id: id.nullable() });
+const pauseSchema = currentVersionExpectation.extend({ reason: cleanText(500) });
+const resumeSchema = currentVersionExpectation;
+const retireVersionSchema = pauseSchema;
+const retireRouteSchema = z.strictObject({
+  reason: cleanText(500),
+  expected_current_version_id: z.null()
+});
 const reasonSchema = z.strictObject({ reason: cleanText(500) });
 const stopListSchema = z.strictObject({
   ...pagination,
@@ -119,15 +129,19 @@ function coordinate(value: unknown) {
   return numeric;
 }
 
-function serializeStop(stop: Record<string, unknown>, admin = true) {
+// Public callers see coordinates only once maps are switched on; admins always
+// do. Before M7D the public catalog withheld them unconditionally — see
+// docs/api/route-catalog.md for why that changed.
+function serializeStop(stop: Record<string, unknown>, admin = true, maps = false) {
+  const geo = admin || maps;
   return {
     id: stop.id,
     stop_key: admin ? stop.stop_key : undefined,
     service_region_key: admin ? stop.service_region_key : undefined,
     name_ar: stop.name_ar,
     name_en: stop.name_en,
-    latitude: admin ? coordinate(stop.latitude) : undefined,
-    longitude: admin ? coordinate(stop.longitude) : undefined,
+    latitude: geo ? coordinate(stop.latitude) : undefined,
+    longitude: geo ? coordinate(stop.longitude) : undefined,
     status: admin ? stop.status : undefined,
     retired_at: admin ? stop.retired_at : undefined,
     created_at: admin ? stop.created_at : undefined,
@@ -135,9 +149,10 @@ function serializeStop(stop: Record<string, unknown>, admin = true) {
   };
 }
 
-function serializeMembership(membership: Record<string, unknown>, admin = true) {
+function serializeMembership(membership: Record<string, unknown>, admin = true, maps = false) {
   return {
     id: admin ? membership.id : undefined,
+    stop_id: admin ? membership.stop_id : undefined,
     sequence: membership.sequence,
     passenger_pickup_allowed: membership.passenger_pickup,
     passenger_dropoff_allowed: membership.passenger_dropoff,
@@ -147,55 +162,77 @@ function serializeMembership(membership: Record<string, unknown>, admin = true) 
       ? membership.scheduled_offset_seconds
       : undefined,
     dwell_seconds: admin ? membership.dwell_seconds : undefined,
-    stop: serializeStop(membership.stop as Record<string, unknown>, admin)
+    stop: serializeStop(membership.stop as Record<string, unknown>, admin, maps)
   };
 }
 
-function serializeVersion(version: Record<string, unknown>, admin = true) {
+// Only released once the geometry pipeline marks a version `available`; a
+// pending or unavailable version reports its status and no points, so clients
+// fall back to the ordered stops rather than drawing an invented line.
+function serializeGeometry(version: Record<string, unknown>) {
+  const ready = version.geometry_status === "available";
+  return {
+    status: version.geometry_status,
+    ready,
+    encoding: ready ? version.geometry_encoding : null,
+    encoded: ready ? version.encoded_geometry : null,
+    precision: version.geometry_precision,
+    estimated_distance_m: version.estimated_distance_meters,
+    estimated_duration_s: version.estimated_duration_seconds
+  };
+}
+
+function serializeVersion(version: Record<string, unknown>, admin = true, detail = true, maps = false) {
   const stops = Array.isArray(version.stops)
-    ? (version.stops as Array<Record<string, unknown>>).map((membership) => serializeMembership(membership, admin))
+    ? (version.stops as Array<Record<string, unknown>>)
+        .slice(0, 100)
+        .map((membership) => serializeMembership(membership, admin, maps))
     : [];
   const count = version._count as { driver_routes?: number } | undefined;
   return {
     id: version.id,
-    service_route_id: admin ? version.service_route_id : undefined,
+    service_route_id: admin && detail ? version.service_route_id : undefined,
     version_number: version.version_number,
     status: version.status,
     name_ar: version.name_ar,
     name_en: version.name_en,
-    description_ar: admin ? version.description_ar : undefined,
-    description_en: admin ? version.description_en : undefined,
+    description_ar: admin && detail ? version.description_ar : undefined,
+    description_en: admin && detail ? version.description_en : undefined,
     active_from: version.active_from,
     active_until: version.active_until,
-    origin_stop_id: admin ? version.origin_stop_id : undefined,
-    destination_stop_id: admin ? version.destination_stop_id : undefined,
-    geometry: admin
-      ? {
+    origin_stop_id: admin && detail ? version.origin_stop_id : undefined,
+    destination_stop_id: admin && detail ? version.destination_stop_id : undefined,
+    geometry: detail && (admin || maps)
+      ? admin ? {
           status: version.geometry_status,
           ready: version.geometry_status === "available",
           precision: version.geometry_precision,
           estimated_distance_m: version.estimated_distance_meters,
           estimated_duration_s: version.estimated_duration_seconds
-        }
+        } : serializeGeometry(version)
       : undefined,
-    draft_revision: admin ? version.draft_revision : undefined,
+    draft_revision: admin && detail ? version.draft_revision : undefined,
     stop_count: admin ? stops.length : undefined,
-    stops,
-    driver_availability_count: admin ? (count?.driver_routes ?? 0) : undefined,
+    stops: detail ? stops : undefined,
+    driver_availability_count: admin && detail ? (count?.driver_routes ?? 0) : undefined,
     published_at: admin ? version.published_at : undefined,
     paused_at: admin ? version.paused_at : undefined,
-    pause_reason: admin ? version.pause_reason : undefined,
+    pause_reason: admin && detail ? version.pause_reason : undefined,
     retired_at: admin ? version.retired_at : undefined,
-    retirement_reason: admin ? version.retirement_reason : undefined,
-    created_at: admin ? version.created_at : undefined,
-    updated_at: admin ? version.updated_at : undefined
+    retirement_reason: admin && detail ? version.retirement_reason : undefined,
+    created_at: admin && detail ? version.created_at : undefined,
+    updated_at: admin && detail ? version.updated_at : undefined
   };
 }
 
-function serializeRoute(route: Record<string, unknown>, admin = true) {
+function serializeRoute(route: Record<string, unknown>, admin = true, detail = true, maps = false) {
   const current = route.current_version as Record<string, unknown> | null | undefined;
   const versions = Array.isArray(route.versions)
-    ? (route.versions as Array<Record<string, unknown>>).map((version) => serializeVersion(version, true))
+    ? detail
+      ? (route.versions as Array<Record<string, unknown>>)
+        .slice(0, ADMIN_ROUTE_VERSION_HISTORY_LIMIT)
+        .map((version) => serializeVersion(version, true))
+      : undefined
     : undefined;
   const count = route._count as { versions?: number } | undefined;
   return {
@@ -206,7 +243,7 @@ function serializeRoute(route: Record<string, unknown>, admin = true) {
     direction: route.direction,
     status: route.status,
     current_version_id: admin ? route.current_version_id : undefined,
-    current_version: current ? serializeVersion(current, admin) : null,
+    current_version: current ? serializeVersion(current, admin, detail, maps) : null,
     version_count: admin ? (count?.versions ?? versions?.length ?? 0) : undefined,
     versions: admin ? versions : undefined,
     retired_at: admin ? route.retired_at : undefined,
@@ -267,7 +304,7 @@ export function createAdminRouteManagementRouter(
         direction: input.direction,
         serviceRegionKey: input.service_region_key
       });
-      res.json({ ...result, routes: result.routes.map((route) => serializeRoute(route as unknown as Record<string, unknown>)) });
+      res.json({ ...result, routes: result.routes.map((route) => serializeRoute(route as unknown as Record<string, unknown>, true, false)) });
     } catch (error) {
       next(error);
     }
@@ -320,8 +357,12 @@ export function createAdminRouteManagementRouter(
 
   router.post("/admin/service-routes/:id/retire", async (req: AuthenticatedRequest, res, next) => {
     try {
-      const input = reasonSchema.parse(req.body);
-      const result = await service.retireRoute(pathId(req), input.reason, writeActor(req));
+      const input = retireRouteSchema.parse(req.body);
+      const result = await service.retireRoute(
+        pathId(req),
+        { reason: input.reason, expectedCurrentVersionId: input.expected_current_version_id },
+        writeActor(req)
+      );
       res.json({ route: serializeRoute(result.resource as unknown as Record<string, unknown>), replayed: result.replayed, request_id: req.requestId });
     } catch (error) {
       next(error);
@@ -395,8 +436,12 @@ export function createAdminRouteManagementRouter(
 
   router.post("/admin/route-versions/:id/pause", async (req: AuthenticatedRequest, res, next) => {
     try {
-      const input = reasonSchema.parse(req.body);
-      const result = await service.pauseVersion(pathId(req), input.reason, writeActor(req));
+      const input = pauseSchema.parse(req.body);
+      const result = await service.pauseVersion(
+        pathId(req),
+        { reason: input.reason, expectedCurrentVersionId: input.expected_current_version_id },
+        writeActor(req)
+      );
       res.json({ version: serializeVersion(result.resource as unknown as Record<string, unknown>), replayed: result.replayed, request_id: req.requestId });
     } catch (error) {
       next(error);
@@ -405,8 +450,12 @@ export function createAdminRouteManagementRouter(
 
   router.post("/admin/route-versions/:id/resume", async (req: AuthenticatedRequest, res, next) => {
     try {
-      z.strictObject({}).parse(req.body);
-      const result = await service.resumeVersion(pathId(req), writeActor(req));
+      const input = resumeSchema.parse(req.body);
+      const result = await service.resumeVersion(
+        pathId(req),
+        { expectedCurrentVersionId: input.expected_current_version_id },
+        writeActor(req)
+      );
       res.json({ version: serializeVersion(result.resource as unknown as Record<string, unknown>), replayed: result.replayed, request_id: req.requestId });
     } catch (error) {
       next(error);
@@ -415,8 +464,12 @@ export function createAdminRouteManagementRouter(
 
   router.post("/admin/route-versions/:id/retire", async (req: AuthenticatedRequest, res, next) => {
     try {
-      const input = reasonSchema.parse(req.body);
-      const result = await service.retireVersion(pathId(req), input.reason, writeActor(req));
+      const input = retireVersionSchema.parse(req.body);
+      const result = await service.retireVersion(
+        pathId(req),
+        { reason: input.reason, expectedCurrentVersionId: input.expected_current_version_id },
+        writeActor(req)
+      );
       res.json({ version: serializeVersion(result.resource as unknown as Record<string, unknown>), replayed: result.replayed, request_id: req.requestId });
     } catch (error) {
       next(error);
@@ -482,8 +535,13 @@ export function createAdminRouteManagementRouter(
   return router;
 }
 
-export function createRouteCatalogRouter(appConfig: AppConfig, service: RouteManagementService = routeManagementService) {
+export function createRouteCatalogRouter(
+  appConfig: AppConfig,
+  service: RouteManagementService = routeManagementService,
+  fareService: RouteFareService = routeFareService
+) {
   const router = Router();
+  const maps = appConfig.mapsEnabled && appConfig.routeManagementEnabled;
   router.use(["/routes", "/route-versions"], requireAuth);
 
   router.get("/routes", async (req, res, next) => {
@@ -494,7 +552,16 @@ export function createRouteCatalogRouter(appConfig: AppConfig, service: RouteMan
         return;
       }
       const result = await service.listPublishedRoutes(input.page, input.limit);
-      res.json({ ...result, enabled: true, routes: result.routes.map((route) => serializeRoute(route as unknown as Record<string, unknown>, false)) });
+      // Display-only estimate; null until an admin publishes a tariff for the route.
+      const fares = await fareService.fareViewsForRoutes(result.routes.map((route) => route.id));
+      res.json({
+        ...result,
+        enabled: true,
+        routes: result.routes.map((route) => ({
+          ...serializeRoute(route as unknown as Record<string, unknown>, false, true, maps),
+          fares: fares.get(route.id) ?? null
+        }))
+      });
     } catch (error) {
       next(error);
     }
@@ -504,7 +571,13 @@ export function createRouteCatalogRouter(appConfig: AppConfig, service: RouteMan
     try {
       if (!appConfig.routeManagementEnabled) throw new HttpError(404, "route_not_found");
       const route = await service.getPublishedRoute(pathId(req));
-      res.json({ route: serializeRoute(route as unknown as Record<string, unknown>, false) });
+      const fares = await fareService.fareViewsForRoutes([route.id]);
+      res.json({
+        route: {
+          ...serializeRoute(route as unknown as Record<string, unknown>, false, true, maps),
+          fares: fares.get(route.id) ?? null
+        }
+      });
     } catch (error) {
       next(error);
     }
@@ -516,7 +589,7 @@ export function createRouteCatalogRouter(appConfig: AppConfig, service: RouteMan
       const version = await service.getPublishedVersionStops(pathId(req));
       res.json({
         route_version_id: version.id,
-        stops: version.stops.map((membership) => serializeMembership(membership as unknown as Record<string, unknown>, false))
+        stops: version.stops.map((membership) => serializeMembership(membership as unknown as Record<string, unknown>, false, maps))
       });
     } catch (error) {
       next(error);

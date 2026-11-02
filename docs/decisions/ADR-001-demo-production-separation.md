@@ -9,7 +9,7 @@ The validated hackathon release intentionally combined deterministic accounts, d
 
 ## Decision
 
-Use one explicit Masari environment model: `local`, `test`, `demo`, `staging`, and `production`. Backend `APP_ENV` controls route registration and configuration. Admin `VITE_APP_ENV` and Flutter `APP_ENV` enforce equivalent build/UI boundaries. An explicit demo flag may enable capabilities only in local/test/demo; staging and production reject it.
+Use one explicit Darb environment model: `local`, `test`, `demo`, `staging`, and `production`. Backend `APP_ENV` controls route registration and configuration. Admin `VITE_APP_ENV` and Flutter `APP_ENV` enforce equivalent build/UI boundaries. An explicit demo flag may enable capabilities only in local/test/demo; staging and production reject it.
 
 Route absence is the security boundary for destructive reset, simulation mutations, and deterministic comparison. Demo passwords come only from untracked runtime values or explicit demo build definitions. Production-like URLs must use HTTPS, and backend production startup fails before listening when required configuration is unsafe.
 

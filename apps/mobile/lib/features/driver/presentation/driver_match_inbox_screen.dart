@@ -1,11 +1,12 @@
+import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
+import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/driver_controller.dart';
@@ -31,75 +32,82 @@ class _DriverMatchInboxScreenState
     final l10n = AppLocalizations.of(context);
     final inbox = ref.watch(driverMatchInboxProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.matchInbox),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () async => _refresh(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppTokens.marginMobile,
-              AppTokens.spaceMedium,
-              AppTokens.marginMobile,
-              AppTokens.spaceExtraLarge,
-            ),
-            children: [
-              // A filter belongs above the results it filters, full width, so
-              // the active scope is always visible while scanning the list.
-              SegmentedButton<String?>(
-                segments: [
-                  ButtonSegment(value: null, label: Text(l10n.allMatches)),
-                  ButtonSegment(
-                    value: 'proposed',
-                    label: Text(l10n.proposedMatches),
-                  ),
-                ],
-                selected: {_status},
-                showSelectedIcon: false,
-                onSelectionChanged: (selection) {
-                  setState(() => _status = selection.first);
-                  _refresh();
-                },
+    return ForegroundRefresh(
+      refresh: () async {
+        await ref
+            .read(driverMatchInboxProvider.notifier)
+            .refresh(status: _status);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.matchInbox),
+          actions: const [
+            LanguageSwitch(),
+            SizedBox(width: AppTokens.spaceSmall),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.marginMobile,
+                AppTokens.spaceMedium,
+                AppTokens.marginMobile,
+                AppTokens.spaceExtraLarge,
               ),
-              const SizedBox(height: AppTokens.spaceLarge),
-              inbox.when(
-                loading: () => const Column(
-                  children: [
-                    LoadingSkeleton.card(),
-                    SizedBox(height: AppTokens.spaceMedium),
-                    LoadingSkeleton.card(),
+              children: [
+                // A filter belongs above the results it filters, full width, so
+                // the active scope is always visible while scanning the list.
+                SegmentedButton<String?>(
+                  segments: [
+                    ButtonSegment(value: null, label: Text(l10n.allMatches)),
+                    ButtonSegment(
+                      value: 'proposed',
+                      label: Text(l10n.proposedMatches),
+                    ),
                   ],
+                  selected: {_status},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selection) {
+                    setState(() => _status = selection.first);
+                    _refresh();
+                  },
                 ),
-                error: (error, _) => ErrorStateView(
-                  title: driverErrorLabel(l10n, error),
-                  retryLabel: l10n.retry,
-                  onRetry: _refresh,
-                ),
-                data: (matches) => matches.isEmpty
-                    ? EmptyState(
-                        title: l10n.noAvailableMatches,
-                        icon: Icons.inbox_outlined,
-                        actionLabel: l10n.refresh,
-                        onAction: _refresh,
-                      )
-                    : Column(
-                        children: [
-                          for (final match in matches) ...[
-                            _MatchCard(match: match),
-                            const SizedBox(height: AppTokens.spaceMedium),
+                const SizedBox(height: AppTokens.spaceLarge),
+                inbox.when(
+                  loading: () => const Column(
+                    children: [
+                      LoadingSkeleton.card(),
+                      SizedBox(height: AppTokens.spaceMedium),
+                      LoadingSkeleton.card(),
+                    ],
+                  ),
+                  error: (error, _) => ErrorStateView(
+                    title: driverErrorLabel(l10n, error),
+                    retryLabel: l10n.retry,
+                    onRetry: _refresh,
+                  ),
+                  data: (matches) => matches.isEmpty
+                      ? EmptyState(
+                          title: l10n.noAvailableMatches,
+                          icon: Icons.inbox_outlined,
+                          actionLabel: l10n.refresh,
+                          onAction: _refresh,
+                        )
+                      : Column(
+                          children: [
+                            for (final match in matches) ...[
+                              _MatchCard(match: match),
+                              const SizedBox(height: AppTokens.spaceMedium),
+                            ],
                           ],
-                        ],
-                      ),
-              ),
-            ],
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -115,11 +123,38 @@ class _MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final routeName = match.route.routeName(
+      arabic: Localizations.localeOf(context).languageCode == 'ar',
+    );
+    final passenger = match.passengerRequest;
+    final order = match.merchantOrder;
 
     // Only the load figures that apply to this match type are listed. The old
     // card printed every field with an empty value where it did not apply,
     // which made a passenger ride and a parcel run look identical at a glance.
+    // Route matches lead with the route and where to collect the load: the
+    // typed details are how the driver finds people now.
     final details = <({String label, String value, IconData icon})>[
+      if (routeName != null)
+        (label: l10n.orderRouteLabel, value: routeName, icon: Icons.route),
+      if (passenger?.pickupDetails != null)
+        (
+          label: l10n.driverPickupDetailsLabel,
+          value: passenger!.pickupDetails!,
+          icon: Icons.person_pin_circle_outlined,
+        ),
+      if (passenger?.dropoffDetails != null)
+        (
+          label: l10n.driverDropoffDetailsLabel,
+          value: passenger!.dropoffDetails!,
+          icon: Icons.flag_outlined,
+        ),
+      if (order?.pickupDetails != null)
+        (
+          label: l10n.driverMerchantPickupLabel,
+          value: order!.pickupDetails!,
+          icon: Icons.storefront_outlined,
+        ),
       if (match.passengerRequest != null)
         (
           label: l10n.passengerCount,
@@ -129,7 +164,8 @@ class _MatchCard extends StatelessWidget {
       if (match.merchantOrder != null)
         (
           label: l10n.parcelCount,
-          value: '${match.merchantOrder!.parcelCount}',
+          value:
+              '${match.parcelBatch?.parcelCount ?? match.merchantOrder!.parcelCount}',
           icon: Icons.widgets_outlined,
         ),
       if (match.parcelBatch != null)
@@ -147,8 +183,9 @@ class _MatchCard extends StatelessWidget {
       statusTone: statusToneFor(match.status),
       score: match.score,
       scoreLabel: l10n.matchScore,
-      from: match.pickupLabel,
-      to: match.destinationLabel,
+      // The route row names a route match; older matches keep their places.
+      from: routeName == null ? match.pickupLabel : null,
+      to: routeName == null ? match.destinationLabel : null,
       details: details,
       actionKey: ValueKey('openMatch-${match.id}'),
       actionLabel: l10n.viewDetails,

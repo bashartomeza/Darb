@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/canonical_routes/application/canonical_route_controller.dart';
-import 'package:masari_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
-import 'package:masari_mobile/features/canonical_routes/domain/canonical_route_models.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/canonical_routes/application/canonical_route_controller.dart';
+import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
+import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
 
 void main() {
   group('M7C2 typed capability and route contracts', () {
@@ -57,15 +57,43 @@ void main() {
       );
     });
 
-    test('rejects coordinates in the public stop contract', () {
-      expect(
-        () => CanonicalStop.fromMembership({
-          ...membership(1, pickup: true),
-          'stop': {...stop('one'), 'latitude': 31.5},
-        }),
-        throwsFormatException,
-      );
+    test('reads coordinates when the catalog supplies them', () {
+      final parsed = CanonicalStop.fromMembership({
+        ...membership(1, pickup: true),
+        'stop': {...stop('one'), 'latitude': 31.5326, 'longitude': 35.0998},
+      });
+      expect(parsed.position, const GeoPoint(31.5326, 35.0998));
     });
+
+    test(
+      'leaves a stop unplaced when maps are off or a coordinate is absent',
+      () {
+        // Maps disabled: the serializer omits both keys entirely.
+        expect(
+          CanonicalStop.fromMembership({
+            ...membership(1, pickup: true),
+            'stop': stop('one'),
+          }).position,
+          isNull,
+        );
+        // A half-reported position is not a position.
+        expect(
+          CanonicalStop.fromMembership({
+            ...membership(1, pickup: true),
+            'stop': {...stop('one'), 'latitude': 31.5326},
+          }).position,
+          isNull,
+        );
+        // Out of range is dropped rather than clamped onto the map.
+        expect(
+          CanonicalStop.fromMembership({
+            ...membership(1, pickup: true),
+            'stop': {...stop('one'), 'latitude': 931.5, 'longitude': 35.0998},
+          }).position,
+          isNull,
+        );
+      },
+    );
 
     test('parses every approved route direction and rejects another enum', () {
       for (final direction in ['outbound', 'inbound', 'loop']) {
@@ -153,6 +181,7 @@ void main() {
       await runner.acknowledge(
         actorId: 'passenger-1',
         operation: 'passenger_route_request_create',
+        idempotencyKey: result,
       );
       expect(storage.bundle, isNull);
       expect(storage.clearCount, 1);

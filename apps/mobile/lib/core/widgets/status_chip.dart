@@ -4,8 +4,11 @@ import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/semantic_colors.dart';
 
-/// The semantic tones a status can carry.
-enum StatusTone { success, warning, error, pending, active, neutral }
+/// The semantic tones a status can carry, matching design-system.html §G
+/// "Status chip vocabulary — the fixed six" (searching/confirmed/
+/// progress/completed/delayed/cancelled), plus a neutral fallback for
+/// anything outside that vocabulary (e.g. an archived-record badge).
+enum StatusTone { success, warning, error, pending, active, confirmed, neutral }
 
 /// A pill-shaped status indicator.
 ///
@@ -44,8 +47,12 @@ class StatusChip extends StatelessWidget {
       foreground: SemanticColors.onPendingContainer,
     ),
     StatusTone.active => (
-      background: SemanticColors.warningContainer,
-      foreground: SemanticColors.onWarningContainer,
+      background: AppTheme.primaryContainer,
+      foreground: AppTheme.onPrimaryContainer,
+    ),
+    StatusTone.confirmed => (
+      background: SemanticColors.infoContainer,
+      foreground: SemanticColors.onInfoContainer,
     ),
     StatusTone.neutral => (
       background: AppTheme.surfaceContainerHigh,

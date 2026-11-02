@@ -12,12 +12,22 @@ const apiBaseUrl = `${apiOrigin.replace(/\/$/, "")}/api/v1`;
 const resetKey = process.env.DEMO_RESET_KEY;
 const startedAt = Date.now();
 
+function assertResetSafeDatabase() {
+  const databaseUrl = process.env.DATABASE_URL;
+  const allowed = (process.env.DEMO_RESET_ALLOWED_DATABASES ?? "").split(",").map((value) => value.trim()).filter(Boolean);
+  let name = "";
+  try { name = new URL(databaseUrl).pathname.replace(/^\//, ""); } catch {}
+  if (name.toLowerCase() === "darb" || !/^[A-Za-z0-9_]+$/.test(name) || !allowed.includes(name)) {
+    throw new Error("Demo smoke refuses a database that is not explicitly reset-safe");
+  }
+}
+
 const accounts = {
-  passenger: ["+970590000001", process.env.DEMO_PASSENGER_PASSWORD],
-  driver1: ["+970590000002", process.env.DEMO_DRIVER_PASSWORD],
-  driver2: ["+970590000003", process.env.DEMO_DRIVER_PASSWORD],
-  merchant: ["+970590000004", process.env.DEMO_MERCHANT_PASSWORD],
-  admin: ["+970590000005", process.env.DEMO_ADMIN_PASSWORD]
+  passenger: ["demo.passenger@darb.app", process.env.DEMO_PASSENGER_PASSWORD],
+  driver1: ["demo.driver@darb.app", process.env.DEMO_DRIVER_PASSWORD],
+  driver2: ["demo.driver2@darb.app", process.env.DEMO_DRIVER_PASSWORD],
+  merchant: ["demo.merchant@darb.app", process.env.DEMO_MERCHANT_PASSWORD],
+  admin: ["demo.admin@darb.app", process.env.DEMO_ADMIN_PASSWORD]
 };
 
 function argument(name) {
@@ -47,11 +57,11 @@ async function request(path, { token, method = "GET", body, headers = {}, expect
 }
 
 async function login(role) {
-  const [phone, password] = accounts[role];
+  const [email, password] = accounts[role];
   return (
     await request("/auth/login", {
       method: "POST",
-      body: { phone, password }
+      body: { email, password }
     })
   ).token;
 }
@@ -65,6 +75,7 @@ async function reset() {
 }
 
 async function primaryStory() {
+  assertResetSafeDatabase();
   const health = await request("/health");
   assert(health.ok === true, "API health response is not ready");
   assert(typeof health.request_id === "string", "API health response has no request ID");
@@ -72,7 +83,7 @@ async function primaryStory() {
   await request("/demo/reset", { method: "POST", body: {}, expected: 403 });
   await request("/auth/login", {
     method: "POST",
-    body: { phone: accounts.passenger[0], password: "invalid-demo-password" },
+    body: { email: accounts.passenger[0], password: "invalid-demo-password" },
     expected: 401
   });
 
@@ -90,7 +101,7 @@ async function primaryStory() {
   ]);
   assert(
     JSON.stringify(dashboard.counts) ===
-      JSON.stringify({ users: 5, drivers: 2, routes: 2, passenger_requests: 1, merchant_orders: 1, parcels: 5 }),
+      JSON.stringify({ users: 5, drivers: 2, routes: 2, passenger_requests: 1, merchant_orders: 1, parcels: 5, active_drivers: 1, pending_driver_approvals: 0, open_incidents: 0 }),
     `unexpected reset counts: ${JSON.stringify(dashboard.counts)}`
   );
 
@@ -207,28 +218,43 @@ async function primaryStory() {
   assert(orderInTransit.order.parcels.every((parcel) => parcel.status === "in_transit"), "merchant parcels did not enter transit");
   assert(orderInTransit.order.parcel_batches[0].status === "in_transit", "parcel batch did not enter transit");
 
-  for (const status of ["delivered", "completed"]) {
-    await request(`/trips/${trip.id}/status`, {
-      token: tokens.driver1,
-      method: "POST",
-      body: { status }
-    });
-  }
+  // The receiver must confirm: the sender issues the handover code, the driver enters it.
+  const handover = (
+    await request(`/parcel-orders/${merchantOrder.id}/handover/regenerate`, { token: tokens.merchant, method: "POST", body: {} })
+  ).handover;
+  assert(/^[0-9]{6}$/.test(handover.code), "sender did not receive a six-digit handover code");
+  await request(`/trips/${trip.id}/delivery-confirmation`, {
+    token: tokens.driver1,
+    method: "POST",
+    body: { method: "receiver_code", code: handover.code === "000000" ? "000001" : "000000" },
+    expected: 422
+  });
+  const delivery = await request(`/trips/${trip.id}/delivery-confirmation`, {
+    token: tokens.driver1,
+    method: "POST",
+    body: { method: "receiver_code", code: handover.code }
+  });
+  assert(delivery.delivered === true, "receiver code did not deliver the trip");
+  await request(`/trips/${trip.id}/status`, {
+    token: tokens.driver1,
+    method: "POST",
+    body: { status: "completed" }
+  });
 
   const comparison = (
     await request("/compare/run", {
       token: tokens.admin,
       method: "POST",
       body: {
-        scenarioKey: "masari_batch_wins",
+        scenarioKey: "darb_batch_wins",
         passengerRequestId: passengerRequest.id,
         merchantOrderId: merchantOrder.id
       },
       expected: 201
     })
   ).comparison;
-  assert(comparison.winner === "masari", "comparison winner changed");
-  assert(comparison.masari_trips === 1 && comparison.nearest_driver_trips === 6, "comparison trip counts changed");
+  assert(comparison.winner === "darb", "comparison winner changed");
+  assert(comparison.darb_trips === 1 && comparison.nearest_driver_trips === 6, "comparison trip counts changed");
 
   const finalOrder = (await request(`/merchant/orders/${merchantOrder.id}`, { token: tokens.merchant })).order;
   const finalTrip = (await request(`/trips/${trip.id}`, { token: tokens.admin })).trip;
@@ -251,11 +277,11 @@ async function primaryStory() {
     latestSequence: locations.at(-1).sequence,
     comparison: {
       winner: comparison.winner,
-      masariTrips: comparison.masari_trips,
+      darbTrips: comparison.darb_trips,
       nearestDriverTrips: comparison.nearest_driver_trips,
-      masariDistance: comparison.masari_estimated_distance,
+      darbDistance: comparison.darb_estimated_distance,
       nearestDriverDistance: comparison.nearest_estimated_distance,
-      masariCost: comparison.masari_estimated_cost,
+      darbCost: comparison.darb_estimated_cost,
       nearestDriverCost: comparison.nearest_estimated_cost
     }
   };

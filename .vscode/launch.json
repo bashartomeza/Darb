@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "darb_mobile (demo)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main.dart",
+      "toolArgs": ["--dart-define-from-file=config/demo.local.json"]
+    },
+    {
+      "name": "darb_mobile (web/chrome)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main.dart",
+      "deviceId": "chrome",
+      "args": ["--web-port=5173"],
+      "toolArgs": ["--dart-define-from-file=config/demo.web.json"]
+    },
+    {
+      "name": "darb_mobile (local)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main.dart",
+      "toolArgs": ["--dart-define-from-file=config/local.example.json"]
+    }
+  ]
+}

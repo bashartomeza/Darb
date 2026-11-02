@@ -25,6 +25,34 @@ Draft PATCH and stop replacement use optimistic revision checks. A stale write r
 
 Publication requires bilingual names, two or more active unique contiguous stops, exact origin/first and destination/last alignment, distinct endpoints, downstream passenger pickup/drop-off, internally valid parcel permissions, and valid active dates. It locks both route identity and version in one real MySQL transaction. `expected_current_version_id` fences concurrent publication so exactly one caller selects the new current version.
 
+Admin route detail history is bounded: `GET /api/v1/admin/service-routes/:id` returns at most the newest 50 versions, deterministically ordered by version number and ID. Each returned version includes at most 100 ordered stop memberships. `version_count` remains the total number of route versions, so clients can identify truncated history.
+
+## Lifecycle current-version expectations
+
+Lifecycle request bodies are strict allowlists. Pause, resume, version retirement, and route retirement require an observed current-version expectation in addition to their existing fields:
+
+```json
+POST /api/v1/admin/route-versions/:id/pause
+{ "reason": "service review", "expected_current_version_id": "version_1" }
+```
+
+```json
+POST /api/v1/admin/route-versions/:id/resume
+{ "expected_current_version_id": "version_1" }
+```
+
+```json
+POST /api/v1/admin/route-versions/:id/retire
+{ "reason": "superseded", "expected_current_version_id": "version_1" }
+```
+
+```json
+POST /api/v1/admin/service-routes/:id/retire
+{ "reason": "service ended", "expected_current_version_id": null }
+```
+
+For pause and resume, the expectation must equal the target version and the locked route's current version. Version retirement accepts the route's observed current pointer even when the target is historical. Route retirement accepts only `expected_current_version_id: null`. A mismatch returns `409 current_version_conflict` without a lifecycle write. These expectations are included in idempotency payload identity.
+
 ## Stops
 
 | Method | Path | Purpose |

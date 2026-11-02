@@ -5,7 +5,7 @@
 
 ## Context
 
-Masari's deterministic MVP combines a route corridor and a driver's availability in `DriverRoute`. Multi-route operations require stable route identities, reusable stops, auditable corrections, and historical trip safety without changing the approved matcher during M7B.
+Darb's deterministic MVP combines a route corridor and a driver's availability in `DriverRoute`. Multi-route operations require stable route identities, reusable stops, auditable corrections, and historical trip safety without changing the approved matcher during M7B.
 
 ## Decision
 

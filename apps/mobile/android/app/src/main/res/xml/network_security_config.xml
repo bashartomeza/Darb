@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Development / demo builds talk to a local API over plain HTTP
+  (http://10.0.2.2:3000 on the emulator, or a LAN IP on a device). Android
+  blocks cleartext in release builds unless it is opted into here.
+
+  Staging/production builds use https:// and never hit this path. If you ship
+  a real release, tighten this to an explicit HTTPS-only policy.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

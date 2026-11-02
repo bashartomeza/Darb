@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { routeStatusLabel } from "./routeStatusLabel";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type {
   ApiError,
   CanonicalStop,
@@ -10,18 +11,134 @@ import type {
   ServiceRouteVersion,
   createApiClient
 } from "../../api";
-import { Button, Card, CardHeader, EmptyState, Notice, Skeleton, StatusBadge } from "../../ui";
+import { translations } from "../../i18n/translations";
+import { Button, Card, Notice, Skeleton } from "../../ui";
+import { CreateRouteDialog } from "./CreateRouteDialog";
+import { RouteDirectory, type RouteDirectoryFilters } from "./RouteDirectory";
+import { RouteOverview } from "./RouteOverview";
+import { RouteStops, type StopDialogMode } from "./RouteStops";
+import { RouteVersions } from "./RouteVersions";
+import { RouteFares } from "./RouteFares";
+import { RouteWorkspace } from "./RouteWorkspace";
+import {
+  initialRouteUiState,
+  moveRouteStop,
+  normalizeRouteVersionDraft,
+  routeUiReducer,
+  selectAuthoritativeRouteVersion,
+  toggleRouteStopPermission
+} from "./routeManagementModel";
+import type { RouteFeedbackScope } from "./routeManagementModel";
+
+export { moveRouteStop, toggleRouteStopPermission } from "./routeManagementModel";
 
 type Api = ReturnType<typeof createApiClient>;
 type Locale = "ar" | "en";
-type Permission = keyof Pick<
-  RouteStopDraft,
-  "passenger_pickup_allowed" | "passenger_dropoff_allowed" | "parcel_pickup_allowed" | "parcel_dropoff_allowed"
->;
 
 export type RouteViewState = "loading" | "ready" | "empty" | "error";
 export type RouteLifecycleAction = "clone" | "publish" | "pause" | "resume" | "retire";
+export type PublicationReadinessIssue =
+  | "readinessMissingNames"
+  | "readinessMinimumStops"
+  | "readinessStopEligibility"
+  | "readinessDateOrder"
+  | "readinessPassengerPath"
+  | "readinessParcelPath";
 export const ADMIN_ROUTE_RESPONSIVE_BREAKPOINT = 880;
+
+type ReadinessVersion = ServiceRouteVersion & { service_region_key?: string };
+
+export function routeCatalogQuery(input: {
+  page: number;
+  search: string;
+  status: string;
+  direction: string;
+  serviceRegionKey: string;
+}) {
+  const query = new URLSearchParams({ page: String(input.page), limit: "25" });
+  if (input.search.trim()) query.set("search", input.search.trim());
+  if (input.status) query.set("status", input.status);
+  if (input.direction) query.set("direction", input.direction);
+  if (input.serviceRegionKey.trim()) query.set("service_region_key", input.serviceRegionKey.trim());
+  return query;
+}
+
+export function publicationReadiness(version: ReadinessVersion, stops: CanonicalStop[]) {
+  const issues: PublicationReadinessIssue[] = [];
+  if (!version.name_ar.trim() || !version.name_en.trim()) issues.push("readinessMissingNames");
+  if (version.stops.length < 2) issues.push("readinessMinimumStops");
+
+  const stopById = new Map(stops.map((stop) => [stop.id, stop]));
+  const routeRegion = version.service_region_key ?? version.stops[0]?.stop.service_region_key;
+  const hasIneligibleStop = version.stops.some((membership) => {
+    const stop = stopById.get(membership.stop_id) ?? membership.stop;
+    return stop.status !== "active" || Boolean(routeRegion && stop.service_region_key !== routeRegion);
+  });
+  if (hasIneligibleStop) issues.push("readinessStopEligibility");
+
+  if (version.active_from && version.active_until) {
+    const startsAt = Date.parse(version.active_from);
+    const endsAt = Date.parse(version.active_until);
+    if (!Number.isFinite(startsAt) || !Number.isFinite(endsAt) || endsAt <= startsAt) {
+      issues.push("readinessDateOrder");
+    }
+  }
+
+  const hasDownstreamPath = (
+    pickup: "passenger_pickup_allowed" | "parcel_pickup_allowed",
+    dropoff: "passenger_dropoff_allowed" | "parcel_dropoff_allowed"
+  ) => version.stops.some((candidate, pickupIndex) =>
+    candidate[pickup] && version.stops.some((later, dropoffIndex) => dropoffIndex > pickupIndex && later[dropoff])
+  );
+
+  if (!hasDownstreamPath("passenger_pickup_allowed", "passenger_dropoff_allowed")) {
+    issues.push("readinessPassengerPath");
+  }
+  const hasParcelPermission = version.stops.some((membership) =>
+    membership.parcel_pickup_allowed || membership.parcel_dropoff_allowed
+  );
+  if (hasParcelPermission && !hasDownstreamPath("parcel_pickup_allowed", "parcel_dropoff_allowed")) {
+    issues.push("readinessParcelPath");
+  }
+  return issues;
+}
+
+export function reconcileRouteVersionSnapshot(route: ServiceRoute, savedVersion: ServiceRouteVersion) {
+  const versions = route.versions ?? [];
+  const containsVersion = versions.some((version) => version.id === savedVersion.id);
+  const reconciledVersions = containsVersion
+    ? versions.map((version) => version.id === savedVersion.id ? savedVersion : version)
+    : [savedVersion, ...versions];
+  return {
+    ...route,
+    versions: reconciledVersions,
+    current_version: route.current_version?.id === savedVersion.id ? savedVersion : route.current_version
+  };
+}
+
+export function routeUsedStopIds(route: ServiceRoute | null) {
+  return new Set(
+    route?.versions?.flatMap((version) => version.stops.map((membership) => membership.stop_id)) ?? []
+  );
+}
+
+export function RouteMembershipStopLabel({
+  membership,
+  version,
+  stops,
+  locale
+}: {
+  membership: RouteStopDraft;
+  version: ServiceRouteVersion | null;
+  stops: CanonicalStop[];
+  locale: Locale;
+}) {
+  const embeddedStop = version?.stops.find((item) => item.stop_id === membership.stop_id)?.stop;
+  const stop = embeddedStop ?? stops.find((item) => item.id === membership.stop_id);
+  return stop
+    ? <strong>{locale === "ar" ? stop.name_ar : stop.name_en}</strong>
+    : <strong className="technical-value" dir="ltr">{membership.stop_id}</strong>;
+}
 
 export function routeCatalogView(input: { loading: boolean; error: boolean; count: number }): RouteViewState {
   if (input.loading) return "loading";
@@ -31,20 +148,6 @@ export function routeCatalogView(input: { loading: boolean; error: boolean; coun
 
 export function reorderControlLabel(label: string, index: number) {
   return `${label} ${index + 1}`;
-}
-
-export function moveRouteStop(stops: RouteStopDraft[], index: number, direction: -1 | 1) {
-  const target = index + direction;
-  if (target < 0 || target >= stops.length) return stops;
-  const reordered = [...stops];
-  [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
-  return reordered.map((stop, current) => ({ ...stop, sequence: current + 1 }));
-}
-
-export function toggleRouteStopPermission(stops: RouteStopDraft[], index: number, permission: Permission) {
-  return stops.map((stop, current) =>
-    current === index ? { ...stop, [permission]: !stop[permission] } : stop
-  );
 }
 
 export function lifecycleActions(version: ServiceRouteVersion | null) {
@@ -104,6 +207,8 @@ const copy = {
     geometryReady: "الهندسة جاهزة",
     geometryPending: "الهندسة معلّقة",
     revisionConflict: "عُدّلت المسودة من جلسة أخرى. أعد تحميلها قبل الحفظ.",
+    conflictReloaded: "تغيّرت حالة المسار من جلسة أخرى. أُعيد تحميل أحدث البيانات المعتمدة؛ راجعها قبل المحاولة مرة أخرى.",
+    reloadFailed: "تعذّر إعادة تحميل أحدث بيانات المسار. أعد المحاولة أو استخدم معرّف الطلب للدعم.",
     saved: "تم الحفظ بنجاح.",
     confirm: "هل تريد تنفيذ هذا الإجراء؟ سيُسجل في سجل التدقيق.",
     stopKey: "مفتاح المحطة",
@@ -174,6 +279,8 @@ const copy = {
     geometryReady: "Geometry ready",
     geometryPending: "Geometry pending",
     revisionConflict: "Another session changed this draft. Reload it before saving.",
+    conflictReloaded: "Another session changed the route state. The latest authoritative data was reloaded; review it before trying again.",
+    reloadFailed: "The latest route data could not be reloaded. Retry or use the request ID for support.",
     saved: "Saved successfully.",
     confirm: "Continue with this action? It will be recorded in the audit log.",
     stopKey: "Stop key",
@@ -199,7 +306,45 @@ const copy = {
 } as const;
 
 export function routeUiText(locale: Locale) {
-  return copy[locale];
+  const shared = translations[locale];
+  return {
+    ...copy[locale],
+    routeStatusFilter: shared.routeStatusFilter,
+    routeDirectionFilter: shared.routeDirectionFilter,
+    routeRegionFilter: shared.routeRegionFilter,
+    routeStatusHeading: shared.routeStatusHeading,
+    currentVersionStatusHeading: shared.currentVersionStatusHeading,
+    selectedVersionStatusHeading: shared.selectedVersionStatusHeading,
+    stopStatusHeading: shared.stopStatusHeading,
+    routeStatusLabels: shared.routeStatusLabels,
+    routeHistoryBounded: shared.routeHistoryBounded,
+    routeHistorySummary: shared.routeHistorySummary,
+    routeHistoryTruncated: shared.routeHistoryTruncated,
+    routeMapUnavailable: shared.routeMapUnavailable,
+    routeMapUnavailableDescription: shared.routeMapUnavailableDescription,
+    routeReadinessTitle: shared.routeReadinessTitle,
+    routeReadinessReady: shared.routeReadinessReady,
+    readinessMissingNames: shared.readinessMissingNames,
+    readinessMinimumStops: shared.readinessMinimumStops,
+    readinessStopEligibility: shared.readinessStopEligibility,
+    readinessDateOrder: shared.readinessDateOrder,
+    readinessPassengerPath: shared.readinessPassengerPath,
+    readinessParcelPath: shared.readinessParcelPath,
+    routeUsedStopImmutable: shared.routeUsedStopImmutable,
+    routeNoCurrentVersion: shared.routeNoCurrentVersion,
+    routeConflictCreateRoute: shared.routeConflictCreateRoute,
+    routeConflictVersionEditor: shared.routeConflictVersionEditor,
+    routeConflictStops: shared.routeConflictStops,
+    routeConflictStopEditor: shared.routeConflictStopEditor,
+    routeConflictLifecycle: shared.routeConflictLifecycle,
+    routeBetaLimitReached: shared.routeBetaLimitReached,
+    routeValidationError: shared.routeValidationError,
+    routeCurrentVersionConflict: shared.routeCurrentVersionConflict,
+    routeVersionInUse: shared.routeVersionInUse,
+    routeRouteInUse: shared.routeRouteInUse,
+    routeStopIdMissing: shared.routeStopIdMissing,
+    requestId: shared.requestId
+  };
 }
 
 function key(prefix: string) {
@@ -235,45 +380,134 @@ export function mutationFailureIsAuthoritative(error: unknown) {
   );
 }
 
-export function routeUiError(locale: Locale, error: unknown) {
-  const value = error instanceof Error ? error.message : "unexpected_error";
-  return value === "draft_revision_conflict" ? routeUiText(locale).revisionConflict : routeUiText(locale).genericError;
+function routeErrorPayload(error: unknown) {
+  const details = (error as ApiError | undefined)?.details;
+  return details && typeof details === "object" ? details as {
+    error?: unknown;
+    request_id?: unknown;
+    details?: unknown;
+  } : undefined;
 }
 
-function emptyRoute(): RouteIdentityDraft {
-  return { route_key: "", route_group_key: "", service_region_key: "", direction: "outbound" };
+function routeErrorCode(error: unknown) {
+  const payload = routeErrorPayload(error);
+  return typeof payload?.error === "string"
+    ? payload.error
+    : error instanceof Error ? error.message : "unexpected_error";
 }
 
-function emptyVersion(): RouteVersionDraft {
-  return { name_ar: "", name_en: "", description_ar: "", description_en: "", active_from: null, active_until: null };
+function routeRequestId(error: unknown) {
+  const value = routeErrorPayload(error)?.request_id;
+  return typeof value === "string" && value ? value : null;
 }
 
-function emptyStop(): CanonicalStopDraft {
-  return { stop_key: "", service_region_key: "", name_ar: "", name_en: "", latitude: 31.5, longitude: 35.1 };
+function withRequestId(locale: Locale, message: string, error: unknown) {
+  const requestId = routeRequestId(error);
+  return requestId ? `${message} (${routeUiText(locale).requestId}: ${requestId})` : message;
 }
 
-function toApiDate(value: string | null | undefined) {
-  return value ? new Date(value).toISOString() : null;
-}
-
-function toInputDate(value: string | null | undefined) {
-  return value ? value.slice(0, 16) : "";
-}
-
-function draftFromVersion(version: ServiceRouteVersion): RouteVersionDraft {
-  return {
-    name_ar: version.name_ar,
-    name_en: version.name_en,
-    description_ar: version.description_ar ?? "",
-    description_en: version.description_en ?? "",
-    active_from: toInputDate(version.active_from),
-    active_until: toInputDate(version.active_until)
+function routeValidationMessage(locale: Locale, error: unknown) {
+  const payload = routeErrorPayload(error);
+  const details = Array.isArray(payload?.details) ? payload.details : [];
+  const text = routeUiText(locale);
+  const labels: Record<string, string> = {
+    route_key: text.routeKey,
+    route_group_key: text.groupKey,
+    service_region_key: text.region,
+    direction: text.direction,
+    name_ar: text.nameAr,
+    name_en: text.nameEn,
+    description_ar: text.descriptionAr,
+    description_en: text.descriptionEn,
+    active_from: text.activeFrom,
+    active_until: text.activeUntil,
+    stop_key: text.stopKey,
+    latitude: text.latitude,
+    longitude: text.longitude
   };
+  const fields = [...new Set(details.flatMap((detail) => {
+    if (!detail || typeof detail !== "object" || !("path" in detail) || !Array.isArray(detail.path)) return [];
+    const field = detail.path.map((value: unknown) => String(value)).find((value: string) => labels[value]);
+    return field ? [labels[field]] : [];
+  }))];
+  return fields.length > 0 ? `${text.routeValidationError} ${fields.join(", ")}` : text.routeValidationError;
 }
 
-function membershipsFromVersion(version: ServiceRouteVersion): RouteStopDraft[] {
+export function routeUiError(locale: Locale, error: unknown) {
+  const code = routeErrorCode(error);
+  const text = routeUiText(locale);
+  const message = code === "draft_revision_conflict"
+    ? text.revisionConflict
+    : code === "current_version_conflict"
+      ? text.routeCurrentVersionConflict
+      : code === "beta_route_limit_reached"
+        ? text.routeBetaLimitReached
+        : code === "validation_error"
+          ? routeValidationMessage(locale, error)
+          : code === "used_stop_immutable"
+            ? text.routeUsedStopImmutable
+            : code === "route_version_has_active_usage"
+              ? text.routeVersionInUse
+              : code === "service_route_has_active_usage"
+                ? text.routeRouteInUse
+                : code === "route_stop_id_missing"
+                  ? text.routeStopIdMissing
+                  : text.genericError;
+  return withRequestId(locale, message, error);
+}
+
+export function routeStatusText(locale: Locale, value: string) {
+  return routeStatusLabel(locale, value);
+}
+
+export function routeConflictRequiresReload(error: unknown) {
+  const code = routeErrorCode(error);
+  if ((error as ApiError | undefined)?.status !== 409) return false;
+  return !new Set([
+    "beta_route_limit_reached",
+    "used_stop_immutable",
+    "route_version_has_active_usage",
+    "service_route_has_active_usage",
+    "route_contains_inactive_stop"
+  ]).has(code);
+}
+
+export async function handleRouteMutationFailure(
+  error: unknown,
+  reload: () => Promise<boolean>,
+  locale: Locale,
+  scope?: Exclude<RouteFeedbackScope, "page">
+) {
+  if (!routeConflictRequiresReload(error)) return routeUiError(locale, error);
+  const text = routeUiText(locale);
+  try {
+    if (!await reload()) return withRequestId(locale, text.reloadFailed, error);
+    const scopedConflict = scope === "create-route"
+      ? text.routeConflictCreateRoute
+      : scope === "version-editor"
+        ? text.routeConflictVersionEditor
+        : scope === "stops"
+          ? text.routeConflictStops
+          : scope === "stop-editor"
+            ? text.routeConflictStopEditor
+            : scope === "lifecycle"
+              ? text.routeConflictLifecycle
+              : text.conflictReloaded;
+    if (routeErrorCode(error) === "current_version_conflict") {
+      return withRequestId(locale, scopedConflict, error);
+    }
+    const safeError = routeUiError(locale, error);
+    return safeError === routeUiText(locale).genericError
+      ? scopedConflict
+      : `${safeError} ${scopedConflict}`;
+  } catch {
+    return withRequestId(locale, text.reloadFailed, error);
+  }
+}
+
+export function membershipsFromVersion(version: ServiceRouteVersion): RouteStopDraft[] {
   return version.stops.map((membership, index) => ({
-    stop_id: membership.stop.id,
+    stop_id: membership.stop_id ?? membership.stop?.id ?? (() => { throw new Error("route_stop_id_missing"); })(),
     sequence: index + 1,
     passenger_pickup_allowed: membership.passenger_pickup_allowed,
     passenger_dropoff_allowed: membership.passenger_dropoff_allowed,
@@ -291,23 +525,24 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
   const [stops, setStops] = useState<CanonicalStop[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<ServiceRoute | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<ServiceRouteVersion | null>(null);
-  const [routeDraft, setRouteDraft] = useState<RouteIdentityDraft>(emptyRoute);
-  const [versionDraft, setVersionDraft] = useState<RouteVersionDraft>(emptyVersion);
-  const [stopDraft, setStopDraft] = useState<CanonicalStopDraft>(emptyStop);
+  const [ui, dispatch] = useReducer(routeUiReducer, initialRouteUiState);
   const [memberships, setMemberships] = useState<RouteStopDraft[]>([]);
-  const [stopToAdd, setStopToAdd] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [directionFilter, setDirectionFilter] = useState("");
+  const [serviceRegionFilter, setServiceRegionFilter] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [busy, setBusy] = useState("");
-  const [actionReason, setActionReason] = useState("");
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const busyRef = useRef("");
   const mutationKeys = useRef(new Map<string, string>());
 
-  const activeStops = useMemo(() => stops.filter((stop) => stop.status === "active"), [stops]);
+  const usedStopIds = useMemo(() => routeUsedStopIds(selectedRoute), [selectedRoute]);
   const actions = lifecycleActions(selectedVersion);
+  const readinessIssues = selectedRoute && selectedVersion
+    ? publicationReadiness({ ...selectedVersion, service_region_key: selectedRoute.service_region_key }, stops)
+    : [];
 
   function showError(error: unknown) {
     setMessage({ kind: "error", text: routeUiError(locale, error) });
@@ -334,13 +569,31 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
     if (error === undefined || mutationFailureIsAuthoritative(error)) mutationKeys.current.delete(fingerprint);
   }
 
-  async function loadCatalog(nextPage = page) {
-    setView("loading");
-    setMessage(null);
+  async function loadCatalog(nextPage = page, requestedFilters?: RouteDirectoryFilters, surfaceFailure = true) {
+    if (surfaceFailure) {
+      setView("loading");
+      setMessage(null);
+    }
+    const catalogFilters = requestedFilters ?? {
+      search,
+      status: statusFilter,
+      direction: directionFilter,
+      serviceRegionKey: serviceRegionFilter
+    };
+    if (requestedFilters) {
+      setSearch(requestedFilters.search);
+      setStatusFilter(requestedFilters.status);
+      setDirectionFilter(requestedFilters.direction);
+      setServiceRegionFilter(requestedFilters.serviceRegionKey);
+    }
     try {
-      const query = new URLSearchParams({ page: String(nextPage), limit: "25" });
-      if (search.trim()) query.set("search", search.trim());
-      if (statusFilter) query.set("status", statusFilter);
+      const query = routeCatalogQuery({
+        page: nextPage,
+        search: catalogFilters.search,
+        status: catalogFilters.status,
+        direction: catalogFilters.direction,
+        serviceRegionKey: catalogFilters.serviceRegionKey
+      });
       const [routePage, stopPage] = await Promise.all([
         api.serviceRoutes(token, `?${query}`),
         api.canonicalStops(token, "?limit=50")
@@ -350,9 +603,24 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
       setTotal(routePage.total);
       setPage(nextPage);
       setView(routePage.routes.length ? "ready" : "empty");
+      return true;
     } catch (error) {
-      setView("error");
-      showError(error);
+      if (surfaceFailure) {
+        setView("error");
+        showError(error);
+      }
+      return false;
+    }
+  }
+
+  async function loadStops(surfaceFailure = true) {
+    try {
+      const stopPage = await api.canonicalStops(token, "?limit=50");
+      setStops(stopPage.stops);
+      return true;
+    } catch (error) {
+      if (surfaceFailure) showError(error);
+      return false;
     }
   }
 
@@ -360,15 +628,17 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
     void loadCatalog(1);
   }, []);
 
-  async function loadRoute(routeId: string, nested = false) {
-    if (!nested && !beginBusy("route-detail")) return;
+  async function loadRoute(routeId: string, nested = false, surfaceFailure = true) {
+    if (!nested && !beginBusy("route-detail")) return false;
     try {
       const response = await api.serviceRoute(token, routeId);
       setSelectedRoute(response.route);
-      const version = response.route.versions?.[0] ?? response.route.current_version;
+      const version = selectAuthoritativeRouteVersion(response.route, selectedVersion?.id ?? ui.selectedVersionId);
       selectVersion(version ?? null);
+      return true;
     } catch (error) {
-      showError(error);
+      if (surfaceFailure) showError(error);
+      return false;
     } finally {
       if (!nested) endBusy();
     }
@@ -376,99 +646,153 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
 
   function selectVersion(version: ServiceRouteVersion | null) {
     setSelectedVersion(version);
-    setVersionDraft(version ? draftFromVersion(version) : emptyVersion());
+    dispatch({ type: "select-version", versionId: version?.id ?? null });
     setMemberships(version ? membershipsFromVersion(version) : []);
   }
 
-  async function submitRoute(event: FormEvent) {
-    event.preventDefault();
+  async function submitRoute(draft: RouteIdentityDraft) {
     if (!beginBusy("create-route")) return;
-    const mutation = pendingMutation("route_create", routeDraft);
+    const mutation = pendingMutation("route_create", draft);
     try {
-      const response = await api.createServiceRoute(token, routeDraft, mutation.key);
+      const response = await api.createServiceRoute(token, draft, mutation.key);
       settleMutation(mutation.fingerprint);
-      setRouteDraft(emptyRoute());
-      await loadCatalog(1);
-      await loadRoute(response.route.id, true);
-      setMessage({ kind: "success", text: text.saved });
+      dispatch({ type: "clear-feedback" });
+      dispatch({ type: "close-dialog" });
+      if (!await loadCatalog(1) || !await loadRoute(response.route.id, true)) return;
+      dispatch({ type: "open-route", routeId: response.route.id });
+      dispatch({ type: "feedback", scope: "page", kind: "success", text: text.saved });
     } catch (error) {
       settleMutation(mutation.fingerprint, error);
-      showError(error);
+      dispatch({ type: "feedback", scope: "create-route", kind: "error", text: await handleRouteMutationFailure(error, () => loadCatalog(1, undefined, false), locale, "create-route") });
     } finally {
       endBusy();
     }
   }
 
-  async function submitStop(event: FormEvent) {
-    event.preventDefault();
-    if (!beginBusy("create-stop")) return;
-    const mutation = pendingMutation("stop_create", stopDraft);
+  async function submitStop(draft: CanonicalStopDraft) {
+    if (!beginBusy("create-stop")) return false;
+    dispatch({ type: "clear-feedback" });
+    const mutation = pendingMutation("stop_create", draft);
     try {
-      await api.createCanonicalStop(token, stopDraft, mutation.key);
+      await api.createCanonicalStop(token, draft, mutation.key);
       settleMutation(mutation.fingerprint);
-      const page = await api.canonicalStops(token, "?limit=50");
-      setStops(page.stops);
-      setStopDraft(emptyStop());
-      setMessage({ kind: "success", text: text.saved });
-    } catch (error) {
-      settleMutation(mutation.fingerprint, error);
-      showError(error);
-    } finally {
-      endBusy();
-    }
-  }
-
-  async function submitVersion(event: FormEvent) {
-    event.preventDefault();
-    if (!selectedRoute) return;
-    if (!beginBusy("save-version")) return;
-    let mutation: ReturnType<typeof pendingMutation> | undefined;
-    try {
-      const payload = { ...versionDraft, active_from: toApiDate(versionDraft.active_from), active_until: toApiDate(versionDraft.active_until) };
-      if (selectedVersion?.status !== "draft") mutation = pendingMutation("route_version_create", { routeId: selectedRoute.id, ...payload });
-      const response = selectedVersion?.status === "draft"
-        ? await api.updateRouteVersion(token, selectedVersion.id, { ...payload, expected_revision: selectedVersion.draft_revision })
-        : await api.createRouteVersion(token, selectedRoute.id, payload, mutation!.key);
-      if (mutation) settleMutation(mutation.fingerprint);
-      await loadRoute(selectedRoute.id, true);
-      selectVersion(response.version);
-      setMessage({ kind: "success", text: text.saved });
-    } catch (error) {
-      if (mutation) settleMutation(mutation.fingerprint, error);
-      showError(error);
-    } finally {
-      endBusy();
-    }
-  }
-
-  function addExistingStop() {
-    if (!stopToAdd || memberships.some((membership) => membership.stop_id === stopToAdd)) return;
-    setMemberships((current) => [
-      ...current,
-      {
-        stop_id: stopToAdd,
-        sequence: current.length + 1,
-        passenger_pickup_allowed: current.length === 0,
-        passenger_dropoff_allowed: false,
-        parcel_pickup_allowed: current.length === 0,
-        parcel_dropoff_allowed: false
+      if (!await loadStops(false)) {
+        dispatch({ type: "feedback", scope: "stop-editor", kind: "error", text: text.reloadFailed });
+        return false;
       }
-    ]);
-    setStopToAdd("");
+      dispatch({ type: "feedback", scope: "stops", kind: "success", text: text.saved });
+      return true;
+    } catch (error) {
+      settleMutation(mutation.fingerprint, error);
+      dispatch({
+        type: "feedback",
+        scope: "stop-editor",
+        kind: "error",
+        text: await handleRouteMutationFailure(error, () => loadStops(false), locale, "stop-editor")
+      });
+      return false;
+    } finally {
+      endBusy();
+    }
   }
 
-  async function saveStops() {
+  async function saveStop(id: string, draft: CanonicalStopDraft) {
+    if (!beginBusy(`edit-stop-${id}`)) return false;
+    dispatch({ type: "clear-feedback" });
+    const { stop_key: _immutableStopKey, ...update } = draft;
+    try {
+      await api.updateCanonicalStop(token, id, update);
+      if (!await loadStops(false)) {
+        dispatch({ type: "feedback", scope: "stop-editor", kind: "error", text: text.reloadFailed });
+        return false;
+      }
+      dispatch({ type: "feedback", scope: "stops", kind: "success", text: text.saved });
+      return true;
+    } catch (error) {
+      dispatch({
+        type: "feedback",
+        scope: "stop-editor",
+        kind: "error",
+        text: await handleRouteMutationFailure(error, () => loadStops(false), locale, "stop-editor")
+      });
+      return false;
+    } finally {
+      endBusy();
+    }
+  }
+
+  async function createDraft(draft: RouteVersionDraft) {
+    if (!selectedRoute) return;
+    if (!beginBusy("create-version")) return;
+    const payload = normalizeRouteVersionDraft(draft);
+    const mutation = pendingMutation("route_version_create", { routeId: selectedRoute.id, ...payload });
+    try {
+      const response = await api.createRouteVersion(token, selectedRoute.id, payload, mutation.key);
+      settleMutation(mutation.fingerprint);
+      if (!await loadRoute(selectedRoute.id, true, false)) {
+        dispatch({ type: "feedback", scope: "version-editor", kind: "error", text: text.reloadFailed });
+        return;
+      }
+      selectVersion(response.version);
+      dispatch({ type: "feedback", scope: "version-editor", kind: "success", text: text.saved });
+    } catch (error) {
+      settleMutation(mutation.fingerprint, error);
+      dispatch({
+        type: "feedback",
+        scope: "version-editor",
+        kind: "error",
+        text: await handleRouteMutationFailure(error, () => loadRoute(selectedRoute.id, true, false), locale, "version-editor")
+      });
+    } finally {
+      endBusy();
+    }
+  }
+
+  async function saveDraft(draft: RouteVersionDraft) {
+    if (!selectedRoute || !selectedVersion || selectedVersion.status !== "draft") return;
+    if (!beginBusy("save-version")) return;
+    try {
+      const payload = normalizeRouteVersionDraft(draft);
+      await api.updateRouteVersion(token, selectedVersion.id, { ...payload, expected_revision: selectedVersion.draft_revision });
+      if (!await loadRoute(selectedRoute.id, true, false)) {
+        dispatch({ type: "feedback", scope: "version-editor", kind: "error", text: text.reloadFailed });
+        return;
+      }
+      dispatch({ type: "feedback", scope: "version-editor", kind: "success", text: text.saved });
+    } catch (error) {
+      dispatch({
+        type: "feedback",
+        scope: "version-editor",
+        kind: "error",
+        text: await handleRouteMutationFailure(error, () => loadRoute(selectedRoute.id, true, false), locale, "version-editor")
+      });
+    } finally {
+      endBusy();
+    }
+  }
+
+  async function saveStops(nextMemberships: RouteStopDraft[]) {
     if (!selectedVersion || selectedVersion.status !== "draft") return;
     if (!beginBusy("save-stops")) return;
+    dispatch({ type: "clear-feedback" });
     try {
+      if (nextMemberships.some((membership) => !membership.stop_id?.trim())) {
+        throw new Error("route_stop_id_missing");
+      }
       const response = await api.replaceRouteStops(token, selectedVersion.id, {
         expected_revision: selectedVersion.draft_revision,
-        stops: memberships
+        stops: nextMemberships
       });
+      setSelectedRoute((current) => current ? reconcileRouteVersionSnapshot(current, response.version) : current);
       selectVersion(response.version);
-      setMessage({ kind: "success", text: text.saved });
+      dispatch({ type: "feedback", scope: "stops", kind: "success", text: text.saved });
     } catch (error) {
-      showError(error);
+      dispatch({
+        type: "feedback",
+        scope: "stops",
+        kind: "error",
+        text: await handleRouteMutationFailure(error, () => loadRoute(selectedVersion.service_route_id, true, false), locale, "stops")
+      });
     } finally {
       endBusy();
     }
@@ -487,28 +811,37 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
         mutation.key
       );
       settleMutation(mutation.fingerprint);
-      await loadRoute(selectedRoute.id, true);
+      if (!await loadRoute(selectedRoute.id, true, false)) {
+        dispatch({ type: "feedback", scope: "lifecycle", kind: "error", text: text.reloadFailed });
+        return;
+      }
       selectVersion(response.version);
-      setMessage({ kind: "success", text: text.saved });
+      dispatch({ type: "feedback", scope: "page", kind: "success", text: text.saved });
     } catch (error) {
       settleMutation(mutation.fingerprint, error);
-      showError(error);
+      dispatch({
+        type: "feedback",
+        scope: "lifecycle",
+        kind: "error",
+        text: await handleRouteMutationFailure(error, () => loadRoute(selectedRoute.id, true, false), locale, "lifecycle")
+      });
     } finally {
       endBusy();
     }
   }
 
-  async function versionAction(action: "publish" | "pause" | "resume" | "retire") {
-    const reason = actionReason.trim();
+  async function versionAction(action: "publish" | "pause" | "resume" | "retire", suppliedReason = "") {
+    const reason = suppliedReason.trim();
     if ((action === "pause" || action === "retire") && !reason) {
-      setMessage({ kind: "error", text: text.reasonRequired });
+      dispatch({ type: "feedback", scope: "lifecycle", kind: "error", text: text.reasonRequired });
       return;
     }
-    if (!selectedRoute || !selectedVersion || !window.confirm(text.confirm)) return;
+    if (!selectedRoute || !selectedVersion) return;
     if (!beginBusy(action)) return;
+    const lifecycleExpectation = { expected_current_version_id: selectedRoute.current_version_id };
     const payload = action === "publish"
-      ? { id: selectedVersion.id, expected_revision: selectedVersion.draft_revision, expected_current_version_id: selectedRoute.current_version_id }
-      : { id: selectedVersion.id, action, reason: action === "resume" ? undefined : reason };
+      ? { id: selectedVersion.id, expected_revision: selectedVersion.draft_revision, ...lifecycleExpectation }
+      : { id: selectedVersion.id, action, ...(action === "resume" ? lifecycleExpectation : { reason, ...lifecycleExpectation }) };
     const mutation = pendingMutation(`route_version_${action}`, payload);
     try {
       const response = action === "publish"
@@ -522,247 +855,243 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
             token,
             selectedVersion.id,
             action,
-            action === "resume" ? undefined : reason,
+            action === "resume" ? lifecycleExpectation : { reason, ...lifecycleExpectation },
             mutation.key
           );
       settleMutation(mutation.fingerprint);
-      await loadRoute(selectedRoute.id, true);
+      if (!await loadRoute(selectedRoute.id, true, false)) {
+        dispatch({ type: "feedback", scope: "lifecycle", kind: "error", text: text.reloadFailed });
+        return;
+      }
       selectVersion(response.version);
-      setActionReason("");
-      setMessage({ kind: "success", text: text.saved });
+      dispatch({ type: "feedback", scope: "page", kind: "success", text: text.saved });
     } catch (error) {
       settleMutation(mutation.fingerprint, error);
-      showError(error);
+      dispatch({
+        type: "feedback",
+        scope: "lifecycle",
+        kind: "error",
+        text: await handleRouteMutationFailure(error, () => loadRoute(selectedRoute.id, true, false), locale, "lifecycle")
+      });
     } finally {
       endBusy();
     }
   }
 
-  async function retireRoute() {
-    const reason = actionReason.trim();
+  async function retireRoute(suppliedReason = "") {
+    const reason = suppliedReason.trim();
     if (!reason) {
-      setMessage({ kind: "error", text: text.reasonRequired });
+      dispatch({ type: "feedback", scope: "lifecycle", kind: "error", text: text.reasonRequired });
       return;
     }
-    if (!selectedRoute || !window.confirm(text.confirm)) return;
+    if (!selectedRoute) return;
     if (!beginBusy("retire-route")) return;
-    const payload = { id: selectedRoute.id, reason };
+    const retirement = { reason, expected_current_version_id: null as null };
+    const payload = { id: selectedRoute.id, ...retirement };
     const mutation = pendingMutation("service_route_retire", payload);
     try {
-      await api.retireServiceRoute(token, selectedRoute.id, reason, mutation.key);
+      await api.retireServiceRoute(token, selectedRoute.id, retirement, mutation.key);
       settleMutation(mutation.fingerprint);
       setSelectedRoute(null);
       selectVersion(null);
-      setActionReason("");
-      await loadCatalog(page);
+      dispatch({ type: "back-to-directory" });
+      if (!await loadCatalog(page)) return;
+      dispatch({ type: "feedback", scope: "page", kind: "success", text: text.saved });
     } catch (error) {
       settleMutation(mutation.fingerprint, error);
-      showError(error);
+      dispatch({
+        type: "feedback",
+        scope: "lifecycle",
+        kind: "error",
+        text: await handleRouteMutationFailure(
+          error,
+          () => loadRoute(selectedRoute.id, true, false),
+          locale,
+          "lifecycle"
+        )
+      });
     } finally {
       endBusy();
     }
   }
 
-  async function retireStop(stop: CanonicalStop) {
-    const reason = actionReason.trim();
+  async function retireStop(stop: CanonicalStop, suppliedReason: string) {
+    const reason = suppliedReason.trim();
     if (!reason) {
-      setMessage({ kind: "error", text: text.reasonRequired });
-      return;
+      dispatch({ type: "feedback", scope: "stops", kind: "error", text: text.reasonRequired });
+      return false;
     }
-    if (!window.confirm(text.confirm)) return;
-    if (!beginBusy(`retire-stop-${stop.id}`)) return;
+    if (!beginBusy(`retire-stop-${stop.id}`)) return false;
+    dispatch({ type: "clear-feedback" });
     const payload = { id: stop.id, reason };
     const mutation = pendingMutation("stop_retire", payload);
     try {
       await api.retireCanonicalStop(token, stop.id, reason, mutation.key);
       settleMutation(mutation.fingerprint);
-      const page = await api.canonicalStops(token, "?limit=50");
-      setStops(page.stops);
-      setActionReason("");
-      setMessage({ kind: "success", text: text.stopRetired });
+      if (!await loadStops(false)) {
+        dispatch({ type: "feedback", scope: "stops", kind: "error", text: text.reloadFailed });
+        return false;
+      }
+      dispatch({ type: "feedback", scope: "stops", kind: "success", text: text.stopRetired });
+      return true;
     } catch (error) {
       settleMutation(mutation.fingerprint, error);
-      showError(error);
+      dispatch({
+        type: "feedback",
+        scope: "stops",
+        kind: "error",
+        text: await handleRouteMutationFailure(error, () => loadStops(false), locale, "stops")
+      });
+      return false;
     } finally {
       endBusy();
     }
   }
 
-  const statusText = (value: string) => text[value as keyof typeof text] ?? value;
+  if (ui.surface === "directory") {
+    return (
+      <section className="route-management stack" dir={locale === "ar" ? "rtl" : "ltr"} lang={locale}>
+        {ui.feedback?.scope === "page" && <Notice kind={ui.feedback.kind}>{ui.feedback.text}</Notice>}
+        {message && <Notice kind={message.kind}>{message.text}</Notice>}
+        <RouteDirectory
+          locale={locale}
+          routes={routes}
+          view={view}
+          page={page}
+          total={total}
+          busy={Boolean(busy)}
+          filters={{ search, status: statusFilter, direction: directionFilter, serviceRegionKey: serviceRegionFilter }}
+          onSearch={(filters) => { void loadCatalog(1, filters); }}
+          onPage={(nextPage) => { void loadCatalog(nextPage); }}
+          onOpenRoute={(routeId) => {
+            dispatch({ type: "open-route", routeId });
+            void loadRoute(routeId);
+          }}
+          onCreateRoute={() => dispatch({ type: "open-dialog", dialog: "create-route" })}
+        />
+        <CreateRouteDialog
+          open={ui.dialog === "create-route"}
+          locale={locale}
+          busy={busy === "create-route"}
+          error={ui.feedback?.scope === "create-route" ? ui.feedback.text : null}
+          onSubmit={submitRoute}
+          onClose={() => {
+            dispatch({ type: "close-dialog" });
+            dispatch({ type: "clear-feedback" });
+          }}
+        />
+      </section>
+    );
+  }
 
-  const disabledUnlessDraft = selectedVersion ? selectedVersion.status !== "draft" : false;
+  if (!selectedRoute) {
+    return (
+      <section className="route-management stack" dir={locale === "ar" ? "rtl" : "ltr"} lang={locale}>
+        <Button variant="ghost" size="sm" onClick={() => dispatch({ type: "back-to-directory" })}>
+          {locale === "ar" ? "العودة إلى المسارات" : "Back to routes"}
+        </Button>
+        {message && <Notice kind={message.kind}>{message.text}</Notice>}
+        <Card><p className="muted">{text.loading}</p><Skeleton /></Card>
+      </section>
+    );
+  }
+
+  const versionsPanel = <RouteVersions
+    locale={locale}
+    route={selectedRoute}
+    selectedVersion={selectedVersion}
+    editing={ui.versionEditMode}
+    busy={Boolean(busy)}
+    feedback={ui.feedback?.scope === "version-editor" ? ui.feedback : null}
+    onSelectVersion={selectVersion}
+    onCreateDraft={(draft) => void createDraft(draft)}
+    onBeginEdit={() => {
+      dispatch({ type: "clear-feedback" });
+      dispatch({ type: "begin-version-edit" });
+    }}
+    onSaveDraft={(draft) => void saveDraft(draft)}
+    onCancelEdit={() => {
+      dispatch({ type: "cancel-version-edit" });
+      dispatch({ type: "clear-feedback" });
+    }}
+  />;
+
+  const stopDialog = (["add-stop", "create-stop", "edit-stop"] as StopDialogMode[]).includes(ui.dialog as StopDialogMode)
+    ? ui.dialog as StopDialogMode
+    : null;
+  const stopsPanel = <RouteStops
+    locale={locale}
+    version={selectedVersion}
+    memberships={memberships}
+    stops={stops}
+    usedStopIds={usedStopIds}
+    busy={Boolean(busy)}
+    feedback={ui.feedback?.scope === "stops" ? ui.feedback : null}
+    dialogFeedback={ui.feedback?.scope === "stop-editor" ? ui.feedback : null}
+    dialog={stopDialog}
+    selectedStopId={ui.selectedStopId}
+    onOpenDialog={(dialog, stopId) => {
+      dispatch({ type: "clear-feedback" });
+      dispatch({ type: "open-dialog", dialog, stopId });
+    }}
+    onCloseDialog={() => {
+      dispatch({ type: "close-dialog" });
+      if (ui.feedback?.scope === "stop-editor") dispatch({ type: "clear-feedback" });
+    }}
+    onMembershipsChange={setMemberships}
+    onSaveOrder={saveStops}
+    onCreateStop={submitStop}
+    onEditStop={saveStop}
+    onRetireStop={retireStop}
+  />;
 
   return (
-    <section className="stack" aria-labelledby="route-management-title">
-      <div className="split">
-        <h2 id="route-management-title" className="page-header__title">{text.title}</h2>
-        <StatusBadge tone="warning">{text.geometryPending}</StatusBadge>
-      </div>
-      <p className="muted">{text.subtitle}</p>
-
+    <section
+      className="route-management stack"
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      lang={locale}
+      data-selected-route-id={selectedRoute.id}
+    >
+      {ui.feedback?.scope === "page" && <Notice kind={ui.feedback.kind}>{ui.feedback.text}</Notice>}
       {message && <Notice kind={message.kind}>{message.text}</Notice>}
-
-      <div className="route-layout">
-        <aside className="route-sidebar" aria-label={text.routes}>
-          <Card>
-            <form className="stack stack--tight" onSubmit={(event) => { event.preventDefault(); void loadCatalog(1); }}>
-              <label className="field">{text.search}<input value={search} onChange={(event) => setSearch(event.target.value)} /></label>
-              <label className="field">{text.status}<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">—</option><option value="active">{text.active}</option><option value="retired">{text.retired}</option></select></label>
-              <Button type="submit" variant="primary" icon="search" disabled={Boolean(busy)}>{text.search}</Button>
-            </form>
-          </Card>
-
-          <Card>
-            {view === "loading" && <div aria-live="polite"><p className="muted">{text.loading}</p><Skeleton /></div>}
-            {view === "error" && <EmptyState compact icon="warning" title={text.error} action={<Button variant="outline" icon="refresh" onClick={() => void loadCatalog(page)} disabled={Boolean(busy)}>{text.retry}</Button>} />}
-            {view === "empty" && <EmptyState compact icon="edit_road" title={text.empty} />}
-            {view === "ready" && <div className="route-catalog">{routes.map((route) => (
-              <button
-                type="button"
-                className={selectedRoute?.id === route.id ? "route-catalog__item is-selected" : "route-catalog__item"}
-                key={route.id}
-                onClick={() => void loadRoute(route.id)}
-                disabled={Boolean(busy)}
-              >
-                <strong>{locale === "ar" ? route.current_version?.name_ar ?? route.route_key : route.current_version?.name_en ?? route.route_key}</strong>
-                <span>{route.route_key}</span>
-                <small>{statusText(route.status)} · {text[route.direction]}</small>
-              </button>
-            ))}</div>}
-            <div className="route-pagination">
-              <span>{text.pagination} {page} · {total}</span>
-              <div className="button-row">
-                <Button variant="outline" size="sm" disabled={page <= 1 || Boolean(busy)} onClick={() => void loadCatalog(page - 1)}>‹</Button>
-                <Button variant="outline" size="sm" disabled={page * 25 >= total || Boolean(busy)} onClick={() => void loadCatalog(page + 1)}>›</Button>
-              </div>
-            </div>
-          </Card>
-        </aside>
-
-        <div className="stack">
-          <Card>
-            <details className="disclosure">
-              <summary>{text.createRoute}</summary>
-              <form className="field-grid" onSubmit={submitRoute}>
-                <label className="field">{text.routeKey}<input required value={routeDraft.route_key} onChange={(event) => setRouteDraft({ ...routeDraft, route_key: event.target.value })} /></label>
-                <label className="field">{text.groupKey}<input required value={routeDraft.route_group_key} onChange={(event) => setRouteDraft({ ...routeDraft, route_group_key: event.target.value })} /></label>
-                <label className="field">{text.region}<input required value={routeDraft.service_region_key} onChange={(event) => setRouteDraft({ ...routeDraft, service_region_key: event.target.value })} /></label>
-                <label className="field">{text.direction}<select value={routeDraft.direction} onChange={(event) => setRouteDraft({ ...routeDraft, direction: event.target.value as RouteIdentityDraft["direction"] })}><option value="outbound">{text.outbound}</option><option value="inbound">{text.inbound}</option><option value="loop">{text.loop}</option></select></label>
-                <Button type="submit" icon="add" disabled={Boolean(busy)}>{text.create}</Button>
-              </form>
-            </details>
-          </Card>
-
-          <Card>
-            <label className="field">{text.reason}<input value={actionReason} maxLength={500} onChange={(event) => setActionReason(event.target.value)} disabled={Boolean(busy)} /></label>
-          </Card>
-
-          {!selectedRoute ? <Card><EmptyState icon="edit_road" title={text.chooseRoute} /></Card> : <>
-            <Card>
-              <div className="split">
-                <div>
-                  <StatusBadge tone="neutral">{selectedRoute.route_key}</StatusBadge>
-                  <h3 className="card__title">{selectedRoute.current_version ? (locale === "ar" ? selectedRoute.current_version.name_ar : selectedRoute.current_version.name_en) : selectedRoute.route_key}</h3>
-                  <p className="muted">{selectedRoute.service_region_key} · {text[selectedRoute.direction]}</p>
-                </div>
-                <div className="button-row">
-                  <StatusBadge status={selectedRoute.status}>{statusText(selectedRoute.status)}</StatusBadge>
-                  <Button variant="destructive" icon="close" onClick={() => void retireRoute()} disabled={Boolean(busy)}>{text.retireRoute}</Button>
-                </div>
-              </div>
-            </Card>
-
-            <Card>
-              <CardHeader
-                title={text.versions}
-                action={<Button variant="secondary" icon="add" onClick={() => selectVersion(null)} disabled={Boolean(busy)}>{text.newVersion}</Button>}
-              />
-              <div className="version-tabs">{selectedRoute.versions?.map((version) => (
-                <Button
-                  key={version.id}
-                  variant="outline"
-                  size="sm"
-                  className={selectedVersion?.id === version.id ? "is-selected" : undefined}
-                  onClick={() => selectVersion(version)}
-                  disabled={Boolean(busy)}
-                >
-                  {`v${version.version_number} · ${statusText(version.status)}`}
-                </Button>
-              ))}</div>
-              <form className="field-grid" onSubmit={submitVersion}>
-                <label className="field">{text.nameAr}<input dir="rtl" required value={versionDraft.name_ar} onChange={(event) => setVersionDraft({ ...versionDraft, name_ar: event.target.value })} disabled={disabledUnlessDraft} /></label>
-                <label className="field">{text.nameEn}<input dir="ltr" required value={versionDraft.name_en} onChange={(event) => setVersionDraft({ ...versionDraft, name_en: event.target.value })} disabled={disabledUnlessDraft} /></label>
-                <label className="field">{text.descriptionAr}<textarea dir="rtl" value={versionDraft.description_ar ?? ""} onChange={(event) => setVersionDraft({ ...versionDraft, description_ar: event.target.value })} disabled={disabledUnlessDraft} /></label>
-                <label className="field">{text.descriptionEn}<textarea dir="ltr" value={versionDraft.description_en ?? ""} onChange={(event) => setVersionDraft({ ...versionDraft, description_en: event.target.value })} disabled={disabledUnlessDraft} /></label>
-                <label className="field">{text.activeFrom}<input type="datetime-local" value={versionDraft.active_from ?? ""} onChange={(event) => setVersionDraft({ ...versionDraft, active_from: event.target.value })} disabled={disabledUnlessDraft} /></label>
-                <label className="field">{text.activeUntil}<input type="datetime-local" value={versionDraft.active_until ?? ""} onChange={(event) => setVersionDraft({ ...versionDraft, active_until: event.target.value })} disabled={disabledUnlessDraft} /></label>
-                {(!selectedVersion || selectedVersion.status === "draft") && <Button type="submit" icon="check" disabled={Boolean(busy)}>{selectedVersion ? text.saveDraft : text.createDraft}</Button>}
-              </form>
-              {selectedVersion && <div className="route-lifecycle">
-                <StatusBadge status={selectedVersion.status}>{statusText(selectedVersion.status)}</StatusBadge>
-                <StatusBadge tone={selectedVersion.geometry.ready ? "success" : "warning"}>{selectedVersion.geometry.ready ? text.geometryReady : text.geometryPending}</StatusBadge>
-                {actions.includes("clone") && <Button variant="outline" size="sm" onClick={() => void cloneVersion()} disabled={Boolean(busy)}>{text.clone}</Button>}
-                {actions.includes("publish") && <Button variant="action" size="sm" icon="check" onClick={() => void versionAction("publish")} disabled={Boolean(busy)}>{text.publish}</Button>}
-                {actions.includes("pause") && <Button variant="outline" size="sm" onClick={() => void versionAction("pause")} disabled={Boolean(busy)}>{text.pause}</Button>}
-                {actions.includes("resume") && <Button variant="secondary" size="sm" onClick={() => void versionAction("resume")} disabled={Boolean(busy)}>{text.resume}</Button>}
-                {actions.includes("retire") && <Button variant="destructive" size="sm" onClick={() => void versionAction("retire")} disabled={Boolean(busy)}>{text.retire}</Button>}
-              </div>}
-            </Card>
-
-            {selectedVersion?.status === "draft" && <Card>
-              <CardHeader title={text.orderedStops} />
-              <div className="button-row">
-                <select className="input" aria-label={text.addStop} value={stopToAdd} onChange={(event) => setStopToAdd(event.target.value)} disabled={Boolean(busy)}>
-                  <option value="">{text.addStop}</option>
-                  {activeStops.filter((stop) => !memberships.some((membership) => membership.stop_id === stop.id)).map((stop) => <option value={stop.id} key={stop.id}>{locale === "ar" ? stop.name_ar : stop.name_en}</option>)}
-                </select>
-                <Button variant="secondary" icon="add" onClick={addExistingStop} disabled={!stopToAdd || Boolean(busy)}>{text.addStop}</Button>
-              </div>
-              {memberships.length === 0 && <EmptyState compact icon="location_on" title={text.noStops} />}
-              <ol className="stop-editor">{memberships.map((membership, index) => {
-                const stop = stops.find((item) => item.id === membership.stop_id);
-                return <li key={membership.stop_id}>
-                  <div className="stop-editor__title">
-                    <StatusBadge tone="info">{index + 1}</StatusBadge>
-                    <strong>{stop ? (locale === "ar" ? stop.name_ar : stop.name_en) : membership.stop_id}</strong>
-                    <div className="button-row">
-                      <Button variant="outline" size="sm" aria-label={reorderControlLabel(text.moveUp, index)} disabled={index === 0 || Boolean(busy)} onClick={() => setMemberships(moveRouteStop(memberships, index, -1))}>↑</Button>
-                      <Button variant="outline" size="sm" aria-label={reorderControlLabel(text.moveDown, index)} disabled={index === memberships.length - 1 || Boolean(busy)} onClick={() => setMemberships(moveRouteStop(memberships, index, 1))}>↓</Button>
-                      <Button variant="destructive" size="sm" aria-label={reorderControlLabel(text.remove, index)} disabled={Boolean(busy)} onClick={() => setMemberships(memberships.filter((_, current) => current !== index).map((item, current) => ({ ...item, sequence: current + 1 })))}>×</Button>
-                    </div>
-                  </div>
-                  <div className="permission-grid">{(["passenger_pickup_allowed", "passenger_dropoff_allowed", "parcel_pickup_allowed", "parcel_dropoff_allowed"] as Permission[]).map((permission) => <label key={permission}><input type="checkbox" checked={membership[permission]} disabled={Boolean(busy)} onChange={() => setMemberships(toggleRouteStopPermission(memberships, index, permission))} />{permission === "passenger_pickup_allowed" ? text.passengerPickup : permission === "passenger_dropoff_allowed" ? text.passengerDropoff : permission === "parcel_pickup_allowed" ? text.parcelPickup : text.parcelDropoff}</label>)}</div>
-                </li>;
-              })}</ol>
-              <Button icon="check" onClick={() => void saveStops()} disabled={memberships.length < 2 || Boolean(busy)}>{text.saveOrder}</Button>
-            </Card>}
-          </>}
-
-          <Card>
-            <details className="disclosure">
-              <summary>{text.createStop}</summary>
-              <p className="muted">{text.stopHelp}</p>
-              <form className="field-grid" onSubmit={submitStop}>
-                <label className="field">{text.stopKey}<input required value={stopDraft.stop_key} onChange={(event) => setStopDraft({ ...stopDraft, stop_key: event.target.value })} /></label>
-                <label className="field">{text.region}<input required value={stopDraft.service_region_key} onChange={(event) => setStopDraft({ ...stopDraft, service_region_key: event.target.value })} /></label>
-                <label className="field">{text.nameAr}<input dir="rtl" required value={stopDraft.name_ar} onChange={(event) => setStopDraft({ ...stopDraft, name_ar: event.target.value })} /></label>
-                <label className="field">{text.nameEn}<input dir="ltr" required value={stopDraft.name_en} onChange={(event) => setStopDraft({ ...stopDraft, name_en: event.target.value })} /></label>
-                <label className="field">{text.latitude}<input type="number" step="0.000001" min="-90" max="90" required value={stopDraft.latitude} onChange={(event) => setStopDraft({ ...stopDraft, latitude: Number(event.target.value) })} /></label>
-                <label className="field">{text.longitude}<input type="number" step="0.000001" min="-180" max="180" required value={stopDraft.longitude} onChange={(event) => setStopDraft({ ...stopDraft, longitude: Number(event.target.value) })} /></label>
-                <Button type="submit" icon="add" disabled={Boolean(busy)}>{text.createStop}</Button>
-              </form>
-              <div className="stop-catalog">{stops.map((stop) => <div key={stop.id}>
-                <div>
-                  <strong>{locale === "ar" ? stop.name_ar : stop.name_en}</strong>
-                  <span>{stop.stop_key} · {stop.latitude.toFixed(6)}, {stop.longitude.toFixed(6)}</span>
-                </div>
-                <StatusBadge status={stop.status}>{statusText(stop.status)}</StatusBadge>
-                {stop.status === "active" && <Button variant="destructive" size="sm" onClick={() => void retireStop(stop)} disabled={Boolean(busy)}>{text.retire}</Button>}
-              </div>)}</div>
-            </details>
-          </Card>
-        </div>
-      </div>
+      <RouteWorkspace
+        locale={locale}
+        route={selectedRoute}
+        selectedVersion={selectedVersion}
+        tab={ui.tab}
+        onBack={() => {
+          setSelectedRoute(null);
+          selectVersion(null);
+          dispatch({ type: "back-to-directory" });
+        }}
+        onSelectTab={(tab) => dispatch({ type: "select-tab", tab })}
+        overview={
+          <RouteOverview
+            locale={locale}
+            route={selectedRoute}
+            version={selectedVersion}
+            readinessIssues={readinessIssues}
+            actions={actions}
+            lifecycleDialogOpen={ui.dialog === "lifecycle"}
+            lifecycleFeedback={ui.feedback?.scope === "lifecycle" ? ui.feedback.text : null}
+            busy={Boolean(busy)}
+            onOpenLifecycleDialog={() => {
+              dispatch({ type: "clear-feedback" });
+              dispatch({ type: "open-dialog", dialog: "lifecycle" });
+            }}
+            onCloseLifecycleDialog={() => dispatch({ type: "close-dialog" })}
+            onClone={() => void cloneVersion()}
+            onPublish={() => void versionAction("publish")}
+            onPause={(reason) => void versionAction("pause", reason)}
+            onResume={() => void versionAction("resume")}
+            onRetireVersion={(reason) => void versionAction("retire", reason)}
+            onRetireRoute={(reason) => void retireRoute(reason)}
+          />
+        }
+        versions={versionsPanel}
+        stops={stopsPanel}
+        fares={<RouteFares api={api} token={token} locale={locale} routeId={selectedRoute.id} />}
+      />
     </section>
   );
 }

@@ -1,13 +1,11 @@
-import { randomUUID } from "node:crypto";
 import express, { Router } from "express";
 import { z } from "zod";
 import type { AppConfig } from "../config.js";
 import { HttpError } from "../middleware/error.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
-import type { AuthenticatedRequest } from "../middleware/auth.js";
+import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import {
-  PassengerAssistantProviderError,
   createPassengerAssistantService,
+  PassengerAssistantProviderError,
   type PassengerAssistantReply,
   type PassengerAssistantService
 } from "../services/passengerAssistant.js";
@@ -16,68 +14,60 @@ import {
   type AiServicesClient
 } from "../services/aiServicesClient.js";
 import {
+  createPrismaAssistantHistoryStore,
+  type AssistantHistoryConversation,
+  type PassengerAssistantHistoryStore
+} from "../services/passengerAssistantHistory.js";
+import {
   prismaUncertainRequestRecorder,
   type UncertainRequestRecorder
-} from "../services/uncertainRequests.js";
+} from "../services/uncertainAiRequests.js";
 
-const messageSchema = z.object({
+const assistantMessageSchema = z.object({
   message: z.string().trim().min(1).max(1_000),
-  conversation_id: z.string().min(1).max(100).optional()
-});
+  locale: z.enum(["ar", "en"]).default("ar"),
+  conversation_id: z.string().trim().min(1).max(128).optional(),
+  history: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    text: z.string().trim().min(1).max(2_000)
+  }).strict()).max(8).default([])
+}).strict();
 
-function publicIntent(reply: PassengerAssistantReply) {
-  if (!reply.intent) return undefined;
+const savedRequestLinkSchema = z.object({
+  conversation_id: z.string().trim().min(1).max(128),
+  saved_request_id: z.string().trim().min(1).max(191)
+}).strict();
+
+function publicConversation(conversation: AssistantHistoryConversation) {
   return {
-    service_type: reply.intent.serviceType,
-    pickup: reply.intent.pickup,
-    destination: reply.intent.destination,
-    preferred_time: reply.intent.preferredTime,
-    passenger_count: reply.intent.passengerCount
+    id: conversation.id,
+    saved_request_id: conversation.saved_request_id,
+    created_at: conversation.created_at.toISOString(),
+    updated_at: conversation.updated_at.toISOString(),
+    messages: conversation.messages.map((message) => ({
+      id: message.id,
+      role: message.role,
+      text: message.text,
+      payload: message.payload ?? null,
+      created_at: message.created_at.toISOString()
+    }))
   };
 }
 
-/** Public response body shared by the text and voice routes (keeps one data contract). */
-export function assistantResponseBody(
-  reply: PassengerAssistantReply,
-  conversationId: string,
-  intent: ReturnType<typeof publicIntent> | undefined
-) {
-  if (reply.status === "request_review") {
-    return {
-      status: "request_review" as const,
-      message: reply.message,
-      extracted: {
-        pickup_key: reply.request!.pickupKey,
-        pickup_label: reply.request!.pickupLabel,
-        destination_key: reply.request!.destinationKey,
-        destination_label: reply.request!.destinationLabel,
-        preferred_time: reply.request!.preferredTime,
-        passenger_count: reply.request!.passengerCount,
-        pickup_lat: reply.request!.pickupLat,
-        pickup_lng: reply.request!.pickupLng,
-        destination_lat: reply.request!.destinationLat,
-        destination_lng: reply.request!.destinationLng
-      },
-      intent,
-      suggestions: [],
-      conversation_id: conversationId
-    };
-  }
-  if (reply.status === "clarification") {
-    return {
-      status: "clarification" as const,
-      question: reply.message,
-      suggestions: reply.suggestions,
-      intent,
-      conversation_id: conversationId
-    };
-  }
+/** Structured intent as returned to the app (snake_case, no internal fields). */
+function publicIntent(reply: PassengerAssistantReply) {
+  const intent = reply.intent!;
+  const place = (value: typeof intent.pickup) =>
+    value ? { key: value.key, label_ar: value.label_ar, label_en: value.label_en } : null;
   return {
-    status: "result" as const,
-    answer: reply.message,
-    suggestions: [],
-    intent,
-    conversation_id: conversationId
+    type: intent.type,
+    pickup: place(intent.pickup),
+    dropoff: place(intent.dropoff),
+    time: intent.time,
+    seats: intent.seats,
+    size: intent.size,
+    confidence: intent.confidence,
+    source: intent.source
   };
 }
 
@@ -85,48 +75,134 @@ export function createPassengerAssistantRouter(
   appConfig: AppConfig,
   service: PassengerAssistantService = createPassengerAssistantService(appConfig),
   recorder: UncertainRequestRecorder = prismaUncertainRequestRecorder,
+  history: PassengerAssistantHistoryStore = createPrismaAssistantHistoryStore(),
   aiServices: AiServicesClient | null = null
 ) {
   const router = Router();
   router.use("/passenger/assistant", requireAuth, requireRole("passenger"));
 
+  router.get("/passenger/assistant/conversation", async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const conversation = await history.latest(req.user!.id);
+      res.json({ conversation: conversation ? publicConversation(conversation) : null });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete("/passenger/assistant/conversation", async (req: AuthenticatedRequest, res, next) => {
+    try {
+      await history.clear(req.user!.id);
+      res.json({ deleted: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.patch("/passenger/assistant/conversation", async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const input = savedRequestLinkSchema.parse(req.body);
+      const result = await history.linkSavedRequest(req.user!.id, input.conversation_id, input.saved_request_id);
+      if (result === "conversation_not_found") throw new HttpError(404, "assistant_conversation_not_found");
+      if (result === "request_not_found") throw new HttpError(404, "passenger_request_not_found");
+      res.json({ conversation_id: input.conversation_id, saved_request_id: input.saved_request_id });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /** Runs one assistant exchange (shared by the text and voice routes) and returns the public body. */
+  async function answerExchange(
+    req: AuthenticatedRequest,
+    input: { message: string; locale: "ar" | "en"; conversation_id?: string; history: { role: "user" | "assistant"; text: string }[] }
+  ) {
+    const reply = await service.answer({
+      passengerId: req.user!.id,
+      message: input.message,
+      locale: input.locale,
+      history: input.history
+    });
+    const intent = reply.intent ? publicIntent(reply) : undefined;
+
+    if (reply.degraded && reply.degraded !== "unavailable") {
+      req.operationalLog?.warn(
+        { event: "passenger_assistant_fallback_used", category: reply.degraded },
+        "Passenger assistant used the rule-based fallback"
+      );
+    }
+    if (reply.uncertain && reply.intent) {
+      // Best effort: the review queue must never break the passenger's reply.
+      try {
+        await recorder.record({
+          text: input.message,
+          locale: input.locale,
+          intent: reply.intent,
+          reason: reply.uncertain.reason,
+          source: reply.uncertain.source
+        });
+      } catch {
+        req.operationalLog?.warn(
+          { event: "uncertain_ai_request_record_failed" },
+          "Could not record uncertain assistant request"
+        );
+      }
+    }
+
+    const extracted = reply.status === "request_review"
+      ? {
+          pickup_key: reply.request!.pickupKey,
+          pickup_label: reply.request!.pickupLabel,
+          destination_key: reply.request!.destinationKey,
+          destination_label: reply.request!.destinationLabel,
+          preferred_time: reply.request!.preferredTime,
+          passenger_count: reply.request!.passengerCount,
+          pickup_lat: reply.request!.pickupLat,
+          pickup_lng: reply.request!.pickupLng,
+          destination_lat: reply.request!.destinationLat,
+          destination_lng: reply.request!.destinationLng
+        }
+      : undefined;
+    // Both sides are saved only once there is a reply, so a failed attempt the
+    // app retries is not stored twice. Only what the app shows is kept; the
+    // JSON round trip drops absent fields, which a JSON column cannot hold.
+    const conversationId = await history.appendExchange({
+      passengerId: req.user!.id,
+      conversationId: input.conversation_id,
+      userText: input.message,
+      assistantText: reply.message.slice(0, 2_000),
+      assistantPayload: JSON.parse(JSON.stringify({
+        status: reply.status,
+        suggestions: reply.status === "clarification" ? reply.suggestions : [],
+        extracted
+      }))
+    });
+
+    if (reply.status === "request_review") {
+      return { status: "request_review" as const, message: reply.message, extracted, intent, suggestions: [], conversation_id: conversationId };
+    }
+    if (reply.status === "clarification") {
+      return { status: "clarification" as const, question: reply.message, suggestions: reply.suggestions, intent, conversation_id: conversationId };
+    }
+    return { status: "result" as const, answer: reply.message, suggestions: [], intent, conversation_id: conversationId };
+  }
+
   router.post("/passenger/assistant/messages", async (req: AuthenticatedRequest, res, next) => {
     try {
-      const parsed = messageSchema.safeParse(req.body);
-      if (!parsed.success) throw new HttpError(400, "invalid_request");
-      const reply = await service.answer({
-        passengerId: req.user!.id,
-        message: parsed.data.message,
-        locale: "ar",
-        history: []
-      });
-      const conversationId = parsed.data.conversation_id ?? randomUUID();
-      const intent = reply.intent ? publicIntent(reply) : undefined;
-      if (reply.uncertain && reply.intent) {
-        try {
-          await recorder.record({
-            text: parsed.data.message,
-            locale: "ar",
-            intent: reply.intent,
-            reason: reply.uncertain.reason,
-            source: reply.uncertain.source
-          });
-        } catch {
-          req.operationalLog?.warn(
-            { event: "uncertain_ai_request_record_failed" },
-            "Could not record uncertain assistant request"
-          );
-        }
-      }
-
-      res.json(assistantResponseBody(reply, conversationId, intent));
+      const input = assistantMessageSchema.parse(req.body);
+      res.json(await answerExchange(req, input));
     } catch (error) {
       if (error instanceof PassengerAssistantProviderError) {
         req.operationalLog?.warn(
-          { event: "assistant_provider_failure", category: error.category },
-          "Passenger assistant provider failure"
+          { event: "passenger_assistant_provider_failure", category: error.category },
+          "Passenger assistant request failed"
         );
-        next(new HttpError(error.category === "timeout" ? 504 : error.category === "upstream" ? 502 : 503, "assistant_unavailable"));
+        const statusCode = error.category === "timeout" ? 504 : error.category === "upstream" ? 502 : 503;
+        const errorCode = error.category === "timeout"
+          ? "assistant_timeout"
+          : error.category === "upstream"
+            ? "assistant_provider_error"
+            : "assistant_unavailable";
+        next(new HttpError(statusCode, errorCode));
         return;
       }
       next(error);
@@ -159,29 +235,9 @@ export function createPassengerAssistantRouter(
         const transcript = (analysis.transcript ?? "").trim().slice(0, 1_000);
         if (!transcript) throw new HttpError(422, "voice_input_rejected");
 
-        const reply = await service.answer({
-          passengerId: req.user!.id,
-          message: transcript,
-          locale: "ar",
-          history: []
-        });
-        const conversationId = randomUUID();
-        const intent = reply.intent ? publicIntent(reply) : undefined;
-        if (reply.uncertain && reply.intent) {
-          try {
-            await recorder.record({
-              text: transcript,
-              locale: "ar",
-              intent: reply.intent,
-              reason: reply.uncertain.reason,
-              source: reply.uncertain.source
-            });
-          } catch {
-            req.operationalLog?.warn({ event: "uncertain_ai_request_record_failed" }, "Could not record uncertain assistant request");
-          }
-        }
+        const body = await answerExchange(req, { message: transcript, locale: "ar", history: [] });
         res.json({
-          ...assistantResponseBody(reply, conversationId, intent),
+          ...body,
           transcript,
           ai_routing: {
             routing_target: analysis.routing.routing_target,

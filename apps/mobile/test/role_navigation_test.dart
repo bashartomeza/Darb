@@ -1,3 +1,4 @@
+import 'package:darb_mobile/core/widgets/role_nav_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -5,11 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:masari_mobile/app.dart';
-import 'package:masari_mobile/core/api/api_client.dart';
-import 'package:masari_mobile/core/config/app_config.dart';
-import 'package:masari_mobile/core/i18n/domain_labels.dart';
-import 'package:masari_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/app.dart';
+import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/core/i18n/domain_labels.dart';
+import 'package:darb_mobile/features/auth/data/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_app_config.dart';
@@ -21,18 +22,18 @@ void main() {
     testWidgets('bottom navigation survives every tab', (tester) async {
       await _pumpApp(tester, handler: _driverHandler);
 
-      expect(_bar(tester).selectedIndex, 0);
+      expect(_bar(tester).currentIndex, 0);
 
       // Every destination, then back down again: the diagram gives the driver
       // five, and each must keep the bar alive.
       for (final index in [1, 2, 3, 4, 0, 4, 3, 2, 1, 0]) {
         await _tapTab(tester, index);
         expect(
-          find.byType(NavigationBar),
+          find.byType(RoleShellScaffold),
           findsOneWidget,
           reason: 'bar disappeared on tab $index',
         );
-        expect(_bar(tester).selectedIndex, index);
+        expect(_bar(tester).currentIndex, index);
       }
     });
 
@@ -45,8 +46,8 @@ void main() {
         await _tapTab(tester, i.isEven ? 1 : 0);
       }
 
-      expect(find.byType(NavigationBar), findsOneWidget);
-      expect(_bar(tester).selectedIndex, 0);
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+      expect(_bar(tester).currentIndex, 0);
     });
 
     testWidgets('a detail keeps the bar, its tab, and the branch stack', (
@@ -59,8 +60,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Nested detail: bar stays, and its own tab stays highlighted.
-      expect(find.byType(NavigationBar), findsOneWidget);
-      expect(_bar(tester).selectedIndex, 1);
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+      expect(_bar(tester).currentIndex, 1);
       expect(
         find.byKey(const ValueKey('driverScoringBreakdown')),
         findsOneWidget,
@@ -86,7 +87,7 @@ void main() {
         findsNothing,
       );
       expect(find.byKey(const ValueKey('openMatch-match_1')), findsOneWidget);
-      expect(_bar(tester).selectedIndex, 1);
+      expect(_bar(tester).currentIndex, 1);
     });
 
     testWidgets('re-tapping the active tab pops instead of stacking', (
@@ -117,12 +118,12 @@ void main() {
       await _pumpApp(tester, handler: _driverHandler);
 
       GoRouter.of(
-        tester.element(find.byType(NavigationBar)),
+        tester.element(find.byType(RoleShellScaffold)),
       ).go('/driver/match/match_1');
       await tester.pumpAndSettle();
 
-      expect(find.byType(NavigationBar), findsOneWidget);
-      expect(_bar(tester).selectedIndex, 1);
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+      expect(_bar(tester).currentIndex, 1);
     });
 
     testWidgets('a full-screen flow deliberately has no navigation bar', (
@@ -131,11 +132,11 @@ void main() {
       await _pumpApp(tester, handler: _driverHandler);
 
       GoRouter.of(
-        tester.element(find.byType(NavigationBar)),
+        tester.element(find.byType(RoleShellScaffold)),
       ).go('/driver/trip/trip_1');
       await tester.pumpAndSettle();
 
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(RoleShellScaffold), findsNothing);
     });
   });
 
@@ -143,11 +144,24 @@ void main() {
     testWidgets('bottom navigation survives every tab', (tester) async {
       await _pumpApp(tester, handler: _passengerHandler);
 
-      for (final index in [1, 2, 3, 4, 0, 1]) {
+      // The passenger bar has four tabs; branch 3 (notifications) is opened
+      // from Home's bell instead, covered by the next test.
+      for (final index in [1, 2, 4, 0, 1]) {
         await _tapTab(tester, index);
-        expect(find.byType(NavigationBar), findsOneWidget);
-        expect(_bar(tester).selectedIndex, index);
+        expect(find.byType(RoleShellScaffold), findsOneWidget);
+        expect(_bar(tester).currentIndex, index);
       }
+      expect(find.byKey(const ValueKey('roleNavigation-3')), findsNothing);
+    });
+
+    testWidgets('the home bell opens the notifications branch', (tester) async {
+      await _pumpApp(tester, handler: _passengerHandler);
+
+      await tester.tap(find.byKey(const ValueKey('passengerNotifications')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+      expect(_bar(tester).currentIndex, 3);
     });
 
     testWidgets('the trips tab lists the request history', (tester) async {
@@ -163,8 +177,30 @@ void main() {
         find.byKey(const ValueKey('passengerTrip-request_1')),
         findsOneWidget,
       );
-      expect(find.text('الرحلات السابقة'), findsOneWidget);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+    });
+
+    testWidgets('the assistant opens inside the passenger home branch', (
+      tester,
+    ) async {
+      await _pumpApp(tester, handler: _passengerHandler);
+
+      await tester.tap(find.byKey(const ValueKey('openPassengerAssistant')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('passengerAssistantScreen')),
+        findsOneWidget,
+      );
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+      expect(_bar(tester).currentIndex, 0);
+      expect(
+        Directionality.of(
+          tester.element(find.byKey(const ValueKey('assistantTextInput'))),
+        ),
+        TextDirection.rtl,
+      );
     });
 
     testWidgets('the account tab reaches session management', (tester) async {
@@ -172,7 +208,7 @@ void main() {
 
       await _tapTab(tester, _accountTab(tester));
       expect(find.text('الأمان والجلسات'), findsWidgets);
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
     });
 
     testWidgets('the legacy security link lands on the account tab', (
@@ -181,12 +217,14 @@ void main() {
       await _pumpApp(tester, handler: _passengerHandler);
       final account = _accountTab(tester);
 
-      await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+      GoRouter.of(
+        tester.element(find.byType(RoleShellScaffold)),
+      ).go('/security/sessions');
       await tester.pumpAndSettle();
 
       expect(find.text('الأمان والجلسات'), findsWidgets);
-      expect(find.byType(NavigationBar), findsOneWidget);
-      expect(_bar(tester).selectedIndex, account);
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+      expect(_bar(tester).currentIndex, account);
     });
   });
 
@@ -196,8 +234,8 @@ void main() {
 
       for (final index in [1, 2, 3, 4, 0, 1]) {
         await _tapTab(tester, index);
-        expect(find.byType(NavigationBar), findsOneWidget);
-        expect(_bar(tester).selectedIndex, index);
+        expect(find.byType(RoleShellScaffold), findsOneWidget);
+        expect(_bar(tester).currentIndex, index);
       }
     });
 
@@ -211,23 +249,23 @@ void main() {
         find.byKey(const ValueKey('merchantShipmentsList')),
         findsOneWidget,
       );
-      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
     });
   });
 
   testWidgets('Arabic lays the bar out right-to-left', (tester) async {
     await _pumpApp(tester, handler: _driverHandler);
 
-    final bar = find.byType(NavigationBar);
+    final bar = find.byType(RoleShellScaffold);
     expect(Directionality.of(tester.element(bar)), TextDirection.rtl);
 
     // Under RTL the first destination sits on the trailing (right) edge.
     final home = tester.getCenter(_tabIcon(0));
     final account = tester.getCenter(_tabIcon(_accountTab(tester)));
     expect(
-      home.dx,
-      greaterThan(account.dx),
-      reason: 'first destination should be rightmost in Arabic',
+      home.dy,
+      lessThan(account.dy),
+      reason: 'home should precede account in the sidebar',
     );
   });
 
@@ -239,12 +277,12 @@ void main() {
     );
 
     expect(
-      Directionality.of(tester.element(find.byType(NavigationBar))),
+      Directionality.of(tester.element(find.byType(RoleShellScaffold))),
       TextDirection.ltr,
     );
     expect(
-      tester.getCenter(_tabIcon(0)).dx,
-      lessThan(tester.getCenter(_tabIcon(_accountTab(tester))).dx),
+      tester.getCenter(_tabIcon(0)).dy,
+      lessThan(tester.getCenter(_tabIcon(_accountTab(tester))).dy),
     );
   });
 }
@@ -253,24 +291,25 @@ void main() {
 // Helpers.
 // ---------------------------------------------------------------------------
 
-NavigationBar _bar(WidgetTester tester) =>
-    tester.widget<NavigationBar>(find.byType(NavigationBar));
+StatefulNavigationShell _bar(WidgetTester tester) => tester
+    .widget<RoleShellScaffold>(find.byType(RoleShellScaffold))
+    .navigationShell;
 
 /// The account tab's index: always the last destination, in every role.
 ///
 /// Derived rather than hardcoded so adding a destination to a shell does not
 /// silently point these assertions at the wrong tab.
-int _accountTab(WidgetTester tester) => _bar(tester).destinations.length - 1;
+int _accountTab(WidgetTester tester) =>
+    tester
+        .widget<RoleShellScaffold>(find.byType(RoleShellScaffold))
+        .destinations
+        .length -
+    1;
 
 /// The destination at [index], scoped to the bar so it never collides with the
 /// same icon used inside a screen's content. Indexing destinations rather than
 /// icons keeps this tied to branch order.
-Finder _tabIcon(int index) => find
-    .descendant(
-      of: find.byType(NavigationBar),
-      matching: find.byType(NavigationDestination),
-    )
-    .at(index);
+Finder _tabIcon(int index) => find.byKey(ValueKey('roleNavigation-$index'));
 
 Future<void> _tapTab(WidgetTester tester, int index) async {
   await tester.tap(_tabIcon(index));
@@ -288,7 +327,7 @@ Future<void> _pumpApp(
   Map<String, Object> localeValues = const {},
   AppConfig config = demoTestAppConfig,
 }) async {
-  tester.view.physicalSize = const Size(900, 2000);
+  tester.view.physicalSize = const Size(1200, 2000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -300,7 +339,7 @@ Future<void> _pumpApp(
         appConfigProvider.overrideWithValue(config),
         httpClientProvider.overrideWithValue(MockClient(handler)),
       ],
-      child: const MasariApp(),
+      child: const DarbApp(),
     ),
   );
   await tester.pumpAndSettle();
@@ -365,7 +404,7 @@ Future<http.Response> _merchantHandler(http.Request request) async {
 Future<http.Response> _sessionsOr404(http.Request request) async {
   if (request.url.path.endsWith('/auth/sessions') && request.method == 'GET') {
     return http.Response(
-      '{"sessions":[{"id":"session_1","client_type":"mobile","device_name":"Masari Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:05:00.000Z","expires_at":"2026-08-17T10:00:00.000Z","is_current":true,"revoked":false}]}',
+      '{"sessions":[{"id":"session_1","client_type":"mobile","device_name":"Darb Android","created_at":"2026-07-17T10:00:00.000Z","last_used_at":"2026-07-17T10:05:00.000Z","expires_at":"2026-08-17T10:00:00.000Z","is_current":true,"revoked":false}]}',
       200,
     );
   }
@@ -385,7 +424,7 @@ const _routeJson =
     '{"id":"route_1","origin_label":"Hebron / PPU / Bab Al-Zawiya","origin_lat":"31.532600","origin_lng":"35.099800","destination_label":"Bethlehem","destination_lat":"31.705400","destination_lng":"35.202400","corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":2,"parcel_capacity_available":5,"status":"active","activated_at":"2026-07-13T08:00:00.000Z","completed_at":null}';
 
 const _matchJson =
-    '{"id":"match_1","status":"proposed","score":"0.9317","method":"masari_route_score","explanation":"Safe explanation","scoring_breakdown":{"corridorOverlap":0.95,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317},"created_at":"2026-07-13T08:10:00.000Z","driver_route":{"id":"route_1","origin_label":"Hebron / PPU / Bab Al-Zawiya","destination_label":"Bethlehem","corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":2,"parcel_capacity_available":5,"status":"active","driver":{"vehicle_type":"sedan","verified":true,"trust_score":86}},"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","preferred_time":"2026-07-13T09:00:00.000Z","passenger_count":1,"status":"pending","created_at":"2026-07-13T08:00:00.000Z"},"merchant_order":null,"parcel_batch":null}';
+    '{"id":"match_1","status":"proposed","score":"0.9317","method":"darb_route_score","explanation":"Safe explanation","scoring_breakdown":{"corridorOverlap":0.95,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317},"created_at":"2026-07-13T08:10:00.000Z","driver_route":{"id":"route_1","origin_label":"Hebron / PPU / Bab Al-Zawiya","destination_label":"Bethlehem","corridor_key":"hebron-ppu-bab-al-zawiya-to-bethlehem","seats_available":2,"parcel_capacity_available":5,"status":"active","driver":{"vehicle_type":"sedan","verified":true,"trust_score":86}},"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","preferred_time":"2026-07-13T09:00:00.000Z","passenger_count":1,"status":"pending","created_at":"2026-07-13T08:00:00.000Z"},"merchant_order":null,"parcel_batch":null}';
 
 const _tripJson =
     '{"id":"trip_1","status":"accepted","created_at":"2026-07-13T08:20:00.000Z","started_at":"2026-07-13T08:20:00.000Z","completed_at":null,"driver_route":$_routeJson,"passenger_request":{"id":"request_1","pickup_label":"PPU Main Gate","destination_label":"Bethlehem Center","passenger_count":1,"status":"accepted"},"merchant_order":null,"parcel_batch":null}';

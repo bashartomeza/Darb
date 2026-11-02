@@ -1,12 +1,11 @@
 /*
- * Masari admin design tokens.
+ * Darb admin design tokens.
  *
- * Values are taken verbatim from the Stitch desktop admin screens
- * (project 9242277153579104348, the five DESKTOP screens). Those screens use a
- * burnt-orange primary rather than the teal in the project-level design system
- * that apps/mobile follows. To move the console onto the mobile identity,
- * replace the six values in the "brand ramp" block below with the teal set
- * commented beside them; nothing else in the codebase hard-codes a brand colour.
+ * Palette from brand/darb/README.md: orange #FA5F12, ink #1C1A1A, grey #707070,
+ * hint #AEAEAE, card #F6F6F6 with #E0E0E0 border, success #3A7C07, danger #EB3223.
+ * White on #FA5F12 is only 3.1:1 (fails WCAG AA for normal text), so text on
+ * orange fills uses ink (5.5:1). Orange used as text on light surfaces uses the
+ * darker --primary-text so it also stays above 4.5:1.
  */
 
 @font-face {
@@ -42,51 +41,56 @@
 }
 
 :root {
-  /* --- brand ramp (swap this block for teal; see file header) --- */
-  --primary: #9a4100;                 /* teal identity: #004b4c */
-  --primary-container: #c25300;       /* teal identity: #116466 */
-  --on-primary: #ffffff;
-  --on-primary-container: #fffbff;
-  --tertiary: #9d3e00;                /* teal identity: #5f3a00 */
-  --tertiary-container: #c15312;      /* teal identity: #7f4f00 */
+  /* --- brand ramp --- */
+  --primary: #fa5f12;
+  --primary-container: #ff7f3f;       /* hover fill; ink text stays above 4.5:1 */
+  --primary-text: #b23d00;            /* orange for text/icons on light surfaces */
+  --on-primary: #1c1a1a;
+  --on-primary-container: #1c1a1a;
+  --tertiary: #a64300;
+  --tertiary-container: #c25300;
   --on-tertiary: #ffffff;
-  --on-tertiary-container: #fffbff;
-  --surface-tint: #9e4200;
+  --on-tertiary-container: #ffffff;
+  --surface-tint: #fa5f12;
 
   /* --- neutrals / surfaces --- */
-  --background: #f5fbf6;
-  --on-background: #171d1a;
-  --surface: #f5fbf6;
-  --surface-bright: #f5fbf6;
-  --surface-dim: #d6dbd6;
+  --background: #ffffff;
+  --on-background: #1c1a1a;
+  --surface: #ffffff;
+  --surface-bright: #ffffff;
+  --surface-dim: #e0e0e0;
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #eff5f0;
-  --surface-container: #eaefea;
-  --surface-container-high: #e4eae4;
-  --surface-container-highest: #dee4df;
-  --surface-variant: #dee4df;
-  --on-surface: #171d1a;
-  --on-surface-variant: #584237;
-  --inverse-surface: #2c322f;
-  --inverse-on-surface: #edf2ed;
-  --inverse-primary: #ffb691;
-  --outline: #8c7265;
-  --outline-variant: #dfc0b2;
+  --surface-container-low: #f6f6f6;
+  --surface-container: #f6f6f6;
+  --surface-container-high: #ececec;
+  --surface-container-highest: #e0e0e0;
+  --surface-variant: #e0e0e0;
+  --card: #f6f6f6;
+  --card-border: #e0e0e0;
+  --on-surface: #1c1a1a;
+  --on-surface-variant: #707070;
+  --hint: #aeaeae;
+  --inverse-surface: #1c1a1a;
+  --inverse-on-surface: #f6f6f6;
+  --inverse-primary: #ffb08a;
+  --outline: #8c8c8c;
+  --outline-variant: #e0e0e0;
 
   /* --- secondary --- */
-  --secondary: #5b5f5d;
+  --secondary: #707070;
   --on-secondary: #ffffff;
-  --secondary-container: #dde0dd;
-  --on-secondary-container: #606361;
-  --secondary-fixed: #e0e3e0;
-  --on-secondary-fixed: #181c1b;
+  --secondary-container: #ececec;
+  --on-secondary-container: #4a4a4a;
+  --secondary-fixed: #e0e0e0;
+  --on-secondary-fixed: #1c1a1a;
 
   /* --- functional --- */
-  --error: #ba1a1a;
+  --error: #eb3223;
+  --error-text: #c62818;               /* #eb3223 is 4.2:1 on white; this passes AA */
   --on-error: #ffffff;
-  --error-container: #ffdad6;
-  --on-error-container: #93000a;
-  --success: #4caf50;
+  --error-container: #fde3e0;
+  --on-error-container: #8f1409;
+  --success: #3a7c07;
 
   /* --- typography scale --- */
   --font-sans: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, ui-sans-serif, system-ui, sans-serif;
@@ -124,15 +128,15 @@
 
   /* --- radii --- */
   --radius-sm: 4px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --radius: 12px;
+  --radius-lg: 14px;
   --radius-xl: 16px;
   --radius-full: 9999px;
 
   /* --- elevation --- */
-  --elevation-1: 0 1px 2px rgba(23, 29, 26, 0.06), 0 1px 3px rgba(23, 29, 26, 0.04);
-  --elevation-2: 0 4px 12px rgba(23, 29, 26, 0.08);
-  --elevation-3: 0 8px 24px rgba(23, 29, 26, 0.12);
+  --elevation-1: 0 1px 2px rgba(28, 26, 26, 0.06), 0 1px 3px rgba(28, 26, 26, 0.04);
+  --elevation-2: 0 4px 12px rgba(28, 26, 26, 0.08);
+  --elevation-3: 0 8px 24px rgba(28, 26, 26, 0.12);
 
   /* --- layout --- */
   --sidenav-width: 256px;

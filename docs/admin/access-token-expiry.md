@@ -6,7 +6,7 @@ The React admin console intentionally remains access-token only. M6C1B does not 
 
 The shared admin API client observes authenticated requests that carry the current access token. When one returns `401` with `access_token_expired`, `invalid_token`, `invalid_session`, `session_revoked`, `session_expired`, or `missing_token`, one process-wide handler:
 
-1. clears `masari_admin_token` from both current `sessionStorage` and legacy `localStorage`;
+1. clears `darb_admin_token` from both current `sessionStorage` and legacy `localStorage`;
 2. clears the in-memory token, admin identity, and all auth-derived dashboard state;
 3. returns to the login screen; and
 4. displays the exact localized expiry notice once.

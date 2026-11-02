@@ -32,7 +32,8 @@ export async function createInvitation(
     createdById: string;
     intendedRole: OnboardingRole;
     intendedPhone?: string;
-    phoneRegion?: "PS";
+    contactEmail?: string;
+    phoneRegion?: string;
     campaign?: string;
     source?: string;
     expiresAt: Date;
@@ -53,6 +54,7 @@ export async function createInvitation(
           intended_phone_digest: phoneDigest(canonicalPhone, input.keys.phone),
           phone_digest_version: input.keys.phone.version,
           phone_last4: phoneLast4(canonicalPhone),
+          contact_email: input.contactEmail ?? null,
           campaign: input.campaign,
           source: input.source,
           expires_at: input.expiresAt,
@@ -161,7 +163,7 @@ export async function findUsableInvitationByCode(
   }
   if (invitation.intended_phone_digest) {
     if (!input.phoneE164 || !input.phoneKey || invitation.phone_digest_version !== input.phoneKey.version) return null;
-    if (!keyedDigestMatches(invitation.intended_phone_digest, "masari:phone", input.phoneE164, input.phoneKey)) return null;
+    if (!keyedDigestMatches(invitation.intended_phone_digest, "darb:phone", input.phoneE164, input.phoneKey)) return null;
   }
   return invitation;
 }

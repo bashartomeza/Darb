@@ -5,13 +5,13 @@
 
 ## Context
 
-Masari's hackathon JWTs were signature-valid for eight hours and could not be revoked before expiry. Controlled-beta identity needs immediate account suspension, per-device session revocation, logout-all, and mobile continuity without placing long-lived browser credentials in JavaScript.
+Darb's hackathon JWTs were signature-valid for eight hours and could not be revoked before expiry. Controlled-beta identity needs immediate account suspension, per-device session revocation, logout-all, and mobile continuity without placing long-lived browser credentials in JavaScript.
 
 ## Decision
 
 Keep short-lived JWT access tokens, but bind each token to an `AuthSession` and user `security_version`. Resolve that session and account from MySQL on every protected request. Issue one-time rotating opaque refresh tokens only to passenger, driver, and merchant sessions; store keyed HMAC digests rather than raw values. Treat reuse as session compromise and revoke the entire session.
 
-Access JWT signing and verification are restricted to HS256. Issuer and audience claims are intentionally omitted while Masari has one API issuer and one resource-server trust domain; they must become mandatory before introducing another token issuer, resource server, or federation boundary. The live session/user/role/version checks remain authoritative for every protected request.
+Access JWT signing and verification are restricted to HS256. Issuer and audience claims are intentionally omitted while Darb has one API issuer and one resource-server trust domain; they must become mandatory before introducing another token issuer, resource server, or federation boundary. The live session/user/role/version checks remain authoritative for every protected request.
 
 Admin browser logins receive only short-lived access JWTs. Admins reauthenticate after expiry until a later secure browser-session decision. Existing clients retain the `token` field, so backend rollout does not require M6C1B client refresh support in the same milestone.
 

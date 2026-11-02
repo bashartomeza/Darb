@@ -1,5 +1,8 @@
 {
   "APP_ENV": "local",
   "API_BASE_URL": "http://10.0.2.2:3000",
-  "ENABLE_DEMO_FEATURES": false
+  "ENABLE_DEMO_FEATURES": false,
+  "GOOGLE_WEB_CLIENT_ID": "",
+  "GOOGLE_IOS_CLIENT_ID": "",
+  "GOOGLE_SERVER_CLIENT_ID": ""
 }

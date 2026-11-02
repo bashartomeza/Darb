@@ -11,6 +11,7 @@ export function DemoControl({
   onResetKeyChange,
   steps,
   canAct,
+  resetAvailable,
   busy,
   onReset,
   onRefresh,
@@ -20,6 +21,7 @@ export function DemoControl({
   onResetKeyChange: (value: string) => void;
   steps: string[];
   canAct: boolean;
+  resetAvailable: boolean;
   busy: string | null;
   onReset: () => void;
   onRefresh: () => void;
@@ -31,7 +33,7 @@ export function DemoControl({
       <CardHeader
         title={t("demoControl")}
         action={
-          <Button variant="action" icon="play" onClick={onRunFullDemo} disabled={!canAct}>
+          <Button variant="action" icon="play" onClick={onRunFullDemo} disabled={!canAct || !resetAvailable}>
             {t("runFullDemo")}
           </Button>
         }
@@ -42,7 +44,7 @@ export function DemoControl({
           <input className="technical" value={resetKey} onChange={(event) => onResetKeyChange(event.target.value)} />
         </label>
         <div className="button-row">
-          <Button variant="outline" icon="refresh" onClick={onReset} disabled={!canAct}>
+          <Button variant="outline" icon="refresh" onClick={onReset} disabled={!canAct || !resetAvailable}>
             {busy === "reset" ? t("resetting") : t("resetDemo")}
           </Button>
           <Button variant="secondary" icon="refresh" onClick={onRefresh} disabled={!canAct}>
@@ -51,6 +53,7 @@ export function DemoControl({
         </div>
       </div>
       <p className="muted">{t("resetExplanation")}</p>
+      {!resetAvailable && <p className="notice notice--warning">{t("demoResetUnavailable")}</p>}
       {steps.length > 0 && (
         <ol className="demo-steps">
           {steps.map((step, index) => (

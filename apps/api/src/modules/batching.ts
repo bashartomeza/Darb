@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { auditEvent } from "../lib/audit.js";
-import { lockedCorridorDistanceKm, round } from "../lib/geo.js";
+import { haversineKm, lockedCorridorDistanceKm, round, toNumber } from "../lib/geo.js";
+import { BATCHING_LIMITS, type ParcelSize } from "../lib/batchingConfig.js";
+import { planBatches } from "../services/batchPlanner.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
-import { LOCKED_CORRIDOR_KEY, LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
+import { LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 
 export const batchingRouter = Router();
@@ -15,63 +17,132 @@ function routeParam(value: string | string[] | undefined) {
 }
 
 export async function createParcelBatch(req: AuthenticatedRequest, orderId: string) {
-  const order = await prisma.merchantOrder.findUnique({
-    where: { id: orderId },
-    include: { parcels: true, parcel_batches: { select: { id: true }, take: 1 } }
+  const result = await prisma.$transaction(async (tx) => {
+    const order = await tx.merchantOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        route_version: { select: { service_route_id: true, name_en: true } },
+        parcels: true,
+        parcel_batches: { select: { id: true, status: true }, orderBy: { created_at: "desc" }, take: 20 },
+        batch_members: { select: { parcel_batch_id: true, active: true }, orderBy: { created_at: "desc" }, take: 20 }
+      }
+    });
+    if (!order) throw new HttpError(404, "order_not_found");
+    if (req.user!.role !== "admin" && (req.user!.role !== "merchant" || order.merchant_id !== req.user!.id)) {
+      throw new HttpError(403, "forbidden");
+    }
+    if (order.canonical_entry_version) throw new HttpError(409, "canonical_batching_not_enabled");
+    if (order.parcels.length < 1 || order.parcels.length > BATCHING_LIMITS.maxParcelsPerOrder) throw new HttpError(400, "invalid_parcel_count");
+    const hasActiveBatch = order.parcel_batches.some((batch) => !["cancelled", "failed", "expired"].includes(batch.status));
+    const hasActiveBatchMembership = order.batch_members.some((member) => member.active);
+    if (hasActiveBatch || hasActiveBatchMembership) throw new HttpError(409, "order_already_batched");
+    if (order.status !== "submitted") throw new HttpError(409, "order_not_batchable");
+
+    // A compatible batch keeps one merchant's pickup point and groups real,
+    // still-submitted orders on the same service route whose dropoffs lie close
+    // together and fit one driver's capacity. Further orders form separate
+    // batches. No synthetic orders are ever created. Orders from before routes
+    // existed only group with each other.
+    const serviceRouteId = order.route_version?.service_route_id ?? null;
+    const pool = await tx.merchantOrder.findMany({
+      where: {
+        merchant_id: order.merchant_id,
+        status: "submitted",
+        canonical_entry_version: null,
+        ...(serviceRouteId ? { route_version: { is: { service_route_id: serviceRouteId } } } : { route_version_id: null }),
+        parcel_batches: { none: { status: { notIn: ["cancelled", "failed", "expired"] } } },
+        batch_members: { none: { active: true } },
+        parcels: { some: {} }
+      },
+      include: { parcels: true },
+      orderBy: [{ created_at: "asc" }, { id: "asc" }],
+      take: BATCHING_LIMITS.maxOrdersPerBatch * 2
+    });
+    const candidates = [order, ...pool.filter((candidate) => candidate.id !== order.id)];
+    const plan = planBatches(
+      candidates.map((candidate) => ({
+        id: candidate.id,
+        pickup: { lat: toNumber(candidate.pickup_lat), lng: toNumber(candidate.pickup_lng) },
+        parcels: candidate.parcels.map((parcel) => ({
+          lat: toNumber(parcel.destination_lat),
+          lng: toNumber(parcel.destination_lng),
+          size: (parcel.size === "L" || parcel.size === "M" ? parcel.size : "S") as ParcelSize
+        }))
+      })),
+      undefined,
+      { seedId: order.id }
+    );
+    const planned = plan.batches.find((candidate) => candidate.order_ids.includes(order.id));
+    if (!planned) throw new HttpError(400, "order_exceeds_batch_capacity");
+    const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+    const selectedOrders = planned.order_ids.map((id) => byId.get(id)!);
+    const parcelCount = planned.parcel_count;
+    if (selectedOrders.length < 1 || parcelCount < 1) throw new HttpError(400, "invalid_batch_contents");
+
+    // The trip length is the route's own origin-to-destination distance.
+    const corridorKm = serviceRouteId
+      ? haversineKm(
+          { lat: toNumber(order.pickup_lat), lng: toNumber(order.pickup_lng) },
+          { lat: toNumber(order.parcels[0]!.destination_lat), lng: toNumber(order.parcels[0]!.destination_lng) }
+        )
+      : lockedCorridorDistanceKm();
+    const estimatedDistanceSaved = round(Math.max(0, parcelCount * corridorKm - corridorKm), 2);
+    const orderWord = selectedOrders.length === 1 ? "order" : "orders";
+    const corridorName = order.route_version ? `${order.route_version.name_en} route` : `${LOCKED_CORRIDOR_LABEL} pickup corridor`;
+    const explanation =
+      `${selectedOrders.length} compatible merchant ${orderWord} with ${parcelCount} parcels share the ` +
+      `${corridorName} and can be assigned together to one driver capacity allocation.`;
+
+    const orderIds = selectedOrders.map((candidate) => candidate.id);
+    const claimed = await tx.merchantOrder.updateMany({
+      where: { id: { in: orderIds }, merchant_id: order.merchant_id, canonical_entry_version: null, status: "submitted" },
+      data: { status: "batched" }
+    });
+    if (claimed.count !== orderIds.length) throw new HttpError(409, "order_not_batchable");
+
+    let batch;
+    try {
+      batch = await tx.parcelBatch.create({
+        data: {
+          merchant_order_id: order.id,
+          status: "created",
+          estimated_distance_saved: estimatedDistanceSaved.toFixed(2),
+          explanation,
+          members: {
+            create: selectedOrders.map((candidate) => ({
+              merchant_order_id: candidate.id,
+              active: true,
+              active_membership_key: candidate.id
+            }))
+          }
+        },
+        include: {
+          merchant_order: { include: { parcels: true } },
+          driver_route: true,
+          members: { include: { merchant_order: { select: { id: true, merchant_id: true, pickup_label: true, status: true } } } }
+        }
+      });
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+        throw new HttpError(409, "order_already_batched");
+      }
+      throw error;
+    }
+
+    await tx.parcel.updateMany({ where: { order_id: { in: orderIds }, status: "pending" }, data: { status: "batched", batch_id: batch.id } });
+
+    await auditEvent(tx, {
+      userId: req.user!.id,
+      action: AuditAction.parcel_batch_created,
+      entityType: "ParcelBatch",
+      entityId: batch.id,
+      metadata: { parcel_count: parcelCount, merchant_order_count: selectedOrders.length, estimated_distance_saved: estimatedDistanceSaved }
+    });
+
+    return { batch, orderIds };
   });
-  if (!order) throw new HttpError(404, "order_not_found");
-  if (req.user!.role !== "admin" && (req.user!.role !== "merchant" || order.merchant_id !== req.user!.id)) {
-    throw new HttpError(403, "forbidden");
-  }
-  if (order.canonical_entry_version) throw new HttpError(409, "canonical_batching_not_enabled");
-  if (order.parcels.length < 1 || order.parcels.length > 10) throw new HttpError(400, "invalid_parcel_count");
-  if (order.parcel_batches.length > 0) throw new HttpError(409, "order_already_batched");
-  if (order.status !== "submitted") throw new HttpError(409, "order_not_batchable");
 
-  const driverRoute = await prisma.driverRoute.findFirst({
-    where: {
-      status: "active",
-      corridor_key: LOCKED_CORRIDOR_KEY,
-      canonical_availability_version: null,
-      operational_mode: "legacy",
-      parcel_capacity_available: { gte: order.parcels.length },
-      driver: { verified: true }
-    },
-    orderBy: { id: "asc" }
-  });
-
-  if (!driverRoute) throw new HttpError(404, "no_route_with_parcel_capacity");
-
-  const corridorKm = lockedCorridorDistanceKm();
-  const nearestTrips = order.parcels.length;
-  const masariTrips = 1;
-  const estimatedDistanceSaved = round(Math.max(0, nearestTrips * corridorKm - masariTrips * corridorKm), 2);
-  const explanation =
-    `${order.parcels.length} parcels are compatible with the ${LOCKED_CORRIDOR_LABEL} corridor and can be grouped into one Masari batch, ` +
-    `reducing the baseline from ${nearestTrips} nearest-driver trips to ${masariTrips} corridor trip.`;
-
-  const batch = await prisma.parcelBatch.create({
-    data: {
-      merchant_order_id: order.id,
-      driver_route_id: driverRoute.id,
-      status: "created",
-      estimated_distance_saved: estimatedDistanceSaved.toFixed(2),
-      explanation
-    },
-    include: { merchant_order: { include: { parcels: true } }, driver_route: true }
-  });
-
-  await prisma.merchantOrder.update({ where: { id: order.id }, data: { status: "batched" } });
-
-  await auditEvent(prisma, {
-    userId: req.user!.id,
-    action: AuditAction.parcel_batch_created,
-    entityType: "ParcelBatch",
-    entityId: batch.id,
-    metadata: { parcel_count: order.parcels.length, estimated_distance_saved: estimatedDistanceSaved }
-  });
-
-  return batch;
+  return result.batch;
 }
 
 batchingRouter.post("/merchant/orders/:id/batch", requireAuth, async (req: AuthenticatedRequest, res, next) => {

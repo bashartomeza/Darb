@@ -1,4 +1,103 @@
+import 'dart:convert';
+
+import '../../../core/fares/fare.dart';
+
 enum CanonicalRouteDirection { outbound, inbound, loop }
+
+/// A position the server actually reported.
+///
+/// There is no default and no origin fallback: code that has no [GeoPoint] must
+/// say so on screen rather than draw something plausible.
+class GeoPoint {
+  const GeoPoint(this.latitude, this.longitude);
+
+  final double latitude;
+  final double longitude;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GeoPoint &&
+      other.latitude == latitude &&
+      other.longitude == longitude;
+
+  @override
+  int get hashCode => Object.hash(latitude, longitude);
+}
+
+enum RouteGeometryStatus { pending, available, unavailable }
+
+/// The drawn shape of a route version.
+///
+/// [points] is empty unless the server marked the geometry `available` and the
+/// encoding is one this build understands. Callers fall back to joining the
+/// ordered stops, which is real data, rather than inventing a road shape.
+class RouteGeometry {
+  const RouteGeometry({
+    required this.status,
+    required this.points,
+    this.distanceMeters,
+    this.durationSeconds,
+  });
+
+  final RouteGeometryStatus status;
+  final List<GeoPoint> points;
+  final int? distanceMeters;
+  final int? durationSeconds;
+
+  bool get hasPoints => points.length >= 2;
+
+  static const empty = RouteGeometry(
+    status: RouteGeometryStatus.pending,
+    points: <GeoPoint>[],
+  );
+
+  factory RouteGeometry.fromJson(Map<String, dynamic> json) {
+    final status =
+        RouteGeometryStatus.values
+            .where((value) => value.name == json['status'])
+            .firstOrNull ??
+        RouteGeometryStatus.pending;
+    return RouteGeometry(
+      status: status,
+      points: status == RouteGeometryStatus.available
+          ? _decodeGeometry(json['encoding'], json['encoded'])
+          : const <GeoPoint>[],
+      distanceMeters: _optionalInteger(json, 'estimated_distance_m'),
+      durationSeconds: _optionalInteger(json, 'estimated_duration_s'),
+    );
+  }
+}
+
+/// Only `demo-json-v1` exists server-side today. An unknown encoding yields no
+/// points instead of a guess, so a new provider degrades to the stop polyline
+/// until this understands it.
+List<GeoPoint> _decodeGeometry(Object? encoding, Object? encoded) {
+  if (encoding != 'demo-json-v1' || encoded is! String) {
+    return const <GeoPoint>[];
+  }
+  final Object? decoded;
+  try {
+    decoded = jsonDecode(encoded);
+  } on FormatException {
+    return const <GeoPoint>[];
+  }
+  if (decoded is! List) return const <GeoPoint>[];
+  final points = <GeoPoint>[];
+  for (final value in decoded) {
+    if (value is! Map<String, dynamic>) return const <GeoPoint>[];
+    final latitude = _coordinate(value['lat'], 90);
+    final longitude = _coordinate(value['lng'], 180);
+    if (latitude == null || longitude == null) return const <GeoPoint>[];
+    points.add(GeoPoint(latitude, longitude));
+  }
+  return List.unmodifiable(points);
+}
+
+double? _coordinate(Object? value, num limit) {
+  final numeric = value is num ? value.toDouble() : null;
+  if (numeric == null || numeric.abs() > limit) return null;
+  return numeric;
+}
 
 enum CanonicalRouteStatus { active, retired }
 
@@ -27,6 +126,7 @@ class MobileCapabilities {
     this.canonicalSharedDriverOffersAvailable = false,
     this.canonicalSharedAssignmentStatusAvailable = false,
     required this.mapsAvailable,
+    this.checkpointsAvailable = false,
     required this.liveTrackingAvailable,
   });
 
@@ -40,6 +140,7 @@ class MobileCapabilities {
   final bool canonicalSharedDriverOffersAvailable;
   final bool canonicalSharedAssignmentStatusAvailable;
   final bool mapsAvailable;
+  final bool checkpointsAvailable;
   final bool liveTrackingAvailable;
 
   factory MobileCapabilities.fromJson(Map<String, dynamic> json) {
@@ -54,6 +155,7 @@ class MobileCapabilities {
       'canonical_shared_driver_offers_available',
       'canonical_shared_assignment_status_available',
       'maps_available',
+      'checkpoints_available',
       'live_tracking_available',
     });
     return MobileCapabilities(
@@ -88,6 +190,7 @@ class MobileCapabilities {
         'canonical_shared_assignment_status_available',
       ),
       mapsAvailable: _bool(json, 'maps_available'),
+      checkpointsAvailable: _optionalBool(json, 'checkpoints_available'),
       liveTrackingAvailable: _bool(json, 'live_tracking_available'),
     );
   }
@@ -103,6 +206,7 @@ class CanonicalStop {
     required this.passengerDropoffAllowed,
     required this.parcelPickupAllowed,
     required this.parcelDropoffAllowed,
+    this.position,
   });
 
   final String id;
@@ -114,6 +218,11 @@ class CanonicalStop {
   final bool parcelPickupAllowed;
   final bool parcelDropoffAllowed;
 
+  /// Null whenever the server withholds coordinates, which it does until maps
+  /// are enabled. A stop without one is still selectable by name; it simply
+  /// cannot be drawn.
+  final GeoPoint? position;
+
   factory CanonicalStop.fromMembership(Map<String, dynamic> json) {
     _requireKeys(json, const {
       'sequence',
@@ -124,11 +233,22 @@ class CanonicalStop {
       'stop',
     });
     final stop = _object(json, 'stop');
-    _requireKeys(stop, const {'id', 'name_ar', 'name_en'});
+    _requireKeys(stop, const {
+      'id',
+      'name_ar',
+      'name_en',
+      'latitude',
+      'longitude',
+    });
+    final latitude = _coordinate(stop['latitude'], 90);
+    final longitude = _coordinate(stop['longitude'], 180);
     return CanonicalStop(
       id: _string(stop, 'id'),
       nameAr: _string(stop, 'name_ar'),
       nameEn: _string(stop, 'name_en'),
+      position: latitude == null || longitude == null
+          ? null
+          : GeoPoint(latitude, longitude),
       sequence: _integer(json, 'sequence'),
       passengerPickupAllowed: _bool(json, 'passenger_pickup_allowed'),
       passengerDropoffAllowed: _bool(json, 'passenger_dropoff_allowed'),
@@ -151,6 +271,8 @@ class CanonicalRoute {
     required this.activeFrom,
     required this.activeUntil,
     required this.stops,
+    this.geometry = RouteGeometry.empty,
+    this.fares,
   });
 
   final String id;
@@ -164,6 +286,26 @@ class CanonicalRoute {
   final DateTime? activeFrom;
   final DateTime? activeUntil;
   final List<CanonicalStop> stops;
+  final RouteGeometry geometry;
+
+  /// Display-only estimated tariff; null until an admin publishes one.
+  final RouteFares? fares;
+
+  /// The line to draw for this route.
+  ///
+  /// Prefers the published geometry and otherwise joins the stops that have
+  /// coordinates, in sequence. Both are server data; neither is interpolated.
+  List<GeoPoint> get path {
+    if (geometry.hasPoints) return geometry.points;
+    return List.unmodifiable([
+      for (final stop in stops)
+        if (stop.position != null) stop.position!,
+    ]);
+  }
+
+  CanonicalStop? get originStop => stops.isEmpty ? null : stops.first;
+
+  CanonicalStop? get destinationStop => stops.isEmpty ? null : stops.last;
 
   bool get currentlyEligible {
     final now = DateTime.now().toUtc();
@@ -185,10 +327,18 @@ class CanonicalRoute {
     activeFrom: activeFrom,
     activeUntil: activeUntil,
     stops: _validatedStops(value),
+    geometry: geometry,
+    fares: fares,
   );
 
   factory CanonicalRoute.fromJson(Map<String, dynamic> json) {
-    _requireKeys(json, const {'id', 'direction', 'status', 'current_version'});
+    _requireKeys(json, const {
+      'id',
+      'direction',
+      'status',
+      'current_version',
+      'fares',
+    });
     final version = _object(json, 'current_version');
     _requireKeys(version, const {
       'id',
@@ -199,6 +349,7 @@ class CanonicalRoute {
       'active_from',
       'active_until',
       'stops',
+      'geometry',
     });
     final direction = CanonicalRouteDirection.values
         .where((value) => value.name == _string(json, 'direction'))
@@ -231,6 +382,10 @@ class CanonicalRoute {
       activeFrom: _optionalDate(version, 'active_from'),
       activeUntil: _optionalDate(version, 'active_until'),
       stops: _validatedStops(stops),
+      geometry: version['geometry'] is Map<String, dynamic>
+          ? RouteGeometry.fromJson(_object(version, 'geometry'))
+          : RouteGeometry.empty,
+      fares: RouteFares.tryParse(json['fares']),
     );
   }
 }
@@ -245,7 +400,9 @@ List<CanonicalStop> _validatedStops(List<CanonicalStop> stops) {
       throw const FormatException('Invalid ordered stops');
     }
   }
-  return List.unmodifiable(stops);
+  return List.unmodifiable(
+    [...stops]..sort((a, b) => a.sequence.compareTo(b.sequence)),
+  );
 }
 
 class DriverAvailability {
@@ -326,6 +483,7 @@ class CanonicalPassengerRequest {
     required this.departureUntil,
     required this.passengerCount,
     required this.replayed,
+    this.fare,
   });
 
   final String id;
@@ -336,6 +494,9 @@ class CanonicalPassengerRequest {
   final DateTime departureUntil;
   final int passengerCount;
   final bool replayed;
+
+  /// Estimated fare frozen when the request was created (null if none).
+  final FareSnapshot? fare;
 
   factory CanonicalPassengerRequest.fromEnvelope(Map<String, dynamic> json) {
     final value = _object(json, 'request');
@@ -348,6 +509,7 @@ class CanonicalPassengerRequest {
       departureUntil: _date(value, 'requested_departure_until'),
       passengerCount: _integer(value, 'passenger_count'),
       replayed: json['replayed'] == true,
+      fare: FareSnapshot.tryParse(value['fare']),
     );
   }
 }
@@ -373,10 +535,14 @@ class CanonicalMerchantOrder {
     required this.id,
     required this.parcelCount,
     required this.replayed,
+    this.fare,
   });
   final String id;
   final int parcelCount;
   final bool replayed;
+
+  /// Estimated total frozen at creation; null unless every parcel was priced.
+  final FareSnapshot? fare;
 
   factory CanonicalMerchantOrder.fromEnvelope(Map<String, dynamic> json) {
     final order = _object(json, 'order');
@@ -386,6 +552,7 @@ class CanonicalMerchantOrder {
       id: _string(order, 'id'),
       parcelCount: parcels.length,
       replayed: json['replayed'] == true,
+      fare: FareSnapshot.tryParse(order['fare']),
     );
   }
 }
@@ -441,6 +608,13 @@ bool _optionalBool(Map<String, dynamic> json, String key) {
 
 int _integer(Map<String, dynamic> json, String key) {
   final value = json[key];
+  if (value is int) return value;
+  throw FormatException('Invalid $key');
+}
+
+int? _optionalInteger(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value == null) return null;
   if (value is int) return value;
   throw FormatException('Invalid $key');
 }

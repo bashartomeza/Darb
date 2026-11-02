@@ -1,9 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderOrFamily;
 
+import '../../auth/application/auth_actor_binding.dart';
 import '../../trips/data/trip_models.dart';
 import '../../trips/data/trip_repository.dart';
 import '../data/passenger_models.dart';
 import '../data/passenger_repository.dart';
+import 'passenger_history_controller.dart';
+
+/// Home and "My trips" both list the passenger's saved requests and live for
+/// the whole session. After any create, match or cancellation both are
+/// dropped so they re-read the server instead of showing the old snapshot.
+///
+/// Pass `ref.invalidate` from a widget, or a captured container's
+/// `invalidate` when the screen may close before the mutation finishes.
+void invalidatePassengerLists(
+  void Function(ProviderOrFamily provider) invalidate,
+) {
+  invalidate(passengerDashboardProvider);
+  invalidate(passengerHistoryProvider);
+}
 
 class PassengerDashboardState {
   const PassengerDashboardState({
@@ -16,7 +32,24 @@ class PassengerDashboardState {
 
   PassengerRequest? get activeRequest =>
       activeRequests.isEmpty ? null : activeRequests.first;
-  PassengerTrip? get activeTrip => trips.isEmpty ? null : trips.first;
+
+  PassengerTrip? get activeTrip {
+    for (final trip in trips) {
+      if (trip.status != 'completed' &&
+          trip.status != 'cancelled' &&
+          trip.status != 'failed') {
+        return trip;
+      }
+    }
+    return null;
+  }
+
+  PassengerTrip? tripForRequest(String requestId) {
+    for (final trip in trips) {
+      if (trip.passengerRequestId == requestId) return trip;
+    }
+    return null;
+  }
 }
 
 final passengerDashboardProvider =
@@ -50,6 +83,43 @@ class PassengerDashboardController
 }
 
 final passengerRequestDetailProvider = FutureProvider.autoDispose
-    .family<PassengerRequest, String>((ref, id) {
-      return ref.watch(passengerRepositoryProvider).requestDetail(id);
+    .family<PassengerRequest, String>((ref, id) async {
+      final requireCurrent = _passengerActorGuard(ref);
+      final request = await ref
+          .watch(passengerRepositoryProvider)
+          .requestDetail(id, beforeSend: requireCurrent);
+      requireCurrent();
+      return request;
     });
+
+final passengerTripForRequestProvider = FutureProvider.autoDispose
+    .family<PassengerTrip?, String>((ref, requestId) async {
+      final requireCurrent = _passengerActorGuard(ref);
+      // A refreshed request must not retain its independently cached trip.
+      // FutureProvider discards an older generation when this dependency changes.
+      await ref.watch(passengerRequestDetailProvider(requestId).future);
+      requireCurrent();
+      final trips = await ref
+          .watch(tripRepositoryProvider)
+          .listTrips(beforeSend: requireCurrent);
+      requireCurrent();
+      for (final trip in trips) {
+        if (trip.passengerRequestId == requestId) return trip;
+      }
+      return null;
+    });
+
+void Function() _passengerActorGuard(Ref ref) {
+  final binding = ref.read(authenticatedActorBindingProvider);
+  final revision = binding.revision;
+  void requireCurrent() {
+    if (!ref.mounted ||
+        binding.actorId == null ||
+        binding.revision != revision) {
+      throw StateError('session_changed');
+    }
+  }
+
+  requireCurrent();
+  return requireCurrent;
+}

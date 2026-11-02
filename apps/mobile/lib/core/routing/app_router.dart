@@ -1,16 +1,24 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/domain/auth_models.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/auth_completion_screen.dart';
+import '../../features/auth/presentation/google_onboarding_screen.dart';
+import '../../features/auth/presentation/register_role_screen.dart';
+import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/unsupported_role_screen.dart';
+import '../theme/passenger_theme.dart';
+import '../../features/assistant/presentation/passenger_assistant_screen.dart';
 import '../../features/canonical_routes/presentation/driver_availability_screens.dart';
 import '../../features/canonical_routes/presentation/merchant_route_order_screen.dart';
 import '../../features/canonical_routes/presentation/passenger_route_request_screen.dart';
+import '../../features/passenger_parcels/presentation/passenger_parcels_screen.dart';
+import '../../features/passenger_parcels/presentation/send_parcel_screen.dart';
 import '../../features/canonical_assignments/presentation/canonical_assignment_screens.dart';
 import '../../features/driver/presentation/driver_home_screen.dart';
 import '../../features/driver/presentation/driver_match_detail_screen.dart';
@@ -19,8 +27,11 @@ import '../../features/driver/presentation/driver_my_trip_screen.dart';
 import '../../features/driver/presentation/driver_performance_screen.dart';
 import '../../features/driver/presentation/driver_route_screen.dart';
 import '../../features/driver/presentation/driver_trip_screen.dart';
+import '../../features/driver_renewal/presentation/driver_renewal_banner.dart';
+import '../../features/driver_renewal/presentation/driver_renewal_screen.dart';
 import '../../features/matching/presentation/match_detail_screen.dart';
 import '../../features/merchant/presentation/create_merchant_order_screen.dart';
+import '../../features/merchant/presentation/merchant_bulk_orders_screen.dart';
 import '../../features/merchant/presentation/merchant_home_screen.dart';
 import '../../features/merchant/presentation/merchant_match_detail_screen.dart';
 import '../../features/merchant/presentation/merchant_match_inbox_screen.dart';
@@ -94,11 +105,20 @@ final _merchantAccountKey = GlobalKey<NavigatorState>(
 );
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authControllerProvider.select(authRoutingSnapshotFor));
-  final authenticating = auth.status == AuthStatus.authenticating;
+  // Auth changes refresh redirects without replacing the router or mounted
+  // forms. In particular, clearing a failed login must preserve its first edit.
+  final refresh = ValueNotifier(
+    authRoutingSnapshotFor(ref.read(authControllerProvider)),
+  );
+  ref.listen(authControllerProvider.select(authRoutingSnapshotFor), (_, next) {
+    refresh.value = next;
+  });
 
-  return GoRouter(
-    initialLocation: authenticating ? '/login' : '/splash',
+  final router = GoRouter(
+    initialLocation: refresh.value.status == AuthStatus.authenticating
+        ? '/login'
+        : '/splash',
+    refreshListenable: refresh,
     routes: [
       GoRoute(path: '/', redirect: (context, state) => '/splash'),
       GoRoute(
@@ -106,6 +126,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/auth/complete-registration',
+        // A Google sign-up chooses its role and profile; an email sign-up
+        // only confirms its emailed code and the terms.
+        builder: (context, state) => Consumer(
+          builder: (context, ref, _) =>
+              ref.watch(
+                    authControllerProvider.select(
+                      (auth) => auth.value?.registrationGrant?['next_action'],
+                    ),
+                  ) ==
+                  'consent_required'
+              ? const GoogleOnboardingScreen()
+              : const AuthCompletionScreen(phone: false),
+        ),
+      ),
+      GoRoute(
+        path: '/profile/phone',
+        builder: (context, state) => const AuthCompletionScreen(phone: true),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterRoleScreen(),
+      ),
+      GoRoute(
+        path: '/signup',
+        builder: (context, state) => const SignUpScreen(),
+      ),
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingFlowScreen(),
@@ -128,20 +176,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ---------------------------------------------------------------------
       GoRoute(
         path: '/passenger/request/new',
-        builder: (context, state) => const CreateRequestScreen(),
+        builder: (context, state) =>
+            const PassengerTheme(child: CreateRequestScreen()),
       ),
       GoRoute(
         path: '/passenger/routes/request/new',
-        builder: (context, state) => const PassengerRouteRequestScreen(),
+        builder: (context, state) =>
+            const PassengerTheme(child: PassengerRouteRequestScreen()),
+      ),
+      GoRoute(
+        path: '/passenger/parcels',
+        builder: (context, state) =>
+            const PassengerTheme(child: PassengerParcelsScreen()),
+      ),
+      GoRoute(
+        path: '/passenger/parcels/new',
+        builder: (context, state) =>
+            const PassengerTheme(child: SendParcelScreen()),
       ),
       GoRoute(
         path: '/passenger/trip/:id',
-        builder: (context, state) =>
-            PassengerTripScreen(tripId: state.pathParameters['id']!),
+        builder: (context, state) => PassengerTheme(
+          child: PassengerTripScreen(tripId: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/driver/availability/new',
         builder: (context, state) => const DriverAvailabilityFormScreen(),
+      ),
+      GoRoute(
+        path: driverRenewalPath,
+        builder: (context, state) => const DriverRenewalScreen(),
       ),
       GoRoute(
         path: '/driver/trip/:id',
@@ -151,6 +216,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/merchant/order/new',
         builder: (context, state) => const CreateMerchantOrderScreen(),
+      ),
+      GoRoute(
+        path: '/merchant/order/bulk',
+        builder: (context, state) => const MerchantBulkOrdersScreen(),
       ),
       GoRoute(
         path: '/merchant/routes/order/new',
@@ -171,6 +240,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           destinations: RoleNavDestinations.passenger(
             AppLocalizations.of(context),
           ),
+          passengerItems: RoleNavDestinations.passengerBar(
+            AppLocalizations.of(context),
+          ),
         ),
         branches: [
           StatefulShellBranch(
@@ -180,6 +252,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: '/passenger',
                 builder: (context, state) => const PassengerHomeScreen(),
                 routes: [
+                  GoRoute(
+                    path: 'assistant',
+                    builder: (context, state) =>
+                        const PassengerAssistantScreen(),
+                  ),
                   GoRoute(
                     path: 'request/:id',
                     builder: (context, state) => RequestDetailScreen(
@@ -475,6 +552,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
     redirect: (context, state) {
+      final auth = authRoutingSnapshotFor(ref.read(authControllerProvider));
+      final authenticating = auth.status == AuthStatus.authenticating;
       final path = state.uri.path;
       if (auth.isLoading) {
         if (authenticating || path == '/login') {
@@ -483,7 +562,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return path == '/splash' ? null : '/splash';
       }
       if (auth.hasError) {
-        return path == '/login' ? null : '/login';
+        return (path == '/login' || path == '/register' || path == '/signup')
+            ? null
+            : '/login';
       }
 
       if (auth.status == AuthStatus.restoring ||
@@ -492,15 +573,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (auth.status == AuthStatus.authenticating) {
-        return path == '/login' ? null : '/login';
+        return (path == '/login' || path == '/register' || path == '/signup')
+            ? null
+            : '/login';
+      }
+
+      if (auth.status == AuthStatus.registrationRequired) {
+        return path == '/auth/complete-registration'
+            ? null
+            : '/auth/complete-registration';
       }
 
       if (auth.status != AuthStatus.authenticated || auth.user == null) {
-        if (path == '/login' || path.startsWith('/onboarding')) return null;
+        if (path == '/login' ||
+            path == '/register' ||
+            path == '/signup' ||
+            path.startsWith('/onboarding')) {
+          return null;
+        }
         return '/login';
       }
 
       final role = auth.user!.role;
+      if (auth.user!.requiresPhone &&
+          role != UserRole.admin &&
+          role != UserRole.unsupported) {
+        return path == '/profile/phone' ? null : '/profile/phone';
+      }
       final target = routeForRole(role);
 
       // Send the shared security link to the signed-in role's account tab, so
@@ -518,6 +617,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return target;
     },
   );
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
+  return router;
 });
 
 typedef AuthRoutingSnapshot = ({

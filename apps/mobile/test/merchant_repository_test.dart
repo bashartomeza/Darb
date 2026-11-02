@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/features/merchant/data/merchant_models.dart';
-import 'package:masari_mobile/features/merchant/data/merchant_repository.dart';
+import 'package:darb_mobile/features/merchant/data/merchant_models.dart';
+import 'package:darb_mobile/features/merchant/data/merchant_repository.dart';
 
 import 'support/auth_test_support.dart';
 
@@ -23,40 +23,70 @@ void main() {
     expect((await repository.orderDetail('order_1')).canBatch, isFalse);
   });
 
-  test('create order sends only locked pickup and 1-10 parcel DTOs', () async {
-    Map<String, dynamic>? body;
-    final repository = _repository((request) async {
-      body = jsonDecode(request.body) as Map<String, dynamic>;
-      return http.Response('{"order":$_submittedOrderJson}', 201);
-    });
+  test(
+    'create order sends the route, the pickup details and 1-10 parcel DTOs',
+    () async {
+      Map<String, dynamic>? body;
+      final repository = _repository((request) async {
+        body = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response('{"order":$_submittedOrderJson}', 201);
+      });
 
-    final order = await repository.createOrder(const [
-      ParcelDraft(),
-      ParcelDraft(
-        destinationLabel: 'Manger Street',
-        size: 'M',
-        priority: 'high',
-      ),
-      ParcelDraft(
-        destinationLabel: 'Bethlehem Center',
-        size: 'L',
-        priority: 'low',
-      ),
-    ]);
+      final order = await repository.createOrder(
+        serviceRouteId: 'route-heb-bth',
+        pickupDetails: 'Al-Amal store, Ein Sarah street',
+        parcels: const [
+          ParcelDraft(dropoffDetails: 'Near the university gate'),
+          ParcelDraft(
+            dropoffDetails: 'Manger Street',
+            size: 'M',
+            priority: 'high',
+            receiverName: 'Sara',
+            receiverPhone: '+970599123456',
+          ),
+          ParcelDraft(dropoffDetails: 'Bethlehem centre', size: 'L'),
+        ],
+      );
 
-    expect(order.parcels, hasLength(3));
-    expect(body?['pickup_label'], merchantPickupLabel);
-    expect(body?['pickup_lat'], merchantPickupLat);
-    expect(body?['pickup_lng'], merchantPickupLng);
-    final parcels = body?['parcels'] as List<dynamic>;
-    expect(parcels, hasLength(3));
-    expect(parcels[1], {
-      'destination_label': 'Manger Street',
-      'destination_lat': merchantDestinationLat,
-      'destination_lng': merchantDestinationLng,
-      'size': 'M',
-      'priority': 'high',
-    });
+      expect(order.parcels, hasLength(3));
+      expect(body?['service_route_id'], 'route-heb-bth');
+      expect(body?['pickup_details'], 'Al-Amal store, Ein Sarah street');
+      // No coordinates or corridor labels: the server fills them.
+      expect(body?.keys, {'service_route_id', 'pickup_details', 'parcels'});
+      final parcels = body?['parcels'] as List<dynamic>;
+      expect(parcels, hasLength(3));
+      expect(parcels[1], {
+        'dropoff_details': 'Manger Street',
+        'size': 'M',
+        'priority': 'high',
+        'receiver_name': 'Sara',
+        'receiver_phone': '+970599123456',
+      });
+      expect(parcels[0], {
+        'dropoff_details': 'Near the university gate',
+        'size': 'S',
+        'priority': 'normal',
+      });
+    },
+  );
+
+  test('orders read the route and typed details; old rows have none', () {
+    final order = MerchantOrder.fromJson(
+      jsonDecode(_routeOrderJson) as Map<String, dynamic>,
+    );
+    expect(order.serviceRouteId, 'route-heb-bth');
+    expect(order.routeName(arabic: true), 'الخليل ← بيت لحم');
+    expect(order.routeName(arabic: false), 'Hebron → Bethlehem');
+    expect(order.pickupDetails, 'Al-Amal store');
+    expect(order.parcels.single.dropoffDetails, 'Manger Street');
+    expect(order.parcels.single.receiverName, 'Sara');
+
+    final old = MerchantOrder.fromJson(
+      jsonDecode(_submittedOrderJson) as Map<String, dynamic>,
+    );
+    expect(old.routeName(arabic: true), isNull);
+    expect(old.pickupDetails, isNull);
+    expect(old.parcels.first.dropoffDetails, isNull);
   });
 
   test(
@@ -131,12 +161,14 @@ const _parcelsJson =
     '[{"id":"parcel_1","destination_label":"Bethlehem Market","size":"S","priority":"normal","status":"pending"},{"id":"parcel_2","destination_label":"Manger Street","size":"M","priority":"high","status":"pending"},{"id":"parcel_3","destination_label":"Bethlehem Center","size":"L","priority":"low","status":"pending"}]';
 const _submittedOrderJson =
     '{"id":"order_1","pickup_label":"Hebron Merchant Pickup","status":"submitted","created_at":"2026-07-13T08:00:00.000Z","parcels":$_parcelsJson}';
+const _routeOrderJson =
+    '{"id":"order_2","pickup_label":"Hebron","service_route_id":"route-heb-bth","route_name_ar":"الخليل ← بيت لحم","route_name_en":"Hebron → Bethlehem","pickup_details":"Al-Amal store","status":"submitted","created_at":"2026-07-13T08:00:00.000Z","parcels":[{"id":"parcel_9","destination_label":"Bethlehem","dropoff_details":"Manger Street","receiver_name":"Sara","size":"S","priority":"normal","status":"pending"}]}';
 const _orderJson =
     '{"id":"order_1","pickup_label":"Hebron Merchant Pickup","status":"batched","created_at":"2026-07-13T08:00:00.000Z","parcels":$_parcelsJson,"parcel_batches":[$_batchJson]}';
 const _scoringJson =
     '{"corridorOverlap":0.95,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317}';
 const _matchJson =
-    '{"id":"match_1","status":"proposed","score":"0.9317","method":"masari_route_score","explanation":"Safe route explanation","scoring_breakdown":$_scoringJson,"created_at":"2026-07-13T08:10:00.000Z","driver_route":$_routeJson,"passenger_request":null,"merchant_order":{"id":"order_1","pickup_label":"Hebron Merchant Pickup","status":"batched","parcel_count":3,"created_at":"2026-07-13T08:00:00.000Z"},"parcel_batch":null}';
+    '{"id":"match_1","status":"proposed","score":"0.9317","method":"darb_route_score","explanation":"Safe route explanation","scoring_breakdown":$_scoringJson,"created_at":"2026-07-13T08:10:00.000Z","driver_route":$_routeJson,"passenger_request":null,"merchant_order":{"id":"order_1","pickup_label":"Hebron Merchant Pickup","status":"batched","parcel_count":3,"created_at":"2026-07-13T08:00:00.000Z"},"parcel_batch":null}';
 const _tripJson =
     '{"id":"trip_1","status":"accepted","created_at":"2026-07-13T08:20:00.000Z","driver_route":$_routeJson,"merchant_order":{"id":"order_1","pickup_label":"Hebron Merchant Pickup","status":"assigned","created_at":"2026-07-13T08:00:00.000Z","parcels":$_parcelsJson},"parcel_batch":null}';
 const _locationJson =

@@ -1,54 +1,119 @@
 import { describe, expect, it } from "vitest";
-import { MODULE_IDS, NAV_ITEMS, isModuleAvailable, resolveActiveModule, visibleNavItems } from "./navigation";
+import {
+  MODULE_IDS,
+  NAV_GROUPS,
+  NAV_ITEMS,
+  hashForModule,
+  isModuleAvailable,
+  moduleFromHash,
+  navItemForModule,
+  resolveActiveModule,
+  visibleNavItems
+} from "./navigation";
 import { translations } from "./i18n/translations";
 
 const allOn = { demoEnabled: true, routeManagementEnabled: true };
 const allOff = { demoEnabled: false, routeManagementEnabled: false };
 
 describe("admin navigation", () => {
-  it("defines the sidebar tabs from the admin flow diagram, in order", () => {
+  it("defines the required operational sidebar destinations in order", () => {
     expect(NAV_ITEMS.map((item) => item.id)).toEqual([...MODULE_IDS]);
-    expect(NAV_ITEMS).toHaveLength(14);
+    expect(MODULE_IDS).toEqual([
+      "overview",
+      "users",
+      "drivers",
+      "invitations",
+      "trips",
+      "routes",
+      "deliveries",
+      "matchingBatching",
+      "incidentsSafety",
+      "reports",
+      "settings"
+    ]);
   });
 
-  it("has a translated label for every tab in both locales", () => {
-    for (const item of NAV_ITEMS) {
-      expect(translations.ar[item.labelKey]).toBeTruthy();
-      expect(translations.en[item.labelKey]).toBeTruthy();
+  it("assigns each destination to the requested operational group", () => {
+    expect(NAV_GROUPS.map((group) => group.id)).toEqual([
+      "main",
+      "people",
+      "operations",
+      "safety",
+      "insights",
+      "system"
+    ]);
+    expect(NAV_ITEMS.map(({ id, group }) => [id, group])).toEqual([
+      ["overview", "main"],
+      ["users", "people"],
+      ["drivers", "people"],
+      ["invitations", "people"],
+      ["trips", "operations"],
+      ["routes", "operations"],
+      ["deliveries", "operations"],
+      ["matchingBatching", "operations"],
+      ["incidentsSafety", "safety"],
+      ["reports", "insights"],
+      ["settings", "system"]
+    ]);
+  });
+
+  it("has Arabic and English labels for every destination and group", () => {
+    for (const { labelKey } of [...NAV_ITEMS, ...NAV_GROUPS]) {
+      expect(translations.ar[labelKey]).toBeTruthy();
+      expect(translations.en[labelKey]).toBeTruthy();
     }
   });
 
-  it("hides route management when its build flag is off and keeps every other tab", () => {
-    expect(visibleNavItems(allOn).map((item) => item.id)).toContain("routes");
-    expect(visibleNavItems(allOff).map((item) => item.id)).not.toContain("routes");
-    expect(visibleNavItems(allOff)).toHaveLength(NAV_ITEMS.length - 1);
+  it("keeps the full structure visible when build flags are off", () => {
+    expect(visibleNavItems(allOff)).toEqual(NAV_ITEMS);
+    expect(visibleNavItems(allOff).map((item) => item.id)).toContain("routes");
+    expect(visibleNavItems(allOff).map((item) => item.id)).toContain("matchingBatching");
   });
 
-  it("marks demo-only modules unavailable in a non-demo build without hiding them", () => {
-    expect(isModuleAvailable("matching", allOn)).toBe(true);
-    expect(isModuleAvailable("batching", allOff)).toBe(false);
-    expect(isModuleAvailable("comparison", allOff)).toBe(false);
-    expect(visibleNavItems(allOff).map((item) => item.id)).toContain("matching");
+  it("uses honest unavailable states for gated and unimplemented modules", () => {
+    // The simple Routes page is API-backed and no longer behind VITE_ROUTE_MANAGEMENT_ENABLED.
+    expect(isModuleAvailable("routes", allOn)).toBe(true);
+    expect(isModuleAvailable("routes", allOff)).toBe(true);
+    expect(isModuleAvailable("matchingBatching", allOn)).toBe(true);
+    expect(isModuleAvailable("matchingBatching", allOff)).toBe(true);
+    expect(isModuleAvailable("incidentsSafety", allOn)).toBe(true);
+    expect(isModuleAvailable("reports", allOn)).toBe(true);
   });
 
-  it("treats tabs with no endpoint as unavailable so they never render invented data", () => {
-    expect(isModuleAvailable("incidents", allOn)).toBe(false);
-    expect(isModuleAvailable("safety", allOn)).toBe(false);
-    expect(isModuleAvailable("aiReview", allOn)).toBe(false);
-    expect(isModuleAvailable("reports", allOn)).toBe(false);
-  });
-
-  // `GET /admin/drivers` and `PATCH /admin/users/:id/status` back these two.
-  // They were previously marked "none", which is what left the console
-  // rendering a placeholder over working endpoints.
-  it("marks the user and verification modules as API-backed", () => {
+  it("keeps API-backed people modules available", () => {
     expect(isModuleAvailable("users", allOff)).toBe(true);
-    expect(isModuleAvailable("verification", allOff)).toBe(true);
+    expect(isModuleAvailable("drivers", allOff)).toBe(true);
+    expect(NAV_ITEMS.find((item) => item.id === "matchingBatching")?.backing).toBe("api");
+    expect(isModuleAvailable("matchingBatching", allOff)).toBe(true);
   });
 
-  it("falls back to the overview when the active module is hidden by a flag change", () => {
-    expect(resolveActiveModule("routes", allOn)).toBe("routes");
-    expect(resolveActiveModule("routes", allOff)).toBe("overview");
-    expect(resolveActiveModule("trips", allOff)).toBe("trips");
+  it("provides stable deep links and resolves compatibility aliases", () => {
+    for (const id of MODULE_IDS) expect(moduleFromHash(hashForModule(id))).toBe(id);
+    expect(hashForModule("profile")).toBe("#/profile");
+    expect(moduleFromHash("#/profile")).toBe("profile");
+    expect(NAV_ITEMS.map((item) => item.id)).not.toContain("profile");
+    expect(moduleFromHash("#/verification")).toBe("drivers");
+    expect(moduleFromHash("#/requests")).toBe("deliveries");
+    expect(moduleFromHash("#/matching")).toBe("matchingBatching");
+    expect(moduleFromHash("#/comparison")).toBe("matchingBatching");
+    expect(moduleFromHash("#/safety")).toBe("incidentsSafety");
+    expect(moduleFromHash("#/unknown")).toBe("overview");
+    expect(moduleFromHash("")).toBe("overview");
+  });
+
+  it("keeps a valid destination active regardless of feature availability", () => {
+    expect(resolveActiveModule("routes", allOff)).toBe("routes");
+    expect(resolveActiveModule("matchingBatching", allOff)).toBe("matchingBatching");
+  });
+
+  it("keeps the old route workspace out of the sidebar and behind the route-management flag", () => {
+    expect(NAV_ITEMS.map((item) => item.id)).not.toContain("routeWorkspace");
+    expect(hashForModule("routeWorkspace")).toBe("#/routes/advanced");
+    expect(moduleFromHash("#/routes/advanced")).toBe("routeWorkspace");
+    expect(resolveActiveModule("routeWorkspace", allOn)).toBe("routeWorkspace");
+    expect(resolveActiveModule("routeWorkspace", allOff)).toBe("routes");
+    expect(navItemForModule("routeWorkspace")).toBe("routes");
+    expect(navItemForModule("profile")).toBeNull();
+    expect(navItemForModule("trips")).toBe("trips");
   });
 });

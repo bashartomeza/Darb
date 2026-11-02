@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/i18n/locale_controller.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/darb_page.dart';
 import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_card.dart';
+import '../../../core/widgets/darb_card.dart';
 import '../application/onboarding_controller.dart';
 import '../domain/onboarding_models.dart';
 
@@ -64,7 +65,7 @@ class _PendingStatusRecoveryScreenState
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppTokens.spaceLarge),
-            child: MasariCard(
+            child: DarbCard(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -88,67 +89,61 @@ class _PendingStatusRecoveryScreenState
         title: Text(l10n.checkApplicationStatus),
         actions: const [LanguageSwitch()],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppTokens.spaceLarge),
-          children: [
-            MasariCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.checkApplicationStatus,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: AppTokens.spaceMedium),
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: TextField(
-                      key: const ValueKey('pendingRecoveryPhoneField'),
-                      controller: _phone,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[+0-9٠-٩۰-۹ ]'),
-                        ),
-                      ],
-                      decoration: InputDecoration(labelText: l10n.phoneNumber),
+      body: DarbFormPage(
+        icon: Icons.fact_check_outlined,
+        title: l10n.checkApplicationStatus,
+        children: [
+          DarbFormCard(
+            children: [
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: TextField(
+                  key: const ValueKey('pendingRecoveryPhoneField'),
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'[+0-9٠-٩۰-۹ ()-]'),
                     ),
-                  ),
-                  const SizedBox(height: AppTokens.spaceMedium),
-                  TextField(
-                    key: const ValueKey('pendingRecoveryPasswordField'),
-                    controller: _password,
-                    obscureText: true,
-                    decoration: InputDecoration(labelText: l10n.password),
-                  ),
-                  if (state.errorCode != null) ...[
-                    const SizedBox(height: AppTokens.spaceMedium),
-                    Text(
-                      state.errorCode == 'invalid_credentials'
-                          ? l10n.invalidCredentials
-                          : l10n.requestFailed,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
+                    LengthLimitingTextInputFormatter(32),
                   ],
-                  const SizedBox(height: AppTokens.spaceLarge),
-                  FilledButton(
-                    key: const ValueKey('pendingRecoveryButton'),
-                    onPressed: busy ? null : _recover,
-                    child: busy
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l10n.checkApplicationStatus),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                    labelText: l10n.phoneNumber,
+                    hintText: '+[country code][number]',
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
+              TextField(
+                key: const ValueKey('pendingRecoveryPasswordField'),
+                controller: _password,
+                obscureText: true,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  labelText: l10n.password,
+                ),
+              ),
+              if (state.errorCode != null)
+                Text(
+                  state.errorCode == 'invalid_credentials'
+                      ? l10n.invalidCredentials
+                      : l10n.requestFailed,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppTokens.spaceLarge),
+          FilledButton(
+            key: const ValueKey('pendingRecoveryButton'),
+            onPressed: busy ? null : _recover,
+            child: busy
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(l10n.checkApplicationStatus),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,6 @@
 # M7D1B provider privacy and DPA evaluation
 
-Evidence date: 2026-08-07. Scope is Masari's server-side HTTP adapters using public canonical fixture queries and coordinates. No mobile provider SDK, device location, advertising identifier, GPS, background service, or client telemetry is introduced. Provider documentation alone cannot establish GDPR, Palestinian-law, or general legal compliance.
+Evidence date: 2026-08-07. Scope is Darb's server-side HTTP adapters using public canonical fixture queries and coordinates. No mobile provider SDK, device location, advertising identifier, GPS, background service, or client telemetry is introduced. Provider documentation alone cannot establish GDPR, Palestinian-law, or general legal compliance.
 
 | Provider | Published evidence | Engineering classification |
 |---|---|---|
@@ -8,11 +8,11 @@ Evidence date: 2026-08-07. Scope is Masari's server-side HTTP adapters using pub
 | Google | Maps terms describe Google collection/use of queries, IP and coordinates; controller-controller terms are relevant; generic Cloud DPA applicability is not assumed | UNRESOLVED |
 | HERE | public privacy material and essential-data-processing option exist; applicable processor/DPA and region/account configuration are not established | UNRESOLVED |
 | Stadia | DPA incorporated into terms; processor role for Customer Data; US/international transfers; API logs approximately 7–14 days | CONDITIONAL |
-| OSM self-hosted | evidence traffic stayed on localhost; production logging/hosting/retention remain Masari's responsibility | PASS for local evidence / CONDITIONAL for production |
+| OSM self-hosted | evidence traffic stayed on localhost; production logging/hosting/retention remain Darb's responsibility | PASS for local evidence / CONDITIONAL for production |
 
 ## Mapbox
 
-[Mapbox privacy material](https://www.mapbox.com/legal/privacy) states that IP addresses are generally retained for 30 days, with possible longer security/fraud/legal investigation retention. Its [subprocessor/legal FAQ material](https://www.mapbox.com/legal/subprocessors) states that primary processing is in AWS in the United States with CDN caching in other regions and points to its DPA and Standard Contractual Clauses. This is useful evidence, but Masari still needs the actual account DPA, transfer assessment, request-field minimization, subprocessor review, and confirmation of how server-side geocoding/routing requests are logged. Classification: `CONDITIONAL`.
+[Mapbox privacy material](https://www.mapbox.com/legal/privacy) states that IP addresses are generally retained for 30 days, with possible longer security/fraud/legal investigation retention. Its [subprocessor/legal FAQ material](https://www.mapbox.com/legal/subprocessors) states that primary processing is in AWS in the United States with CDN caching in other regions and points to its DPA and Standard Contractual Clauses. This is useful evidence, but Darb still needs the actual account DPA, transfer assessment, request-field minimization, subprocessor review, and confirmation of how server-side geocoding/routing requests are logged. Classification: `CONDITIONAL`.
 
 ## Google Maps Platform
 
@@ -24,7 +24,7 @@ Evidence date: 2026-08-07. Scope is Masari's server-side HTTP adapters using pub
 
 ## Stadia Maps
 
-The [Stadia DPA](https://stadiamaps.com/legal/data-processing-addendum/) is incorporated into its terms and states that Stadia acts as processor/subprocessor for Customer Data, restricts use to service provision, lists subprocessors, and uses transfer safeguards. Its annex says API request/access logs are retained approximately 7–14 days, with longer security/audit/backup or legal retention where applicable. The [privacy policy](https://stadiamaps.com/privacy/privacy-policy/) states that API endpoints use no cookies, Stadia is US-based, and international transfers may occur. Masari still needs executed account terms, subprocessor/transfer review, minimization, and legal assessment. Classification: `CONDITIONAL`.
+The [Stadia DPA](https://stadiamaps.com/legal/data-processing-addendum/) is incorporated into its terms and states that Stadia acts as processor/subprocessor for Customer Data, restricts use to service provision, lists subprocessors, and uses transfer safeguards. Its annex says API request/access logs are retained approximately 7–14 days, with longer security/audit/backup or legal retention where applicable. The [privacy policy](https://stadiamaps.com/privacy/privacy-policy/) states that API endpoints use no cookies, Stadia is US-based, and international transfers may occur. Darb still needs executed account terms, subprocessor/transfer review, minimization, and legal assessment. Classification: `CONDITIONAL`.
 
 ## SDK and production boundary
 

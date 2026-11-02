@@ -10,8 +10,8 @@ const root = resolve(new URL("../../", import.meta.url).pathname.replace(/^\/(\w
 const node = process.execPath;
 
 test("isolated restore database naming is fail-closed", () => {
-  assert.equal(safeRestoreDatabaseName("masari_restore_rehearsal_20260713"), true);
-  for (const unsafe of ["masari", "production", "masari_restore_", "masari_restore_x;DROP DATABASE masari"])
+  assert.equal(safeRestoreDatabaseName("darb_restore_rehearsal_20260713"), true);
+  for (const unsafe of ["darb", "production", "darb_restore_", "darb_restore_x;DROP DATABASE darb"])
     assert.equal(safeRestoreDatabaseName(unsafe), false);
 });
 
@@ -32,10 +32,10 @@ test("single-statement trigger dumps retain data and normalize only the invalid 
 });
 
 test("backup fails safely when ignored configuration is missing", () => {
-  const missing = join(tmpdir(), `missing-masari-${Date.now()}.env`);
+  const missing = join(tmpdir(), `missing-darb-${Date.now()}.env`);
   const result = spawnSync(node, ["scripts/mysql-backup.mjs"], {
     cwd: root,
-    env: { ...process.env, DATABASE_URL: "", MASARI_ENV_FILE: missing },
+    env: { ...process.env, DATABASE_URL: "", DARB_ENV_FILE: missing },
     encoding: "utf8"
   });
   assert.notEqual(result.status, 0);
@@ -44,10 +44,10 @@ test("backup fails safely when ignored configuration is missing", () => {
 });
 
 test("restore rejects an unsafe destination before database access", () => {
-  const directory = mkdtempSync(join(tmpdir(), "masari-restore-test-"));
+  const directory = mkdtempSync(join(tmpdir(), "darb-restore-test-"));
   const dump = join(directory, "test.sql");
   writeFileSync(dump, "SELECT 1;\n");
-  const result = spawnSync(node, ["scripts/mysql-restore-verify.mjs", "--dump", dump, "--database", "masari", "--confirm-isolated"], {
+  const result = spawnSync(node, ["scripts/mysql-restore-verify.mjs", "--dump", dump, "--database", "darb", "--confirm-isolated"], {
     cwd: root, encoding: "utf8"
   });
   assert.notEqual(result.status, 0);
@@ -56,7 +56,7 @@ test("restore rejects an unsafe destination before database access", () => {
 });
 
 test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secret fields", () => {
-  const directory = mkdtempSync(join(tmpdir(), "masari-metadata-test-"));
+  const directory = mkdtempSync(join(tmpdir(), "darb-metadata-test-"));
   const first = join(directory, "one.json");
   const second = join(directory, "two.json");
   const env = { ...process.env, SOURCE_DATE_EPOCH: "1783900800", APP_RELEASE: "m6b2-test", APP_ENV: "staging" };
@@ -90,7 +90,37 @@ test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secre
       "20260726170000_enforce_match_trip_availability_mode",
       "20260727110000_harden_canonical_assignment_integrity",
       "20260728130000_canonical_shared_trip_aggregation",
-      "20260729120000_harden_canonical_shared_trip_integrity"
+      "20260729120000_harden_canonical_shared_trip_integrity",
+      "20260819150000_driver_verification_approval",
+      "20260820120000_global_e164_phone_constraints",
+      "20260821120000_consent_management_workflow",
+      "20260910120000_email_google_self_service_auth",
+      "20260915130000_external_identity_profile_state",
+      "20260915130100_backfill_legacy_google_external_identities",
+      "20261006110000_complete_passenger_trip_lifecycle",
+      "20261008190000_complete_capacity_batching_failure_states",
+      "20261012165000_allow_legacy_offer_lifecycle_timestamps",
+      "20261025120000_in_app_notifications",
+      "20261025140000_incident_reports",
+      "20261025160000_driver_verification_history",
+      "20261026120000_driver_verification_evidence",
+      "20261026140000_driver_verification_documents",
+      "20261028120000_merchant_application_documents",
+      "20261028150000_auth_action_short_codes",
+      "20261029110000_driver_trust_score",
+      "20261029120000_delivery_handover_confirmation",
+      "20261029120000_open_driver_merchant_signup",
+      "20261029130000_passenger_parcels",
+      "20261029140000_route_fares",
+      "20261029150000_ai_uncertain_requests",
+      "20261029190000_driver_document_expiry",
+      "20261029200000_email_otp_contact",
+      "20261101120000_google_role_onboarding",
+      "20261102100000_community_reports",
+      "20261102120000_rename_masari_to_darb",
+      "20261103120000_passenger_request_selected_route",
+      "20261103130000_passenger_assistant_history",
+      "20261104120000_route_based_orders"
     ]
   );
   rmSync(directory, { recursive: true, force: true });

@@ -1,30 +1,73 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/data/authenticated_api_client.dart';
+import '../../passenger/application/legacy_passenger_request_mutation.dart';
 import 'matching_models.dart';
 
 final matchingRepositoryProvider = Provider<MatchingRepository>((ref) {
   return MatchingRepository(
     apiClient: ref.watch(authenticatedApiClientProvider),
+    mutation: ref.watch(legacyPassengerRequestMutationProvider),
   );
 });
 
 class MatchingRepository {
-  const MatchingRepository({required this.apiClient});
+  const MatchingRepository({required this.apiClient, required this.mutation});
 
   final AuthenticatedApiClient apiClient;
+  final LegacyPassengerRequestMutation mutation;
 
-  Future<MatchResult> runForPassengerRequest(String requestId) async {
+  /// [driverRouteId] is the route the passenger picked, as saved on the
+  /// request (`selected_driver_route_id`). The server pins matching to the
+  /// saved pick and rejects any other route, so sending it is a cross-check.
+  Future<MatchResult> runForPassengerRequest(
+    String requestId, {
+    String? driverRouteId,
+  }) async {
+    final actor = mutation.actorId;
     final json = await apiClient.postJson(
       '/matches/run',
-      body: {'passengerRequestId': requestId},
+      body: {'passengerRequestId': requestId, 'driverRouteId': ?driverRouteId},
     );
+    mutation.requireActor(actor);
     return _match(json);
   }
 
   Future<MatchResult> detail(String id) async {
     final json = await apiClient.getJson('/matches/$id');
     return _match(json);
+  }
+
+  Future<MatchResult?> latestForPassengerRequest(
+    String requestId, {
+    String? driverRouteId,
+  }) async {
+    final actor = mutation.actorId;
+    final json = await apiClient.getJson('/matches');
+    mutation.requireActor(actor);
+    final matches = json['matches'];
+    if (matches is! List) throw const FormatException('Missing matches');
+    for (final raw in matches.cast<Map<String, dynamic>>()) {
+      final passengerRequest = raw['passenger_request'];
+      if (passengerRequest is Map && passengerRequest['id'] == requestId) {
+        if (driverRouteId != null &&
+            (raw['driver_route'] is! Map ||
+                (raw['driver_route'] as Map)['id'] != driverRouteId ||
+                ![
+                  'proposed',
+                  'sent_to_driver',
+                  'accepted',
+                ].contains(raw['status']))) {
+          continue;
+        }
+        final scoring = raw['scoring_breakdown'];
+        if (scoring is! Map<String, dynamic>) {
+          throw const FormatException('Missing scoring breakdown');
+        }
+        return MatchResult.fromJson(raw, scoring);
+      }
+    }
+    return null;
   }
 
   MatchResult _match(Map<String, dynamic> json) {

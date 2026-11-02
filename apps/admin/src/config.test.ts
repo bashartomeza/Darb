@@ -20,7 +20,7 @@ describe("admin build isolation", () => {
     for (const appEnv of ["staging", "production"]) {
       const config = createAdminBuildConfig({
         VITE_APP_ENV: appEnv,
-        VITE_API_BASE_URL: "https://api.masari.example",
+        VITE_API_BASE_URL: "https://api.darb.example",
         VITE_ENABLE_DEMO_FEATURES: "false"
       });
       expect(config.demoFeaturesEnabled).toBe(false);
@@ -46,7 +46,7 @@ describe("admin build isolation", () => {
     expect(() =>
       createAdminBuildConfig({
         VITE_APP_ENV: "production",
-        VITE_API_BASE_URL: "http://api.masari.example",
+        VITE_API_BASE_URL: "http://api.darb.example",
         VITE_ENABLE_DEMO_FEATURES: "false"
       })
     ).toThrow(/HTTPS/);
@@ -56,7 +56,7 @@ describe("admin build isolation", () => {
     expect(() =>
       createAdminBuildConfig({
         VITE_APP_ENV: "staging",
-        VITE_API_BASE_URL: "https://staging-api.masari.example",
+        VITE_API_BASE_URL: "https://staging-api.darb.example",
         VITE_ENABLE_DEMO_FEATURES: "true"
       })
     ).toThrow(/cannot be enabled/);
@@ -65,12 +65,12 @@ describe("admin build isolation", () => {
   it("keeps route management navigation explicitly feature-gated", () => {
     const disabled = createAdminBuildConfig({
       VITE_APP_ENV: "production",
-      VITE_API_BASE_URL: "https://api.masari.example",
+      VITE_API_BASE_URL: "https://api.darb.example",
       VITE_ROUTE_MANAGEMENT_ENABLED: "false"
     });
     const enabled = createAdminBuildConfig({
       VITE_APP_ENV: "production",
-      VITE_API_BASE_URL: "https://api.masari.example",
+      VITE_API_BASE_URL: "https://api.darb.example",
       VITE_ROUTE_MANAGEMENT_ENABLED: "true"
     });
     expect(routeManagementUiEnabled(disabled)).toBe(false);

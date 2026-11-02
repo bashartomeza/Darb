@@ -9,13 +9,13 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appTitle => 'مساري';
+  String get appTitle => 'درب';
 
   @override
   String get tagline => 'لوجستيات ذكية لتشارك المسار';
 
   @override
-  String get welcomeTitle => 'مرحباً بك في مساري';
+  String get welcomeTitle => 'مرحباً بك في درب';
 
   @override
   String get welcomeBody =>
@@ -57,10 +57,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'تدفقات المسافر والسائق والتاجر ستضاف في مراحل لاحقة.';
 
   @override
-  String get lockedCorridor =>
-      'الخليل / جامعة بوليتكنك فلسطين / باب الزاوية ← بيت لحم';
-
-  @override
   String get diagnostics => 'تشخيصات تقنية';
 
   @override
@@ -74,6 +70,45 @@ class AppLocalizationsAr extends AppLocalizations {
   String get retry => 'إعادة المحاولة';
 
   @override
+  String get whereToGo => 'إلى أين تريد الذهاب؟';
+
+  @override
+  String get selectPickupLocation => 'اختاري موقع الانطلاق';
+
+  @override
+  String get selectDestination => 'اختاري الوجهة';
+
+  @override
+  String get selectPickupLocationTitle => 'اختيار موقع الانطلاق';
+
+  @override
+  String get selectDestinationTitle => 'اختيار الوجهة';
+
+  @override
+  String get selectBothLocations => 'اختاري موقع الانطلاق والوجهة أولاً';
+
+  @override
+  String get timeField => 'الوقت';
+
+  @override
+  String get dateField => 'التاريخ';
+
+  @override
+  String get searchRide => 'ابحث عن رحلة';
+
+  @override
+  String get increasePassengers => 'إضافة راكب';
+
+  @override
+  String get decreasePassengers => 'إزالة راكب';
+
+  @override
+  String get loginWelcomeBack => 'أهلاً بعودتك';
+
+  @override
+  String get loginWelcomeSubtitle => 'يسعدنا عودتك';
+
+  @override
   String get signInWelcome => 'سجل الدخول للمتابعة إلى مساحة عمل دورك.';
 
   @override
@@ -83,6 +118,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get phone => 'رقم الهاتف';
 
   @override
+  String get email => 'البريد الإلكتروني';
+
+  @override
+  String get fullName => 'الاسم الكامل';
+
+  @override
   String get password => 'كلمة المرور';
 
   @override
@@ -90,6 +131,73 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get hidePassword => 'إخفاء كلمة المرور';
+
+  @override
+  String get signUp => 'إنشاء الحساب';
+
+  @override
+  String get createAccount => 'إنشاء الحساب';
+
+  @override
+  String get createAccountSubtitle => 'أنشئ حساب مسافر للبدء.';
+
+  @override
+  String get newToDarb => 'جديد في درب؟ أنشئ حساباً';
+
+  @override
+  String get alreadyHaveAccount => 'لديك حساب؟ سجّل الدخول';
+
+  @override
+  String get continueWithGoogle => 'المتابعة عبر Google';
+
+  @override
+  String get welcomeBack => 'أهلاً بعودتك';
+
+  @override
+  String get welcomeBackSubtitle => 'يسعدنا عودتك';
+
+  @override
+  String get login => 'تسجيل الدخول';
+
+  @override
+  String get noAccountPrompt => 'ليس لديك حساب؟';
+
+  @override
+  String get registerAction => 'سجّل الآن';
+
+  @override
+  String get haveAccountPrompt => 'لديك حساب بالفعل؟';
+
+  @override
+  String get orSeparator => 'أو';
+
+  @override
+  String get emailRequired => 'أدخل بريدك الإلكتروني.';
+
+  @override
+  String get emailInvalid => 'أدخل بريداً إلكترونياً صحيحاً.';
+
+  @override
+  String get nameRequired => 'أدخل اسمك.';
+
+  @override
+  String get passwordRequired => 'أدخل كلمة المرور.';
+
+  @override
+  String get passwordTooShort =>
+      'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.';
+
+  @override
+  String get emailAlreadyRegistered =>
+      'هذا البريد الإلكتروني مسجّل بالفعل. حاول تسجيل الدخول.';
+
+  @override
+  String get googleSignInFailed =>
+      'فشل تسجيل الدخول عبر Google. حاول مرة أخرى.';
+
+  @override
+  String get googleSignInUnavailable =>
+      'تسجيل الدخول عبر Google غير متاح حالياً.';
 
   @override
   String get demoAccounts => 'حسابات تجريبية';
@@ -116,7 +224,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sessionExpired => 'انتهت جلستك، يرجى تسجيل الدخول مرة أخرى';
 
   @override
-  String get invalidCredentials => 'رقم الهاتف أو كلمة المرور غير صحيحة.';
+  String get invalidCredentials =>
+      'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
 
   @override
   String get networkUnavailable =>
@@ -244,6 +353,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get selectedDriver => 'السائق المختار';
 
   @override
+  String get selectedDriverUnavailable =>
+      'مسار السائق المختار لم يعد متاحاً. اختر رحلة أخرى.';
+
+  @override
   String get selectedRoute => 'المسار المختار';
 
   @override
@@ -272,7 +385,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get routeMatchExplanation =>
-      'اختار مساري هذا السائق لأن المسار يطابق الممر النشط، ونقطة الالتقاط قريبة من المسار، والسعة متاحة، ودرجة الثقة مرتفعة.';
+      'اختار درب هذا السائق لأنه يسلك نفس المسار الذي اخترته، ولديه مقعد متاح لك، ودرجة الثقة لديه مرتفعة.';
 
   @override
   String get passengerTrip => 'رحلة المسافر';
@@ -587,7 +700,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String parcelBatchExplanationDemo(int parcelCount) {
-    return 'يمكن تجميع $parcelCount طرود متوافقة في رحلة واحدة على ممر مساري بدلاً من رحلات منفصلة، مما يقلل المسافة والتكلفة.';
+    return 'يمكن تجميع $parcelCount طرود متوافقة في رحلة واحدة على ممر درب بدلاً من رحلات منفصلة، مما يقلل المسافة والتكلفة.';
   }
 
   @override
@@ -717,9 +830,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذر إكمال إجراء الجلسة. يرجى إعادة المحاولة.';
 
   @override
-  String get createInvitedAccount => 'إنشاء حساب بدعوة';
-
-  @override
   String get selectAccountType => 'اختر نوع الحساب';
 
   @override
@@ -731,13 +841,45 @@ class AppLocalizationsAr extends AppLocalizations {
       'يبقى الحساب قيد المراجعة حتى الموافقة';
 
   @override
-  String get invitationCode => 'رمز الدعوة';
+  String get registerChooseTitle => 'كيف ستستخدم درب؟';
+
+  @override
+  String get registerChooseSubtitle =>
+      'اختر ما يناسبك وسنأخذك عبر الخطوات الصحيحة.';
+
+  @override
+  String get registerPassengerTitle => 'مستخدم عادي';
+
+  @override
+  String get registerPassengerHelp =>
+      'اطلب رحلات وتوصيلات. يصبح حسابك جاهزاً مباشرة بعد التسجيل.';
+
+  @override
+  String get registerDriverTitle => 'سائق';
+
+  @override
+  String get registerDriverHelp =>
+      'انقل الرحلات والتوصيلات. ترفع مستنداتك ويوافق المشرف على حسابك.';
+
+  @override
+  String get registerMerchantTitle => 'صاحب متجر';
+
+  @override
+  String get registerMerchantHelp =>
+      'أرسل طلبات من متجرك. ترفع مستنداتك ويوافق المشرف على حسابك.';
 
   @override
   String get phoneNumber => 'رقم الهاتف';
 
   @override
   String get sendVerificationCode => 'إرسال رمز التحقق';
+
+  @override
+  String get emailForCode => 'البريد الإلكتروني (نرسل الرمز إليه)';
+
+  @override
+  String get codeSentToEmail =>
+      'أرسلنا رمزاً من ستة أرقام إلى بريدك الإلكتروني. تحقق من بريدك، بما في ذلك مجلد الرسائل غير المرغوبة.';
 
   @override
   String get enterVerificationCode => 'أدخل رمز التحقق';
@@ -773,9 +915,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get acceptAndContinue => 'قبول ومتابعة';
 
   @override
-  String get createAccount => 'إنشاء الحساب';
-
-  @override
   String get accountCreated => 'تم إنشاء الحساب';
 
   @override
@@ -786,7 +925,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pendingReviewBody =>
-      'تم إنشاء حسابك وهو قيد المراجعة. ستتمكن من تسجيل الدخول بعد الموافقة على الحساب.';
+      'تم إرسال طلبك إلى المشرف وهو بانتظار الموافقة. يستغرق ذلك عادةً حتى 24 ساعة. يمكنك تسجيل الدخول بعد الموافقة عليه.';
+
+  @override
+  String get merchantDocumentsHint =>
+      'للحصول على الموافقة، ارفع صوراً واضحة أو ملفات PDF للسجل التجاري (أو رخصة المتجر) والهوية الوطنية وصورة للمتجر. تُحفظ الملفات على خادمنا ولا يفتحها إلا فريق المراجعة.';
+
+  @override
+  String get documentKindCommercialRegister => 'السجل التجاري';
+
+  @override
+  String get documentKindShopPhoto => 'صورة المتجر';
 
   @override
   String get checkApplicationStatus => 'متابعة حالة طلب سابق';
@@ -796,7 +945,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get unableToStartRegistration =>
-      'تعذر بدء التسجيل. تحقق من بيانات الدعوة وحاول مرة أخرى.';
+      'تعذر بدء التسجيل. تحقق من رقم الهاتف والبريد الإلكتروني وحاول مرة أخرى.';
 
   @override
   String get incorrectVerificationCode => 'رمز التحقق غير صحيح.';
@@ -850,6 +999,97 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get routeCatalogUnavailable =>
       'المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.';
+
+  @override
+  String get orderRouteLabel => 'المسار';
+
+  @override
+  String get orderRouteChoose => 'اختر المسار';
+
+  @override
+  String get orderRoutesLoadFailed =>
+      'تعذّر تحميل المسارات. تحقّق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String get orderRoutesEmpty => 'لا توجد مسارات تعمل حالياً. حاول لاحقاً.';
+
+  @override
+  String get orderRouteRequired => 'اختر المسار أولاً.';
+
+  @override
+  String get orderRouteUnavailable =>
+      'هذا المسار لم يعد يعمل. اختر مساراً آخر.';
+
+  @override
+  String get orderRouteSaved => 'المسار المحفوظ';
+
+  @override
+  String get orderDetailsTooShort =>
+      'اكتب 3 أحرف على الأقل ليجد السائق المكان.';
+
+  @override
+  String get merchantPickupDetailsLabel => 'تفاصيل مكان الاستلام';
+
+  @override
+  String get merchantPickupDetailsHint => 'مثال: اسم المتجر والشارع';
+
+  @override
+  String get merchantDropoffDetailsLabel => 'تفاصيل مكان التسليم';
+
+  @override
+  String get merchantDropoffDetailsHint => 'مثال: الحي والشارع وأقرب معلم';
+
+  @override
+  String get merchantReceiverNameLabel => 'اسم المستلم (اختياري)';
+
+  @override
+  String get merchantReceiverPhoneLabel => 'هاتف المستلم (اختياري)';
+
+  @override
+  String get merchantReceiverPhoneInvalid =>
+      'أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.';
+
+  @override
+  String get merchantReceiverLabel => 'المستلم';
+
+  @override
+  String get merchantPendingOrderTitle => 'طلب بانتظار التأكيد';
+
+  @override
+  String get driverRoutePickTitle => 'اختر مسارك';
+
+  @override
+  String get driverRoutePickBody =>
+      'ستصلك طلبات الركاب والطرود على هذا المسار فقط.';
+
+  @override
+  String get driverRoutePickConfirm => 'ابدأ العمل';
+
+  @override
+  String get driverRouteNone => 'لم تختر مساراً بعد';
+
+  @override
+  String get driverPickupDetailsLabel => 'مكان الصعود';
+
+  @override
+  String get driverDropoffDetailsLabel => 'مكان النزول';
+
+  @override
+  String get driverMerchantPickupLabel => 'استلم الطرود من';
+
+  @override
+  String get driverParcelStopsTitle => 'أماكن تسليم الطرود';
+
+  @override
+  String driverParcelStopLabel(int number) {
+    return 'الطرد $number';
+  }
+
+  @override
+  String get driverReceiverLabel => 'المستلم';
+
+  @override
+  String get driverWhereToFindTitle => 'أماكن الاستلام والتسليم';
 
   @override
   String get noPublishedRoutes => 'لا توجد مسارات منشورة ومؤهلة حالياً.';
@@ -980,6 +1220,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get invalidDepartureWindow => 'اختر نافذة انطلاق مستقبلية وصحيحة.';
 
   @override
+  String get availabilityDepartureTooSoon =>
+      'وقت الانطلاق قريب جداً. اختر وقتاً بعد 10 دقائق على الأقل من الآن.';
+
+  @override
+  String get availabilityDepartureTooFar =>
+      'وقت الانطلاق بعيد جداً. اختر وقتاً خلال الـ30 يوماً القادمة.';
+
+  @override
+  String get availabilityInvalidWindow =>
+      'نهاية نافذة الإتاحة يجب أن تكون بعد الانطلاق بساعتين كحد أقصى.';
+
+  @override
+  String get availabilityExceedsVehicleCapacity =>
+      'سعة المقاعد أو الطرود التي اخترتها تتجاوز سعة مركبتك المسجلة.';
+
+  @override
+  String get availabilityDriverNotApproved =>
+      'حسابك كسائق لم يُعتمد بعد. تواصل مع الدعم لإتمام التحقق.';
+
+  @override
+  String get availabilityRouteNoLongerEligible =>
+      'لم يعد هذا المسار متاحاً. اختر مساراً آخر.';
+
+  @override
+  String get availabilityDuplicate =>
+      'لديك بالفعل إتاحة مطابقة لهذا المسار والوقت.';
+
+  @override
   String get invalidStopOrder => 'اختر محطة معتمدة لاحقة في المسار.';
 
   @override
@@ -1008,6 +1276,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get returnToDashboard => 'العودة إلى لوحة التحكم';
+
+  @override
+  String get viewRouteRequests => 'عرض طلبات المسار الخاصة بي';
 
   @override
   String get canonicalDriverOffers => 'عروض المسار';
@@ -1153,9 +1424,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get whereToGo => 'إلى أين تريد الذهاب؟';
-
-  @override
   String get smartSearch => 'بحث ذكي';
 
   @override
@@ -1186,7 +1454,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noAvailableTripsBody =>
-      'أنشئ طلباً وسيقوم مساري بمطابقتك مع سائق على المسار.';
+      'أنشئ طلباً وسيقوم درب بمطابقتك مع سائق على المسار.';
 
   @override
   String seatsRemaining(int count) {
@@ -1567,4 +1835,1263 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get notLiveNotice =>
       'هذه الشاشة ليست مباشرة. استخدم التحديث للتحقق من المستجدات.';
+
+  @override
+  String get assistantTitle => 'مساعد درب';
+
+  @override
+  String get assistantHomeTitle => 'اسأل مساعد درب';
+
+  @override
+  String get assistantHomeBody => 'استفسر عن رحلاتك والمسارات المتاحة.';
+
+  @override
+  String get assistantWelcomeTitle => 'كيف يمكنني مساعدتك؟';
+
+  @override
+  String get assistantWelcomeBody =>
+      'اسأل عن بيانات رحلاتك أو المسارات المتاحة في درب. إذا كانت التفاصيل ناقصة، سأطلب منك توضيحها.';
+
+  @override
+  String get assistantTryAsking => 'جرّب أن تسأل';
+
+  @override
+  String get assistantExampleTripTime => 'متى موعد رحلتي القادمة؟';
+
+  @override
+  String get assistantExampleAvailableTrip => 'هل توجد رحلة إلى بيت لحم؟';
+
+  @override
+  String get assistantInputHint => 'اكتب سؤالك هنا';
+
+  @override
+  String get assistantVoiceStart => 'تحدّث بطلبك';
+
+  @override
+  String get assistantVoiceStop => 'إيقاف الاستماع';
+
+  @override
+  String get assistantVoiceListening => 'جارٍ الاستماع…';
+
+  @override
+  String get assistantVoicePermissionDenied =>
+      'نحتاج إذن الميكروفون للإدخال الصوتي. يمكنك كتابة طلبك بدلًا من ذلك.';
+
+  @override
+  String get assistantVoicePermissionPermanent =>
+      'إذن الميكروفون أو التعرف على الكلام معطّل. افتح الإعدادات للسماح به أو اكتب طلبك.';
+
+  @override
+  String get assistantVoiceOpenSettings => 'فتح الإعدادات';
+
+  @override
+  String get assistantVoiceUnavailable =>
+      'الإدخال الصوتي غير متاح على هذا الجهاز. يرجى كتابة طلبك.';
+
+  @override
+  String get assistantVoiceNoSpeech =>
+      'لم أسمعك جيدًا. اضغط على الميكروفون وحاول مجددًا أو اكتب طلبك.';
+
+  @override
+  String get assistantVoiceOffline =>
+      'يحتاج الإدخال الصوتي إلى اتصال حاليًا. اكتب طلبك أو حاول لاحقًا.';
+
+  @override
+  String get assistantVoiceError =>
+      'توقف الإدخال الصوتي بشكل غير متوقع. حاول مجددًا أو اكتب طلبك.';
+
+  @override
+  String get assistantSend => 'إرسال';
+
+  @override
+  String get assistantProcessing => 'جارٍ التحقق من بيانات درب…';
+
+  @override
+  String get assistantErrorTitle => 'تعذّر إكمال الطلب';
+
+  @override
+  String get assistantErrorBody =>
+      'لم يتمكن المساعد من إكمال طلبك. حاول مرة أخرى.';
+
+  @override
+  String get assistantUnavailable =>
+      'خدمة المساعد غير متاحة في هذا الإصدار. لم يتم إنشاء أي نتيجة.';
+
+  @override
+  String get assistantHistoryErrorTitle => 'تعذّر تحميل المحادثة';
+
+  @override
+  String get assistantHistoryErrorBody =>
+      'محادثتك مع المساعد محفوظة في حسابك. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get assistantNewChat => 'محادثة جديدة';
+
+  @override
+  String get assistantNewChatTitle => 'بدء محادثة جديدة؟';
+
+  @override
+  String get assistantNewChatBody =>
+      'سيتم حذف هذه المحادثة من حسابك. الرحلات التي حجزتها لن تتأثر.';
+
+  @override
+  String get assistantNewChatFailed =>
+      'تعذّر بدء محادثة جديدة. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get passengerRouteLabel => 'المسار';
+
+  @override
+  String get passengerRouteHint => 'اختر المسار';
+
+  @override
+  String get passengerRoutesLoading => 'جارٍ تحميل المسارات…';
+
+  @override
+  String get passengerRoutesLoadFailed =>
+      'تعذّر تحميل المسارات. تحقّق من اتصالك وحاول مرة أخرى.';
+
+  @override
+  String get passengerRoutesEmpty =>
+      'لا توجد مسارات متاحة حاليًا. يُرجى المحاولة لاحقًا.';
+
+  @override
+  String get passengerRouteRequired => 'اختر المسار للمتابعة.';
+
+  @override
+  String get passengerRouteUnavailable =>
+      'هذا المسار لم يعد متاحًا. اختر مسارًا آخر.';
+
+  @override
+  String get passengerPickupDetailsLabel => 'مكان الصعود بالتحديد';
+
+  @override
+  String get passengerPickupDetailsHint =>
+      'مثال: أمام البوابة الرئيسية لجامعة بوليتكنك فلسطين';
+
+  @override
+  String get passengerDropoffDetailsLabel => 'مكان النزول بالتحديد';
+
+  @override
+  String get passengerDropoffDetailsHint =>
+      'مثال: مجمّع سيارات بيت لحم، بجانب الصيدلية';
+
+  @override
+  String get passengerDetailsHelper =>
+      'صِف المكان بوضوح ليصل إليه السائق بسهولة.';
+
+  @override
+  String get passengerDetailsTooShort => 'اكتب 3 أحرف على الأقل.';
+
+  @override
+  String get passengerPickupPoint => 'مكان الصعود';
+
+  @override
+  String get passengerDropoffPoint => 'مكان النزول';
+
+  @override
+  String get assistantRouteChoose =>
+      'اختر المسار المناسب لرحلتك، ثم تأكّد من مكانَي الصعود والنزول.';
+
+  @override
+  String get passengerParcelRouteIntro =>
+      'اختر المسار، وصِف مكان استلام الطرد ومكان تسليمه، ثم أخبرنا من سيستلمه.';
+
+  @override
+  String get passengerParcelPickupDetailsLabel => 'مكان استلام الطرد منك';
+
+  @override
+  String get passengerParcelPickupDetailsHint =>
+      'مثال: المحل المجاور لدوار ابن رشد في الخليل';
+
+  @override
+  String get passengerParcelDropoffDetailsLabel => 'مكان تسليم الطرد';
+
+  @override
+  String get passengerParcelDropoffDetailsHint =>
+      'مثال: بيت المستلم، قرب كنيسة المهد';
+
+  @override
+  String get passengerParcelPreferredTime => 'الوقت المفضّل للاستلام';
+
+  @override
+  String get welcomeRoutesTitle => 'المسارات التي نخدمها';
+
+  @override
+  String welcomeRoutesMore(int count) {
+    return 'و$count أخرى';
+  }
+
+  @override
+  String get welcomeRoutesOffline => 'ستظهر المسارات عند الاتصال بالإنترنت.';
+
+  @override
+  String get assistantClarificationLabel => 'يحتاج مساعد درب إلى توضيح';
+
+  @override
+  String get assistantResultLabel => 'رد مساعد درب';
+
+  @override
+  String get assistantPassengerMessage => 'رسالتك';
+
+  @override
+  String get assistantExampleFindTrip =>
+      'ابحث لي عن رحلة من باب الزاوية إلى بيت لحم الساعة 3 لشخص واحد';
+
+  @override
+  String get assistantReviewTitle => 'راجع معلومات الرحلة';
+
+  @override
+  String get assistantReviewBody =>
+      'تأكد من المعلومات وعدّلها قبل بدء البحث الحقيقي.';
+
+  @override
+  String get assistantConfirmSearch => 'تأكيد وبدء البحث';
+
+  @override
+  String get assistantSearching => 'جارٍ البحث عن رحلة…';
+
+  @override
+  String get assistantSearchError =>
+      'تعذّر إنشاء الطلب أو العثور على مسار مناسب. لم يتم إنشاء نتيجة وهمية.';
+
+  @override
+  String get assistantFutureTimeRequired => 'اختر وقتاً قادماً قبل بدء البحث.';
+
+  @override
+  String get mapAttribution => '© مساهمو OpenStreetMap';
+
+  @override
+  String get mapLoading => 'جارٍ تحميل الخريطة...';
+
+  @override
+  String get mapLoadFailed => 'تعذّر تحميل الخريطة';
+
+  @override
+  String get mapLoadFailedBody =>
+      'تعذّر جلب بيانات المسار. تحقق من اتصالك ثم أعد المحاولة.';
+
+  @override
+  String get mapYourLocation => 'موقعك الحالي';
+
+  @override
+  String get mapRequestedRoute => 'المسار المطلوب';
+
+  @override
+  String get mapDriverRoute => 'مسار السائق المتاح';
+
+  @override
+  String mapOriginLabel(String name) {
+    return 'نقطة الانطلاق: $name';
+  }
+
+  @override
+  String mapDestinationLabel(String name) {
+    return 'الوجهة: $name';
+  }
+
+  @override
+  String mapStopLabel(String name) {
+    return 'محطة: $name';
+  }
+
+  @override
+  String get mapLegend => 'دليل الرموز';
+
+  @override
+  String get locationServiceDisabled =>
+      'خدمة الموقع متوقفة على الجهاز. فعّلها لعرض موقعك على الخريطة.';
+
+  @override
+  String get locationPermissionDenied =>
+      'لم يُسمح بالوصول إلى الموقع. اسمح بالوصول لعرض موقعك.';
+
+  @override
+  String get locationPermanentlyDenied =>
+      'الوصول إلى الموقع مرفوض نهائياً. فعّله من إعدادات النظام.';
+
+  @override
+  String get locationUnavailable => 'تعذّر تحديد موقعك الآن.';
+
+  @override
+  String get locationEnable => 'تفعيل الموقع';
+
+  @override
+  String get checkpoints => 'الحواجز';
+
+  @override
+  String get checkpointsUnavailable => 'بيانات الحواجز غير متاحة';
+
+  @override
+  String get checkpointsUnavailableBody =>
+      'تعذّر جلب حالة الحواجز. المسار معروض بدونها.';
+
+  @override
+  String get checkpointsDisabled => 'خدمة الحواجز غير مفعّلة في هذا الإصدار.';
+
+  @override
+  String get checkpointsStale =>
+      'هذه آخر حالة مؤكدة للحواجز، وقد لا تكون محدّثة الآن.';
+
+  @override
+  String get checkpointsEmpty => 'لا توجد حواجز مسجّلة على هذا المسار.';
+
+  @override
+  String checkpointCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count حاجزاً',
+      few: '$count حواجز',
+      two: 'حاجزان',
+      one: 'حاجز واحد',
+      zero: 'لا حواجز',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get checkpointOpen => 'مفتوح';
+
+  @override
+  String get checkpointCongested => 'ازدحام';
+
+  @override
+  String get checkpointClosed => 'مغلق';
+
+  @override
+  String get checkpointUnknown => 'الحالة غير معروفة';
+
+  @override
+  String checkpointLabel(String name, String status) {
+    return '$name — $status';
+  }
+
+  @override
+  String get checkpointUnnamed => 'حاجز';
+
+  @override
+  String get mapRouteMissingCoordinates =>
+      'لا توجد إحداثيات لهذا المسار، لذلك لا يمكن رسمه على الخريطة.';
+
+  @override
+  String get mapSelectRoute => 'اختر مساراً لعرضه على الخريطة.';
+
+  @override
+  String get recoverMerchantOrder => 'استعادة الطلب';
+
+  @override
+  String get merchantOrderUncertain =>
+      'قد يكون الطلب قد حُفظ. استعده قبل إنشاء طلب آخر.';
+
+  @override
+  String get merchantOrderRecoveryExpired =>
+      'انتهت مهلة إعادة المحاولة. يُسمح فقط بالتحقق من الطلب المحفوظ. تواصل مع الدعم إذا لم تُحسم نتيجة الطلب.';
+
+  @override
+  String get merchantOrderRecoveryUnavailable =>
+      'استعادة الطلب غير متاحة. سجّل الدخول إلى حساب التاجر الأصلي أو تواصل مع الدعم. لا ترسل طلباً بديلاً.';
+
+  @override
+  String get bookingTimePassed => 'وقت المغادرة هذا قد مضى. اختر وقتاً قادماً.';
+
+  @override
+  String get bookingOutcomeUnknown =>
+      'قد يكون الحجز محفوظًا بالفعل. سنتحقق منه عند عودة الاتصال. لا تنشئ حجزًا آخر.';
+
+  @override
+  String get verifyBooking => 'التحقق من الحجز';
+
+  @override
+  String get checkpointDirectoryTitle => 'دليل الحواجز';
+
+  @override
+  String get checkpointDirectoryDisabled => 'دليل الحواجز غير مفعّل.';
+
+  @override
+  String get checkpointDirectoryLoadFailed => 'تعذر تحميل دليل الحواجز.';
+
+  @override
+  String get checkpointDirectorySearch => 'ابحث عن حاجز أو مدينة';
+
+  @override
+  String get checkpointDirectoryNoResults => 'لا توجد حواجز مطابقة';
+
+  @override
+  String get checkpointDirectoryTrafficUnavailable => 'حالة المرور غير متاحة';
+
+  @override
+  String get checkpointDirectoryLimitedNotice =>
+      'بيانات محدودة من المزود: حتى سبع نقاط في كل مدينة. هذه ليست القائمة الكاملة.';
+
+  @override
+  String get checkpointDirectoryGenerated => 'وقت إنشاء استجابة المزود';
+
+  @override
+  String get checkpointDirectoryEnteringUpdated =>
+      'آخر تغيير لحالة الدخول (الحالة غير متاحة)';
+
+  @override
+  String get checkpointDirectoryLeavingUpdated =>
+      'آخر تغيير لحالة الخروج (الحالة غير متاحة)';
+
+  @override
+  String get checkpointDirectoryTimezoneUnspecified =>
+      'المنطقة الزمنية غير محددة';
+
+  @override
+  String get notifMatchOfferedTitle => 'عرض مطابقة جديد';
+
+  @override
+  String get notifMatchOfferedBody => 'لديك طلب جديد بانتظار ردّك.';
+
+  @override
+  String get notifMatchAcceptedTitle => 'تم قبول طلبك';
+
+  @override
+  String get notifMatchAcceptedBody => 'قَبِل أحد السائقين طلبك.';
+
+  @override
+  String get notifMatchRejectedTitle => 'اعتذر السائق';
+
+  @override
+  String get notifMatchRejectedBody =>
+      'اعتذر السائق عن الطلب. يمكنك البحث عن مطابقة أخرى.';
+
+  @override
+  String get notifTripStatusTitle => 'تحديث على الرحلة';
+
+  @override
+  String notifTripStatusBody(String status) {
+    return 'حالة الرحلة الآن: $status';
+  }
+
+  @override
+  String get notifVerificationApprovedTitle => 'تمت الموافقة على حسابك';
+
+  @override
+  String get notifVerificationApprovedBody =>
+      'تمت الموافقة على حساب السائق. يمكنك الآن البدء بالعمل.';
+
+  @override
+  String get notifVerificationRejectedTitle => 'تم رفض طلب التحقق';
+
+  @override
+  String get notifVerificationRejectedBody =>
+      'لم تتم الموافقة على طلب التحقق من حسابك.';
+
+  @override
+  String notifVerificationRejectedReason(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get notifUnknownTitle => 'إشعار جديد';
+
+  @override
+  String get notificationsMarkAllRead => 'تعليم الكل كمقروء';
+
+  @override
+  String get notificationsLoadError => 'تعذّر تحميل الإشعارات.';
+
+  @override
+  String notificationsUnreadCount(int count) {
+    return '$count غير مقروءة';
+  }
+
+  @override
+  String get reportsDeliveries => 'التوصيلات';
+
+  @override
+  String get reportsLoadError => 'تعذّر تحميل التقرير.';
+
+  @override
+  String get reportsOrdersByStatus => 'الطلبات حسب الحالة';
+
+  @override
+  String get reportsDeliveriesByStatus => 'التوصيلات حسب الحالة';
+
+  @override
+  String get reportsNoRecords => 'لا توجد سجلات بعد.';
+
+  @override
+  String get incidentReportAction => 'الإبلاغ عن مشكلة';
+
+  @override
+  String get incidentReportTitle => 'الإبلاغ عن مشكلة';
+
+  @override
+  String get incidentReportNotice =>
+      'يُسجَّل بلاغك لتراجعه الإدارة. هذه ليست خدمة طوارئ؛ في حال الخطر اتصل بالجهات المختصة مباشرة.';
+
+  @override
+  String get incidentDescriptionLabel => 'صف المشكلة';
+
+  @override
+  String get incidentSubmit => 'إرسال البلاغ';
+
+  @override
+  String get incidentSubmitted => 'تم إرسال البلاغ.';
+
+  @override
+  String get incidentSubmitFailed => 'تعذّر إرسال البلاغ. حاول مرة أخرى.';
+
+  @override
+  String get incidentTooMany =>
+      'لديك عدة بلاغات قيد المراجعة. انتظر معالجتها قبل إرسال بلاغ جديد.';
+
+  @override
+  String get incidentCategorySafety => 'السلامة';
+
+  @override
+  String get incidentCategoryDelay => 'تأخير';
+
+  @override
+  String get incidentCategoryParcelDamage => 'تلف طرد';
+
+  @override
+  String get incidentCategoryBehavior => 'سلوك';
+
+  @override
+  String get incidentCategoryOther => 'أخرى';
+
+  @override
+  String get myIncidentReports => 'بلاغاتي';
+
+  @override
+  String get myIncidentReportsEmpty => 'لم ترسل أي بلاغ بعد.';
+
+  @override
+  String get myIncidentReportsFailed => 'تعذّر تحميل بلاغاتك.';
+
+  @override
+  String get incidentStatusOpen => 'مفتوح';
+
+  @override
+  String get incidentStatusReviewing => 'قيد المراجعة';
+
+  @override
+  String get incidentStatusResolved => 'تمت المعالجة';
+
+  @override
+  String get notifIncidentUpdatedTitle => 'تحديث على بلاغك';
+
+  @override
+  String get notifIncidentReviewingBody => 'بلاغك قيد المراجعة.';
+
+  @override
+  String get notifIncidentResolvedBody => 'تمت معالجة بلاغك.';
+
+  @override
+  String get verificationDocuments => 'مستندات التوثيق';
+
+  @override
+  String get verificationDocumentsHint =>
+      'للحصول على الموافقة، ارفع صوراً واضحة أو ملفات PDF لرخصة القيادة وتسجيل المركبة والهوية الوطنية. تُحفظ الملفات على خادمنا ولا يفتحها إلا فريق المراجعة.';
+
+  @override
+  String get documentKind => 'نوع المستند';
+
+  @override
+  String get documentKindDriverLicence => 'رخصة القيادة';
+
+  @override
+  String get documentKindVehicleRegistration => 'ترخيص المركبة';
+
+  @override
+  String get documentKindVehiclePhoto => 'صورة المركبة';
+
+  @override
+  String get documentKindNationalId => 'الهوية الوطنية';
+
+  @override
+  String get documentKindInsurance => 'التأمين';
+
+  @override
+  String get documentKindOther => 'مستند آخر';
+
+  @override
+  String get addDocument => 'إضافة مستند';
+
+  @override
+  String get removeDocument => 'إزالة المستند';
+
+  @override
+  String get documentTooLarge => 'الملف كبير جدًا. الحد الأقصى 5 ميغابايت.';
+
+  @override
+  String get documentTypeUnsupported =>
+      'يمكن رفع ملفات JPEG أو PNG أو PDF فقط.';
+
+  @override
+  String get documentLimitReached => 'وصلت إلى الحد الأقصى لعدد المستندات.';
+
+  @override
+  String get acceptanceRateTitle => 'نسبة القبول';
+
+  @override
+  String acceptanceRateValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String acceptanceRateDetail(int accepted, int responded) {
+    return 'تم قبول $accepted من $responded عرضًا أجبت عنها. العروض التي انتهت دون رد لا تُحتسب.';
+  }
+
+  @override
+  String acceptanceRateNeedMore(int needed, int responded) {
+    return 'تظهر نسبتك بعد $needed عروض تم الرد عليها ($responded حتى الآن).';
+  }
+
+  @override
+  String get emailOrPhone => 'البريد الإلكتروني أو رقم الهاتف';
+
+  @override
+  String get emailOrPhoneRequired => 'أدخل بريدك الإلكتروني أو رقم هاتفك.';
+
+  @override
+  String get emailOrPhoneInvalid =>
+      'أدخل بريدًا إلكترونيًا صحيحًا، أو رقم هاتف يبدأ بـ + ورمز الدولة.';
+
+  @override
+  String get mapLegendStart => 'البداية';
+
+  @override
+  String get mapLegendDestination => 'الوصول';
+
+  @override
+  String get sendParcelTitle => 'إرسال طرد';
+
+  @override
+  String get sendParcelEntryBody =>
+      'أرسل طردًا صغيرًا مع سائق يسير أصلًا على مسار معتمد.';
+
+  @override
+  String get sendParcelIntro =>
+      'اختر المسار والمحطتين ثم أخبرنا من سيستلم الطرد. سيحمله سائق متجه في هذا الاتجاه.';
+
+  @override
+  String get sendParcelPickupHint => 'سلّم الطرد للسائق عند هذه المحطة.';
+
+  @override
+  String get parcelSizeSmallHint => 'S - صغير، يكفي لحقيبة';
+
+  @override
+  String get parcelSizeMediumHint => 'M - متوسط، بحجم علبة حذاء تقريبًا';
+
+  @override
+  String get parcelSizeLargeNotAllowed =>
+      'الطرود الكبيرة مخصصة للمتاجر ولا يمكن إرسالها من حساب شخصي.';
+
+  @override
+  String get receiverNameLabel => 'اسم المستلم';
+
+  @override
+  String get receiverPhoneLabel => 'هاتف المستلم';
+
+  @override
+  String get receiverPrivacyNote =>
+      'المستلم لا يحتاج إلى التطبيق. يُستخدم اسمه ورقمه لهذا التوصيل فقط، ولا يظهران لأي مستخدم آخر، ويُمسحان بعد انتهاء المدة.';
+
+  @override
+  String get parcelNoteLabel => 'ملاحظة للسائق (اختياري)';
+
+  @override
+  String get forbiddenItemsAck =>
+      'أقرّ بأن الطرد لا يحتوي على نقود أو أشياء ثمينة أو أدوية أو أسلحة أو مواد قابلة للاشتعال أو ممنوعة أو سريعة التلف.';
+
+  @override
+  String get sendParcelSubmit => 'إرسال الطرد';
+
+  @override
+  String get sendParcelRecorded => 'تم تسجيل طلب الطرد.';
+
+  @override
+  String get sendParcelRecordedBody =>
+      'نبحث عن سائق على هذا المسار. يمكنك الإلغاء ما لم يُعرض الطرد على سائق.';
+
+  @override
+  String get myParcelsTitle => 'طرودي';
+
+  @override
+  String get myParcelsEmpty => 'لم ترسل أي طرد بعد.';
+
+  @override
+  String get parcelTrackSearching => 'جارٍ البحث عن سائق';
+
+  @override
+  String get parcelTrackAssigned => 'تم تعيين سائق';
+
+  @override
+  String get parcelTrackPickedUp => 'تم استلامه منك';
+
+  @override
+  String get parcelTrackInTransit => 'في الطريق';
+
+  @override
+  String get parcelTrackDelivered => 'تم التسليم';
+
+  @override
+  String get parcelTrackCancelled => 'ملغى';
+
+  @override
+  String get parcelTrackFailed => 'تعذّر التوصيل';
+
+  @override
+  String get parcelTrackExpired => 'انتهت المهلة';
+
+  @override
+  String get parcelCancelAction => 'إلغاء الطرد';
+
+  @override
+  String get parcelCancelConfirm =>
+      'هل تريد إلغاء هذا الطرد؟ سيتم مسح بيانات المستلم.';
+
+  @override
+  String get parcelCancelledNotice => 'تم إلغاء الطرد.';
+
+  @override
+  String get parcelCannotCancel =>
+      'عُرض الطرد على سائق بالفعل، لذلك لم يعد الإلغاء ممكنًا.';
+
+  @override
+  String parcelReceiverLine(String name, String phone) {
+    return 'المستلم: $name ($phone)';
+  }
+
+  @override
+  String get parcelReceiverRemoved => 'تم مسح بيانات المستلم.';
+
+  @override
+  String get parcelLimitReached =>
+      'لديك الحد الأقصى من الطرود قيد التوصيل. انتظر انتهاء أحدها أو ألغِ واحدًا.';
+
+  @override
+  String get parcelDailyLimit => 'تم بلوغ حد الطرود اليومي. حاول غدًا.';
+
+  @override
+  String get invalidReceiverPhone => 'أدخل رقم هاتف صحيحًا للمستلم.';
+
+  @override
+  String get receiverNameInvalid => 'أدخل اسم المستلم.';
+
+  @override
+  String get parcelAckRequired =>
+      'أكّد الإقرار الخاص بالمواد الممنوعة للمتابعة.';
+
+  @override
+  String get keepParcel => 'إبقاء الطرد';
+
+  @override
+  String get mapOfflineSaved => 'بدون اتصال - تُعرض الخريطة المحفوظة';
+
+  @override
+  String get clearMapCache => 'مسح الخريطة المحفوظة';
+
+  @override
+  String get clearMapCacheHint =>
+      'يحذف مربعات الخريطة المحفوظة على هذا الجهاز. تُحفظ من جديد أثناء التصفح.';
+
+  @override
+  String get mapCacheCleared => 'تم مسح الخريطة المحفوظة';
+
+  @override
+  String get mapCacheClearFailed => 'تعذّر مسح الخريطة المحفوظة';
+
+  @override
+  String get notifDocsExpiringTitle => 'مستند على وشك الانتهاء';
+
+  @override
+  String notifDocsExpiringBody(String document, String date) {
+    return 'ينتهي $document بتاريخ $date. أرسل مستندات مجددة قبل ذلك لتواصل العمل دون انقطاع.';
+  }
+
+  @override
+  String get notifDocsExpiredTitle => 'انتهت صلاحية مستنداتك';
+
+  @override
+  String get notifDocsExpiredBody =>
+      'تم تقييد حسابك ولا يمكنك الاتصال أو قبول رحلات جديدة حتى تُرسل مستندات مجددة وتتم الموافقة عليها. رحلاتك المقبولة سابقاً لا تتأثر.';
+
+  @override
+  String get notifDocsRenewalSubmittedTitle => 'تم إرسال مستندات التجديد';
+
+  @override
+  String get notifDocsRenewalSubmittedBody =>
+      'سيراجعها فريقنا وتصلك رسالة عند اتخاذ القرار.';
+
+  @override
+  String get documentKindContract => 'العقد';
+
+  @override
+  String get availabilityDocumentsExpired =>
+      'انتهت صلاحية مستنداتك. أرسل مستندات مجددة لاستعادة الوصول.';
+
+  @override
+  String get applicationDocumentsRequiredTitle => 'ارفع مستنداتك';
+
+  @override
+  String get applicationDocumentsRequiredBody =>
+      'تم إنشاء حسابك لكنه ليس قيد المراجعة بعد. ارفع كل المستندات المطلوبة ثم أرسل طلبك. تستغرق المراجعة عادةً حتى 24 ساعة.';
+
+  @override
+  String get applicationRejectedTitle => 'تم رفض الطلب';
+
+  @override
+  String get applicationRejectedBody =>
+      'تمت مراجعة طلبك كسائق ولم تتم الموافقة عليه. لا يمكنك استخدام ميزات السائق. تواصل مع الدعم إذا كنت ترى أن هذا خطأ.';
+
+  @override
+  String applicationRejectedReason(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String documentsStillNeeded(String documents) {
+    return 'ما زال مطلوباً: $documents';
+  }
+
+  @override
+  String get submitApplication => 'إرسال للمراجعة';
+
+  @override
+  String get documentsRequiredError =>
+      'ارفع كل المستندات المطلوبة قبل إرسال طلبك.';
+
+  @override
+  String get fareEstimatedTitle => 'الأجرة التقديرية';
+
+  @override
+  String get fareBookedTitle => 'الأجرة التقديرية عند الطلب';
+
+  @override
+  String get fareDisclaimer =>
+      'تقديرية، وتُدفع مباشرة إلى السائق. لا تتم معالجة أي مدفوعات داخل التطبيق.';
+
+  @override
+  String get fareNotSet => 'لم تُحدَّد أجرة تقديرية لهذا المسار بعد.';
+
+  @override
+  String get farePerSeat => 'للمقعد الواحد';
+
+  @override
+  String fareSeatsLine(int count) {
+    return 'المقاعد × $count';
+  }
+
+  @override
+  String fareParcelLine(String size) {
+    return 'طرد $size';
+  }
+
+  @override
+  String get fareTotal => 'الإجمالي';
+
+  @override
+  String get notifDriverApproachingTitle => 'سائقك يقترب';
+
+  @override
+  String get notifDriverApproachingBody =>
+      'سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.';
+
+  @override
+  String get ratingPromptTitle => 'كيف كانت رحلتك؟';
+
+  @override
+  String get ratingPromptBody =>
+      'قيّم السائق من 1 إلى 5 نجوم. تقييمك سري: لا يرى السائق التقييم ولا من قدّمه.';
+
+  @override
+  String ratingStarLabel(int count) {
+    return '$count نجوم';
+  }
+
+  @override
+  String get ratingSubmit => 'إرسال التقييم';
+
+  @override
+  String get ratingThanks => 'شكرًا لتقييمك الرحلة.';
+
+  @override
+  String get ratingFailed => 'تعذّر إرسال التقييم. حاول مرة أخرى.';
+
+  @override
+  String get ratingAlreadyRated => 'لقد قيّمت هذه الرحلة من قبل.';
+
+  @override
+  String get renewalTitle => 'جدّد مستنداتك';
+
+  @override
+  String get renewalOpen => 'تجديد المستندات';
+
+  @override
+  String get renewalBannerTitle => 'انتهت صلاحية مستنداتك';
+
+  @override
+  String get renewalBannerBody =>
+      'لا يمكنك الاتصال بالإنترنت أو قبول رحلات جديدة حتى ترسل مستنداتك المجدَّدة وتتم الموافقة عليها.';
+
+  @override
+  String get renewalBannerSubmittedTitle => 'التجديد قيد المراجعة';
+
+  @override
+  String get renewalBannerSubmittedBody =>
+      'مستنداتك المجدَّدة بانتظار المراجعة.';
+
+  @override
+  String get renewalIntro =>
+      'ارفع صوراً واضحة أو ملفات PDF لرخصة القيادة وترخيص المركبة والتأمين المجدَّدة، ثم أرسلها للمراجعة. الرحلات التي قبلتها سابقاً لا تتأثر.';
+
+  @override
+  String get renewalUploaded => 'المستندات المرفوعة';
+
+  @override
+  String get renewalNoDocuments => 'لم يتم رفع أي مستندات مجدَّدة بعد.';
+
+  @override
+  String get renewalSubmit => 'إرسال للمراجعة';
+
+  @override
+  String get renewalSubmittedTitle => 'بانتظار المراجعة';
+
+  @override
+  String get renewalSubmittedBody =>
+      'استلمنا مستنداتك المجدَّدة. سيتم إشعارك عندما يوافق فريق المراجعة عليها.';
+
+  @override
+  String get renewalDocumentsRequired =>
+      'ارفع مستنداً مجدَّداً واحداً على الأقل قبل الإرسال.';
+
+  @override
+  String get renewalStateConflict =>
+      'تغيّرت حالة التجديد. اسحب للتحديث وحاول مرة أخرى.';
+
+  @override
+  String get renewalLoadError => 'تعذّر تحميل حالة التجديد.';
+
+  @override
+  String get renewalNothingToRenew =>
+      'مستنداتك محدّثة. لا يوجد ما يتطلب التجديد.';
+
+  @override
+  String get passengerNavHome => 'الرئيسية';
+
+  @override
+  String get passengerNavTrips => 'رحلاتي';
+
+  @override
+  String get passengerNavMaps => 'الخرائط';
+
+  @override
+  String get passengerNavSettings => 'الإعدادات';
+
+  @override
+  String get passengerGreetingMorning => 'صباح الخير';
+
+  @override
+  String get passengerGreetingAfternoon => 'نهارك سعيد';
+
+  @override
+  String get passengerGreetingEvening => 'مساء الخير';
+
+  @override
+  String get passengerPlanTripTitle => 'خطّط لرحلتك القادمة';
+
+  @override
+  String get passengerPlanTripBody =>
+      'ابحث عن رحلة، شارك الطريق، وصل إلى وجهتك';
+
+  @override
+  String get passengerSearchRide => 'ابحث عن رحلة';
+
+  @override
+  String get passengerUpcomingTrips => 'الرحلات القادمة';
+
+  @override
+  String get passengerNoUpcomingTitle => 'لا توجد رحلات قادمة';
+
+  @override
+  String get passengerNoUpcomingBody => 'ابحث عن رحلة جديدة واحجز مقعدك.';
+
+  @override
+  String get passengerWeekStrip => 'هذا الأسبوع';
+
+  @override
+  String get tripsStatTotal => 'الإجمالي';
+
+  @override
+  String get tripsStatActive => 'نشطة';
+
+  @override
+  String get tripsStatUpcoming => 'قادمة';
+
+  @override
+  String get tripsStatPast => 'سابقة';
+
+  @override
+  String get tripsFilterAll => 'الكل';
+
+  @override
+  String get communityReportsTitle => 'بلاغات المجتمع';
+
+  @override
+  String get communityReportsNote =>
+      'بلاغات غير مؤكدة من المستخدمين. التصويت رأي المجتمع فقط ولا يغيّر حالة الحواجز أو الطرق.';
+
+  @override
+  String get communityReportsAdd => 'إضافة بلاغ';
+
+  @override
+  String get communityReportsEmpty => 'لا توجد بلاغات حالياً.';
+
+  @override
+  String get communityReportsLoadFailed => 'تعذّر تحميل البلاغات.';
+
+  @override
+  String get communityFilterAll => 'الكل';
+
+  @override
+  String get communityGroupRoad => 'الطرق';
+
+  @override
+  String get communityGroupCheckpoint => 'الحواجز';
+
+  @override
+  String get communityGroupSafety => 'السلامة';
+
+  @override
+  String get communityGroupOther => 'أخرى';
+
+  @override
+  String get communitySortRecent => 'الأحدث';
+
+  @override
+  String get communitySortTop => 'الأكثر تأييداً';
+
+  @override
+  String get communitySortDisputed => 'المتنازع عليها';
+
+  @override
+  String get communityBadgeRecent => 'حديث';
+
+  @override
+  String get communityBadgeDisputed => 'محل خلاف';
+
+  @override
+  String get communityBadgeWellSupported => 'مدعوم من المجتمع';
+
+  @override
+  String get communityAwaitingReview => 'بانتظار تحقق الإدارة';
+
+  @override
+  String get communityUnverifiedPrefix => 'بلاغ غير مؤكد: ';
+
+  @override
+  String get communityCategoryRoadClosure => 'إغلاق طريق';
+
+  @override
+  String get communityCategoryRoadReopened => 'إعادة فتح طريق';
+
+  @override
+  String get communityCategoryRoadCongestion => 'ازدحام';
+
+  @override
+  String get communityCategoryCheckpointOpenMarkedClosed =>
+      'حاجز مفتوح لكنه معروض مغلقاً';
+
+  @override
+  String get communityCategoryCheckpointClosedMarkedOpen =>
+      'حاجز مغلق لكنه معروض مفتوحاً';
+
+  @override
+  String get communityCategoryCheckpointOutdated => 'معلومات حاجز قديمة';
+
+  @override
+  String get communityCategorySafetyAlert => 'تنبيه سلامة أو أمن';
+
+  @override
+  String get communityCategoryDriverReport => 'ملاحظة عن رحلة أو سائق';
+
+  @override
+  String get communityCategoryIncorrectMapInfo => 'معلومة خاطئة على الخريطة';
+
+  @override
+  String get communityCategoryOther => 'أخرى';
+
+  @override
+  String get communitySheetTitle => 'إضافة بلاغ';
+
+  @override
+  String get communitySensitiveNote =>
+      'صف ما رأيته فقط. لا تذكر اسم شخص أو رقم مركبة أو أي بيانات شخصية. سيظهر البلاغ للآخرين كبلاغ غير مؤكد.';
+
+  @override
+  String get communityFieldCategory => 'نوع البلاغ';
+
+  @override
+  String get communityFieldDescription => 'ماذا حدث؟';
+
+  @override
+  String get communityFieldLocation => 'اسم المكان';
+
+  @override
+  String get communityAttachLocation => 'إرفاق موقعي الحالي على الخريطة';
+
+  @override
+  String get communitySubmit => 'إرسال البلاغ';
+
+  @override
+  String get communitySubmitted => 'تم نشر البلاغ.';
+
+  @override
+  String get communitySubmitFailed => 'تعذّر إرسال البلاغ. حاول مرة أخرى.';
+
+  @override
+  String get communityTooMany => 'أرسلت بلاغات كثيرة. حاول لاحقاً.';
+
+  @override
+  String get communityUpvote => 'أؤيد البلاغ';
+
+  @override
+  String get communityDownvote => 'لا أؤيد البلاغ';
+
+  @override
+  String get communityVoteFailed => 'تعذّر تسجيل صوتك.';
+
+  @override
+  String get communityOwnReportVote => 'لا يمكنك التصويت على بلاغك.';
+
+  @override
+  String get communityFlag => 'الإبلاغ عن بلاغ مضلّل';
+
+  @override
+  String get communityFlagged => 'شكراً. سيراجع فريقنا البلاغ.';
+
+  @override
+  String get communityFlagFailed => 'تعذّر إرسال الإشعار.';
+
+  @override
+  String get communityJustNow => 'الآن';
+
+  @override
+  String communityMinutesAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'قبل $count دقيقة',
+      few: 'قبل $count دقائق',
+      two: 'قبل دقيقتين',
+      one: 'قبل دقيقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityHoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'قبل $count ساعة',
+      few: 'قبل $count ساعات',
+      two: 'قبل ساعتين',
+      one: 'قبل ساعة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityDaysAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'قبل $count يوماً',
+      few: 'قبل $count أيام',
+      two: 'قبل يومين',
+      one: 'قبل يوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communityVoteCounts(int up, int down) {
+    return '$up تأييد، $down اعتراض';
+  }
+
+  @override
+  String get mapStraightLineNote => 'تعذر حساب الطريق: يظهر خط مستقيم';
+
+  @override
+  String get mapCheckpointsUnavailable => 'بيانات الحواجز غير متوفرة';
+
+  @override
+  String get mapCheckpointsLoadFailed => 'تعذر تحميل الحواجز';
+
+  @override
+  String get checkpointOfficialUnknown => 'الحالة الرسمية: غير منشورة';
+
+  @override
+  String checkpointEnteringChanged(String time) {
+    return 'دخول: آخر تغيير $time';
+  }
+
+  @override
+  String checkpointLeavingChanged(String time) {
+    return 'خروج: آخر تغيير $time';
+  }
+
+  @override
+  String checkpointCommunitySays(String status) {
+    return 'المجتمع يقول: $status (غير مؤكد)';
+  }
+
+  @override
+  String get communityStatusOpen => 'مفتوح';
+
+  @override
+  String get communityStatusClosed => 'مغلق';
+
+  @override
+  String get communityStatusOutdated => 'قد تكون الحالة قديمة';
+
+  @override
+  String get checkpointPositionOsm => 'الموقع: © مساهمو OpenStreetMap (ODbL)';
+
+  @override
+  String get checkpointsUnplacedTitle => 'حواجز بلا موقع على الخريطة';
+
+  @override
+  String get checkpointsUnplacedBody =>
+      'يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.';
+
+  @override
+  String get communityPickLocation => 'اضغط على الخريطة لتحديد المكان';
+
+  @override
+  String get communityUseMyLocation => 'استخدام موقعي الحالي';
+
+  @override
+  String get communityLocationRequired =>
+      'حدد المكان على الخريطة لهذا النوع من البلاغات.';
+
+  @override
+  String get communityLocationOptional => 'الموقع (اختياري)';
+
+  @override
+  String get communityLocationOutside => 'هذا المكان خارج منطقة خدمة درب.';
+
+  @override
+  String get communityLocationUnavailable => 'موقعك الحالي غير متاح.';
+
+  @override
+  String get communityLocationSet => 'تم تحديد المكان على الخريطة';
+
+  @override
+  String get communityClearLocation => 'إزالة المكان';
+
+  @override
+  String get mapRouteLabel => 'المسار';
+
+  @override
+  String get merchantOrderMapTitle => 'مسار الطلب';
 }

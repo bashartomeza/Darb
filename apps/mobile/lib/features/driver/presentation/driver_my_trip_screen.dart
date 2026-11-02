@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/driver_controller.dart';
 import 'driver_trip_screen.dart';
@@ -35,13 +34,6 @@ class DriverMyTripScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.navMyTrip),
-        actions: const [
-          LanguageSwitch(),
-          SizedBox(width: AppTokens.spaceSmall),
-        ],
-      ),
       body: SafeArea(
         top: false,
         bottom: false,

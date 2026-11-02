@@ -10,6 +10,7 @@ import { consumeOnboardingSession, createOnboardingSession, revokeOnboardingSess
 import { createOnboardingAttempt } from "../lib/onboardingAttempts.js";
 import { normalizePhoneToE164 } from "../lib/phone.js";
 import { prisma } from "../lib/prisma.js";
+import { DEMO_ACCOUNTS } from "../modules/demoReset.js";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -26,16 +27,16 @@ async function main() {
   const schemaTables = await prisma.$queryRaw<Array<{ n: bigint }>>`
     SELECT COUNT(*) AS n FROM information_schema.tables
     WHERE table_schema = DATABASE() AND table_name IN
-      ('invitations','invitation_redemptions','onboarding_attempts','otp_challenges','onboarding_sessions','consent_documents','user_consents','abuse_counters','idempotency_records')
+      ('invitations','invitation_redemptions','onboarding_attempts','otp_challenges','onboarding_sessions','consent_releases','consent_documents','user_consents','abuse_counters','idempotency_records')
   `;
-  assert(Number(schemaTables[0].n) === 9, "Onboarding foundation tables are incomplete");
+  assert(Number(schemaTables[0].n) === 10, "Onboarding foundation tables are incomplete");
   const utf8Tables = await prisma.$queryRaw<Array<{ n: bigint }>>`
     SELECT COUNT(*) AS n FROM information_schema.tables
     WHERE table_schema = DATABASE() AND table_name IN
-      ('invitations','invitation_redemptions','onboarding_attempts','otp_challenges','onboarding_sessions','consent_documents','user_consents','abuse_counters','idempotency_records')
+      ('invitations','invitation_redemptions','onboarding_attempts','otp_challenges','onboarding_sessions','consent_releases','consent_documents','user_consents','abuse_counters','idempotency_records')
       AND table_collation LIKE 'utf8mb4%'
   `;
-  assert(Number(utf8Tables[0].n) === 9, "Onboarding foundation character set is not utf8mb4");
+  assert(Number(utf8Tables[0].n) === 10, "Onboarding foundation character set is not utf8mb4");
   const binaryDigestColumns = await prisma.$queryRaw<Array<{ n: bigint }>>`
     SELECT COUNT(*) AS n FROM information_schema.columns
     WHERE table_schema = DATABASE() AND collation_name = 'ascii_bin' AND (
@@ -58,7 +59,7 @@ async function main() {
     intendedPhone: phone,
     phoneRegion: "PS",
     expiresAt: new Date(Date.now() + 86_400_000),
-    keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   for (const mismatch of [
     { intendedRole: "driver" as const, phone },
@@ -93,7 +94,7 @@ async function main() {
     intendedPhone: phone,
     phoneRegion: "PS",
     expiresAt: new Date(Date.now() + 86_400_000),
-    keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const mismatchedConsumption = await consumeInvitation(prisma, {
     invitationId: unrelatedInvite.invitation.id,
@@ -125,7 +126,7 @@ async function main() {
     intendedPhone: phone,
     phoneRegion: "PS",
     expiresAt: new Date(Date.now() + 86_400_000),
-    keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const concurrentAttemptResults = await Promise.allSettled(Array.from({ length: 8 }, () =>
     createOnboardingAttempt(prisma, {
@@ -146,7 +147,7 @@ async function main() {
 
   const raceInvite = await createInvitation(prisma, {
     createdById: admin.id, intendedRole: "driver", intendedPhone: "+970590000002", phoneRegion: "PS",
-    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const raceAttempt = await createOnboardingAttempt(prisma, {
     invitationId: raceInvite.invitation.id, intendedRole: "driver", phone: "+970590000002",
@@ -191,7 +192,7 @@ async function main() {
 
   const resendInvite = await createInvitation(prisma, {
     createdById: admin.id, intendedRole: "passenger", intendedPhone: phone, phoneRegion: "PS",
-    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const resendAttempt = await createOnboardingAttempt(prisma, {
     invitationId: resendInvite.invitation.id, intendedRole: "passenger", phone,
@@ -235,7 +236,7 @@ async function main() {
 
   const concurrentInvite = await createInvitation(prisma, {
     createdById: admin.id, intendedRole: "passenger", intendedPhone: phone, phoneRegion: "PS",
-    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const concurrentAttempt = await createOnboardingAttempt(prisma, {
     invitationId: concurrentInvite.invitation.id, intendedRole: "passenger", phone,
@@ -315,7 +316,7 @@ async function main() {
 
   const lockInvite = await createInvitation(prisma, {
     createdById: admin.id, intendedRole: "passenger", intendedPhone: phone, phoneRegion: "PS",
-    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode, phone: onboarding.keys.phoneDigest }
+    expiresAt: new Date(Date.now() + 86_400_000), keys: { code: onboarding.keys.invitationCode!, phone: onboarding.keys.phoneDigest }
   });
   const lockAttempt = await createOnboardingAttempt(prisma, {
     invitationId: lockInvite.invitation.id, intendedRole: "passenger", phone,
@@ -503,14 +504,14 @@ async function main() {
   const loginResponse = await fetch(`${api}/api/v1/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ phone: admin.phone, password: config.demo!.adminPassword, client_type: "admin" })
+    body: JSON.stringify({ email: DEMO_ACCOUNTS.admin.email, password: config.demo!.adminPassword })
   });
   assert(loginResponse.ok, "Admin login failed for invitation integration");
   const token = (await json(loginResponse)).access_token;
   const passenger = await prisma.user.findFirstOrThrow({ where: { role: "passenger", demo_account: true } });
   const passengerLogin = await fetch(`${api}/api/v1/auth/login`, {
     method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ phone: passenger.phone, password: config.demo!.passengerPassword, client_type: "mobile" })
+    body: JSON.stringify({ email: DEMO_ACCOUNTS.passenger.email, password: config.demo!.passengerPassword })
   });
   const passengerToken = (await json(passengerLogin)).access_token;
   const forbidden = await fetch(`${api}/api/v1/admin/invitations`, { headers: { authorization: `Bearer ${passengerToken}` } });
@@ -527,12 +528,13 @@ async function main() {
   const createResponse = await fetch(`${api}/api/v1/admin/invitations`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ role: "merchant", phone: "+970590000004", region: "PS", campaign: privateCampaign })
+    body: JSON.stringify({ role: "merchant", phone: "+970590000004", contact_email: "Invitee@Example.com", region: "PS", campaign: privateCampaign })
   });
   const created = await json(createResponse);
   assert(createResponse.status === 201 && typeof created.code === "string", "Admin invitation creation failed");
   assert(Boolean(createResponse.headers.get("x-request-id")), "Admin invitation response omitted request ID");
   assert(!JSON.stringify(created).includes("digest"), "Admin invitation create response exposed a digest");
+  assert(created.invitation.contact_email === "i***@example.com" && !JSON.stringify(created).includes("invitee@example.com"), "Admin invitation response must mask the contact email");
   const createAudit = await prisma.auditEvent.findFirstOrThrow({
     where: { action: "invitation_created", entity_id: created.invitation.id },
     orderBy: { created_at: "desc" }
@@ -609,6 +611,7 @@ async function main() {
     prisma.abuseCounter.count(),
     prisma.idempotencyRecord.count(),
     prisma.consentDocument.count(),
+    prisma.consentRelease.count(),
     prisma.authSession.count(),
     prisma.refreshToken.count()
   ]);

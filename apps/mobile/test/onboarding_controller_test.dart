@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:http/http.dart' as http;
-import 'package:masari_mobile/core/api/api_error.dart';
-import 'package:masari_mobile/features/onboarding/application/onboarding_controller.dart';
-import 'package:masari_mobile/features/onboarding/data/onboarding_repository.dart';
-import 'package:masari_mobile/features/onboarding/data/onboarding_storage.dart';
-import 'package:masari_mobile/features/onboarding/domain/onboarding_models.dart';
+import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/features/onboarding/application/onboarding_controller.dart';
+import 'package:darb_mobile/features/onboarding/data/onboarding_repository.dart';
+import 'package:darb_mobile/features/onboarding/data/onboarding_storage.dart';
+import 'package:darb_mobile/features/onboarding/domain/onboarding_models.dart';
 
 void main() {
   test('Arabic and Persian OTP digits normalize to ASCII', () {
@@ -37,7 +37,7 @@ void main() {
     controller.chooseRole(OnboardingRole.passenger);
 
     final pending = controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000001',
       locale: 'ar',
     );
@@ -70,17 +70,17 @@ void main() {
     controller.chooseRole(OnboardingRole.passenger);
 
     await controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000001',
       locale: 'ar',
     );
     await controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000001',
       locale: 'ar',
     );
     await controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000002',
       locale: 'ar',
     );
@@ -99,13 +99,13 @@ void main() {
     controller.chooseRole(OnboardingRole.passenger);
 
     await controller.start(
-      invitationCode: 'A' * 20,
+      email: 'applicant@example.com',
       phone: '0590000001',
       locale: 'ar',
     );
 
     final state = container.read(onboardingControllerProvider).value!;
-    expect(state.stage, OnboardingStage.enteringInvitation);
+    expect(state.stage, OnboardingStage.enteringContact);
     expect(state.busy, isFalse);
     expect(state.errorCode, 'secure_storage_unavailable');
     expect(storage.bundle, isNull);
@@ -377,9 +377,9 @@ class _FakeOnboardingRepository extends OnboardingRepository {
 
   @override
   Future<StartAttemptResult> start({
-    required String invitationCode,
     required OnboardingRole role,
     required String phone,
+    required String email,
     required String locale,
     required String idempotencyKey,
   }) async {

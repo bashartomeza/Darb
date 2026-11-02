@@ -27,6 +27,7 @@ const { signAuthToken } = await import("../middleware/auth.js");
 const { createRefreshToken, parseRefreshToken } = await import("../lib/refreshTokens.js");
 
 const user = {
+  email_verified_at: new Date(),
   id: "user_1",
   name: "Passenger",
   phone: "+970590000001",

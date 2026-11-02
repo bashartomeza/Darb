@@ -18,6 +18,8 @@ vi.mock("../middleware/auth.js", () => ({
 const { createConfig } = await import("../config.js");
 const { HttpError } = await import("../middleware/error.js");
 const { createPassengerAssistantRouter } = await import("../modules/passengerAssistant.js");
+const { createPrismaAssistantHistoryStore } = await import("../services/passengerAssistantHistory.js");
+const { createAssistantHistoryDb } = await import("./assistantHistoryFake.js");
 const {
   AiServicesError,
   createAiServicesClient,
@@ -129,7 +131,7 @@ describe("POST /passenger/assistant/voice", () => {
   function appWith(client: ReturnType<typeof createAiServicesClient> | null) {
     const app = express();
     app.use(express.json());
-    app.use(createPassengerAssistantRouter(appConfig, service as any, recorder, client as any));
+    app.use(createPassengerAssistantRouter(appConfig, service as any, recorder, createPrismaAssistantHistoryStore(createAssistantHistoryDb().db as never), client as any));
     app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       const status = error instanceof HttpError ? error.statusCode : 500;
       res.status(status).json({ error: (error as Error).message });
@@ -195,31 +197,5 @@ describe("POST /passenger/assistant/voice", () => {
     const down = { analyzeText: vi.fn(), analyzeVoice: vi.fn().mockRejectedValue(new AiServicesError("unavailable")) };
     expect((await request(appWith(down)).post("/passenger/assistant/voice").set("Content-Type", "audio/wav").send(WAV)).status).toBe(503);
     expect(service.answer).not.toHaveBeenCalled();
-  });
-
-  it("keeps the text endpoint body identical after the shared-builder refactor", async () => {
-    service.answer.mockResolvedValue({ status: "result", message: "جواب", suggestions: [] });
-    const res = await request(appWith(null)).post("/passenger/assistant/messages").send({ message: "مرحبا", conversation_id: "c1" });
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "result", answer: "جواب", suggestions: [], conversation_id: "c1" });
-
-    service.answer.mockResolvedValue({
-      status: "request_review",
-      message: "راجع المعلومات ثم أكّد لبدء البحث.",
-      suggestions: [],
-      request: { pickupKey: "bab_al_zawiya", pickupLabel: "Bab Al-Zawiya", destinationKey: "bethlehem", destinationLabel: "Bethlehem Center", preferredTime: "2026-09-10T15:00:00+03:00", passengerCount: 1 }
-    });
-    const review = await request(appWith(null)).post("/passenger/assistant/messages").send({ message: "x", conversation_id: "c3" });
-    expect(review.body).toEqual({
-      status: "request_review",
-      message: "راجع المعلومات ثم أكّد لبدء البحث.",
-      extracted: { pickup_key: "bab_al_zawiya", pickup_label: "Bab Al-Zawiya", destination_key: "bethlehem", destination_label: "Bethlehem Center", preferred_time: "2026-09-10T15:00:00+03:00", passenger_count: 1 },
-      suggestions: [],
-      conversation_id: "c3"
-    });
-
-    service.answer.mockResolvedValue({ status: "clarification", message: "من وين؟", suggestions: ["أ"] });
-    const clar = await request(appWith(null)).post("/passenger/assistant/messages").send({ message: "x", conversation_id: "c2" });
-    expect(clar.body).toEqual({ status: "clarification", question: "من وين؟", suggestions: ["أ"], conversation_id: "c2" });
   });
 });

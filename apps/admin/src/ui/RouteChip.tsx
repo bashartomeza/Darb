@@ -16,5 +16,5 @@ export function RouteChip({ from, to }: { from: string; to: string }) {
 
 /** Small monospace-ish pill for IDs and keys; always rendered LTR. */
 export function TechnicalValue({ children }: { children: string | undefined }) {
-  return <span className="technical">{children ?? "-"}</span>;
+  return <span className="technical" dir="ltr">{children ?? "-"}</span>;
 }

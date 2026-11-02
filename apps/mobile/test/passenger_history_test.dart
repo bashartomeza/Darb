@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:masari_mobile/features/passenger/application/passenger_history_controller.dart';
-import 'package:masari_mobile/features/passenger/data/passenger_models.dart';
-import 'package:masari_mobile/features/trips/data/trip_models.dart';
+import 'package:darb_mobile/features/passenger/application/passenger_history_controller.dart';
+import 'package:darb_mobile/features/passenger/data/passenger_models.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 /// The "My trips" tab renders one section per bucket, so the bucketing has to
 /// be a partition: anything counted twice is a trip the passenger sees twice.
@@ -85,6 +85,27 @@ void main() {
       'dropped',
       'gone',
     }, reason: 'nothing dropped');
+  });
+
+  test('expired requests remain visible in past history', () {
+    final state = PassengerHistoryState(
+      requests: [request(id: 'expired', status: 'expired')],
+      trips: const [],
+    );
+
+    expect(state.past.map((r) => r.id), ['expired']);
+    expect(state.active, isEmpty);
+    expect(state.cancelled, isEmpty);
+  });
+
+  test('delivered remains active until the trip is completed', () {
+    final state = PassengerHistoryState(
+      requests: [request(id: 'delivered', status: 'delivered')],
+      trips: const [],
+    );
+
+    expect(state.active.map((r) => r.id), ['delivered']);
+    expect(state.past, isEmpty);
   });
 
   test('buckets are newest first', () {

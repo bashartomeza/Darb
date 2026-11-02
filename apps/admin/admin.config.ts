@@ -15,7 +15,7 @@ export type AdminBuildConfig = {
 
 export class AdminConfigurationError extends Error {
   constructor(problems: string[]) {
-    super(`Invalid Masari admin configuration: ${problems.join("; ")}`);
+    super(`Invalid Darb admin configuration: ${problems.join("; ")}`);
     this.name = "AdminConfigurationError";
   }
 }

@@ -1,7 +1,11 @@
+import '../../canonical_assignments/application/canonical_assignment_controller.dart';
+import '../../../core/widgets/darb_back_button.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/maps/darb_route_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:masari_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
@@ -30,6 +34,7 @@ class _PassengerRouteRequestScreenState
   int _passengers = 1;
   bool _busy = false;
   Object? _error;
+  CanonicalOperationBundle? _completedOperation;
   CanonicalPassengerRequest? _result;
 
   @override
@@ -51,15 +56,7 @@ class _PassengerRouteRequestScreenState
           bundle?.actorId != actorId) {
         return;
       }
-      if (bundle!.recoveryWindowExpired(DateTime.now())) {
-        setState(
-          () => _error = const CanonicalOperationBlocked(
-            'canonical_recovery_expired',
-          ),
-        );
-        return;
-      }
-      final payload = bundle.payload;
+      final payload = bundle!.payload;
       setState(() {
         _routeVersionId = payload['route_version_id'] as String?;
         _pickupId = payload['pickup_stop_id'] as String?;
@@ -79,12 +76,24 @@ class _PassengerRouteRequestScreenState
     });
   }
 
+  /// Route requests are listed under "My trips" when this build can show
+  /// their status; otherwise the passenger goes back to the dashboard.
+  bool get _requestListAvailable =>
+      ref
+          .read(mobileCapabilitiesProvider)
+          .value
+          ?.canonicalAssignmentStatusAvailable ==
+      true;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (_result != null) {
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.canonicalPassengerRequest)),
+        appBar: AppBar(
+          title: Text(l10n.canonicalPassengerRequest),
+          leading: const DarbBackButton(fallback: '/passenger'),
+        ),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(AppTokens.spaceLarge),
@@ -93,10 +102,19 @@ class _PassengerRouteRequestScreenState
                 title: l10n.requestRecorded,
                 body: l10n.matchingDisabledNotice,
               ),
+              fareSnapshotBox(
+                context,
+                _result!.fare,
+                passengers: _result!.passengerCount,
+              ),
               if (_error != null) Text(_errorLabel(l10n, _error!)),
               FilledButton(
                 onPressed: _acknowledgeResult,
-                child: Text(l10n.returnToDashboard),
+                child: Text(
+                  _requestListAvailable
+                      ? l10n.viewRouteRequests
+                      : l10n.returnToDashboard,
+                ),
               ),
             ],
           ),
@@ -105,7 +123,10 @@ class _PassengerRouteRequestScreenState
     }
     return CanonicalFeatureGate(
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.canonicalPassengerRequest)),
+        appBar: AppBar(
+          title: Text(l10n.canonicalPassengerRequest),
+          leading: const DarbBackButton(fallback: '/passenger'),
+        ),
         body: SafeArea(
           child: ref
               .watch(canonicalRouteCatalogProvider)
@@ -156,6 +177,15 @@ class _PassengerRouteRequestScreenState
                                 }),
                         ),
                       if (route != null) ...[
+                        CanonicalRouteMap(
+                          key: const ValueKey('canonicalRouteMap'),
+                          route: route,
+                          highlightIds: {
+                            _pickupId,
+                            _dropoffId,
+                          }.whereType<String>().toSet(),
+                        ),
+                        const SizedBox(height: AppTokens.spaceMedium),
                         OrderedStopTimeline(
                           stops: route.stops,
                           selectedIds: {
@@ -210,6 +240,11 @@ class _PassengerRouteRequestScreenState
                             ),
                           ],
                         ),
+                        passengerFareEstimate(
+                          context,
+                          route.fares,
+                          _passengers,
+                        ),
                       ],
                       if (_error != null) Text(_errorLabel(l10n, _error!)),
                       const SizedBox(height: AppTokens.spaceLarge),
@@ -254,12 +289,7 @@ class _PassengerRouteRequestScreenState
   }
 
   Future<void> _submit() async {
-    if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
-      setState(
-        () => _error = AppLocalizations.of(context).invalidDepartureWindow,
-      );
-      return;
-    }
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -272,6 +302,9 @@ class _PassengerRouteRequestScreenState
       'requested_departure_until': _until.toUtc().toIso8601String(),
       'passenger_count': _passengers,
     };
+    // Captured up front so the list still learns about a saved request if
+    // this screen is closed while the create is in flight.
+    final container = ProviderScope.containerOf(context, listen: false);
     try {
       final actorId = ref.read(authControllerProvider).value?.user?.id;
       if (actorId == null) {
@@ -287,11 +320,22 @@ class _PassengerRouteRequestScreenState
           .run<CanonicalPassengerRequest>(
             operation: 'passenger_route_request_create',
             scope: 'passenger',
+            allowExpiredReplay: true,
+            onBundle: (bundle) => _completedOperation = bundle,
             actorId: actorId,
             payload: payload,
-            preflight: () => ref
-                .read(canonicalRouteRepositoryProvider)
-                .requireFreshRoute(_routeVersionId!),
+            preflight: () async {
+              if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
+                throw const ApiException(
+                  ApiErrorType.validation,
+                  'invalid_departure_window',
+                  statusCode: 400,
+                );
+              }
+              await ref
+                  .read(canonicalRouteRepositoryProvider)
+                  .requireFreshRoute(_routeVersionId!);
+            },
             send: (bundle) => ref
                 .read(canonicalRouteRepositoryProvider)
                 .createPassengerRequest(
@@ -299,6 +343,9 @@ class _PassengerRouteRequestScreenState
                   idempotencyKey: bundle.idempotencyKey,
                 ),
           );
+      // The request is saved server-side; make the passenger's route request
+      // list re-read so it appears without a manual pull.
+      container.invalidate(passengerCanonicalAssignmentsProvider);
       if (mounted) setState(() => _result = result);
     } catch (error) {
       if (error is ApiException && error.statusCode == 404) {
@@ -314,14 +361,24 @@ class _PassengerRouteRequestScreenState
   Future<void> _acknowledgeResult() async {
     final actorId = ref.read(authControllerProvider).value?.user?.id;
     if (actorId == null) return;
+    final completed = _completedOperation;
+    if (completed == null || completed.actorId != actorId) return;
     try {
       await ref
           .read(canonicalMutationRunnerProvider)
           .acknowledge(
             actorId: actorId,
             operation: 'passenger_route_request_create',
+            idempotencyKey: completed.idempotencyKey,
           );
-      if (mounted) context.go('/passenger');
+      if (!mounted) return;
+      // Land where the new request is listed, not on the legacy dashboard
+      // that only shows location-based requests.
+      context.go(
+        _requestListAvailable
+            ? '/passenger/canonical-assignments'
+            : '/passenger',
+      );
     } catch (error) {
       if (mounted) setState(() => _error = error);
     }
@@ -399,6 +456,9 @@ class _CatalogError extends StatelessWidget {
 }
 
 String _errorLabel(AppLocalizations l10n, Object error) {
+  if (error is ApiException && error.message == 'invalid_departure_window') {
+    return l10n.invalidDepartureWindow;
+  }
   if (error is String) return error;
   if (error is CanonicalOperationBlocked ||
       error is CanonicalOperationStorageException) {

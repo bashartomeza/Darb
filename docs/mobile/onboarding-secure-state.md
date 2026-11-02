@@ -4,9 +4,9 @@ Onboarding state is stored separately from operational authentication.
 
 Secure storage keys:
 
-- `masari_auth_bundle_v1`: operational access/refresh session bundle.
-- `masari_jwt`: legacy operational access token.
-- `masari_onboarding_bundle_v1`: onboarding-only bundle.
+- `darb_auth_bundle_v1`: operational access/refresh session bundle.
+- `darb_jwt`: legacy operational access token.
+- `darb_onboarding_bundle_v1`: onboarding-only bundle.
 
 The onboarding bundle is versioned and fail-closed. Corrupt, unsupported,
 incomplete, mixed-purpose, illegal-stage, or expired bundles are cleared.

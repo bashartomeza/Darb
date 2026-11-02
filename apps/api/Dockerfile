@@ -13,6 +13,8 @@ COPY apps/api/prisma apps/api/prisma
 COPY apps/api/prisma.config.ts apps/api/prisma.config.ts
 COPY apps/api/tsconfig.json apps/api/tsconfig.json
 COPY apps/api/src apps/api/src
+COPY apps/api/data/checkpoint-directory.v1.manifest.json apps/api/data/checkpoint-directory.v1.manifest.json
+COPY apps/api/data/osm-checkpoints.json apps/api/data/osm-checkpoints.json
 RUN DATABASE_URL=mysql://127.0.0.1:3306/build npm run prisma:generate
 RUN npm run build:api
 
@@ -34,6 +36,8 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=production-dependencies --chown=node:node /workspace/node_modules /app/node_modules
 COPY --from=build --chown=node:node /workspace/apps/api/dist /app/apps/api/dist
+COPY --from=build --chown=node:node /workspace/apps/api/data/checkpoint-directory.v1.manifest.json /app/apps/api/data/checkpoint-directory.v1.manifest.json
+COPY --from=build --chown=node:node /workspace/apps/api/data/osm-checkpoints.json /app/apps/api/data/osm-checkpoints.json
 COPY --chown=node:node apps/api/package.json /app/apps/api/package.json
 USER node
 EXPOSE 3000

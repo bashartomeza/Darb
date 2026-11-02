@@ -1,4 +1,5 @@
-import 'dart:async';
+import '../../../core/api/authoritative_refresh.dart';
+import '../../auth/application/auth_actor_binding.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,56 +22,54 @@ class PassengerTripState {
   }
 }
 
-final passengerTripControllerProvider =
-    AsyncNotifierProvider.family<
-      PassengerTripController,
-      PassengerTripState,
-      String
-    >(PassengerTripController.new);
+final passengerTripControllerProvider = AsyncNotifierProvider.autoDispose
+    .family<PassengerTripController, PassengerTripState, String>(
+      PassengerTripController.new,
+    );
 
 class PassengerTripController extends AsyncNotifier<PassengerTripState> {
   PassengerTripController(this._tripId);
 
   final String _tripId;
-  Timer? _tripTimer;
-  Timer? _locationTimer;
+  late AuthoritativeRefresh<PassengerTripState> _reads;
 
   @override
-  Future<PassengerTripState> build() async {
-    ref.onDispose(_stopPolling);
-    final initial = await _load();
-    resumePolling();
-    return initial;
+  Future<PassengerTripState> build() {
+    _reads = AuthoritativeRefresh<PassengerTripState>();
+    ref.onDispose(_reads.dispose);
+    return _read();
   }
 
-  Future<void> refresh() async {
-    state = AsyncData(await _load());
-  }
+  Future<void> refresh() async => await _read();
 
-  void pausePolling() => _stopPolling();
-
-  void resumePolling() {
-    if (_tripTimer != null || _locationTimer != null) {
-      return;
+  Future<PassengerTripState> _read() {
+    if (!ref.mounted) throw StateError('session_changed');
+    final binding = ref.read(authenticatedActorBindingProvider);
+    final revision = binding.revision;
+    if (binding.actorId == null) throw StateError('session_changed');
+    void requireCurrent() {
+      if (!ref.mounted || binding.revision != revision) {
+        throw StateError('session_changed');
+      }
     }
-    _tripTimer = Timer.periodic(const Duration(seconds: 5), (_) => refresh());
-    _locationTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => refresh(),
+
+    return _reads.run(
+      load: () async {
+        requireCurrent();
+        final repo = ref.read(tripRepositoryProvider);
+        final trip = await repo.tripDetail(_tripId);
+        requireCurrent();
+        final location = await repo.latestLocation(_tripId);
+        requireCurrent();
+        return PassengerTripState(trip: trip, location: location);
+      },
+      publish: (next) => state = AsyncData(
+        PassengerTripState(
+          trip: next.trip,
+          location: latestTripLocation(state.value?.location, next.location),
+        ),
+      ),
+      isCurrent: () => ref.mounted && binding.revision == revision,
     );
-  }
-
-  Future<PassengerTripState> _load() async {
-    final repo = ref.read(tripRepositoryProvider);
-    final trip = await repo.tripDetail(_tripId);
-    final location = await repo.latestLocation(_tripId);
-    return PassengerTripState(trip: trip, location: location);
-  }
-
-  void _stopPolling() {
-    _tripTimer?.cancel();
-    _locationTimer?.cancel();
-    _tripTimer = null;
-    _locationTimer = null;
   }
 }

@@ -14,6 +14,7 @@ export const prohibitedPathRules = [
 ];
 
 const contentRules = [
+  ["checkpoint partner credential", /\bar_partner_[A-Za-z0-9_]{20,}\b/],
   ["private key header", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],
   ["GitHub token", /\bgh[pousr]_[A-Za-z0-9_]{30,}\b/],
   ["AWS access key", /\bAKIA[0-9A-Z]{16}\b/],

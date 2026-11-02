@@ -7,10 +7,10 @@ const safeRefreshPepper = "a-safe-refresh-pepper-with-more-than-thirty-two-chara
 function environment(overrides: Record<string, string | undefined> = {}) {
   return {
     APP_ENV: "production",
-    DATABASE_URL: "mysql://database-user:database-password@db.internal:3306/masari",
+    DATABASE_URL: "mysql://database-user:database-password@db.internal:3306/darb",
     JWT_SECRET: safeJwt,
     REFRESH_TOKEN_PEPPER: safeRefreshPepper,
-    CORS_ORIGINS: "https://admin.masari.example",
+    CORS_ORIGINS: "https://admin.darb.example",
     APP_RELEASE: "m6b1a-test",
     TRUST_PROXY: "none",
     ...overrides
@@ -18,6 +18,41 @@ function environment(overrides: Record<string, string | undefined> = {}) {
 }
 
 describe("fail-closed application configuration", () => {
+  it.each(["staging", "production"])("blocks %s Google signup until approved delivery providers are integrated", (appEnv) => {
+    expect(() => createConfig(environment({ APP_ENV: appEnv, GOOGLE_PASSENGER_SIGNUP_MODE: "open",
+      GOOGLE_MOBILE_SERVER_CLIENT_ID: "mobile-client", AUTH_ACTION_TOKEN_PEPPER: "separate-auth-action-secret-with-over-thirty-two-characters" })))
+      .toThrow(/google_signup_prerequisite_missing/);
+  });
+  it("requires a nonempty allowlist before enabling allowlist signup", () => {
+    expect(() => createConfig(environment({ APP_ENV: "local", GOOGLE_PASSENGER_SIGNUP_MODE: "allowlist",
+      GOOGLE_MOBILE_SERVER_CLIENT_ID: "mobile-client", AUTH_ACTION_TOKEN_PEPPER: "separate-auth-action-secret-with-over-thirty-two-characters" })))
+      .toThrow(/requires nonempty HMAC allowlist/);
+  });
+  it("defaults Google signup disabled and separates mobile/admin audiences", () => {
+    expect(createConfig(environment()).googleAuth.passengerSignupMode).toBe("disabled");
+    expect(() => createConfig(environment({ GOOGLE_MOBILE_SERVER_CLIENT_ID: "same-client", GOOGLE_ADMIN_WEB_CLIENT_ID: "same-client" }))).toThrow(/audiences must be distinct/);
+    expect(() => createConfig(environment({ GOOGLE_PASSENGER_SIGNUP_MODE: "open" }))).toThrow(/requires mobile audiences/);
+    expect(() => createConfig(environment({ GOOGLE_PASSENGER_ALLOWLIST_HMACS: "email@example.com" }))).toThrow(/HMAC digests/);
+  });
+  it("keeps xAI optional but validates configured credentials", () => {
+    expect(createConfig(environment()).assistant).toEqual({
+      provider: "groq",
+      apiKey: undefined,
+      model: "openai/gpt-oss-20b",
+      timeoutMs: 15_000
+    });
+    expect(createConfig(environment({ XAI_API_KEY: "" })).assistant.apiKey).toBeUndefined();
+    expect(() => createConfig(environment({ XAI_API_KEY: "replace-with-xai-api-key-value" }))).toThrow(
+      /XAI_API_KEY uses a known placeholder/
+    );
+    expect(() => createConfig(environment({ GEMINI_API_KEY: "replace-with-gemini-api-key" }))).toThrow(
+      /GEMINI_API_KEY uses a known placeholder/
+    );
+    expect(() => createConfig(environment({ GROQ_API_KEY: "replace-with-groq-api-key" }))).toThrow(
+      /GROQ_API_KEY uses a known placeholder/
+    );
+  });
+
   it("rejects staging without DATABASE_URL", () => {
     expect(() => createConfig(environment({ APP_ENV: "staging", DATABASE_URL: undefined }))).toThrow(ConfigurationError);
   });
@@ -193,5 +228,70 @@ describe("fail-closed application configuration", () => {
       DEMO_ADMIN_PASSWORD: "admin-test-secret"
     });
     expect(parsed.demoFeaturesEnabled).toBe(true);
+  });
+
+  it("parses only exact reset database allow-list entries", () => {
+    const parsed = createConfig({
+      ...process.env,
+      APP_ENV: "demo",
+      ENABLE_DEMO_FEATURES: "true",
+      DEMO_RESET_ALLOWED_DATABASES: "darb_demo,darb_demo_ci"
+    });
+    expect(parsed.demoResetAllowedDatabases).toEqual(["darb_demo", "darb_demo_ci"]);
+    expect(() => createConfig({
+      ...process.env,
+      APP_ENV: "demo",
+      ENABLE_DEMO_FEATURES: "true",
+      DEMO_RESET_ALLOWED_DATABASES: "darb_*_ci"
+    })).toThrow(/exact comma-separated database names/);
+    expect(() => createConfig({
+      ...process.env,
+      APP_ENV: "demo",
+      ENABLE_DEMO_FEATURES: "true",
+      DEMO_RESET_ALLOWED_DATABASES: "darb_demo,darb_demo"
+    })).toThrow(/must not contain duplicate/);
+  });
+});
+
+describe("SMTP email delivery configuration", () => {
+  const pepper = "separate-auth-action-secret-with-over-thirty-two-characters";
+  const smtp = {
+    EMAIL_DELIVERY: "smtp", SMTP_HOST: "smtp.mail.example", SMTP_PORT: "587", SMTP_SECURE: "starttls",
+    SMTP_USER: "mailer", SMTP_PASSWORD: "a-real-smtp-password", EMAIL_FROM_ADDRESS: "no-reply@darb.example",
+    EMAIL_FROM_NAME: "Darb", AUTH_ACTION_TOKEN_PEPPER: pepper
+  };
+
+  it("defaults to disabled with no smtp settings", () => {
+    expect(createConfig(environment()).email).toEqual({ delivery: "disabled" });
+    expect(createConfig(environment({ EMAIL_DELIVERY: "" })).email.delivery).toBe("disabled");
+  });
+  it.each(["staging", "production"])("accepts a complete smtp configuration in %s", (appEnv) => {
+    const config = createConfig(environment({ APP_ENV: appEnv, ...smtp }));
+    expect(config.email.smtp).toEqual({ host: "smtp.mail.example", port: 587, secure: "starttls", user: "mailer",
+      password: "a-real-smtp-password", fromAddress: "no-reply@darb.example", fromName: "Darb" });
+  });
+  it("defaults the port from the secure mode and the sender name", () => {
+    const tlsConfig = createConfig(environment({ ...smtp, SMTP_PORT: "", SMTP_SECURE: "tls", EMAIL_FROM_NAME: "" }));
+    expect(tlsConfig.email.smtp).toMatchObject({ port: 465, secure: "tls", fromName: "Darb" });
+    expect(createConfig(environment({ ...smtp, SMTP_PORT: "" })).email.smtp?.port).toBe(587);
+  });
+  it.each(["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_ADDRESS", "AUTH_ACTION_TOKEN_PEPPER"])("requires %s together with the rest in production", (name) => {
+    expect(() => createConfig(environment({ ...smtp, [name]: undefined }))).toThrow(new RegExp(name));
+  });
+  it("rejects invalid values and never echoes secrets in the error", () => {
+    expect(() => createConfig(environment({ ...smtp, SMTP_SECURE: "plain" }))).toThrow();
+    expect(() => createConfig(environment({ ...smtp, SMTP_PORT: "70000" }))).toThrow();
+    expect(() => createConfig(environment({ ...smtp, EMAIL_FROM_ADDRESS: "not-an-address" }))).toThrow(/EMAIL_FROM_ADDRESS/);
+    expect(() => createConfig(environment({ ...smtp, SMTP_HOST: "smtp://host" }))).toThrow(/SMTP_HOST/);
+    expect(() => createConfig(environment({ ...smtp, SMTP_HOST: "localhost" }))).toThrow(/loopback/);
+    expect(() => createConfig(environment({ ...smtp, EMAIL_FROM_NAME: "Darb\r\nBcc: x@y.example" }))).toThrow(/EMAIL_FROM_NAME/);
+    try { createConfig(environment({ ...smtp, SMTP_PASSWORD: "<replace-with-smtp-password>" })); expect.unreachable(); }
+    catch (error) { expect(error).toBeInstanceOf(ConfigurationError); expect(String((error as Error).message)).not.toContain("replace-with-smtp-password"); expect(String((error as Error).message)).toMatch(/SMTP_PASSWORD/); }
+  });
+  it("ignores smtp settings when delivery is disabled and allows credential-less relays outside production", () => {
+    expect(createConfig(environment({ ...smtp, EMAIL_DELIVERY: "disabled", SMTP_PASSWORD: undefined })).email).toEqual({ delivery: "disabled" });
+    const local = createConfig(environment({ APP_ENV: "local", EMAIL_DELIVERY: "smtp", SMTP_HOST: "localhost", EMAIL_FROM_ADDRESS: "dev@darb.example" }));
+    expect(local.email.smtp).toMatchObject({ host: "localhost", user: undefined, password: undefined });
+    expect(() => createConfig(environment({ APP_ENV: "local", EMAIL_DELIVERY: "smtp", SMTP_HOST: "localhost", EMAIL_FROM_ADDRESS: "dev@darb.example", SMTP_USER: "u" }))).toThrow(/together/);
   });
 });

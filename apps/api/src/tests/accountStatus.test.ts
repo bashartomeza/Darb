@@ -17,6 +17,7 @@ const { signAuthToken } = await import("../middleware/auth.js");
 
 const now = new Date("2026-07-17T09:00:00.000Z");
 const admin = {
+  email_verified_at: new Date(),
   id: "admin_1",
   name: "Admin",
   phone: "+970590000005",
@@ -87,7 +88,7 @@ describe("admin account status", () => {
     const response = await request(createApp())
       .patch("/api/v1/admin/users/passenger_1/status")
       .set(authorization())
-      .send({ status: "suspended", reason: "  Policy   violation  " })
+      .send({ status: "suspended", reason: "  Policy   violation  ", expected_status: "active" })
       .expect(200);
 
     expect(response.body.user).toEqual(
@@ -127,7 +128,7 @@ describe("admin account status", () => {
     await request(createApp())
       .patch("/api/v1/admin/users/passenger_1/status")
       .set(authorization())
-      .send({ status: "disabled", reason: "  " })
+      .send({ status: "disabled", reason: "  ", expected_status: "active" })
       .expect(400);
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
@@ -137,7 +138,7 @@ describe("admin account status", () => {
     await request(createApp())
       .patch("/api/v1/admin/users/passenger_1/status")
       .set(authorization())
-      .send({ status: "active" })
+      .send({ status: "active", expected_status: "suspended" })
       .expect(200);
     expect(prismaMock.authSession.findMany).not.toHaveBeenCalled();
     expect(prismaMock.authSession.updateMany).not.toHaveBeenCalled();
@@ -154,11 +155,85 @@ describe("admin account status", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
+  it("rejects an unauthenticated status mutation", async () => {
+    await request(createApp())
+      .patch("/api/v1/admin/users/passenger_1/status")
+      .send({ status: "suspended", reason: "Policy violation", expected_status: "active" })
+      .expect(401);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("requires the Admin caller's visible expected status before opening a transaction", async () => {
+    await request(createApp())
+      .patch("/api/v1/admin/users/passenger_1/status")
+      .set(authorization())
+      .send({ status: "suspended", reason: "Policy violation" })
+      .expect(400);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("disables an active account with the same revocation and security-version semantics", async () => {
+    const response = await request(createApp())
+      .patch("/api/v1/admin/users/passenger_1/status")
+      .set(authorization())
+      .send({ status: "disabled", reason: "Access decommissioned", expected_status: "active" })
+      .expect(200);
+    expect(response.body.user.account_status).toBe("disabled");
+    expect(prismaMock.authSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ revoke_reason: "account_disabled" }) }));
+    expect(prismaMock.user.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ security_version: { increment: 1 } }) }));
+  });
+
+  it.each(["driver", "merchant"])("blocks generic activation for a pending %s without writing", async (role) => {
+    prismaMock.user.findUnique.mockResolvedValue({ ...passenger, role, account_status: "pending" });
+    const response = await request(createApp())
+      .patch("/api/v1/admin/users/pending_user/status")
+      .set(authorization())
+      .send({ status: "active", expected_status: "pending" })
+      .expect(409);
+    expect(response.body.error).toBe("approval_required");
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stale expected status with 409 and no write", async () => {
+    const response = await request(createApp())
+      .patch("/api/v1/admin/users/passenger_1/status")
+      .set(authorization())
+      .send({ status: "suspended", reason: "Policy violation", expected_status: "suspended" })
+      .expect(409);
+    expect(response.body.error).toBe("account_status_conflict");
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+
+  it("keeps mutation B authoritative when stale mutation A reuses its active snapshot", async () => {
+    let authoritativeStatus = "active";
+    prismaMock.user.findUnique.mockImplementation(async () => ({ ...passenger, account_status: authoritativeStatus }));
+    prismaMock.user.update.mockImplementation(async ({ data }: { data: { account_status: string; status_reason: string | null } }) => {
+      authoritativeStatus = data.account_status;
+      return { ...passenger, account_status: authoritativeStatus, status_reason: data.status_reason, status_updated_at: new Date() };
+    });
+
+    const mutationB = await request(createApp())
+      .patch("/api/v1/admin/users/passenger_1/status")
+      .set(authorization())
+      .send({ status: "suspended", reason: "Tab B suspension", expected_status: "active" })
+      .expect(200);
+    expect(mutationB.body.user.account_status).toBe("suspended");
+
+    const staleMutationA = await request(createApp())
+      .patch("/api/v1/admin/users/passenger_1/status")
+      .set(authorization())
+      .send({ status: "disabled", reason: "Tab A stale disable", expected_status: "active" })
+      .expect(409);
+    expect(staleMutationA.body.error).toBe("account_status_conflict");
+    expect(authoritativeStatus).toBe("suspended");
+    expect(prismaMock.user.update).toHaveBeenCalledTimes(1);
+  });
+
   it("prevents current-admin self-suspension", async () => {
     await request(createApp())
       .patch("/api/v1/admin/users/admin_1/status")
       .set(authorization())
-      .send({ status: "suspended", reason: "Administrative rotation" })
+      .send({ status: "suspended", reason: "Administrative rotation", expected_status: "active" })
       .expect(409);
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
@@ -174,7 +249,7 @@ describe("admin account status", () => {
     await request(createApp())
       .patch("/api/v1/admin/users/admin_2/status")
       .set(authorization())
-      .send({ status: "disabled", reason: "Access decommissioned" })
+      .send({ status: "disabled", reason: "Access decommissioned", expected_status: "active" })
       .expect(409);
     expect(prismaMock.user.update).not.toHaveBeenCalled();
   });
@@ -183,7 +258,7 @@ describe("admin account status", () => {
     await request(createApp())
       .patch("/api/v1/admin/users/passenger_1/status")
       .set(authorization())
-      .send({ status: "suspended", reason: "Policy violation" })
+      .send({ status: "suspended", reason: "Policy violation", expected_status: "active" })
       .expect(200);
 
     expect(prismaMock.$transaction).toHaveBeenCalledWith(expect.any(Function), {
@@ -197,7 +272,7 @@ describe("admin account status", () => {
     const response = await request(createApp())
       .patch("/api/v1/admin/users/passenger_1/status")
       .set(authorization())
-      .send({ status: "suspended", reason: "Policy violation" })
+      .send({ status: "suspended", reason: "Policy violation", expected_status: "active" })
       .expect(409);
 
     expect(response.body.error).toBe("account_status_conflict");

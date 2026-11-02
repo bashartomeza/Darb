@@ -42,7 +42,7 @@ describe("admin access-token expiry", () => {
       headers: { "Content-Type": "application/json" }
     }));
     vi.stubGlobal("fetch", fetchMock);
-    const api = createApiClient("https://api.masari.invalid", { onSessionEnded: handler.handle });
+    const api = createApiClient("https://api.darb.invalid", { onSessionEnded: handler.handle });
 
     const results = await Promise.allSettled([
       api.me("access-value"),
@@ -62,6 +62,35 @@ describe("admin access-token expiry", () => {
     expect(isAdminSessionEndError(apiError("invalid_credentials", 401))).toBe(false);
     expect(isAdminSessionEndError(apiError("session_revoked", 401))).toBe(true);
     expect(isAdminSessionEndError(apiError("account_unavailable", 403))).toBe(true);
+  });
+
+  it("keeps the overview API behind the current Admin bearer session", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({
+      counts: { users: 0, drivers: 0, routes: 0, passenger_requests: 0, merchant_orders: 0, parcels: 0, active_drivers: 0, pending_driver_approvals: 0, open_incidents: 0 }
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://api.darb.invalid");
+
+    await api.dashboard("admin-access-token");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("https://api.darb.invalid/api/v1/admin/dashboard");
+    expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer admin-access-token");
+  });
+
+  it("keeps driver review data behind the current Admin bearer session", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('{"drivers":[]}', {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("https://api.darb.invalid");
+
+    await api.drivers("admin-access-token");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe("https://api.darb.invalid/api/v1/admin/drivers");
+    expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer admin-access-token");
   });
 
   it("ends an unavailable account but ignores a stale response after reauthentication", () => {

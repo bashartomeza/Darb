@@ -1,3 +1,4 @@
+import { hasVerifiedContact } from "../lib/contactVerification.js";
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "../config.js";
@@ -9,6 +10,8 @@ export type AuthUser = {
   role: "passenger" | "driver" | "merchant" | "admin";
   sessionId: string;
   securityVersion: number;
+  profileState?: "phone_required" | "complete";
+  emailVerified?: boolean;
 };
 
 export type AuthenticatedRequest = Request & {
@@ -71,7 +74,10 @@ export async function authenticateAuthToken(token: string, options: { allowRevok
   if (!session.revoked_at) {
     await prisma.authSession.update({ where: { id: session.id }, data: { last_used_at: new Date() } });
   }
-  return claims;
+  // EMAIL_VERIFICATION_DISABLED (local development only) lets unverified email accounts through.
+  // profile_state is non-null in the database. The fallback only supports
+  // narrow legacy test doubles that predate this schema field.
+  return { ...claims, profileState: session.user.profile_state ?? "complete", emailVerified: config.emailVerificationDisabled || hasVerifiedContact(session.user) };
 }
 
 function authMiddleware(options: { allowRevoked?: boolean } = {}) {

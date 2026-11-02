@@ -1,9 +1,11 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { config } from "../config.js";
+import { config, type AppConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { auditEvent } from "../lib/audit.js";
+import { hasVerifiedContact } from "../lib/contactVerification.js";
+import { normalizePhoneToE164, PHONE_INPUT_MAX_LENGTH } from "../lib/phone.js";
 import {
   createRefreshToken,
   isRefreshTokenRole,
@@ -22,31 +24,171 @@ import {
 } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction, Prisma } from "../generated/prisma/client.js";
-import { normalizePhoneToE164 } from "../lib/phone.js";
+import type { GoogleVerifier } from "../lib/googleIdentity.js";
+import { GoogleAuthService, googleCompleteSchema } from "../services/googleAuth.js";
+import { EmailAuthService, canonicalEmail, emailStartSchema, emailCompleteSchema, emailProofStartSchema, emailProofConfirmSchema, passwordResetSchema, passwordSetSchema, type EmailDelivery } from "../services/emailAuth.js";
+import type { ConsentReleaseService } from "../services/consentReleases.js";
+import { createAuthenticatedAuthRateLimiter } from "../middleware/rateLimit.js";
+import { IdentityProfileService, googleLinkSchema, phoneStartSchema, phoneConfirmSchema, type PhoneVerificationProvider } from "../services/identityProfile.js";
 
-const loginSchema = z.object({
-  phone: z.string().min(5),
-  region: z.literal("PS").optional(),
-  password: z.string().min(1),
-  device_name: z.string().trim().min(1).max(120).optional()
+const emailField = canonicalEmail;
+const deviceNameField = z.string().trim().min(1).max(120).optional();
+
+// Exactly one identifier: an email, or an international phone number for accounts
+// whose phone was verified at an invited sign-up.
+const loginSchema = z
+  .object({
+    email: emailField.optional(),
+    phone: z.string().trim().min(7).max(PHONE_INPUT_MAX_LENGTH).optional(),
+    password: z.string().min(1).max(200),
+    device_name: deviceNameField
+  })
+  .refine((value) => Boolean(value.email) !== Boolean(value.phone), { message: "one_identifier_required" });
+const googleSchema = z.strictObject({
+  id_token: z.string().min(1).max(8192),
+  device_name: deviceNameField
 });
 const refreshSchema = z.object({ refresh_token: z.string().min(1).max(160) });
 
 function publicUser(user: {
   id: string;
   name: string;
-  phone: string;
+  phone: string | null;
+  email: string | null;
   role: string;
   account_status: string;
   demo_account: boolean;
+  profile_state?: string;
+  email_verified_at?: Date | null;
+  phone_verified_at?: Date | null;
+  city?: string | null;
 }) {
   return {
     id: user.id,
     name: user.name,
     phone: user.phone,
+    email: user.email,
     role: user.role,
     account_status: user.account_status,
-    demo_account: user.demo_account
+    demo_account: user.demo_account,
+    profile_state: user.profile_state,
+    email_verified: hasVerifiedContact(user),
+    city: user.city ?? null
+  };
+}
+
+type SessionUser = {
+  id: string;
+  role: AuthUser["role"];
+  security_version: number;
+  demo_account: boolean;
+};
+
+/**
+ * Creates a mobile/admin session for an already-authenticated user: rotates in
+ * a fresh refresh token, writes the login + session-created audit trail, and
+ * signs an access token. Shared by password login, email registration, and
+ * Google sign-in so the session invariants live in exactly one place.
+ */
+export async function establishMobileSession(
+  user: SessionUser,
+  options: {
+    deviceName?: string;
+    loginAction: AuditAction;
+    loginMetadata?: Prisma.InputJsonValue;
+  },
+  transaction?: Prisma.TransactionClient
+) {
+  const now = new Date();
+  const refreshMaterial = isRefreshTokenRole(user.role) ? createRefreshToken(user.role) : null;
+  const clientType = refreshMaterial ? "mobile" : "admin";
+  const refreshExpiresAt = refreshMaterial ? refreshTokenExpiresAt(now) : null;
+  const sessionExpiresAt =
+    refreshExpiresAt ?? new Date(now.getTime() + config.accessTokenTtlSeconds * 1_000);
+
+  const create = async (tx: Prisma.TransactionClient) => {
+    const eligible = await tx.user.updateMany({
+      where: {
+        id: user.id,
+        role: user.role,
+        account_status: "active",
+        security_version: user.security_version
+      },
+      data: { last_login_at: now }
+    });
+    if (eligible.count !== 1) return { kind: "account_unavailable" } as const;
+
+    const created = await tx.authSession.create({
+      data: {
+        user_id: user.id,
+        client_type: clientType,
+        device_name: options.deviceName?.replace(/\s+/g, " "),
+        created_at: now,
+        last_used_at: now,
+        expires_at: sessionExpiresAt,
+        security_version_at_issue: user.security_version
+      }
+    });
+    if (refreshMaterial && refreshExpiresAt) {
+      await tx.refreshToken.create({
+        data: {
+          id: refreshMaterial.id,
+          session_id: created.id,
+          token_hash: refreshMaterial.tokenHash,
+          created_at: now,
+          expires_at: refreshExpiresAt
+        }
+      });
+    }
+    await auditEvent(tx, {
+      userId: user.id,
+      action: options.loginAction,
+      entityType: "User",
+      entityId: user.id,
+      metadata: options.loginMetadata ?? { role: user.role, demo_account: user.demo_account }
+    });
+    await auditEvent(tx, {
+      userId: user.id,
+      action: AuditAction.session_created,
+      entityType: "AuthSession",
+      entityId: created.id,
+      metadata: { client_type: clientType }
+    });
+    const token = accessToken(user, created.id);
+    return { kind: "success", session: created, token } as const;
+  };
+  const result = transaction ? await create(transaction) : await prisma.$transaction(create);
+
+  if (result.kind === "account_unavailable") {
+    await auditEvent(transaction ?? prisma, {
+      userId: user.id,
+      action: AuditAction.login_blocked_by_status,
+      entityType: "User",
+      entityId: user.id,
+      metadata: { account_status: "changed_during_login" }
+    });
+    throw new HttpError(403, "account_unavailable");
+  }
+
+  return { token: result.token, session: result.session, refreshMaterial };
+}
+
+function sessionResponseBody(
+  established: Awaited<ReturnType<typeof establishMobileSession>>,
+  user: Parameters<typeof publicUser>[0]
+) {
+  return {
+    token: established.token,
+    access_token: established.token,
+    access_token_expires_in: config.accessTokenTtlSeconds,
+    ...(established.refreshMaterial
+      ? {
+          refresh_token: established.refreshMaterial.rawToken,
+          refresh_token_expires_in: config.refreshTokenTtlDays * 24 * 60 * 60
+        }
+      : {}),
+    session: safeSession(established.session, established.session.id),
+    user: publicUser(user)
   };
 }
 
@@ -101,22 +243,78 @@ async function markRefreshReuse(
   });
 }
 
-export const authRouter = Router();
+export function createAuthRouter(appConfig: AppConfig = config, dependencies: { emailDelivery?: EmailDelivery; consentReleaseService?: ConsentReleaseService; googleVerifier?: GoogleVerifier; phoneVerificationProvider?: PhoneVerificationProvider } = {}) {
+const authRouter = Router();
+const emailAuth = new EmailAuthService(prisma, appConfig, dependencies.emailDelivery, dependencies.consentReleaseService);
+const googleAuth = new GoogleAuthService(prisma, appConfig, dependencies.googleVerifier, dependencies.consentReleaseService);
+const passwordSetRateLimiter = createAuthenticatedAuthRateLimiter(appConfig);
+const identityProfile = new IdentityProfileService(prisma, appConfig, dependencies.emailDelivery, dependencies.phoneVerificationProvider, dependencies.googleVerifier);
 
-authRouter.post("/auth/login", async (req, res, next) => {
+authRouter.post("/auth/identities/google/link/start", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
+  try { const input = z.strictObject({ locale: z.enum(["ar", "en"]) }).parse(req.body); res.status(202).json(await identityProfile.linkStart(req.user!.id, req.user!.securityVersion, input.locale)); } catch (error) { next(error); }
+});
+authRouter.post("/auth/identities/google/link", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
+  try { res.json(await identityProfile.link(req.user!.id, req.user!.securityVersion, googleLinkSchema.parse(req.body))); } catch (error) { next(error); }
+});
+authRouter.post("/profile/phone/start-verification", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const input = phoneStartSchema.parse(req.body);
+    const { id, securityVersion } = req.user!;
+    res.status(202).json(appConfig.phoneVerificationDisabled
+      ? await identityProfile.phoneSaveUnverified(id, securityVersion, input)
+      : await identityProfile.phoneStart(id, securityVersion, input));
+  } catch (error) { next(error); }
+});
+authRouter.post("/profile/phone/confirm-verification", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
+  try { res.json(await identityProfile.phoneConfirm(req.user!.id, req.user!.securityVersion, phoneConfirmSchema.parse(req.body))); } catch (error) { next(error); }
+});
+
+authRouter.get("/auth/capabilities", (_req, res) => {
+  res.json({
+    google_mobile_login_available: appConfig.googleAuth.mobileClientIds.length > 0,
+    google_admin_login_available: appConfig.googleAuth.adminClientIds.length === 1,
+    google_admin_client_id: appConfig.googleAuth.adminClientIds.length === 1 ? appConfig.googleAuth.adminClientIds[0] : null,
+    google_passenger_signup_mode: appConfig.googleAuth.passengerSignupMode,
+    // Local development: the phone is saved without a code, so the app hides the code step.
+    phone_verification_disabled: appConfig.phoneVerificationDisabled,
+    // Google driver applications reuse the self-service document upload and Admin review.
+    google_driver_signup_available: Boolean(
+      appConfig.publicOnboardingEnabled && appConfig.onboarding && appConfig.publicRegistration && appConfig.driverDocuments
+    )
+  });
+});
+
+authRouter.get("/auth/consents", async (req, res, next) => {
+  try { res.json(await emailAuth.currentConsents(z.enum(["ar", "en"]).parse(req.query.locale))); } catch (error) { next(error); }
+});
+
+authRouter.post(["/auth/login", "/auth/mobile/login", "/auth/admin/login"], async (req, res, next) => {
   try {
     const input = loginSchema.parse(req.body);
-    let phone: string;
-    try {
-      phone = normalizePhoneToE164(input.phone, { region: input.region });
-    } catch {
-      throw new HttpError(401, "invalid_credentials");
+    // The Admin console signs in with email only.
+    if (input.phone && req.path.toLowerCase().replace(/\/+$/, "") === "/auth/admin/login") throw new HttpError(400, "validation_error");
+    let user = null;
+    if (input.phone) {
+      let phone: string | null = null;
+      try {
+        phone = normalizePhoneToE164(input.phone);
+      } catch {
+        phone = null;
+      }
+      user = phone ? await prisma.user.findUnique({ where: { phone } }) : null;
+      // Phone sign-in is only for non-admin accounts whose phone was verified by a one-time code.
+      if (user && (user.role === "admin" || !user.phone_verified_at)) user = null;
+    } else {
+      user = await prisma.user.findUnique({ where: { email: input.email! } });
     }
-    const user = await prisma.user.findUnique({ where: { phone } });
-    if (!user) throw new HttpError(401, "invalid_credentials");
+    if (!user || !user.password_hash) throw new HttpError(401, "invalid_credentials");
+    const loginPath = req.path.toLowerCase().replace(/\/+$/, "");
+    if (loginPath === "/auth/admin/login" && user.role !== "admin") throw new HttpError(401, "invalid_credentials");
 
     const validPassword = await bcrypt.compare(input.password, user.password_hash);
     if (!validPassword) throw new HttpError(401, "invalid_credentials");
+    if (!appConfig.emailVerificationDisabled && !user.email_verified_at && !(input.phone && hasVerifiedContact(user))) throw new HttpError(403, "email_verification_required");
+    if (loginPath === "/auth/mobile/login" && user.role === "admin") throw new HttpError(401, "invalid_credentials");
     if (user.account_status !== "active") {
       await auditEvent(prisma, {
         userId: user.id,
@@ -128,92 +326,103 @@ authRouter.post("/auth/login", async (req, res, next) => {
       throw new HttpError(403, "account_unavailable");
     }
 
-    const now = new Date();
-    const refreshMaterial = isRefreshTokenRole(user.role) ? createRefreshToken(user.role) : null;
-    const clientType = refreshMaterial ? "mobile" : "admin";
-    const refreshExpiresAt = refreshMaterial ? refreshTokenExpiresAt(now) : null;
-    const sessionExpiresAt =
-      refreshExpiresAt ?? new Date(now.getTime() + config.accessTokenTtlSeconds * 1_000);
-
-    const result = await prisma.$transaction(async (tx) => {
-      const eligible = await tx.user.updateMany({
-        where: {
-          id: user.id,
-          role: user.role,
-          account_status: "active",
-          security_version: user.security_version
-        },
-        data: { last_login_at: now }
-      });
-      if (eligible.count !== 1) return { kind: "account_unavailable" } as const;
-
-      const created = await tx.authSession.create({
-        data: {
-          user_id: user.id,
-          client_type: clientType,
-          device_name: input.device_name?.replace(/\s+/g, " "),
-          created_at: now,
-          last_used_at: now,
-          expires_at: sessionExpiresAt,
-          security_version_at_issue: user.security_version
-        }
-      });
-      if (refreshMaterial && refreshExpiresAt) {
-        await tx.refreshToken.create({
-          data: {
-            id: refreshMaterial.id,
-            session_id: created.id,
-            token_hash: refreshMaterial.tokenHash,
-            created_at: now,
-            expires_at: refreshExpiresAt
-          }
-        });
-      }
-      await auditEvent(tx, {
-        userId: user.id,
-        action: AuditAction.auth_login,
-        entityType: "User",
-        entityId: user.id,
-        metadata: { role: user.role, demo_account: user.demo_account }
-      });
-      await auditEvent(tx, {
-        userId: user.id,
-        action: AuditAction.session_created,
-        entityType: "AuthSession",
-        entityId: created.id,
-        metadata: { client_type: clientType }
-      });
-      const token = accessToken(user, created.id);
-      return { kind: "success", session: created, token } as const;
+    const established = await establishMobileSession(user, {
+      deviceName: input.device_name,
+      loginAction: AuditAction.auth_login,
+      loginMetadata: { role: user.role, demo_account: user.demo_account, method: "password" }
     });
-
-    if (result.kind === "account_unavailable") {
-      await auditEvent(prisma, {
-        userId: user.id,
-        action: AuditAction.login_blocked_by_status,
-        entityType: "User",
-        entityId: user.id,
-        metadata: { account_status: "changed_during_login" }
-      });
-      throw new HttpError(403, "account_unavailable");
-    }
-
-    res.json({
-      token: result.token,
-      access_token: result.token,
-      access_token_expires_in: config.accessTokenTtlSeconds,
-      ...(refreshMaterial
-        ? {
-            refresh_token: refreshMaterial.rawToken,
-            refresh_token_expires_in: config.refreshTokenTtlDays * 24 * 60 * 60
-          }
-        : {}),
-      session: safeSession(result.session, result.session.id),
-      user: publicUser(user)
-    });
+    res.json(sessionResponseBody(established, user));
   } catch (error) {
     next(error);
   }
+});
+
+authRouter.post("/auth/register", (_req, _res, next) => next(new HttpError(410, "registration_flow_required")));
+
+authRouter.post("/auth/mobile/register/start", async (req, res, next) => {
+  try { res.status(202).json(await emailAuth.start(emailStartSchema.parse(req.body))); } catch (error) { next(error); }
+});
+authRouter.post("/auth/mobile/register/complete", async (req, res, next) => {
+  try {
+    const input = emailCompleteSchema.parse(req.body);
+    const result = await emailAuth.complete(input, (tx, user) => establishMobileSession(user, {
+      deviceName: input.device_name, loginAction: AuditAction.auth_register, loginMetadata: { method: "email", role: "passenger" }
+    }, tx), req.requestId);
+    res.status(201).json(sessionResponseBody(result.session, result.user));
+  } catch (error) { next(error); }
+});
+authRouter.post("/auth/email/verify/start", async (req, res, next) => {
+  try { res.status(202).json(await emailAuth.proofStart(emailProofStartSchema.parse(req.body), "email_verification", req.operationalLog)); } catch (error) { next(error); }
+});
+authRouter.post("/auth/email/verify/confirm", async (req, res, next) => {
+  try { res.json(await emailAuth.verify(emailProofConfirmSchema.parse(req.body))); } catch (error) { next(error); }
+});
+authRouter.post("/auth/password/reset/start", async (req, res, next) => {
+  try { res.status(202).json(await emailAuth.proofStart(emailProofStartSchema.parse(req.body), "password_reset", req.operationalLog)); } catch (error) { next(error); }
+});
+authRouter.post("/auth/password/reset/confirm", async (req, res, next) => {
+  try { res.json(await emailAuth.reset(passwordResetSchema.parse(req.body))); } catch (error) { next(error); }
+});
+authRouter.post("/auth/password/set/start", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const input = z.strictObject({ locale: z.enum(["ar", "en"]) }).parse(req.body);
+    res.status(202).json(await emailAuth.passwordSetStart(req.user!.id, input.locale));
+  } catch (error) { next(error); }
+});
+authRouter.post("/auth/password/set", requireAuth, passwordSetRateLimiter, async (req: AuthenticatedRequest, res, next) => {
+  try { res.json(await emailAuth.setPassword(req.user!.id, req.user!.securityVersion, passwordSetSchema.parse(req.body))); } catch (error) { next(error); }
+});
+
+authRouter.post(["/auth/google", "/auth/mobile/google"], async (req, res, next) => {
+  try {
+    const input = googleSchema.parse(req.body);
+    const result = await googleAuth.start(input.id_token);
+    if (result.kind === "registration") {
+      const { kind: _kind, ...grant } = result;
+      res.status(202).json(grant);
+      return;
+    }
+    if (result.kind === "pending") {
+      // No app session: the applicant gets the pending-status token that shows their review and documents.
+      res.status(202).json({ ...(await googleAuth.pendingStatus(result.user.id)), request_id: req.requestId });
+      return;
+    }
+    const established = await establishMobileSession(result.user, {
+      deviceName: input.device_name, loginAction: AuditAction.auth_google_login,
+      loginMetadata: { method: "google", role: result.user.role }
+    });
+    res.json(sessionResponseBody(established, result.user));
+  } catch (error) { next(error); }
+});
+
+authRouter.post("/auth/admin/google", async (req, res, next) => {
+  try {
+    const input = googleSchema.parse(req.body);
+    const user = await googleAuth.adminLogin(input.id_token);
+    const established = await establishMobileSession(user, { deviceName: input.device_name, loginAction: AuditAction.auth_google_login, loginMetadata: { method: "google", role: "admin" } });
+    res.json(sessionResponseBody(established, user));
+  } catch (error) { next(error); }
+});
+
+authRouter.post("/auth/mobile/google/complete-registration", async (req, res, next) => {
+  try {
+    const input = googleCompleteSchema.parse(req.body);
+    const result = await googleAuth.complete(input, (tx, user) => establishMobileSession(user, {
+      deviceName: input.device_name, loginAction: AuditAction.auth_register,
+      loginMetadata: { method: "google", role: user.role }
+    }, tx), req.requestId);
+    if (result.pending) {
+      // Drivers wait for Admin approval: they upload documents with the pending-status token, not a session.
+      res.status(201).json({
+        result: "account_created", role: result.user.role, account_status: result.user.account_status,
+        onboarding_status: "documents_required", next_action: "upload_documents",
+        onboarding_status_token: result.pending.token, onboarding_status_expires_at: result.pending.expiresAt,
+        request_id: req.requestId
+      });
+      return;
+    }
+    res.status(201).json(sessionResponseBody(result.session!, result.user));
+  } catch (error) { next(error); }
 });
 
 authRouter.post("/auth/refresh", async (req, res, next) => {
@@ -360,7 +569,18 @@ authRouter.get("/me", requireAuth, async (req: AuthenticatedRequest, res, next) 
             select: { vehicle_type: true, seats_total: true, parcel_capacity: true, verified: true, trust_score: true }
           })
         : null;
-    res.json({ user: publicUser(user), ...(driverProfile ? { driver_profile: driverProfile } : {}) });
+    const merchantProfile =
+      user.role === "merchant"
+        ? await prisma.merchantProfile.findUnique({
+            where: { user_id: user.id },
+            select: { store_name: true, store_type: true, sales_channel: true, city: true, address: true }
+          })
+        : null;
+    res.json({
+      user: publicUser(user),
+      ...(driverProfile ? { driver_profile: driverProfile } : {}),
+      ...(merchantProfile ? { merchant_profile: merchantProfile } : {})
+    });
   } catch (error) {
     next(error);
   }
@@ -440,3 +660,5 @@ authRouter.post("/auth/logout-all", requireAuth, async (req: AuthenticatedReques
     next(error);
   }
 });
+return authRouter;
+}
