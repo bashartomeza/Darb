@@ -10,8 +10,8 @@ says so (English and Arabic).
 | Table / column | Purpose |
 |---|---|
 | `route_fares` | Append-only tariff history per canonical route (`service_routes.id`) and item |
-| `passenger_requests.fare_*` | Seat fare frozen when a canonical passenger request is created |
-| `parcels.fare_*` | Parcel fare frozen when a canonical merchant order is created |
+| `passenger_requests.fare_*` | Seat fare frozen when a passenger request is created on a route |
+| `parcels.fare_*` | Parcel fare frozen when a merchant order or passenger parcel is created on a route |
 
 - Fares belong to the **route**, not to a route version, so publishing a new
   version keeps the tariff. Versioning follows the route catalog idea
@@ -25,8 +25,9 @@ says so (English and Arabic).
 - The fare in force at time `T` for an item is the row with the greatest
   `effective_from <= T` (ties: newest `created_at`, then `id`). A withdrawal
   row hides every older fare for that item.
-- Legacy (non-canonical) requests and parcels have no route, so they carry no
-  fare. Rows created before this feature keep `NULL`.
+- Every order is created on one of the operating routes
+  (`docs/routes/route-based-orders.md`), so it is priced from that route's
+  tariff. Rows created before fares were snapshotted keep `NULL`.
 
 ### Rounding
 
@@ -48,6 +49,18 @@ tariff exists the columns are `NULL` and the response `fare` is `null`.
 
 `PUT .../fares` takes the same route lock, so a fare change and a booking are
 strictly ordered.
+
+The route-based creation paths snapshot the same way, inside their creation
+transaction, using the route the order is created on (older builds that send
+coordinates ride Hebron → Bethlehem and are priced from it):
+
+- `POST /passenger/requests`: seat fare × `passenger_count`.
+- `POST /merchant/orders` and the bulk upload: each parcel's size fare.
+- `POST /passenger/parcels` (route body): the parcel's size fare.
+
+These paths do not take the route row lock: a booking racing a tariff edit
+freezes whichever fare was committed when it read the tariff. A route with no
+fare still accepts orders; the columns stay `NULL` and `fare` is `null`.
 
 ## Admin API
 
@@ -106,6 +119,10 @@ All objects below are display-only estimates.
 - **Create/read merchant order** (`/merchant/route-orders`): `fare` (order
   total, only when every parcel was priced) and `parcels[].fare`
   (`unit_minor = total_minor` = that parcel's price) with `size`.
+- **Route-based orders**: `/passenger/requests` (create, list, read) carry
+  the same passenger `fare`; `/merchant/orders` (create, list, read, cancel;
+  bulk-created orders are priced the same way) carry the order `fare` and `parcels[].fare`; `/passenger/parcels` (create,
+  list, read, cancel) carry the parcel's `fare`.
 - **Driver offers** (`/driver/canonical-match-offers[/:id]`): `demand.fare`
   (passenger total, or merchant order total) and, for merchant orders,
   `demand.parcels[]` with `size` and `fare`, visible before accepting.

@@ -10,6 +10,7 @@ import { advanceLegacyTrip } from "../services/tripLifecycle.js";
 import { releaseLegacyCapacity } from "../services/legacyCapacity.js";
 import { legacyPassengerCreationService, passengerRequestInclude } from "../services/legacyPassengerCreation.js";
 import { detailsSchema, routeFields, serviceRouteIdSchema, type RouteSummary } from "../services/operatingRoutes.js";
+import { passengerFareResponse } from "../services/routeFares.js";
 
 /** Older app builds: coordinates for each end; mapped to the Hebron → Bethlehem route. */
 const createPassengerRequestSchema = z.object({
@@ -60,6 +61,8 @@ export function serializeLegacyPassengerRequest(value: Record<string, unknown>) 
     ...routeFields(value.route_version as RouteSummary),
     pickup_details: value.pickup_details ?? null,
     dropoff_details: value.dropoff_details ?? null,
+    // The seat fare frozen at booking; null when the route had no fare.
+    fare: passengerFareResponse(value),
     created_at: value.created_at
   };
 }

@@ -12,6 +12,7 @@ import {
   resolveOperatingRouteByKey,
   routeSummarySelect
 } from "./operatingRoutes.js";
+import { routeFareService } from "./routeFares.js";
 
 export const MERCHANT_CREATE_OPERATION = "legacy_merchant_order_create_v1";
 const MERCHANT_CREATE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -178,6 +179,15 @@ export async function createLegacyMerchantOrder(
           priority: parcel.priority
         }));
 
+    // Each parcel's size fare in force now, frozen on the parcel so later
+    // tariff edits never change it. A route without a fare stores nulls.
+    const fares = await routeFareService.parcelSnapshots(
+      tx,
+      route.serviceRouteId,
+      parcels.map((parcel) => parcel.size),
+      new Date()
+    );
+
     const created = await tx.merchantOrder.create({
       data: {
         merchant_id: userId,
@@ -189,7 +199,12 @@ export async function createLegacyMerchantOrder(
         status: "submitted",
         parcels: {
           // Parcels carry their order's route version; the database ties the two together.
-          create: parcels.map((parcel) => ({ ...parcel, route_version_id: route.routeVersionId, status: "pending" as const }))
+          create: parcels.map((parcel, index) => ({
+            ...parcel,
+            route_version_id: route.routeVersionId,
+            status: "pending" as const,
+            ...fares[index]
+          }))
         }
       },
       include: createdOrderInclude

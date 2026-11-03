@@ -13,6 +13,7 @@ const db = vi.hoisted(() => ({
   idempotencyRecord: { create: vi.fn(), findUniqueOrThrow: vi.fn(), updateMany: vi.fn() },
   auditEvent: { create: vi.fn() },
   serviceRoute: { findUnique: vi.fn() },
+  routeFare: { findMany: vi.fn(async () => []) },
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: db }));
 const { createApp } = await import("../app.js");

@@ -12,6 +12,7 @@ import {
   resolveOperatingRouteByKey,
   routeSummarySelect
 } from "./operatingRoutes.js";
+import { routeFareService } from "./routeFares.js";
 
 const OPERATION = "legacy_passenger_request_create_v1";
 
@@ -152,11 +153,15 @@ export function createLegacyPassengerCreationService(db: PrismaClient = prisma) 
               destination_lat: input.destination_lat.toFixed(6),
               destination_lng: input.destination_lng.toFixed(6),
             };
+        // The route's seat fare in force now, frozen on the request so later
+        // tariff edits never change it. A route without a fare stores nulls.
+        const fare = await routeFareService.passengerSnapshot(tx, route.serviceRouteId, input.passenger_count, new Date());
         const resource = await tx.passengerRequest.create({
           data: {
             passenger_id: actor.id,
             ...place,
             route_version_id: route.routeVersionId,
+            ...fare,
             preferred_time: input.preferred_time,
             passenger_count: input.passenger_count,
             ...(input.selected_driver_route_id ? { selected_driver_route_id: input.selected_driver_route_id } : {}),

@@ -307,6 +307,52 @@ void main() {
       );
     });
 
+    testWidgets('shows the fare frozen on a parcel, and none without one', (
+      tester,
+    ) async {
+      final repository = _FakeRepository([
+        PassengerParcel.fromJson({
+          ...parcelJson(),
+          'fare': {
+            'currency': 'ILS',
+            'unit_minor': 800,
+            'total_minor': 800,
+            'estimated': true,
+            'paid_directly_to_driver': true,
+          },
+        }),
+        PassengerParcel.fromJson({...parcelJson(id: 'order_2'), 'fare': null}),
+      ]);
+      await _pump(tester, repository);
+      expect(find.byKey(const ValueKey('fareEstimateBox')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('parcel-order_1')),
+          matching: find.text('₪8.00'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('parcel-order_2')),
+          matching: find.byKey(const ValueKey('fareEstimateBox')),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('shows a parcel fare in Arabic', (tester) async {
+      final repository = _FakeRepository([
+        PassengerParcel.fromJson({
+          ...parcelJson(),
+          'fare': {'currency': 'ILS', 'unit_minor': 800, 'total_minor': 800},
+        }),
+      ]);
+      await _pump(tester, repository, locale: const Locale('ar'));
+      expect(find.text('الأجرة التقديرية عند الطلب'), findsOneWidget);
+      expect(find.text('الإجمالي'), findsOneWidget);
+    });
+
     testWidgets('shows an empty state', (tester) async {
       await _pump(tester, _FakeRepository([]));
       expect(find.text('You have not sent any parcels yet.'), findsOneWidget);

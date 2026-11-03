@@ -14,7 +14,8 @@ const prismaMock = vi.hoisted(() => ({
   idempotencyRecord: { create: vi.fn(), findUniqueOrThrow: vi.fn(), updateMany: vi.fn() },
   merchantOrder: { create: vi.fn(), findFirst: vi.fn() },
   deliveryHandover: { findUnique: vi.fn(), create: vi.fn() },
-  serviceRoute: { findUnique: vi.fn() }
+  serviceRoute: { findUnique: vi.fn() },
+  routeFare: { findMany: vi.fn(async () => []) }
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));

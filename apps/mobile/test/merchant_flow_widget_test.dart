@@ -14,8 +14,10 @@ import 'package:http/testing.dart';
 import 'package:darb_mobile/app.dart';
 import 'package:darb_mobile/core/api/api_client.dart';
 import 'package:darb_mobile/core/config/app_config.dart';
+import 'package:darb_mobile/core/fares/fare.dart';
 import 'package:darb_mobile/core/i18n/domain_labels.dart';
 import 'package:darb_mobile/features/auth/data/token_storage.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/operating_routes_fixture.dart';
@@ -449,6 +451,48 @@ void main() {
     expect(find.byKey(const ValueKey('rejectMatchButton')), findsNothing);
   });
 
+  testWidgets('order detail shows the fare frozen on the order', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler()
+      ..orderFare = {
+        'currency': 'ILS',
+        'unit_minor': null,
+        'total_minor': 2300,
+        'estimated': true,
+        'paid_directly_to_driver': true,
+      };
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/order_1');
+    await tester.pumpAndSettle();
+    final box = find.byKey(const ValueKey('fareEstimateBox'));
+    await tester.ensureVisible(box);
+    // The app's own language decides the wording; read it from the box.
+    final context = tester.element(box);
+    final l10n = AppLocalizations.of(context);
+    final language = Localizations.localeOf(context).languageCode;
+    Finder inBox(String text) =>
+        find.descendant(of: box, matching: find.text(text));
+    expect(inBox(l10n.fareBookedTitle), findsOneWidget);
+    expect(inBox(l10n.fareTotal), findsOneWidget);
+    expect(inBox(formatFare(2300, 'ILS', language)), findsOneWidget);
+  });
+
+  testWidgets('order detail shows no fare when the route had none', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler();
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/order_1');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('merchantOrderStatus')), findsOneWidget);
+    expect(find.byKey(const ValueKey('fareEstimateBox')), findsNothing);
+  });
+
   testWidgets('merchant trip is read-only and shows order and location', (
     tester,
   ) async {
@@ -636,6 +680,9 @@ class _MerchantHandler {
   bool routesFail = false;
   bool routesEmpty = false;
   int createCalls = 0;
+
+  /// The order fare the detail read returns; none when null.
+  Map<String, dynamic>? orderFare;
   final lookupKeys = <String?>[];
   final paths = <String>[];
 
@@ -779,8 +826,11 @@ class _MerchantHandler {
       return http.Response('{"batch":$_batchJson}', 201);
     }
     if (path.endsWith('/merchant/orders/order_1')) {
+      final order = createBody == null
+          ? _orderJson(batched)
+          : _createdOrderJson();
       return _utf8(
-        '{"order":${createBody == null ? _orderJson(batched) : _createdOrderJson()}}',
+        '{"order":${orderFare == null ? order : jsonEncode({...jsonDecode(order) as Map<String, dynamic>, 'fare': orderFare})}}',
         200,
       );
     }

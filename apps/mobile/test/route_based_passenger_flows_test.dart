@@ -419,6 +419,39 @@ void main() {
       expect(find.textContaining('PPU Main Gate'), findsWidgets);
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    testWidgets('shows the fare frozen on the request', (tester) async {
+      await _pumpDetail(tester, {
+        ..._requestJson(withRoute: true),
+        'passenger_count': 2,
+        'fare': {
+          'currency': 'ILS',
+          'unit_minor': 1250,
+          'total_minor': 2500,
+          'estimated': true,
+          'paid_directly_to_driver': true,
+        },
+      });
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('fareEstimateBox')),
+        200,
+      );
+      expect(find.text('Estimated fare when requested'), findsOneWidget);
+      expect(find.text('Per seat'), findsOneWidget);
+      expect(find.text('₪12.50'), findsOneWidget);
+      expect(find.text('Seats × 2'), findsOneWidget);
+      expect(find.text('₪25.00'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('shows no fare when the route had none', (tester) async {
+      await _pumpDetail(tester, {
+        ..._requestJson(withRoute: true),
+        'fare': null,
+      });
+      expect(find.byKey(const ValueKey('fareEstimateBox')), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   });
 
   group('assistant route', () {

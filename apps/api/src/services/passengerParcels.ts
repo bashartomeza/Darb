@@ -12,6 +12,7 @@ import { issueHandover } from "./deliveryHandover.js";
 import { releaseLegacyCapacity } from "./legacyCapacity.js";
 import { createLegacyMerchantOrder } from "./legacyMerchantOrders.js";
 import { routeFields, routeSummarySelect } from "./operatingRoutes.js";
+import { parcelFareResponse } from "./routeFares.js";
 
 /**
  * Parcels sent by ordinary passengers ("individual delivery").
@@ -197,6 +198,8 @@ export function serializePassengerParcel(detail: DetailWithOrder) {
     pickup_details: detail.order.pickup_details ?? null,
     dropoff_details: parcel?.dropoff_details ?? null,
     size: detail.size,
+    // The size fare frozen at creation; null when the route had no fare.
+    fare: parcelFareResponse(parcel as Record<string, unknown> | undefined),
     note: purged ? null : detail.note,
     receiver_name: purged ? null : detail.receiver_name,
     receiver_phone_masked: purged || !detail.receiver_phone ? null : maskPhone(detail.receiver_phone),
