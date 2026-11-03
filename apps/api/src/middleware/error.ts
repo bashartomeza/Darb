@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler, Request } from "express";
 import { ZodError } from "zod";
-import { INVALID_PASSWORD, isPasswordRuleIssue } from "../lib/passwordRule.js";
+import { PASSWORD_RULE_ERROR_CODE, isPasswordRuleIssue } from "../lib/passwordRule.js";
 import { RouteProviderError } from "../maps/contracts.js";
 
 export class HttpError extends Error {
@@ -41,7 +41,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     }));
     // A request whose only problem is the shared password rule gets its own stable code so the apps can show the rule.
     const otherProblems = error.issues.length === 0 || !error.issues.every(isPasswordRuleIssue);
-    res.status(400).json(errorShape(otherProblems ? "validation_error" : INVALID_PASSWORD, req, { details }));
+    res.status(400).json(errorShape(otherProblems ? "validation_error" : PASSWORD_RULE_ERROR_CODE, req, { details }));
     return;
   }
 

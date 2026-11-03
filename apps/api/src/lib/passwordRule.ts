@@ -16,7 +16,7 @@ import { z } from "zod";
 export const PASSWORD_MIN_CHARACTERS = 8;
 export const PASSWORD_MAX_UTF8_BYTES = 72;
 /** The stable error code every password-setting route answers with when the rule is not met. */
-export const INVALID_PASSWORD = "invalid_password";
+export const PASSWORD_RULE_ERROR_CODE = "invalid_password";
 
 const letter = /\p{L}/u;
 const digit = /[0-9٠-٩]/u;
@@ -29,11 +29,11 @@ export function isValidNewPassword(value: string) {
 }
 
 /** Zod form of the rule; the error middleware answers its failure with `invalid_password`. */
-export const newPassword = z.string().refine(isValidNewPassword, { params: { error_code: INVALID_PASSWORD } });
+export const newPassword = z.string().refine(isValidNewPassword, { params: { error_code: PASSWORD_RULE_ERROR_CODE } });
 
 /** True when a validation issue is the password rule's own refinement (see newPassword). */
 export function isPasswordRuleIssue(issue: { code: string; params?: unknown }) {
   return issue.code === "custom" &&
     typeof issue.params === "object" && issue.params !== null &&
-    (issue.params as { error_code?: unknown }).error_code === INVALID_PASSWORD;
+    (issue.params as { error_code?: unknown }).error_code === PASSWORD_RULE_ERROR_CODE;
 }

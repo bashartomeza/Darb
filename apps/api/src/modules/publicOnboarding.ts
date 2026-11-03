@@ -32,7 +32,7 @@ import { contactEmailSchema, normalizeEmailForAbuse } from "../lib/contactEmail.
 import { PHONE_INPUT_MAX_LENGTH, maskPhone, normalizePhoneToE164, phoneLast4 } from "../lib/phone.js";
 import { consentDigestMatches } from "../lib/consentContent.js";
 import { missingDocumentKinds, requiredDocumentKinds } from "../lib/applicationReview.js";
-import { INVALID_PASSWORD, PASSWORD_MAX_UTF8_BYTES, PASSWORD_MIN_CHARACTERS, isValidNewPassword } from "../lib/passwordRule.js";
+import { PASSWORD_RULE_ERROR_CODE, PASSWORD_MAX_UTF8_BYTES, PASSWORD_MIN_CHARACTERS, isValidNewPassword } from "../lib/passwordRule.js";
 import { prisma } from "../lib/prisma.js";
 import {
   requireOnboardingToken,
@@ -114,7 +114,7 @@ function safeDisplayName(value: string) {
 }
 
 function validatePassword(value: string) {
-  if (!isValidNewPassword(value)) throw new HttpError(400, INVALID_PASSWORD);
+  if (!isValidNewPassword(value)) throw new HttpError(400, PASSWORD_RULE_ERROR_CODE);
 }
 
 async function currentConsentDocuments(db: Db, locale: ConsentLocale, now = new Date()) {
