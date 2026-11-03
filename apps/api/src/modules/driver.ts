@@ -14,6 +14,8 @@ import { AuditAction } from "../generated/prisma/enums.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { claimIdempotency, completeIdempotency } from "../lib/idempotency.js";
 import {
+  LEGACY_ROUTE_MAX_PARCEL_CAPACITY,
+  LEGACY_ROUTE_MAX_SEATS,
   legacyDriverOnlineStateService,
   type LegacyDriverOnlineStateService,
 } from "../services/legacyDriverOnlineState.js";
@@ -55,8 +57,8 @@ const routeSchema = z.object({
   origin_label: z.string().optional(),
   destination_label: z.string().optional(),
   corridor_key: z.string().optional(),
-  seats_available: z.coerce.number().int().min(0).max(8).default(1),
-  parcel_capacity_available: z.coerce.number().int().min(0).max(20).default(0),
+  seats_available: z.coerce.number().int().min(0).max(LEGACY_ROUTE_MAX_SEATS).default(1),
+  parcel_capacity_available: z.coerce.number().int().min(0).max(LEGACY_ROUTE_MAX_PARCEL_CAPACITY).default(0),
 });
 
 const onlineStateSchema = z.strictObject({

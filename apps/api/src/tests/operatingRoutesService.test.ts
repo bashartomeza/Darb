@@ -145,11 +145,15 @@ describe("ensurePredefinedRoutes", () => {
 });
 
 describe("driver online state on a route", () => {
-  function onlineDb(current: Array<{ id: string; status: string }> = [], currentRouteId?: string) {
+  function onlineDb(
+    current: Array<{ id: string; status: string }> = [],
+    currentRouteId?: string,
+    vehicle: { seats_total: number; parcel_capacity: number } = { seats_total: 4, parcel_capacity: 6 }
+  ) {
     const db: any = {
       $transaction: vi.fn(async (callback: (tx: unknown) => unknown) => callback(db)),
       $queryRaw: vi.fn(async (parts: TemplateStringsArray) =>
-        parts.join("?").includes("FROM driver_profiles") ? [{ id: "profile_1", verified: true }] : current),
+        parts.join("?").includes("FROM driver_profiles") ? [{ id: "profile_1", verified: true, ...vehicle }] : current),
       idempotencyRecord: {
         create: vi.fn(async ({ data }: any) => ({ id: "record_1", state: "processing", claim_version: 1, ...data })),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
@@ -176,6 +180,64 @@ describe("driver online state on a route", () => {
       driver_id: "profile_1", origin_label: "Hebron", destination_label: "Bethlehem",
       corridor_key: "hebron-to-bethlehem", route_version_id: "route_version_hebron_bethlehem", status: "active", operational_mode: "legacy"
     });
+  });
+
+  it("opens the route with the vehicle's seats and parcel space, not one seat and none", async () => {
+    const db = onlineDb([], undefined, { seats_total: 4, parcel_capacity: 6 });
+    await createLegacyDriverOnlineStateService(db).setState({ online: true, serviceRouteId: "service_route_hebron_bethlehem" }, actor);
+    expect(db.driverRoute.create.mock.calls[0][0].data).toMatchObject({ seats_available: 4, parcel_capacity_available: 6 });
+    // Older builds that name no route get the same capacity.
+    const legacy = onlineDb([], undefined, { seats_total: 2, parcel_capacity: 8 });
+    await createLegacyDriverOnlineStateService(legacy).setState({ online: true }, actor);
+    expect(legacy.driverRoute.create.mock.calls[0][0].data).toMatchObject({ seats_available: 2, parcel_capacity_available: 8 });
+  });
+
+  it.each([
+    [{ seats_total: 12, parcel_capacity: 50 }, { seats_available: 8, parcel_capacity_available: 20 }],
+    [{ seats_total: -1, parcel_capacity: -3 }, { seats_available: 0, parcel_capacity_available: 0 }],
+    [{ seats_total: 0, parcel_capacity: 5 }, { seats_available: 0, parcel_capacity_available: 5 }]
+  ])("holds the vehicle %j to the explicit route limits", async (vehicle, expected) => {
+    const db = onlineDb([], undefined, vehicle);
+    await createLegacyDriverOnlineStateService(db).setState({ online: true, serviceRouteId: "service_route_hebron_bethlehem" }, actor);
+    expect(db.driverRoute.create.mock.calls[0][0].data).toMatchObject(expected);
+  });
+
+  it("lets a parcel be reserved on a route opened by going online", async () => {
+    const { reserveLegacyCapacity } = await import("../services/legacyCapacity.js");
+    const db = onlineDb([], undefined, { seats_total: 3, parcel_capacity: 5 });
+    const rows = new Map<string, Row>();
+    db.driverRoute.create = vi.fn(async ({ data }: any) => {
+      const row = { id: "route_new", ...data };
+      rows.set(row.id, row);
+      return row;
+    });
+    // Eligibility and the guarded decrement, as MySQL would answer them.
+    const profileQuery = db.$queryRaw.getMockImplementation();
+    db.$queryRaw = vi.fn(async (parts: TemplateStringsArray, ...values: unknown[]) => {
+      const sql = parts.join("?");
+      if (sql.includes("UTC_TIMESTAMP")) return [{ now: new Date() }];
+      if (sql.includes("FROM driver_routes dr")) {
+        const row = rows.get(values.find((value) => rows.has(value as string)) as string);
+        return row ? [{ id: row.id, status: row.status, verified: true, role: "driver", account_status: "active",
+          departure_at: null, availability_window_end: null, departed_at: null, preferred_time: null, match_expires_at: null }] : [];
+      }
+      return profileQuery!(parts, ...values);
+    });
+    db.driverRoute.updateMany = vi.fn(async ({ where, data }: any) => {
+      const row = rows.get(where.id);
+      if (!row || row.seats_available < where.seats_available.gte ||
+        row.parcel_capacity_available < where.parcel_capacity_available.gte) return { count: 0 };
+      row.seats_available -= data.seats_available?.decrement ?? 0;
+      row.parcel_capacity_available -= data.parcel_capacity_available?.decrement ?? 0;
+      return { count: 1 };
+    });
+
+    const { routeId } = await createLegacyDriverOnlineStateService(db).setState({ online: true, serviceRouteId: "service_route_hebron_bethlehem" }, actor);
+    await expect(reserveLegacyCapacity(db, { driverRouteId: routeId, seats: 0, parcelUnits: 2 })).resolves.toBeUndefined();
+    await expect(reserveLegacyCapacity(db, { driverRouteId: routeId, seats: 2, parcelUnits: 0 })).resolves.toBeUndefined();
+    expect(rows.get(routeId)).toMatchObject({ seats_available: 1, parcel_capacity_available: 3 });
+    await expect(reserveLegacyCapacity(db, { driverRouteId: routeId, seats: 0, parcelUnits: 4 }))
+      .rejects.toMatchObject({ statusCode: 409, message: "insufficient_parcel_capacity" });
   });
 
   it("puts an older build that names no route on Hebron → Bethlehem, and needs a live route", async () => {

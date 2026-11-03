@@ -19,14 +19,45 @@ function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+/** The most seats and parcel units one legacy driver route can offer. */
+export const LEGACY_ROUTE_MAX_SEATS = 8;
+export const LEGACY_ROUTE_MAX_PARCEL_CAPACITY = 20;
+
+function clampCapacity(value: unknown, max: number) {
+  const number = Math.trunc(Number(value));
+  return Number.isFinite(number) ? Math.min(Math.max(number, 0), max) : 0;
+}
+
+/**
+ * A route opened by going online offers what the driver's vehicle holds,
+ * within the same limits an explicitly created route is held to.
+ */
+export function legacyRouteCapacityFromProfile(profile: {
+  seats_total: unknown;
+  parcel_capacity: unknown;
+}) {
+  return {
+    seats_available: clampCapacity(profile.seats_total, LEGACY_ROUTE_MAX_SEATS),
+    parcel_capacity_available: clampCapacity(
+      profile.parcel_capacity,
+      LEGACY_ROUTE_MAX_PARCEL_CAPACITY,
+    ),
+  };
+}
+
 async function lockEligibleProfile(
   tx: Prisma.TransactionClient,
   userId: string,
 ) {
   const rows = await tx.$queryRaw<
-    Array<{ id: string; verified: number | boolean }>
+    Array<{
+      id: string;
+      verified: number | boolean;
+      seats_total: number;
+      parcel_capacity: number;
+    }>
   >`
-    SELECT dp.id, dp.verified
+    SELECT dp.id, dp.verified, dp.seats_total, dp.parcel_capacity
     FROM driver_profiles dp
     INNER JOIN users u ON u.id = dp.user_id
     WHERE dp.user_id = ${userId} AND u.role = 'driver' AND u.account_status = 'active'
@@ -155,8 +186,7 @@ export function createLegacyDriverOnlineStateService(
                 data: {
                   driver_id: profile.id,
                   ...driverRoutePlaces(operatingRoute),
-                  seats_available: 1,
-                  parcel_capacity_available: 0,
+                  ...legacyRouteCapacityFromProfile(profile),
                   status: "active",
                   operational_mode: "legacy",
                   activated_at: new Date(),
