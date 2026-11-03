@@ -1,3 +1,6 @@
+/// Wrong guesses a fresh code allows before it locks (mirrors the API).
+const handoverCodeMaxAttempts = 5;
+
 /// How a parcel order is handed to its receiver. The sender holds a six-digit
 /// code and gives it to the receiver; the driver enters what the receiver reads
 /// out. These models carry state only, never the stored digest.

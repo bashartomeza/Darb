@@ -11,11 +11,20 @@ import '../delivery_handover_strings.dart';
 /// the receiver, or how the delivery was confirmed. Works for any parcel order, so
 /// merchant and passenger senders share it. When [initial] is null the card loads
 /// the current state itself.
+///
+/// With [keepInSession] false the code lives only in this card's state: it is
+/// neither read from nor written to [HandoverCodeVault] (passenger senders).
 class HandoverCodeCard extends ConsumerStatefulWidget {
-  const HandoverCodeCard({required this.orderId, this.initial, super.key});
+  const HandoverCodeCard({
+    required this.orderId,
+    this.initial,
+    this.keepInSession = true,
+    super.key,
+  });
 
   final String orderId;
   final HandoverStatus? initial;
+  final bool keepInSession;
 
   @override
   ConsumerState<HandoverCodeCard> createState() => _HandoverCodeCardState();
@@ -31,7 +40,11 @@ class _HandoverCodeCardState extends ConsumerState<HandoverCodeCard> {
   void initState() {
     super.initState();
     _status = widget.initial;
-    _code = widget.initial?.code ?? HandoverCodeVault.recall(widget.orderId);
+    _code =
+        widget.initial?.code ??
+        (widget.keepInSession
+            ? HandoverCodeVault.recall(widget.orderId)
+            : null);
     if (_status == null) Future.microtask(_load);
   }
 
@@ -66,7 +79,7 @@ class _HandoverCodeCardState extends ConsumerState<HandoverCodeCard> {
     try {
       final status = await ref
           .read(deliveryHandoverRepositoryProvider)
-          .regenerate(widget.orderId);
+          .regenerate(widget.orderId, remember: widget.keepInSession);
       if (mounted) {
         setState(() {
           _status = status;
@@ -163,7 +176,7 @@ class _HandoverCodeCardState extends ConsumerState<HandoverCodeCard> {
         ),
         const SizedBox(height: AppTokens.spaceSmall),
         Text(s.senderHint),
-        if (status.attemptsRemaining < 5) ...[
+        if (status.attemptsRemaining < handoverCodeMaxAttempts) ...[
           const SizedBox(height: AppTokens.spaceSmall),
           Text(s.attemptsLeft(status.attemptsRemaining)),
         ],

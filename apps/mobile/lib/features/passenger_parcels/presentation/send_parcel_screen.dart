@@ -12,6 +12,8 @@ import '../../auth/data/token_storage.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../canonical_routes/data/canonical_operation_storage.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
+import '../../delivery_handover/data/delivery_handover_models.dart';
+import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../../operating_routes/presentation/operating_route_inputs.dart';
 import '../application/passenger_parcel_controller.dart';
@@ -133,7 +135,7 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (_result != null) return _buildDone(l10n);
+    if (_result case final result?) return _buildDone(l10n, result);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.sendParcelTitle),
@@ -143,7 +145,8 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
     );
   }
 
-  Widget _buildDone(AppLocalizations l10n) {
+  Widget _buildDone(AppLocalizations l10n, PassengerParcel parcel) {
+    final code = parcel.handoverCode;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.sendParcelTitle),
@@ -157,6 +160,32 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
               title: l10n.sendParcelRecorded,
               body: l10n.sendParcelRecordedBody,
             ),
+            const SizedBox(height: AppTokens.spaceMedium),
+            if (code != null) ...[
+              Text(
+                l10n.sendParcelHandoverCodeIntro,
+                key: const ValueKey('sendParcelHandoverIntro'),
+              ),
+              const SizedBox(height: AppTokens.spaceSmall),
+            ],
+            // The code from the create response lives only in this screen's
+            // state. A replayed create carries none, so the card then loads the
+            // handover state and offers a new code instead.
+            HandoverCodeCard(
+              orderId: parcel.id,
+              keepInSession: false,
+              initial: code == null
+                  ? null
+                  : HandoverStatus(
+                      issued: true,
+                      confirmed: false,
+                      locked: false,
+                      expired: false,
+                      attemptsRemaining: handoverCodeMaxAttempts,
+                      code: code,
+                    ),
+            ),
+            const SizedBox(height: AppTokens.spaceMedium),
             if (_error != null) Text(_errorLabel(l10n, _error!)),
             FilledButton(
               key: const ValueKey('viewMyParcels'),

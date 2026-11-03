@@ -21,7 +21,11 @@ class DeliveryHandoverRepository {
   }
 
   /// Sender: issues a code, or replaces the current one. The code comes back once.
-  Future<HandoverStatus> regenerate(String orderId) async {
+  /// With [remember] false it is kept only by the caller (never in the vault).
+  Future<HandoverStatus> regenerate(
+    String orderId, {
+    bool remember = true,
+  }) async {
     final json = await apiClient.postJson(
       '/parcel-orders/$orderId/handover/regenerate',
       body: const {},
@@ -29,7 +33,7 @@ class DeliveryHandoverRepository {
     final status = HandoverStatus.fromJson(
       json['handover'] as Map<String, dynamic>,
     );
-    HandoverCodeVault.remember(orderId, status.code);
+    if (remember) HandoverCodeVault.remember(orderId, status.code);
     return status;
   }
 

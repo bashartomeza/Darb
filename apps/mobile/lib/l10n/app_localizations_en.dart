@@ -2535,6 +2535,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'We are looking for a driver on this route. You can cancel until a driver is offered the parcel.';
 
   @override
+  String get sendParcelHandoverCodeIntro =>
+      'Give this code to the receiver now. The driver asks for it at delivery. It is shown only once; if you lose it, get a new code from My parcels.';
+
+  @override
+  String get parcelShowReceiverCode => 'Show receiver code';
+
+  @override
+  String get parcelHideReceiverCode => 'Hide receiver code';
+
+  @override
   String get myParcelsTitle => 'My parcels';
 
   @override

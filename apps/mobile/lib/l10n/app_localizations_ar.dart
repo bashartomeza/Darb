@@ -2512,6 +2512,16 @@ class AppLocalizationsAr extends AppLocalizations {
       'نبحث عن سائق على هذا المسار. يمكنك الإلغاء ما لم يُعرض الطرد على سائق.';
 
   @override
+  String get sendParcelHandoverCodeIntro =>
+      'أعطِ هذا الرمز للمستلم الآن، فالسائق سيطلبه عند التسليم. يظهر الرمز مرة واحدة فقط؛ إذا فقدته فاحصل على رمز جديد من «طرودي».';
+
+  @override
+  String get parcelShowReceiverCode => 'عرض رمز المستلم';
+
+  @override
+  String get parcelHideReceiverCode => 'إخفاء رمز المستلم';
+
+  @override
   String get myParcelsTitle => 'طرودي';
 
   @override
