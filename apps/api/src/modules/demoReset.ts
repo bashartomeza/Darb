@@ -1,11 +1,11 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { createHash } from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { Prisma, PrismaClient, UserRole } from "../generated/prisma/client.js";
 import { config, type AppConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { auditEvent } from "../lib/audit.js";
-import { authenticateAuthToken } from "../middleware/auth.js";
+import { authenticateRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { DEMO_ROUTE_POINTS } from "../lib/geo.js";
@@ -643,21 +643,16 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
   }, { isolationLevel: "Serializable" });
 }
 
-async function canReset(req: { header(name: string): string | undefined }, appConfig: AppConfig) {
+async function canReset(req: Request, res: Response, appConfig: AppConfig) {
   const resetKey = req.header("x-demo-reset-key");
   if (appConfig.demo && resetKey === appConfig.demo.resetKey) {
     return true;
   }
 
-  const authHeader = req.header("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : undefined;
-  if (!token) {
-    return false;
-  }
-
   try {
-    const user = await authenticateAuthToken(token);
-    return user.role === "admin";
+    // A Bearer token or the Admin console's cookie session (CSRF-checked).
+    const user = await authenticateRequest(req, res);
+    return user?.role === "admin";
   } catch {
     return false;
   }
@@ -667,7 +662,7 @@ export function createDemoRouter(appConfig: AppConfig = config, db: PrismaClient
   const demoRouter = Router();
   demoRouter.post("/demo/reset", async (req, res, next) => {
     try {
-      if (!(await canReset(req, appConfig))) {
+      if (!(await canReset(req, res, appConfig))) {
         throw new HttpError(403, "demo_reset_forbidden");
       }
 

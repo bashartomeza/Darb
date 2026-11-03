@@ -1,5 +1,11 @@
 export type TokenStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
+/**
+ * Where earlier console builds kept the Admin bearer token. The console now
+ * signs in with an HttpOnly cookie that JavaScript cannot read, so nothing is
+ * written here any more; the key is only purged from browsers that still hold
+ * an old token.
+ */
 export const ADMIN_TOKEN_KEY = "darb_admin_token";
 
 const sessionEndCodes = new Set([
@@ -11,9 +17,22 @@ const sessionEndCodes = new Set([
   "missing_token"
 ]);
 
-export function clearAdminSession(sessionStore: TokenStorage, legacyStore: TokenStorage) {
+export function purgeStoredAdminTokens(sessionStore: TokenStorage, legacyStore: TokenStorage) {
   sessionStore.removeItem(ADMIN_TOKEN_KEY);
   legacyStore.removeItem(ADMIN_TOKEN_KEY);
+}
+
+let handleSequence = 0;
+
+/**
+ * A marker for one sign-in in this tab, kept only in memory. Feature code
+ * passes it with each request so a late failure from an earlier sign-in can be
+ * told apart from the current one. It is not a credential: the API
+ * authenticates the HttpOnly session cookie.
+ */
+export function newAdminSessionHandle() {
+  handleSequence += 1;
+  return `admin-session-${Date.now().toString(36)}-${handleSequence}`;
 }
 
 export function isAdminSessionEndError(error: unknown) {
@@ -24,24 +43,21 @@ export function isAdminSessionEndError(error: unknown) {
 }
 
 export function createAdminSessionExpiryHandler({
-  sessionStore,
-  legacyStore,
+  currentSession,
   onExpired
 }: {
-  sessionStore: TokenStorage;
-  legacyStore: TokenStorage;
+  currentSession: () => string;
   onExpired: () => void;
 }) {
   let handled = false;
   return {
-    handle(error: unknown, requestToken: string) {
+    handle(error: unknown, requestSession: string) {
       if (
         handled ||
         !isAdminSessionEndError(error) ||
-        sessionStore.getItem(ADMIN_TOKEN_KEY) !== requestToken
+        currentSession() !== requestSession
       ) return false;
       handled = true;
-      clearAdminSession(sessionStore, legacyStore);
       onExpired();
       return true;
     },

@@ -13,6 +13,8 @@ Everything is served from `https://darb.aynur.ps`:
 
 One origin means the Admin console and the API share a site, so no cross-origin setup is needed beyond the explicit allow-list the API already requires (`CORS_ORIGINS="https://darb.aynur.ps"`). The mobile app uses the same base URL; the app appends `/api/v1` itself.
 
+The shared site is also what the Admin console's sign-in relies on: it is an HttpOnly, `Secure`, `SameSite=Strict` cookie scoped to `/api/v1` (ADR-023). Keep the console and the API on this one origin; the proxy must pass the `Cookie` and `Set-Cookie` headers through unchanged for `/api/v1/*`.
+
 TLS terminates at the reverse proxy in front of both. HTTP must redirect to HTTPS, and the API must never be reachable on a public port directly.
 
 ## Configuration

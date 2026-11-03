@@ -9,7 +9,7 @@ M6B1A removes the frozen demo's Critical production-launch risks without changin
 - Demo passwords have no source fallback. The reset module receives validated values from the demo-only environment.
 - Admin production-like builds omit credential presets, reset controls, deterministic comparison, tracking simulation, and full-sequence automation.
 - Flutter staging/production configurations require HTTPS and render neither demo account presets nor driver simulation controls.
-- Admin bearer tokens use `sessionStorage` as an interim control. Logout and startup clear the legacy persistent token location. Server-managed admin sessions remain future work.
+- The Admin console holds no bearer token in browser storage. It signs in to an HttpOnly, `SameSite=Strict` cookie session with sliding expiry and CSRF checks (ADR-023); startup clears tokens left in `sessionStorage` or `localStorage` by earlier builds.
 
 ## Safe serialization
 

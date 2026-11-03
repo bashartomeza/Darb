@@ -183,6 +183,27 @@ describe("fail-closed application configuration", () => {
     );
   });
 
+  it("defaults the Admin cookie session to 30 minutes idle within 12 hours, Secure in production", () => {
+    expect(createConfig(environment()).adminSession).toEqual({
+      idleTimeoutSeconds: 1_800,
+      absoluteTimeoutSeconds: 43_200,
+      cookieSecure: true
+    });
+    expect(createConfig(environment({ APP_ENV: "local", TRUST_PROXY: undefined })).adminSession.cookieSecure).toBe(false);
+  });
+
+  it("enforces production Admin cookie session boundaries", () => {
+    expect(() => createConfig(environment({ ADMIN_SESSION_IDLE_TIMEOUT_SECONDS: "299" }))).toThrow(/IDLE_TIMEOUT_SECONDS must be between 300 and 3600/);
+    expect(() => createConfig(environment({ ADMIN_SESSION_IDLE_TIMEOUT_SECONDS: "3601" }))).toThrow(/IDLE_TIMEOUT_SECONDS must be between 300 and 3600/);
+    expect(() => createConfig(environment({ ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS: "3599" }))).toThrow(/ABSOLUTE_TIMEOUT_SECONDS must be between 3600 and 43200/);
+    expect(() => createConfig(environment({ ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS: "43201" }))).toThrow(/ABSOLUTE_TIMEOUT_SECONDS must be between 3600 and 43200/);
+    expect(() => createConfig(environment({ APP_ENV: "local", TRUST_PROXY: undefined, ADMIN_SESSION_IDLE_TIMEOUT_SECONDS: "7200", ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS: "3600" })))
+      .toThrow(/must not exceed ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS/);
+    expect(createConfig(environment({ ADMIN_SESSION_IDLE_TIMEOUT_SECONDS: "900", ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS: "28800" })).adminSession).toEqual(
+      expect.objectContaining({ idleTimeoutSeconds: 900, absoluteTimeoutSeconds: 28_800 })
+    );
+  });
+
   it("requires a non-placeholder refresh-token pepper in production-like environments", () => {
     expect(() => createConfig(environment({ REFRESH_TOKEN_PEPPER: undefined }))).toThrow(/REFRESH_TOKEN_PEPPER is required/);
     expect(() => createConfig(environment({ REFRESH_TOKEN_PEPPER: "replace-with-a-long-random-refresh-pepper" }))).toThrow(

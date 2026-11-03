@@ -12,7 +12,23 @@ import type {
 } from "./features/monitoring/contracts";
 
 export type ApiError = Error & { status?: number; details?: unknown };
-export type ApiClientOptions = { onSessionEnded?: (error: ApiError, requestToken: string) => void };
+/**
+ * The `token` each method takes is the console's in-memory sign-in handle
+ * (see `newAdminSessionHandle`), not a credential: requests authenticate with
+ * the HttpOnly session cookie, which JavaScript never sees. The handle only
+ * lets a late failure from an earlier sign-in be ignored.
+ */
+export type ApiClientOptions = { onSessionEnded?: (error: ApiError, requestSession: string) => void };
+
+/**
+ * Sent with every request. It asks the Admin sign-in for a cookie session and
+ * is the API's CSRF check for cookie-authenticated requests.
+ */
+export const ADMIN_SESSION_HEADER = "X-Darb-Admin-Session";
+
+function sessionHeaders(headers: Record<string, string> = {}): Record<string, string> {
+  return { ...headers, [ADMIN_SESSION_HEADER]: "1" };
+}
 export type RouteLifecycleExpectation = {
   expected_current_version_id: string | null;
 };
@@ -25,13 +41,13 @@ type RouteRetirementPayload = { reason: string; expected_current_version_id: nul
 
 export function createApiClient(apiBaseUrl: string, clientOptions: ApiClientOptions = {}) {
   async function apiRequest<T>(path: string, options: { method?: string; token?: string; body?: unknown; idempotencyKey?: string; reportSessionEnd?: boolean } = {}) {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (options.token) headers.Authorization = `Bearer ${options.token}`;
+    const headers = sessionHeaders({ "Content-Type": "application/json" });
     if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
 
     const response = await fetch(`${apiBaseUrl}/api/v1${path}`, {
       method: options.method ?? "GET",
       headers,
+      credentials: "include",
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
     });
 
@@ -48,9 +64,11 @@ export function createApiClient(apiBaseUrl: string, clientOptions: ApiClientOpti
   }
 
   async function downloadCsv(path: string, token: string) {
-    const response = await fetch(`${apiBaseUrl}/api/v1${path}`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(`${apiBaseUrl}/api/v1${path}`, { headers: sessionHeaders(), credentials: "include" });
     if (!response.ok) {
-      const error = new Error(`Export failed with ${response.status}`) as ApiError;
+      // The API's error code (e.g. `session_expired`) lets an ended session show the sign-in screen.
+      const data = await response.json().catch(() => null) as { error?: unknown } | null;
+      const error = new Error(typeof data?.error === "string" ? data.error : `Export failed with ${response.status}`) as ApiError;
       error.status = response.status;
       clientOptions.onSessionEnded?.(error, token);
       throw error;
@@ -106,6 +124,8 @@ return {
   // Revokes the server session on sign-out. A failure here must not look like a session expiry.
   logout: (token: string) => apiRequest<{ ok: boolean }>("/auth/logout", { method: "POST", token, reportSessionEnd: false }),
   me: (token: string) => apiRequest<MeResponse>("/me", { token }),
+  // On page load: resumes a cookie session that is still alive. No session yet, so a 401 here is not an expiry.
+  currentSession: () => apiRequest<MeResponse>("/me"),
   capabilities: (token: string) => apiRequest<CapabilitiesResponse>("/capabilities", { token }),
   dashboard: (token: string) => apiRequest<DashboardResponse>("/admin/dashboard", { token }),
   comparisonSimulation: (token: string, query?: { seed?: number; manual_response_delay_min?: number }) =>
@@ -325,12 +345,12 @@ return {
 export function createDemoApiClient(apiBaseUrl: string, clientOptions: ApiClientOptions = {}) {
   if (!__DARB_DEMO_BUILD__) return null;
   const apiRequest = async <T>(path: string, options: { method?: string; token?: string; body?: unknown; resetKey?: string } = {}) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (options.token) headers.Authorization = `Bearer ${options.token}`;
+    const headers = sessionHeaders({ "Content-Type": "application/json" });
     if (options.resetKey) headers["x-demo-reset-key"] = options.resetKey;
     const response = await fetch(`${apiBaseUrl}/api/v1${path}`, {
       method: options.method ?? "GET",
       headers,
+      credentials: "include",
       body: options.body === undefined ? undefined : JSON.stringify(options.body)
     });
     const text = await response.text();
@@ -555,7 +575,8 @@ export type ConsentCurrentResponse = {
   release: ConsentRelease | null;
 };
 export type ApiClient = ReturnType<typeof createApiClient>;
-export type LoginResponse = { token: string; user: User };
+/** The session credential is the HttpOnly cookie the response sets; the body carries no token. */
+export type LoginResponse = { user: User };
 export type MeResponse = { user: User };
 
 export type DashboardResponse = {

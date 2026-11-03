@@ -1,6 +1,6 @@
 # ADR-004: Server-managed sessions and rotating refresh tokens
 
-- Status: Accepted for M6C1A
+- Status: Accepted for M6C1A; the Admin browser session part is superseded by ADR-023 (Admin console cookie session)
 - Date: 2026-07-17
 
 ## Context

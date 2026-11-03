@@ -13,6 +13,10 @@ const MINIMUM_AUTH_ACTION_PEPPER_LENGTH = 32;
 const PRODUCTION_ACCESS_TOKEN_MIN_SECONDS = 300;
 const PRODUCTION_ACCESS_TOKEN_MAX_SECONDS = 1_800;
 const PRODUCTION_REFRESH_TOKEN_MAX_DAYS = 90;
+const PRODUCTION_ADMIN_SESSION_IDLE_MIN_SECONDS = 300;
+const PRODUCTION_ADMIN_SESSION_IDLE_MAX_SECONDS = 3_600;
+const PRODUCTION_ADMIN_SESSION_ABSOLUTE_MIN_SECONDS = 3_600;
+const PRODUCTION_ADMIN_SESSION_ABSOLUTE_MAX_SECONDS = 43_200;
 const unsafeSecretMarkers = ["development-jwt-secret", "change-me", "replace-with", "placeholder"];
 const unsafeRouteProviderSecretMarkers = ["changeme", "example", "test-key", "test_secret", "test-secret", "your-"];
 
@@ -54,6 +58,8 @@ const rawSchema = z.object({
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).optional(),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).optional(),
   REFRESH_TOKEN_PEPPER: z.string().min(MINIMUM_REFRESH_PEPPER_LENGTH).optional(),
+  ADMIN_SESSION_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().min(60).max(86_400).optional(),
+  ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS: z.coerce.number().int().min(300).max(604_800).optional(),
   AUTH_ACTION_TOKEN_PEPPER: z.string().min(MINIMUM_AUTH_ACTION_PEPPER_LENGTH).optional(),
   AUTH_ACTION_TOKEN_KEY_VERSION: z.coerce.number().int().positive().default(1),
   CORS_ORIGINS: z.string().optional(),
@@ -533,6 +539,28 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     problems.push("REFRESH_TOKEN_TTL_DAYS must be between 1 and 90 in staging and production");
   }
 
+  // The Admin console's cookie session slides with activity up to the idle
+  // timeout and never outlives the absolute timeout counted from sign-in.
+  const adminSessionIdleTimeoutSeconds = raw.ADMIN_SESSION_IDLE_TIMEOUT_SECONDS ?? 1_800;
+  const adminSessionAbsoluteTimeoutSeconds = raw.ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS ?? 43_200;
+  if (adminSessionIdleTimeoutSeconds > adminSessionAbsoluteTimeoutSeconds) {
+    problems.push("ADMIN_SESSION_IDLE_TIMEOUT_SECONDS must not exceed ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS");
+  }
+  if (
+    productionLike &&
+    (adminSessionIdleTimeoutSeconds < PRODUCTION_ADMIN_SESSION_IDLE_MIN_SECONDS ||
+      adminSessionIdleTimeoutSeconds > PRODUCTION_ADMIN_SESSION_IDLE_MAX_SECONDS)
+  ) {
+    problems.push("ADMIN_SESSION_IDLE_TIMEOUT_SECONDS must be between 300 and 3600 in staging and production");
+  }
+  if (
+    productionLike &&
+    (adminSessionAbsoluteTimeoutSeconds < PRODUCTION_ADMIN_SESSION_ABSOLUTE_MIN_SECONDS ||
+      adminSessionAbsoluteTimeoutSeconds > PRODUCTION_ADMIN_SESSION_ABSOLUTE_MAX_SECONDS)
+  ) {
+    problems.push("ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS must be between 3600 and 43200 in staging and production");
+  }
+
   const corsOrigins = (raw.CORS_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
@@ -605,6 +633,12 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     accessTokenTtlSeconds,
     refreshTokenTtlDays,
     refreshTokenPepper: raw.REFRESH_TOKEN_PEPPER ?? `darb-non-production:${raw.JWT_SECRET}`,
+    adminSession: {
+      idleTimeoutSeconds: adminSessionIdleTimeoutSeconds,
+      absoluteTimeoutSeconds: adminSessionAbsoluteTimeoutSeconds,
+      // Staging and production are served over HTTPS; local and demo runs use plain http.
+      cookieSecure: productionLike
+    },
     authActions: raw.AUTH_ACTION_TOKEN_PEPPER
       ? {
           key: {
