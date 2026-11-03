@@ -445,7 +445,10 @@ void main() {
     });
 
     testWidgets('shows no fare when the route had none', (tester) async {
-      await _pumpDetail(tester, {..._requestJson(withRoute: true), 'fare': null});
+      await _pumpDetail(tester, {
+        ..._requestJson(withRoute: true),
+        'fare': null,
+      });
       expect(find.byKey(const ValueKey('fareEstimateBox')), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     });
