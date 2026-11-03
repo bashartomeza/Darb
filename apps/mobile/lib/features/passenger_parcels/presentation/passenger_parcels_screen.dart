@@ -12,6 +12,7 @@ import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/route_chip.dart';
 import '../../../core/widgets/timeline_tracker.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
+import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/passenger_parcel_controller.dart';
 import '../data/passenger_parcel_models.dart';
 import 'passenger_parcel_labels.dart';
@@ -106,7 +107,17 @@ class ParcelCard extends ConsumerStatefulWidget {
 
 class _ParcelCardState extends ConsumerState<ParcelCard> {
   bool _busy = false;
+  bool _showCode = false;
   String? _message;
+
+  /// The receiver code matters until the parcel is delivered, and afterwards
+  /// shows how the delivery was confirmed. Cancelled parcels have none to use.
+  bool get _hasHandover => switch (widget.parcel.state) {
+    ParcelTrackingState.cancelled ||
+    ParcelTrackingState.failed ||
+    ParcelTrackingState.expired => false,
+    _ => true,
+  };
 
   List<TimelineStep> _steps(AppLocalizations l10n) {
     final state = widget.parcel.state;
@@ -239,6 +250,25 @@ class _ParcelCardState extends ConsumerState<ParcelCard> {
           if (!parcel.state.isFinal) ...[
             const SizedBox(height: AppTokens.spaceMedium),
             TimelineTracker(steps: _steps(l10n)),
+          ],
+          if (_hasHandover) ...[
+            const SizedBox(height: AppTokens.spaceSmall),
+            TextButton.icon(
+              key: ValueKey('toggleReceiverCode-${parcel.id}'),
+              onPressed: () => setState(() => _showCode = !_showCode),
+              icon: Icon(
+                _showCode ? Icons.expand_less : Icons.verified_user_outlined,
+              ),
+              label: Text(
+                _showCode
+                    ? l10n.parcelHideReceiverCode
+                    : l10n.parcelShowReceiverCode,
+              ),
+            ),
+            // Loads the handover state on demand; a new code is issued only
+            // when the sender asks, and lives in this card's state only.
+            if (_showCode)
+              HandoverCodeCard(orderId: parcel.id, keepInSession: false),
           ],
           if (_message != null) ...[
             const SizedBox(height: AppTokens.spaceSmall),

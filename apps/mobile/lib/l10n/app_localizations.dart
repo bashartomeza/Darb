@@ -4694,6 +4694,24 @@ abstract class AppLocalizations {
   /// **'نبحث عن سائق على هذا المسار. يمكنك الإلغاء ما لم يُعرض الطرد على سائق.'**
   String get sendParcelRecordedBody;
 
+  /// No description provided for @sendParcelHandoverCodeIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'أعطِ هذا الرمز للمستلم الآن، فالسائق سيطلبه عند التسليم. يظهر الرمز مرة واحدة فقط؛ إذا فقدته فاحصل على رمز جديد من «طرودي».'**
+  String get sendParcelHandoverCodeIntro;
+
+  /// No description provided for @parcelShowReceiverCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض رمز المستلم'**
+  String get parcelShowReceiverCode;
+
+  /// No description provided for @parcelHideReceiverCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'إخفاء رمز المستلم'**
+  String get parcelHideReceiverCode;
+
   /// No description provided for @myParcelsTitle.
   ///
   /// In ar, this message translates to:

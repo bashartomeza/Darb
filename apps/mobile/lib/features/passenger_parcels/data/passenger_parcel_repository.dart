@@ -34,9 +34,12 @@ class PassengerParcelRepository {
       body: payload,
       headers: {'Idempotency-Key': idempotencyKey},
     );
+    final code = json['handover_code'];
     return PassengerParcel.fromJson(
       _map(json['parcel']),
       replayed: json['replayed'] == true,
+      // Returned once, on the first create; a replay comes back without it.
+      handoverCode: code is String && code.isNotEmpty ? code : null,
     );
   }
 

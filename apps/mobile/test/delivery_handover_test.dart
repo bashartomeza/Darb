@@ -19,14 +19,17 @@ class _FakeRepository implements DeliveryHandoverRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   @override
-  Future<HandoverStatus> regenerate(String orderId) async {
+  Future<HandoverStatus> regenerate(
+    String orderId, {
+    bool remember = true,
+  }) async {
     regenerated++;
     final status = HandoverStatus.fromJson({
       'issued': true,
       'attempts_remaining': 5,
       'code': issuedCode,
     });
-    HandoverCodeVault.remember(orderId, status.code);
+    if (remember) HandoverCodeVault.remember(orderId, status.code);
     return status;
   }
 

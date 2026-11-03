@@ -65,6 +65,7 @@ class PassengerParcel {
     this.departureFrom,
     this.departureUntil,
     this.replayed = false,
+    this.handoverCode,
     this.serviceRouteId,
     this.routeNameAr,
     this.routeNameEn,
@@ -90,6 +91,11 @@ class PassengerParcel {
   final DateTime? departureFrom;
   final DateTime? departureUntil;
   final bool replayed;
+
+  /// The receiver's six-digit handover code. Only the create response carries
+  /// it, once; an idempotent replay, the list and the detail never do. It lives
+  /// in the screen's state only and is never saved on the device.
+  final String? handoverCode;
 
   /// The predefined route and the exact places typed by the sender; null for
   /// parcels sent before routes existed, which keep their stop labels.
@@ -119,6 +125,7 @@ class PassengerParcel {
   factory PassengerParcel.fromJson(
     Map<String, dynamic> json, {
     bool replayed = false,
+    String? handoverCode,
   }) {
     String? optionalString(String key) {
       final value = json[key];
@@ -153,6 +160,7 @@ class PassengerParcel {
       departureFrom: optionalDate('requested_departure_from'),
       departureUntil: optionalDate('requested_departure_until'),
       replayed: replayed,
+      handoverCode: handoverCode,
       serviceRouteId: optionalString('service_route_id'),
       routeNameAr: optionalString('route_name_ar'),
       routeNameEn: optionalString('route_name_en'),
