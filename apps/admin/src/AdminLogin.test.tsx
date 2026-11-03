@@ -59,6 +59,28 @@ describe("Admin login", () => {
     await act(async () => resolveGoogle(new Response(JSON.stringify({ token: "stale-google-session", user: { id: "old", role: "admin", name: "Old Admin" } }))));
     expect(stored).toBeNull(); expect(host.querySelector('input[type="email"]')).not.toBeNull();
   });
+  it.each(["succeeds", "fails", "never answers"])("sign-out revokes the server session and signs out locally when logout %s", async (outcome) => {
+    let stored: string | null = null;
+    await render("en", false, { getItem: () => stored, setItem: (_key, token) => { stored = token; }, removeItem: () => { stored = null; } });
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/auth/logout")) {
+        if (outcome === "never answers") return new Promise<Response>(() => {});
+        if (outcome === "fails") return Promise.reject(new TypeError("Failed to fetch"));
+        return Promise.resolve(new Response(JSON.stringify({ ok: true })));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ token: "live-session", user: { id: "admin", role: "admin", name: "Admin", phone: "+12025550123" }, counts: {}, drivers: [], routes: [], requests: [], orders: [], trips: [], demo_reset_available: false })));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await act(async () => host.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    expect(stored).toBe("live-session");
+    await act(async () => host.querySelector<HTMLButtonElement>(".btn--signout")?.click());
+    const logoutCalls = fetchMock.mock.calls.filter(([url]) => url.endsWith("/auth/logout"));
+    expect(logoutCalls).toHaveLength(1);
+    expect(logoutCalls[0]).toEqual(["http://api.test/api/v1/auth/logout", expect.objectContaining({ method: "POST", headers: expect.objectContaining({ Authorization: "Bearer live-session" }) })]);
+    expect(stored).toBeNull();
+    expect(host.querySelector('input[type="email"]')).not.toBeNull();
+    expect(host.textContent).not.toContain("expired");
+  });
   it.each(["newer email attempt", "unmount"])("discards a deferred Google success after %s", async (superseding) => {
     let credentialCallback!: (value: { credential: string }) => void;
     vi.stubGlobal("google", { accounts: { id: { initialize: (options: { callback: typeof credentialCallback }) => { credentialCallback = options.callback; }, renderButton: () => {}, cancel: () => {} } } });
