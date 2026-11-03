@@ -39,8 +39,8 @@ type GoogleProfile =
   | { role: "merchant"; profile: z.infer<typeof merchantProfileSchema> };
 const profileSchemas = { passenger: passengerProfileSchema, driver: driverProfileSchema, merchant: merchantProfileSchema } as const;
 
-// `role` and `profile` are optional together for clients that predate role onboarding: those still get a
-// passenger account that must add its phone before using the app (profile_state phone_required).
+// `role` and `profile` are optional together for clients that predate role onboarding: those get a
+// passenger account with no phone, usable at once (the app has no separate phone step).
 export const googleCompleteSchema = emailCompleteBase.omit({ email_verification_token: true, email_verification_code: true }).extend({
   name: z.string().trim().min(1).max(120),
   role: z.enum(GOOGLE_ONBOARDING_ROLES).optional(),
@@ -158,7 +158,7 @@ export class GoogleAuthService {
         // verified phone). Drivers wait for Admin review; passengers and shop owners use the app at once.
         const user = await tx.user.create({ data: {
           name: input.name, email: grant.email, email_verified_at: now, phone, phone_verified_at: null, password_hash: null,
-          profile_state: chosen ? "complete" : "phone_required", role, account_status: pending ? "pending" : "active",
+          profile_state: "complete", role, account_status: pending ? "pending" : "active",
           city: chosen && "city" in chosen.profile ? chosen.profile.city : null,
           // A driver enters the review queue only after uploading every required document and submitting.
           review_submitted_at: role === "merchant" ? now : null,

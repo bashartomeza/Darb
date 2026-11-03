@@ -54,7 +54,7 @@ async function emailCodeChecks(admin) {
     must(/^\d{6}$/.test(code ?? ""), `the emailed proof is not six digits: ${code}`);
     const done = await complete(started.registration_token, code);
     must(done.status === 201 && done.json.token, `complete gave ${done.status} ${JSON.stringify(done.json).slice(0, 100)}`);
-    must(done.json.user.role === "passenger" && done.json.user.profile_state === "phone_required", `user ${JSON.stringify(done.json.user)}`);
+    must(done.json.user.role === "passenger" && done.json.user.profile_state === "complete", `user ${JSON.stringify(done.json.user)}`);
     const again = await complete(started.registration_token, code);
     must(again.status === 400, `a used code gave ${again.status}`);
     const signedIn = await http("/auth/login", { method: "POST", body: { email, password }, expect: 200 });

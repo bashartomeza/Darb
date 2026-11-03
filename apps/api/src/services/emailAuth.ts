@@ -175,8 +175,10 @@ export class EmailAuthService {
         throw new HttpError(409, "consent_version_changed");
       }
       const now = new Date();
+      // The phone typed at sign-up is the contact number; the app has no separate phone step, so the
+      // passenger can use Darb straight away (a verified `phone` stays optional, for phone sign-in only).
       const user = await tx.user.create({ data: { name: payload.name, email: payload.email, password_hash: payload.passwordHash, email_verified_at: unproven ? null : now,
-        phone: null, phone_verified_at: null, contact_phone: payload.phone ?? null, profile_state: unproven ? "complete" : "phone_required", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
+        phone: null, phone_verified_at: null, contact_phone: payload.phone ?? null, profile_state: "complete", role: "passenger", account_status: "active", security_version: 1, demo_account: false } });
       await tx.userConsent.createMany({ data: documents.map((d) => ({ user_id: user.id, consent_document_id: d.id, accepted_at: now,
         source: "email_registration", request_id: requestId, app_release: this.config.appRelease })) });
       const session = await createSession(tx, user);
