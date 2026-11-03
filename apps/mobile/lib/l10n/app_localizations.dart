@@ -2468,6 +2468,42 @@ abstract class AppLocalizations {
   /// **'توجد عملية سابقة غير محسومة. سجّل الدخول بالحساب الأصلي وأعد العملية نفسها، أو تواصل مع الدعم إذا انتهت مهلة الاسترداد.'**
   String get canonicalRecoveryRequired;
 
+  /// No description provided for @savedRequestRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يقبل درب الطلب المحفوظ عند إعادة إرساله، لذلك أُزيل. راجع قائمتك، ثم ابدأ من جديد إن كنت ما زلت بحاجة إليه.'**
+  String get savedRequestRejected;
+
+  /// No description provided for @savedRequestExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تأكيد الطلب المحفوظ في الوقت المحدد، لذلك أُزيل. راجع قائمتك، ثم ابدأ من جديد إن كنت ما زلت بحاجة إليه.'**
+  String get savedRequestExpired;
+
+  /// No description provided for @discardSavedRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'تجاهل والبدء من جديد'**
+  String get discardSavedRequest;
+
+  /// No description provided for @discardSavedRequestTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تجاهل الطلب المحفوظ؟'**
+  String get discardSavedRequestTitle;
+
+  /// No description provided for @discardSavedRequestBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتمكن درب من تأكيد وصول إرسالك السابق. إن كان قد وصل، فقد يؤدي البدء من جديد إلى طلب مكرر. راجع قائمتك أولاً إن لم تكن متأكداً.'**
+  String get discardSavedRequestBody;
+
+  /// No description provided for @discardSavedRequestConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تجاهل'**
+  String get discardSavedRequestConfirm;
+
   /// No description provided for @transactionRetryRequired.
   ///
   /// In ar, this message translates to:

@@ -369,6 +369,72 @@ void main() {
     expect(find.byKey(const ValueKey('merchantOrderId')), findsOneWidget);
   });
 
+  testWidgets('a saved order refused on resend is removed and the form opens', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(hasOrder: false)
+      ..createRefusal = http.Response('{"error":"route_unavailable"}', 409);
+    await _pumpMerchant(tester, handler, secure: _savedRouteOrder());
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/new');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('merchantPendingOrder')), findsOneWidget);
+    expect(find.byKey(const ValueKey('merchantRouteField')), findsNothing);
+
+    await _submit(tester);
+    expect(handler.createCalls, 1);
+    expect(handler.createKey, 'saved-order-key-0001');
+    // Removed and unlocked, with a message saying so.
+    expect(find.byKey(const ValueKey('merchantPendingOrder')), findsNothing);
+    expect(find.byKey(const ValueKey('merchantRouteField')), findsOneWidget);
+    expect(find.textContaining('لم يقبل درب الطلب المحفوظ'), findsOneWidget);
+    expect(
+      (await const FlutterSecureStorage().readAll()).values.any(
+        (value) => value.contains('idempotency_key'),
+      ),
+      isFalse,
+    );
+  });
+
+  testWidgets('a saved order can be discarded after confirming', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(hasOrder: false);
+    await _pumpMerchant(tester, handler, secure: _savedRouteOrder());
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/new');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('merchantPendingOrder')), findsOneWidget);
+
+    // Cancelling keeps it.
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('discardSavedRequest')),
+    );
+    await tester.tap(find.byKey(const ValueKey('discardSavedRequest')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('طلب مكرر'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('cancelDiscardSavedRequest')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('merchantPendingOrder')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('discardSavedRequest')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmDiscardSavedRequest')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('merchantPendingOrder')), findsNothing);
+    expect(find.byKey(const ValueKey('merchantRouteField')), findsOneWidget);
+    expect(find.byKey(const ValueKey('discardSavedRequest')), findsNothing);
+    expect(handler.createCalls, 0);
+    expect(
+      (await const FlutterSecureStorage().readAll()).values.any(
+        (value) => value.contains('idempotency_key'),
+      ),
+      isFalse,
+    );
+  });
+
   testWidgets('order form waits for the routes and can retry them', (
     tester,
   ) async {
@@ -564,6 +630,27 @@ Future<void> _submit(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// A route order kept on the device because its response was lost.
+Map<String, String> _savedRouteOrder() => {
+  'darb_merchant_order_v1:merchant_1': jsonEncode({
+    'version': 1,
+    'actor_id': 'merchant_1',
+    'idempotency_key': 'saved-order-key-0001',
+    'payload': {
+      'service_route_id': 'route-heb-bth',
+      'pickup_details': 'متجر الأمل، شارع عين سارة',
+      'parcels': [
+        {
+          'dropoff_details': 'قرب بوابة جامعة بيت لحم',
+          'size': 'S',
+          'priority': 'normal',
+        },
+      ],
+    },
+    'created_at': DateTime.now().toUtc().toIso8601String(),
+  }),
+};
+
 /// An order saved by a build before routes existed.
 const _corridorPayload = {
   'pickup_label': 'Bab Al-Zawiya',
@@ -633,6 +720,9 @@ class _MerchantHandler {
   Map<String, dynamic>? createBody;
   String? createKey;
   bool loseNextResponse = false;
+
+  /// The server's final refusal of the next order sent; nothing is saved.
+  http.Response? createRefusal;
   bool routesFail = false;
   bool routesEmpty = false;
   int createCalls = 0;
@@ -736,6 +826,8 @@ class _MerchantHandler {
       createCalls++;
       createKey = request.headers['idempotency-key'];
       createBody = jsonDecode(request.body) as Map<String, dynamic>;
+      final refusal = createRefusal;
+      if (refusal != null) return refusal;
       hasOrder = true;
       if (loseNextResponse) {
         loseNextResponse = false;

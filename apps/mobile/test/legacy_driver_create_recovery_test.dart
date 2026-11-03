@@ -175,6 +175,108 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+
+  testWidgets('a saved route refused on resend leaves verify mode', (
+    tester,
+  ) async {
+    final storage = await _saveRoute();
+    final posts = <http.Request>[];
+    await _pumpRouteScreen(tester, (request) async {
+      if (request.method == 'GET') return http.Response('{"routes":[]}', 200);
+      posts.add(request);
+      return http.Response('{"error":"route_unavailable"}', 409);
+    });
+
+    expect(posts, hasLength(1));
+    expect(await storage.read(), isNull);
+    expect(find.text('Verify booking'), findsNothing);
+    expect(find.text('Activate route'), findsOneWidget);
+    expect(
+      find.textContaining('Darb did not accept the saved request'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('discardSavedRequest')), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a saved route can be discarded to start again', (tester) async {
+    final storage = await _saveRoute();
+    var posts = 0;
+    await _pumpRouteScreen(tester, (request) async {
+      if (request.method == 'GET') return http.Response('{"routes":[]}', 200);
+      posts++;
+      throw http.ClientException('lost again');
+    });
+    expect(find.text('Verify booking'), findsOneWidget);
+    final sent = posts;
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('discardSavedRequest')),
+    );
+    await tester.tap(find.byKey(const ValueKey('discardSavedRequest')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirmDiscardSavedRequest')));
+    await tester.pumpAndSettle();
+
+    expect(await storage.read(), isNull);
+    expect(find.text('Verify booking'), findsNothing);
+    expect(find.text('Activate route'), findsOneWidget);
+    expect(posts, sent);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+}
+
+/// A route kept on the device because its response was lost.
+Future<CanonicalOperationStorage> _saveRoute() async {
+  SharedPreferences.setMockInitialValues({});
+  FlutterSecureStorage.setMockInitialValues({});
+  final storage = CanonicalOperationStorage(
+    const FlutterSecureStorage(),
+    storageKey: 'darb_legacy_driver_create_v1',
+  );
+  await storage.save(
+    CanonicalOperationBundle.create(
+      operation: LegacyDriverRouteMutation.operation,
+      scope: 'driver',
+      actorId: 'driver',
+      payload: const {
+        'route_version_id': LegacyDriverRouteMutation.sentinel,
+        'service_route_id': 'route-heb-bth',
+        'seats_available': 3,
+        'parcel_capacity_available': 4,
+      },
+    ),
+  );
+  return storage;
+}
+
+Future<void> _pumpRouteScreen(
+  WidgetTester tester,
+  Future<http.Response> Function(http.Request) handler,
+) async {
+  final client = TestAuthenticatedClient(handler: handler);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authenticatedActorBindingProvider.overrideWithValue(
+          AuthenticatedActorBinding()..bind('driver'),
+        ),
+        driverRepositoryProvider.overrideWithValue(
+          DriverRepository(apiClient: client.client),
+        ),
+        operatingRoutesProvider.overrideWith(
+          (ref) async => testOperatingRoutes(),
+        ),
+      ],
+      child: const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: DriverRouteScreen(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 const _oldRoute =

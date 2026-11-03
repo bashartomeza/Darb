@@ -73,6 +73,11 @@ class CanonicalOperationBundle {
     return !current.isBefore(createdAt.add(recoveryWindow));
   }
 
+  /// Past its retry window by the clock, unlike [recoveryWindowExpired] this
+  /// is not set off by a clock that moved backwards.
+  bool recoveryWindowPassed(DateTime now) =>
+      !now.toUtc().isBefore(createdAt.add(recoveryWindow));
+
   Map<String, dynamic> toJson() => {
     'version': version,
     'operation': operation,

@@ -166,6 +166,9 @@ class LegacyPassengerRequestMutation {
     return receipt;
   }
 
+  /// Drops the saved create, readable or not, so the person can start again.
+  Future<void> discard() => _runner.discard();
+
   Future<void> acknowledge(CanonicalMutationReceipt<String> receipt) async {
     requireActor(receipt.bundle.actorId);
     if (receipt.bundle.operation != operation) {

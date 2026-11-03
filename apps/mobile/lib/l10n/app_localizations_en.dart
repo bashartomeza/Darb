@@ -1264,6 +1264,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'A previous operation is unresolved. Sign in with the original account and retry the exact operation, or contact support if its recovery window expired.';
 
   @override
+  String get savedRequestRejected =>
+      'Darb did not accept the saved request when it was sent again, so it was removed. Check your list, then start again if you still need it.';
+
+  @override
+  String get savedRequestExpired =>
+      'The saved request could not be confirmed in time, so it was removed. Check your list, then start again if you still need it.';
+
+  @override
+  String get discardSavedRequest => 'Discard and start again';
+
+  @override
+  String get discardSavedRequestTitle => 'Discard the saved request?';
+
+  @override
+  String get discardSavedRequestBody =>
+      'Darb could not confirm whether your earlier send arrived. If it did, starting again can create a duplicate. Check your list first if you are not sure.';
+
+  @override
+  String get discardSavedRequestConfirm => 'Discard';
+
+  @override
   String get transactionRetryRequired =>
       'A temporary transaction conflict occurred. Retry this operation.';
 

@@ -3,6 +3,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/presentation/localized_labels.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../data/merchant_models.dart';
 import '../data/merchant_order_operation_storage.dart';
 
@@ -30,6 +31,8 @@ String merchantStatusLabel(AppLocalizations l10n, String status) =>
     };
 
 String merchantErrorLabel(AppLocalizations l10n, Object error) {
+  final saved = savedRequestOutcomeLabel(l10n, error);
+  if (saved != null) return saved;
   if (error is MerchantOrderRecoveryException) {
     return switch (error.code) {
       'merchant_order_recovery_expired' => l10n.merchantOrderRecoveryExpired,

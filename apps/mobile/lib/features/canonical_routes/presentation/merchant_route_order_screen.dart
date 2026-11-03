@@ -9,6 +9,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/canonical_route_controller.dart';
 import '../data/canonical_operation_storage.dart';
@@ -36,6 +37,9 @@ class _MerchantRouteOrderScreenState
   CanonicalOperationBundle? _completedOperation;
   CanonicalMerchantOrder? _result;
 
+  /// A saved, unconfirmed operation is holding the shared slot.
+  bool _savedPending = false;
+
   @override
   void initState() {
     super.initState();
@@ -46,9 +50,15 @@ class _MerchantRouteOrderScreenState
       try {
         bundle = await ref.read(canonicalOperationStorageProvider).read();
       } catch (error) {
-        if (mounted) setState(() => _error = error);
+        if (mounted) {
+          setState(() {
+            _error = error;
+            _savedPending = true;
+          });
+        }
         return;
       }
+      if (mounted && bundle != null) setState(() => _savedPending = true);
       if (!mounted ||
           bundle?.operation != 'merchant_route_order_create' ||
           bundle?.scope != 'merchant' ||
@@ -307,6 +317,11 @@ class _MerchantRouteOrderScreenState
                         ),
                       ],
                       if (_error != null) Text(_merchantError(l10n, _error!)),
+                      if (_savedPending)
+                        DiscardSavedRequestButton(
+                          enabled: !_busy,
+                          onDiscard: _discard,
+                        ),
                       const SizedBox(height: AppTokens.spaceLarge),
                       FilledButton(
                         key: const ValueKey('submitCanonicalMerchantOrder'),
@@ -370,6 +385,7 @@ class _MerchantRouteOrderScreenState
           ).toJson(),
       ],
     };
+    final runner = ref.read(canonicalMutationRunnerProvider);
     try {
       final actorId = ref.read(authControllerProvider).value?.user?.id;
       if (actorId == null) {
@@ -379,65 +395,106 @@ class _MerchantRouteOrderScreenState
           statusCode: 401,
         );
       }
-      final result = await ref
-          .read(canonicalMutationRunnerProvider)
-          .run<CanonicalMerchantOrder>(
-            operation: 'merchant_route_order_create',
-            scope: 'merchant',
-            allowExpiredReplay: true,
-            onBundle: (bundle) => _completedOperation = bundle,
-            actorId: actorId,
-            payload: payload,
-            preflight: () async {
-              if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
-                throw const ApiException(
-                  ApiErrorType.validation,
-                  'invalid_departure_window',
-                  statusCode: 400,
-                );
-              }
-              await ref
-                  .read(canonicalRouteRepositoryProvider)
-                  .requireFreshRoute(_routeVersionId!);
-            },
-            send: (bundle) => ref
-                .read(canonicalRouteRepositoryProvider)
-                .createMerchantOrder(
-                  payload: bundle.payload,
-                  idempotencyKey: bundle.idempotencyKey,
-                ),
-          );
+      final result = await runner.run<CanonicalMerchantOrder>(
+        operation: 'merchant_route_order_create',
+        scope: 'merchant',
+        allowExpiredReplay: true,
+        onBundle: (bundle) => _completedOperation = bundle,
+        actorId: actorId,
+        payload: payload,
+        preflight: () async {
+          if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
+            throw const ApiException(
+              ApiErrorType.validation,
+              'invalid_departure_window',
+              statusCode: 400,
+            );
+          }
+          await ref
+              .read(canonicalRouteRepositoryProvider)
+              .requireFreshRoute(_routeVersionId!);
+        },
+        send: (bundle) => ref
+            .read(canonicalRouteRepositoryProvider)
+            .createMerchantOrder(
+              payload: bundle.payload,
+              idempotencyKey: bundle.idempotencyKey,
+            ),
+      );
       // The order is saved and enters matching server-side; make the merchant's
       // assignment list re-read so it appears without a manual pull.
       ref.invalidate(merchantCanonicalAssignmentsProvider);
-      if (mounted) setState(() => _result = result);
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _savedPending = false;
+        });
+      }
+      // Saved server-side: settle it now, so leaving this screen any way
+      // never leaves it holding the shared slot.
+      await _settleCompleted(runner, actorId);
     } catch (error) {
       if (error is ApiException && error.statusCode == 404) {
         ref.invalidate(mobileCapabilitiesProvider);
         ref.invalidate(canonicalRouteCatalogProvider);
       }
-      if (mounted) setState(() => _error = error);
+      final saved = await savedOperationPresent(runner.storage);
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _savedPending = saved;
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _acknowledgeResult() async {
-    final actorId = ref.read(authControllerProvider).value?.user?.id;
-    if (actorId == null) return;
+  /// Clears the saved create once its result is in hand. False while it
+  /// could not be cleared; the result button tries again.
+  Future<bool> _settleCompleted(
+    CanonicalMutationRunner runner,
+    String? actorId,
+  ) async {
     final completed = _completedOperation;
-    if (completed == null || completed.actorId != actorId) return;
+    if (completed == null) return true;
+    if (actorId == null || completed.actorId != actorId) return false;
     try {
-      await ref
-          .read(canonicalMutationRunnerProvider)
-          .acknowledge(
-            actorId: actorId,
-            operation: 'merchant_route_order_create',
-            idempotencyKey: completed.idempotencyKey,
-          );
-      if (mounted) context.go('/merchant');
+      await runner.acknowledge(
+        actorId: actorId,
+        operation: 'merchant_route_order_create',
+        idempotencyKey: completed.idempotencyKey,
+      );
+      _completedOperation = null;
+      return true;
     } catch (error) {
       if (mounted) setState(() => _error = error);
+      return false;
+    }
+  }
+
+  Future<void> _acknowledgeResult() async {
+    final actorId = ref.read(authControllerProvider).value?.user?.id;
+    final runner = ref.read(canonicalMutationRunnerProvider);
+    if (!await _settleCompleted(runner, actorId) || !mounted) return;
+    context.go('/merchant');
+  }
+
+  /// Drops the saved operation after the merchant confirms, so a new order
+  /// can be sent.
+  Future<void> _discard() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(canonicalMutationRunnerProvider).discard();
+      _completedOperation = null;
+      if (mounted) setState(() => _savedPending = false);
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 }
@@ -505,6 +562,8 @@ String _stopName(BuildContext context, CanonicalStop stop) =>
     : stop.nameEn;
 
 String _merchantError(AppLocalizations l10n, Object error) {
+  final saved = savedRequestOutcomeLabel(l10n, error);
+  if (saved != null) return saved;
   if (error is ApiException && error.message == 'invalid_departure_window') {
     return l10n.invalidDepartureWindow;
   }

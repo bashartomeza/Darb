@@ -6,6 +6,9 @@ import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
+import '../../canonical_routes/application/canonical_route_controller.dart';
+import '../../canonical_routes/data/canonical_operation_storage.dart';
 import '../application/driver_controller.dart';
 import '../data/driver_models.dart';
 
@@ -35,6 +38,12 @@ String driverStatusLabel(AppLocalizations l10n, String status) =>
 
 String driverErrorLabel(AppLocalizations l10n, Object error) {
   if (error is DriverRouteRequired) return l10n.orderRouteRequired;
+  final saved = savedRequestOutcomeLabel(l10n, error);
+  if (saved != null) return saved;
+  if (error is CanonicalOperationBlocked ||
+      error is CanonicalOperationStorageException) {
+    return l10n.canonicalRecoveryRequired;
+  }
   if (error is! ApiException) return l10n.requestFailed;
   if (error.type == ApiErrorType.network) return l10n.networkUnavailable;
   if (error.type == ApiErrorType.timeout) return l10n.requestTimedOut;

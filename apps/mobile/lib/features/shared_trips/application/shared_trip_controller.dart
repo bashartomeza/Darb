@@ -263,10 +263,11 @@ class SharedDriverOfferDetailNotifier
     if (current == null || !current.offer.actionableAt(current.clock.now)) {
       throw StateError('shared_offer_not_actionable');
     }
+    // Read before going busy: a sign-out here must not leave it busy.
+    final actorId = _actorId();
     ++_generation;
     _mutating = true;
     state = AsyncData(current.copyWith(mutating: true, uncertain: false));
-    final actorId = _actorId();
     try {
       final previousPending = await _pendingForActor(actorId);
       final fresh = await _freshOffer();
@@ -325,7 +326,13 @@ class SharedDriverOfferDetailNotifier
       if (error is ApiException && error.statusCode == 404) {
         ref.invalidate(mobileCapabilitiesProvider);
       }
-      final pending = await _pendingForActor(actorId);
+      // Whatever the saved slot holds, the screen must not stay busy.
+      CanonicalOperationBundle? pending;
+      try {
+        pending = await _pendingForActor(actorId);
+      } catch (_) {
+        // Unreadable or another account's: not this offer's operation.
+      }
       final latest = state.value ?? current;
       final belongs = pending?.payload['offer_id'] == offerId;
       state = AsyncData(
@@ -353,8 +360,14 @@ class SharedDriverOfferDetailNotifier
   }
 
   Future<CanonicalOperationBundle?> _pendingForActor(String actorId) async {
-    final pending = await ref.read(canonicalOperationStorageProvider).read();
+    final storage = ref.read(canonicalOperationStorageProvider);
+    final pending = await storage.read();
     if (pending == null) return null;
+    if (pending.recoveryWindowPassed(DateTime.now())) {
+      // Too old to confirm: drop it so it cannot hold every later action.
+      await storage.clear();
+      return null;
+    }
     if (pending.recoveryWindowExpired(DateTime.now())) {
       throw const CanonicalOperationBlocked('canonical_recovery_expired');
     }

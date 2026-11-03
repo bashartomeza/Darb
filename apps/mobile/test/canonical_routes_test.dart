@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/core/api/saved_request_outcome.dart';
 import 'package:darb_mobile/features/canonical_routes/application/canonical_route_controller.dart';
 import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
 import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
@@ -303,45 +304,180 @@ void main() {
       },
     );
 
+    Future<CanonicalMutationRunner> runnerWithSaved(
+      FakeCanonicalStorage storage,
+    ) async {
+      final runner = CanonicalMutationRunner(storage: storage);
+      await expectLater(
+        runner.run<void>(
+          operation: 'driver_canonical_offer_accept',
+          scope: 'driver',
+          actorId: 'driver-1',
+          payload: payload('one'),
+          send: (_) async => throw const ApiException(
+            ApiErrorType.network,
+            'network_unavailable',
+          ),
+        ),
+        throwsA(isA<ApiException>()),
+      );
+      expect(storage.bundle, isNotNull);
+      return runner;
+    }
+
     test(
-      'authorization denial during exact replay preserves unresolved work',
+      'a resend the server refuses for good clears the saved operation',
       () async {
-        final storage = FakeCanonicalStorage();
-        final runner = CanonicalMutationRunner(storage: storage);
-        await expectLater(
-          runner.run<void>(
-            operation: 'driver_canonical_offer_accept',
-            scope: 'driver',
-            actorId: 'driver-1',
-            payload: payload('one'),
-            send: (_) async => throw const ApiException(
-              ApiErrorType.network,
-              'network_unavailable',
-            ),
+        for (final refusal in const [
+          ApiException(
+            ApiErrorType.validation,
+            'invalid_stop_order',
+            statusCode: 400,
           ),
-          throwsA(isA<ApiException>()),
-        );
-        final retained = storage.bundle;
-
-        await expectLater(
-          runner.run<void>(
-            operation: 'driver_canonical_offer_accept',
-            scope: 'driver',
-            actorId: 'driver-1',
-            payload: payload('one'),
-            send: (_) async => throw const ApiException(
-              ApiErrorType.forbidden,
-              'account_unavailable',
-              statusCode: 403,
-            ),
+          ApiException(
+            ApiErrorType.forbidden,
+            'account_unavailable',
+            statusCode: 403,
           ),
-          throwsA(isA<ApiException>()),
-        );
+          ApiException(ApiErrorType.unknown, 'not_found', statusCode: 404),
+          ApiException(
+            ApiErrorType.unknown,
+            'route_unavailable',
+            statusCode: 409,
+          ),
+          ApiException(
+            ApiErrorType.unknown,
+            'idempotency_conflict',
+            statusCode: 409,
+          ),
+          ApiException(ApiErrorType.unknown, 'route_retired', statusCode: 410),
+          ApiException(
+            ApiErrorType.validation,
+            'validation_error',
+            statusCode: 422,
+          ),
+        ]) {
+          final storage = FakeCanonicalStorage();
+          final runner = await runnerWithSaved(storage);
+          await expectLater(
+            runner.run<void>(
+              operation: 'driver_canonical_offer_accept',
+              scope: 'driver',
+              actorId: 'driver-1',
+              payload: payload('one'),
+              send: (_) async => throw refusal,
+            ),
+            throwsA(
+              isA<SavedRequestRejected>().having(
+                (error) => error.message,
+                'message',
+                refusal.message,
+              ),
+            ),
+          );
+          expect(storage.bundle, isNull, reason: refusal.message);
 
-        expect(storage.bundle?.idempotencyKey, retained?.idempotencyKey);
-        expect(storage.clearCount, 0);
+          // Unlocked: a different operation now runs with a fresh key.
+          var sends = 0;
+          await runner.run<void>(
+            operation: 'passenger_route_request_create',
+            scope: 'passenger',
+            actorId: 'driver-1',
+            payload: payload('two'),
+            send: (_) async => sends++,
+          );
+          expect(sends, 1);
+        }
       },
     );
+
+    test(
+      'a lost response, rate limit or server failure on resend keeps it',
+      () async {
+        for (final failure in const [
+          ApiException(ApiErrorType.network, 'network_unavailable'),
+          ApiException(ApiErrorType.timeout, 'request_timeout'),
+          ApiException(ApiErrorType.unauthorized, 'session_changed'),
+          ApiException(
+            ApiErrorType.unauthorized,
+            'unauthorized',
+            statusCode: 401,
+          ),
+          ApiException(ApiErrorType.unknown, 'rate_limited', statusCode: 429),
+          ApiException(ApiErrorType.server, 'request_failed', statusCode: 500),
+          ApiException(ApiErrorType.server, 'unavailable', statusCode: 503),
+          ApiException(ApiErrorType.validation, 'invalid_response'),
+          ApiException(
+            ApiErrorType.unknown,
+            'idempotency_in_progress',
+            statusCode: 409,
+          ),
+          ApiException(
+            ApiErrorType.unknown,
+            'transaction_retry_required',
+            statusCode: 409,
+          ),
+        ]) {
+          final storage = FakeCanonicalStorage();
+          final runner = await runnerWithSaved(storage);
+          final retained = storage.bundle!;
+          await expectLater(
+            runner.run<void>(
+              operation: 'driver_canonical_offer_accept',
+              scope: 'driver',
+              actorId: 'driver-1',
+              payload: payload('one'),
+              send: (_) async => throw failure,
+            ),
+            throwsA(
+              isA<ApiException>().having(
+                (error) => error is SavedRequestRejected,
+                'cleared',
+                isFalse,
+              ),
+            ),
+          );
+          expect(
+            storage.bundle?.idempotencyKey,
+            retained.idempotencyKey,
+            reason: failure.message,
+          );
+          expect(storage.clearCount, 0);
+        }
+      },
+    );
+
+    test('discarding unlocks a slot held by another operation', () async {
+      final storage = FakeCanonicalStorage();
+      storage.bundle = CanonicalOperationBundle.create(
+        operation: 'driver_availability_create',
+        scope: 'driver',
+        actorId: 'driver-1',
+        payload: payload('one'),
+      );
+      final runner = CanonicalMutationRunner(storage: storage);
+      await expectLater(
+        runner.run<void>(
+          operation: 'passenger_route_request_create',
+          scope: 'passenger',
+          actorId: 'driver-1',
+          payload: payload('two'),
+          send: (_) async {},
+        ),
+        throwsA(isA<CanonicalOperationBlocked>()),
+      );
+      await runner.discard();
+      expect(storage.bundle, isNull);
+      var sends = 0;
+      await runner.run<void>(
+        operation: 'passenger_route_request_create',
+        scope: 'passenger',
+        actorId: 'driver-1',
+        payload: payload('two'),
+        send: (_) async => sends++,
+      );
+      expect(sends, 1);
+    });
 
     test('changed payload cannot replace an unresolved operation', () async {
       final storage = FakeCanonicalStorage();
@@ -451,12 +587,47 @@ void main() {
       },
     );
 
-    test('expired or clock-anomalous bundle remains quarantined', () async {
+    test('an expired bundle is cleared so the next action can run', () async {
       final created = DateTime.utc(2026, 1, 1, 12);
-      for (final current in [
-        created.add(const Duration(hours: 24)),
-        created.subtract(const Duration(minutes: 6)),
-      ]) {
+      final current = created.add(const Duration(hours: 24));
+      final storage = FakeCanonicalStorage();
+      storage.bundle = CanonicalOperationBundle.create(
+        operation: 'passenger_route_request_create',
+        scope: 'passenger',
+        actorId: 'passenger-1',
+        payload: payload('one'),
+        now: created,
+      );
+      final runner = CanonicalMutationRunner(
+        storage: storage,
+        now: () => current,
+      );
+      var sends = 0;
+      await expectLater(
+        runner.run<void>(
+          operation: 'passenger_route_request_create',
+          scope: 'passenger',
+          actorId: 'passenger-1',
+          payload: payload('one'),
+          send: (_) async => sends++,
+        ),
+        throwsA(isA<SavedRequestExpired>()),
+      );
+      expect(sends, 0);
+      expect(storage.bundle, isNull);
+      await runner.run<void>(
+        operation: 'passenger_route_request_create',
+        scope: 'passenger',
+        actorId: 'passenger-1',
+        payload: payload('one'),
+        send: (_) async => sends++,
+      );
+      expect(sends, 1);
+    });
+
+    test('a clock-anomalous bundle remains quarantined', () async {
+      final created = DateTime.utc(2026, 1, 1, 12);
+      for (final current in [created.subtract(const Duration(minutes: 6))]) {
         final storage = FakeCanonicalStorage();
         storage.bundle = CanonicalOperationBundle.create(
           operation: 'passenger_route_request_create',

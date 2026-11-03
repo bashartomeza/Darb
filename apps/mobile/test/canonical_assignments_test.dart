@@ -352,6 +352,45 @@ void main() {
       },
     );
 
+    test(
+      'a saved operation that cannot be read back never leaves it busy',
+      () async {
+        final repository = _FakeAssignmentRepository(
+          detailResponses: [
+            Future.value(_offerEnvelope()),
+            Future.value(_offerEnvelope()),
+          ],
+        );
+        final storage = _MemoryCanonicalStorage();
+        final container = _offerContainer(
+          repository: repository,
+          storage: storage,
+        );
+        addTearDown(container.dispose);
+        await container.read(authControllerProvider.future);
+        final provider = driverCanonicalOfferDetailProvider('offer_1');
+        await container.read(provider.future);
+        // Another account's work arrives in the shared slot meanwhile.
+        storage.bundle = CanonicalOperationBundle.create(
+          operation: 'driver_canonical_offer_accept',
+          scope: 'driver',
+          actorId: 'driver_2',
+          payload: const {
+            'route_version_id': 'version_1',
+            'offer_id': 'offer_1',
+          },
+        );
+
+        await expectLater(
+          container.read(provider.notifier).accept(),
+          throwsA(isA<CanonicalOperationBlocked>()),
+        );
+
+        expect(repository.acceptCalls, 0);
+        expect(container.read(provider).value?.mutating, isFalse);
+      },
+    );
+
     test('fresh terminal offer replaces cached actionable detail', () async {
       final repository = _FakeAssignmentRepository(
         detailResponses: [

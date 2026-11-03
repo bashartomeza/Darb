@@ -7,6 +7,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/canonical_route_controller.dart';
 import '../data/canonical_operation_storage.dart';
@@ -95,6 +96,9 @@ class _DriverAvailabilityFormScreenState
   bool _busy = false;
   Object? _error;
 
+  /// A saved, unconfirmed operation is holding the shared slot.
+  bool _savedPending = false;
+
   @override
   void initState() {
     super.initState();
@@ -105,9 +109,15 @@ class _DriverAvailabilityFormScreenState
       try {
         bundle = await ref.read(canonicalOperationStorageProvider).read();
       } catch (error) {
-        if (mounted) setState(() => _error = error);
+        if (mounted) {
+          setState(() {
+            _error = error;
+            _savedPending = true;
+          });
+        }
         return;
       }
+      if (mounted && bundle != null) setState(() => _savedPending = true);
       if (!mounted ||
           bundle?.operation != 'driver_availability_create' ||
           bundle?.scope != 'driver' ||
@@ -251,6 +261,11 @@ class _DriverAvailabilityFormScreenState
                         key: const ValueKey('availabilityError'),
                       ),
                     ],
+                    if (_savedPending)
+                      DiscardSavedRequestButton(
+                        enabled: !_busy,
+                        onDiscard: _discard,
+                      ),
                     const SizedBox(height: AppTokens.spaceLarge),
                     FilledButton(
                       key: const ValueKey('submitCanonicalAvailability'),
@@ -323,6 +338,31 @@ class _DriverAvailabilityFormScreenState
         ref.invalidate(mobileCapabilitiesProvider);
         ref.invalidate(canonicalRouteCatalogProvider);
       }
+      final saved = await savedOperationPresent(
+        ref.read(canonicalOperationStorageProvider),
+      );
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _savedPending = saved;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Drops the saved operation after the driver confirms, so a new
+  /// availability can be sent.
+  Future<void> _discard() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(canonicalMutationRunnerProvider).discard();
+      if (mounted) setState(() => _savedPending = false);
+    } catch (error) {
       if (mounted) setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -570,6 +610,8 @@ String availabilityStatusLabel(
 };
 
 String _safeError(AppLocalizations l10n, Object error) {
+  final saved = savedRequestOutcomeLabel(l10n, error);
+  if (saved != null) return saved;
   if (error is String) return error;
   if (error is CanonicalOperationBlocked ||
       error is CanonicalOperationStorageException) {

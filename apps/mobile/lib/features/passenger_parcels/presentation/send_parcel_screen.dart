@@ -7,6 +7,7 @@ import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/data/token_storage.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
@@ -63,6 +64,9 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
   CanonicalOperationBundle? _completedOperation;
   PassengerParcel? _result;
 
+  /// A saved, unconfirmed create is kept on this device.
+  bool _savedPending = false;
+
   @override
   void initState() {
     super.initState();
@@ -91,9 +95,15 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
           .storage
           .read();
     } catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _savedPending = true;
+        });
+      }
       return;
     }
+    if (mounted && bundle != null) setState(() => _savedPending = true);
     if (!mounted ||
         bundle?.operation != _operation ||
         bundle?.scope != 'passenger' ||
@@ -330,6 +340,8 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
                 ),
         ),
         if (_error != null) Text(_errorLabel(l10n, _error!)),
+        if (_savedPending)
+          DiscardSavedRequestButton(enabled: !_busy, onDiscard: _discard),
         const SizedBox(height: AppTokens.spaceLarge),
         FilledButton(
           key: const ValueKey('submitPassengerParcel'),
@@ -364,6 +376,9 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
       ..._draft.toPayload(preferredTime: _preferredTime),
       'route_version_id': _storageSentinel,
     };
+    // Read up front so the create is settled even if the screen is left
+    // while it is in flight.
+    final runner = ref.read(passengerParcelMutationRunnerProvider);
     try {
       final actorId = ref.read(authControllerProvider).value?.user?.id;
       if (actorId == null) {
@@ -399,7 +414,15 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
                   idempotencyKey: bundle.idempotencyKey,
                 ),
           );
-      if (mounted) setState(() => _result = result);
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _savedPending = false;
+        });
+      }
+      // The parcel is saved: settle it now, so leaving this screen any way
+      // never leaves it to be pre-filled and replayed next time.
+      await _settleCompleted(runner, actorId);
     } catch (error) {
       if (error is ApiException && error.message == 'route_unavailable') {
         // Turned off since the list was read: nothing was created, so a
@@ -422,34 +445,70 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
         ref.invalidate(operatingRoutesProvider);
         if (mounted) setState(() => _draft = _draft.withoutRoute());
       }
+      final saved = await savedOperationPresent(runner.storage);
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _savedPending = saved;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Clears the saved create once its result is in hand. False while it
+  /// could not be cleared; the result button tries again.
+  Future<bool> _settleCompleted(
+    CanonicalMutationRunner runner,
+    String? actorId,
+  ) async {
+    final completed = _completedOperation;
+    if (completed == null) return true;
+    if (actorId == null || completed.actorId != actorId) return false;
+    try {
+      await runner.acknowledge(
+        actorId: actorId,
+        operation: _operation,
+        idempotencyKey: completed.idempotencyKey,
+      );
+      _completedOperation = null;
+      return true;
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+      return false;
+    }
+  }
+
+  Future<void> _acknowledgeResult() async {
+    final actorId = ref.read(authControllerProvider).value?.user?.id;
+    final runner = ref.read(passengerParcelMutationRunnerProvider);
+    if (!await _settleCompleted(runner, actorId)) return;
+    ref.invalidate(passengerParcelsProvider);
+    if (mounted) context.go('/passenger/parcels');
+  }
+
+  /// Drops the saved create after the passenger confirms, so the form can be
+  /// sent as a new parcel.
+  Future<void> _discard() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(passengerParcelMutationRunnerProvider).discard();
+      _completedOperation = null;
+      if (mounted) setState(() => _savedPending = false);
+    } catch (error) {
       if (mounted) setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _acknowledgeResult() async {
-    final actorId = ref.read(authControllerProvider).value?.user?.id;
-    final completed = _completedOperation;
-    if (actorId == null || completed == null || completed.actorId != actorId) {
-      return;
-    }
-    try {
-      await ref
-          .read(passengerParcelMutationRunnerProvider)
-          .acknowledge(
-            actorId: actorId,
-            operation: _operation,
-            idempotencyKey: completed.idempotencyKey,
-          );
-      ref.invalidate(passengerParcelsProvider);
-      if (mounted) context.go('/passenger/parcels');
-    } catch (error) {
-      if (mounted) setState(() => _error = error);
-    }
-  }
-
   String _errorLabel(AppLocalizations l10n, Object error) {
+    final saved = savedRequestOutcomeLabel(l10n, error);
+    if (saved != null) return saved;
     if (error is CanonicalOperationBlocked ||
         error is CanonicalOperationStorageException) {
       return l10n.canonicalRecoveryRequired;

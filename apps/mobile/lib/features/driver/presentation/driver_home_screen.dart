@@ -13,9 +13,11 @@ import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/maps/darb_route_map.dart';
 import '../../../core/widgets/darb_section.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
+import '../../canonical_routes/data/canonical_operation_storage.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../community_reports/application/community_reports_controller.dart';
 import '../../security/presentation/security_actions.dart';
@@ -39,6 +41,9 @@ class DriverHomeScreen extends ConsumerStatefulWidget {
 class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
   bool _busy = false;
   String? _error;
+
+  /// A saved operation from another flow is holding the online switch.
+  bool _savedBlocking = false;
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +111,11 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                       const SizedBox(height: AppTokens.spaceMedium),
                       OfflineBanner(message: _error!, tone: BannerTone.error),
                     ],
+                    if (_savedBlocking)
+                      DiscardSavedRequestButton(
+                        enabled: !_busy,
+                        onDiscard: _discardSaved,
+                      ),
 
                     const SizedBox(height: AppTokens.spaceMedium),
                     const SessionStatusBanner(),
@@ -247,6 +257,7 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _savedBlocking = false;
     });
     try {
       final online = ref.read(legacyDriverOnlineControllerProvider);
@@ -264,8 +275,36 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
         await online.setOnline(value, serviceRouteId: chosen);
       }
     } catch (error) {
-      if (mounted) setState(() => _error = driverErrorLabel(l10n, error));
+      if (mounted) {
+        setState(() {
+          _error = driverErrorLabel(l10n, error);
+          _savedBlocking =
+              error is CanonicalOperationBlocked ||
+              error is CanonicalOperationStorageException;
+        });
+      }
       await ref.read(driverDashboardProvider.notifier).refresh();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Drops the saved operation holding the switch, once the driver confirms.
+  Future<void> _discardSaved() async {
+    final l10n = AppLocalizations.of(context);
+    setState(() => _busy = true);
+    try {
+      await ref.read(canonicalMutationRunnerProvider).discard();
+      if (mounted) {
+        setState(() {
+          _savedBlocking = false;
+          _error = null;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = driverErrorLabel(l10n, error));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

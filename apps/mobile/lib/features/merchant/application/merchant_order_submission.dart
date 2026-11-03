@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/api/saved_request_outcome.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import '../data/merchant_models.dart';
 import '../data/merchant_order_operation_storage.dart';
@@ -113,25 +114,57 @@ class MerchantOrderSubmission {
     try {
       return await _send(pending, actor);
     } on ApiException catch (error) {
-      // Only a definitive rejection of this first send proves it never committed.
-      // Reconciliation failures, malformed success, transport loss and 5xx retain identity.
-      // A route turned off before the first send is such a rejection too.
-      if ((const {400, 422}.contains(error.statusCode) &&
-              error.message != 'invalid_response') ||
-          (error.statusCode == 409 && error.message == 'route_unavailable')) {
+      // Only a definitive rejection of this first send proves it never committed
+      // (a route turned off before the first send is one too). Malformed
+      // success, transport loss, 429 and 5xx retain identity.
+      if (isDefiniteRejection(error)) {
         _require(actor);
         await storage.clear(pending, guard: () => _require(actor));
       }
       rethrow;
     }
   });
+
+  /// Drops this merchant's saved order, readable or not, so they can start
+  /// again. The screen asks first: if the earlier send did arrive, a new
+  /// order is a duplicate.
+  Future<void> discard() async {
+    if (_busy) {
+      throw const MerchantOrderRecoveryException('merchant_order_in_progress');
+    }
+    _busy = true;
+    try {
+      final id = binding.actorId;
+      if (id == null) {
+        throw const MerchantOrderRecoveryException(
+          'merchant_order_auth_changed',
+        );
+      }
+      final actor = _OrderActor(id, binding.revision);
+      await storage.discard(id);
+      _require(actor);
+      _cleanupBlockedActors.remove(id);
+    } finally {
+      _busy = false;
+    }
+  }
+
   Future<MerchantOrder> _resume(
     MerchantPendingOrder pending,
     _OrderActor actor,
   ) async {
     final saved = await _lookup(pending, actor);
     if (saved != null) return saved;
-    return _send(pending, actor);
+    try {
+      return await _send(pending, actor);
+    } on ApiException catch (error) {
+      if (!isDefiniteRejection(error)) rethrow;
+      // The server refused the resend for good: keeping the order would lock
+      // the form forever. Lost responses, 429 and 5xx keep it for retry.
+      _require(actor);
+      await storage.clear(pending, guard: () => _require(actor));
+      throw SavedRequestRejected(error);
+    }
   }
 
   Future<MerchantOrder?> _lookup(
@@ -150,13 +183,23 @@ class MerchantOrderSubmission {
           error.message != 'merchant_order_operation_not_found') {
         rethrow;
       }
-      if (pending.expired(_now())) {
-        throw const MerchantOrderRecoveryException(
-          'merchant_order_recovery_expired',
-        );
-      }
+      if (pending.expired(_now())) await _expire(pending, actor);
       return null;
     }
+  }
+
+  /// A saved order the server does not know, past its retry window, is
+  /// removed so the form opens again. One dated in the future (a clock that
+  /// moved backwards) is kept until it can be judged.
+  Future<Never> _expire(MerchantPendingOrder pending, _OrderActor actor) async {
+    if (!pending.windowPassed(_now())) {
+      throw const MerchantOrderRecoveryException(
+        'merchant_order_recovery_expired',
+      );
+    }
+    _require(actor);
+    await storage.clear(pending, guard: () => _require(actor));
+    throw const SavedRequestExpired();
   }
 
   Future<MerchantOrder> _send(

@@ -1259,6 +1259,27 @@ class AppLocalizationsAr extends AppLocalizations {
       'توجد عملية سابقة غير محسومة. سجّل الدخول بالحساب الأصلي وأعد العملية نفسها، أو تواصل مع الدعم إذا انتهت مهلة الاسترداد.';
 
   @override
+  String get savedRequestRejected =>
+      'لم يقبل درب الطلب المحفوظ عند إعادة إرساله، لذلك أُزيل. راجع قائمتك، ثم ابدأ من جديد إن كنت ما زلت بحاجة إليه.';
+
+  @override
+  String get savedRequestExpired =>
+      'تعذّر تأكيد الطلب المحفوظ في الوقت المحدد، لذلك أُزيل. راجع قائمتك، ثم ابدأ من جديد إن كنت ما زلت بحاجة إليه.';
+
+  @override
+  String get discardSavedRequest => 'تجاهل والبدء من جديد';
+
+  @override
+  String get discardSavedRequestTitle => 'تجاهل الطلب المحفوظ؟';
+
+  @override
+  String get discardSavedRequestBody =>
+      'لم يتمكن درب من تأكيد وصول إرسالك السابق. إن كان قد وصل، فقد يؤدي البدء من جديد إلى طلب مكرر. راجع قائمتك أولاً إن لم تكن متأكداً.';
+
+  @override
+  String get discardSavedRequestConfirm => 'تجاهل';
+
+  @override
   String get transactionRetryRequired =>
       'حدث تعارض مؤقت في المعاملة. أعد محاولة هذه العملية.';
 

@@ -93,6 +93,9 @@ class LegacyDriverRouteMutation {
     );
   }
 
+  /// Drops the saved create, readable or not, so the person can start again.
+  Future<void> discard() => _runner.discard();
+
   Future<void> acknowledge(
     CanonicalMutationReceipt<DriverRoute> receipt,
   ) async {
