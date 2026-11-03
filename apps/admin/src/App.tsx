@@ -281,6 +281,19 @@ export function App({
     return true;
   }
 
+  function signOut() {
+    // Best effort: start revoking the server session first, but never let a slow or
+    // failed request keep this browser signed in.
+    const signedInToken = sessionStore.getItem(ADMIN_TOKEN_KEY) ?? token;
+    if (signedInToken) void api.logout(signedInToken).catch(() => undefined);
+    authAttempt.current += 1;
+    clearAdminSession(sessionStore, legacyStore);
+    sessionExpiry.reset();
+    clearAuthenticatedData();
+    setNotice(null);
+    setToken("");
+  }
+
   async function loadMe(currentToken = token) {
     const result = await runAction("me", () => api.me(currentToken), t("sessionLoaded"));
     if (result) setAdmin(result.user);
@@ -692,7 +705,7 @@ export function App({
                   icon="logout"
                   className="btn--signout"
                   disabled={Boolean(busy)}
-                  onClick={() => { authAttempt.current += 1; clearAdminSession(sessionStore, legacyStore); sessionExpiry.reset(); clearAuthenticatedData(); setNotice(null); setToken(""); }}
+                  onClick={signOut}
                 >
                   {t("logout")}
                 </Button>

@@ -24,7 +24,7 @@ type RouteVersionActionPayload = {
 type RouteRetirementPayload = { reason: string; expected_current_version_id: null };
 
 export function createApiClient(apiBaseUrl: string, clientOptions: ApiClientOptions = {}) {
-  async function apiRequest<T>(path: string, options: { method?: string; token?: string; body?: unknown; idempotencyKey?: string } = {}) {
+  async function apiRequest<T>(path: string, options: { method?: string; token?: string; body?: unknown; idempotencyKey?: string; reportSessionEnd?: boolean } = {}) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (options.token) headers.Authorization = `Bearer ${options.token}`;
     if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
@@ -41,7 +41,7 @@ export function createApiClient(apiBaseUrl: string, clientOptions: ApiClientOpti
       const error = new Error(data?.error ?? `Request failed with ${response.status}`) as ApiError;
       error.status = response.status;
       error.details = data;
-      if (options.token) clientOptions.onSessionEnded?.(error, options.token);
+      if (options.token && options.reportSessionEnd !== false) clientOptions.onSessionEnded?.(error, options.token);
       throw error;
     }
     return data as T;
@@ -103,6 +103,8 @@ return {
   login: (email: string, password: string) => apiRequest<LoginResponse>("/auth/admin/login", { method: "POST", body: { email, password } }),
   googleLogin: (id_token: string) => apiRequest<LoginResponse>("/auth/admin/google", { method: "POST", body: { id_token } }),
   authCapabilities: () => apiRequest<{ google_admin_login_available: boolean; google_admin_client_id: string | null }>("/auth/capabilities"),
+  // Revokes the server session on sign-out. A failure here must not look like a session expiry.
+  logout: (token: string) => apiRequest<{ ok: boolean }>("/auth/logout", { method: "POST", token, reportSessionEnd: false }),
   me: (token: string) => apiRequest<MeResponse>("/me", { token }),
   capabilities: (token: string) => apiRequest<CapabilitiesResponse>("/capabilities", { token }),
   dashboard: (token: string) => apiRequest<DashboardResponse>("/admin/dashboard", { token }),

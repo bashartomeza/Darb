@@ -14,6 +14,15 @@ describe("Admin driver verification API client", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://api.test/api/v1/auth/admin/google", expect.objectContaining({ body: JSON.stringify({ id_token: "credential" }) }));
   });
 
+  it("revokes the server session on logout without reporting a session expiry", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({ error: "access_token_expired" }, 401));
+    vi.stubGlobal("fetch", fetchMock);
+    const onSessionEnded = vi.fn();
+    await expect(createApiClient("http://api.test", { onSessionEnded }).logout("admin-token")).rejects.toThrow("access_token_expired");
+    expect(fetchMock).toHaveBeenCalledWith("http://api.test/api/v1/auth/logout", expect.objectContaining({ method: "POST", headers: expect.objectContaining({ Authorization: "Bearer admin-token" }) }));
+    expect(onSessionEnded).not.toHaveBeenCalled();
+  });
+
   it("uses the Admin email boundary with no phone payload", async () => {
     const fetchMock = vi.fn().mockResolvedValue(response({ token: "admin-token" }));
     vi.stubGlobal("fetch", fetchMock);
