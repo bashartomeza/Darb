@@ -8,6 +8,8 @@ import 'masari_back_button.dart';
 import 'passenger_bottom_nav.dart';
 import '../theme/app_theme.dart';
 import '../theme/passenger_theme.dart';
+import '../theme/merchant_theme.dart';
+import 'merchant_bottom_nav.dart';
 
 /// A bottom-nav destination. The branch it selects is its index in the list, so
 /// the order here must match the order of the shell's branches.
@@ -31,6 +33,7 @@ class RoleShellScaffold extends StatelessWidget {
     required this.navigationShell,
     required this.destinations,
     this.passengerItems,
+    this.merchant = false,
     super.key,
   });
 
@@ -42,6 +45,7 @@ class RoleShellScaffold extends StatelessWidget {
   /// other roles. Branches missing from this list (the notifications inbox)
   /// stay reachable from within the screens — Home's bell opens it.
   final List<PassengerNavItem>? passengerItems;
+  final bool merchant;
 
   void _onSelected(int index) {
     // `initialLocation: true` only when re-tapping the active tab: that pops
@@ -58,6 +62,7 @@ class RoleShellScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final passenger = passengerItems;
     if (passenger != null) return _passengerShell(context, passenger);
+    if (merchant) return _merchantShell(context);
     final arabic = Localizations.localeOf(context).languageCode == 'ar';
     final wide = MediaQuery.sizeOf(context).width >= 1024;
     final path = GoRouterState.of(context).uri.path;
@@ -127,6 +132,34 @@ class RoleShellScaffold extends StatelessWidget {
                   ],
                 )
               : panel,
+        ),
+      ),
+    );
+  }
+
+  Widget _merchantShell(BuildContext context) {
+    final path = GoRouterState.of(context).uri.path;
+    return MerchantTheme(
+      child: Scaffold(
+        backgroundColor: MerchantStyle.background,
+        appBar: path == '/merchant/reports'
+            ? AppBar(title: Text(AppLocalizations.of(context).navReports))
+            : null,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: navigationShell,
+          ),
+        ),
+        bottomNavigationBar: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: MerchantBottomNav(
+              currentBranch: navigationShell.currentIndex,
+              onSelected: _onSelected,
+            ),
+          ),
         ),
       ),
     );

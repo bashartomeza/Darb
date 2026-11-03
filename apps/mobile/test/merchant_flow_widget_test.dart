@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +21,110 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'test_app_config.dart';
 
 void main() {
+  testWidgets(
+    'merchant screens fit narrow phones and keep order filters usable',
+    (tester) async {
+      const pathProvider = MethodChannel('plugins.flutter.io/path_provider');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        pathProvider,
+        (_) async => Directory('build/merchant-design/cache').absolute.path,
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          pathProvider,
+          null,
+        ),
+      );
+      final shadowsWereDisabled = debugDisableShadows;
+      debugDisableShadows = false;
+      addTearDown(() => debugDisableShadows = shadowsWereDisabled);
+      if (const bool.fromEnvironment('MERCHANT_SCREENSHOTS')) {
+        final loader = FontLoader('IBMPlexSansArabic');
+        for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
+          loader.addFont(
+            rootBundle.load('assets/fonts/IBMPlexSansArabic-$weight.ttf'),
+          );
+        }
+        await loader.load();
+        final icons = FontLoader('MaterialIcons')
+          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+        await icons.load();
+      }
+      await _pumpMerchant(
+        tester,
+        _MerchantHandler(withTrip: true, designPreview: true),
+      );
+      final router = GoRouter.of(
+        tester.element(find.byKey(const ValueKey('merchantHome'))),
+      );
+      for (final width in [390.0, 320.0]) {
+        tester.view.physicalSize = Size(width, 844);
+        await tester.pumpAndSettle();
+        for (final screen in [
+          ('home', '/merchant'),
+          ('orders', '/merchant/shipments'),
+          ('detail', '/merchant/order/order_1'),
+          ('tracking', '/merchant/trip/trip_1'),
+          ('profile', '/merchant/account'),
+          ('notifications', '/merchant/notifications'),
+        ]) {
+          router.go(screen.$2);
+          await tester.pumpAndSettle();
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '${screen.$1} at $width',
+          );
+          if (width == 390 &&
+              const bool.fromEnvironment('MERCHANT_SCREENSHOTS')) {
+            final boundary = tester.renderObject<RenderRepaintBoundary>(
+              find.byKey(const ValueKey('merchantCapture')),
+            );
+            await tester.runAsync(() async {
+              final image = await boundary.toImage(pixelRatio: 2);
+              final bytes = await image.toByteData(
+                format: ui.ImageByteFormat.png,
+              );
+              await Directory('build/merchant-design').create(recursive: true);
+              await File(
+                'build/merchant-design/${screen.$1}.png',
+              ).writeAsBytes(bytes!.buffer.asUint8List());
+              image.dispose();
+            });
+          }
+        }
+      }
+      router.go('/merchant/shipments');
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('merchantOrderFilter-completed')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('merchantShipment-order_1')),
+        findsNothing,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('merchantOrderFilter-newOrders')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('merchantShipment-order_1')),
+        findsOneWidget,
+      );
+      router.go('/merchant/account');
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('securitySessionsButton')),
+      );
+      await tester.tap(find.byKey(const ValueKey('securitySessionsButton')));
+      await tester.pumpAndSettle();
+      expect(find.text('الأمان والجلسات'), findsWidgets);
+      debugDisableShadows = shadowsWereDisabled;
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
   testWidgets('merchant dashboard is Arabic RTL and language persists', (
     tester,
   ) async {
@@ -279,7 +387,10 @@ Future<void> _pumpMerchant(
         appConfigProvider.overrideWithValue(demoTestAppConfig),
         httpClientProvider.overrideWithValue(MockClient(handler.call)),
       ],
-      child: const MasariApp(),
+      child: const RepaintBoundary(
+        key: ValueKey('merchantCapture'),
+        child: MasariApp(),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -290,11 +401,13 @@ class _MerchantHandler {
     this.hasOrder = true,
     this.withTrip = false,
     this.initiallyBatched = false,
+    this.designPreview = false,
   }) : batched = initiallyBatched;
 
   bool hasOrder;
   final bool withTrip;
   final bool initiallyBatched;
+  final bool designPreview;
   bool batched;
   bool matched = false;
   String matchStatus = 'proposed';
@@ -320,7 +433,45 @@ class _MerchantHandler {
 
   Future<http.Response> call(http.Request request) async {
     final path = request.url.path;
-    if (path.endsWith('/me')) return http.Response(_meJson, 200);
+    if (path.endsWith('/me')) {
+      return http.Response(
+        designPreview
+            ? _meJson.replaceFirst('Demo Merchant', 'متجر ذكريات')
+            : _meJson,
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    }
+    if (designPreview && path.endsWith('/notifications')) {
+      return http.Response(
+        jsonEncode({
+          'notifications': [
+            for (final (index, type) in [
+              'match_offered',
+              'match_accepted',
+              'trip_status',
+              'trip_status',
+              'driver_approaching',
+            ].indexed)
+              {
+                'id': 'notification_$index',
+                'type': type,
+                'entity_type': type.startsWith('match') ? 'Match' : 'Trip',
+                'entity_id': type.startsWith('match') ? 'match_1' : 'trip_1',
+                'params': {'status': index == 2 ? 'delivered' : 'in_transit'},
+                'created_at': '2026-11-03T08:20:00.000Z',
+              },
+          ],
+          'unread_count': 5,
+        }),
+        200,
+      );
+    }
+    if (designPreview &&
+        path.contains('/notifications/') &&
+        request.method == 'POST') {
+      return http.Response('{}', 200);
+    }
     if (path.endsWith('/merchant/order-operation')) {
       lookupKeys.add(request.headers['idempotency-key']);
       return hasOrder
@@ -342,6 +493,26 @@ class _MerchantHandler {
       return http.Response('{"order":${_createdOrderJson()}}', 201);
     }
     if (path.endsWith('/merchant/orders')) {
+      if (designPreview) {
+        return http.Response(
+          jsonEncode({
+            'orders': [
+              jsonDecode(_orderJson(batched)),
+              for (final (index, status) in [
+                'in_transit',
+                'completed',
+                'completed',
+              ].indexed)
+                {
+                  ...jsonDecode(_orderJson(false)) as Map<String, dynamic>,
+                  'id': 'order_${index + 2}',
+                  'status': status,
+                },
+            ],
+          }),
+          200,
+        );
+      }
       return http.Response(
         hasOrder ? '{"orders":[${_orderJson(batched)}]}' : '{"orders":[]}',
         200,

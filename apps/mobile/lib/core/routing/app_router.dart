@@ -13,6 +13,9 @@ import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/unsupported_role_screen.dart';
 import '../theme/passenger_theme.dart';
+import '../theme/merchant_theme.dart';
+import '../../features/merchant/presentation/merchant_profile_screen.dart';
+import '../../features/merchant/presentation/merchant_notifications_screen.dart';
 import '../../features/assistant/presentation/passenger_assistant_screen.dart';
 import '../../features/canonical_routes/presentation/driver_availability_screens.dart';
 import '../../features/canonical_routes/presentation/merchant_route_order_screen.dart';
@@ -215,7 +218,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/merchant/order/new',
-        builder: (context, state) => const CreateMerchantOrderScreen(),
+        builder: (context, state) =>
+            const MerchantTheme(child: CreateMerchantOrderScreen()),
       ),
       GoRoute(
         path: '/merchant/order/bulk',
@@ -227,8 +231,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/merchant/trip/:id',
-        builder: (context, state) =>
-            MerchantTripScreen(tripId: state.pathParameters['id']!),
+        builder: (context, state) => MerchantTheme(
+          child: MerchantTripScreen(tripId: state.pathParameters['id']!),
+        ),
       ),
 
       // ---------------------------------------------------------------------
@@ -454,6 +459,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           destinations: RoleNavDestinations.merchant(
             AppLocalizations.of(context),
           ),
+          merchant: true,
         ),
         branches: [
           StatefulShellBranch(
@@ -526,7 +532,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/merchant/notifications',
-                builder: (context, state) => const NotificationsScreen(),
+                builder: (context, state) =>
+                    const MerchantNotificationsScreen(),
               ),
             ],
           ),
@@ -535,7 +542,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: merchantAccountPath,
-                builder: (context, state) => const SessionManagementScreen(),
+                builder: (context, state) => const MerchantProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'sessions',
+                    builder: (context, state) =>
+                        const SessionManagementScreen(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -607,6 +621,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // unsupported roles fall through to the role guard below, which is what
       // keeps session management off-limits to them.
       if (path == securitySessionsPath) {
+        if (role == UserRole.merchant) return '$merchantAccountPath/sessions';
         final account = accountRouteForRole(role);
         if (account != null) return account;
       }

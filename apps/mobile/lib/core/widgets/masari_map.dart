@@ -91,6 +91,7 @@ class MasariMap extends StatefulWidget {
     this.height = 420,
     this.overlay,
     this.banner,
+    this.bannerElevation = 3,
     this.interactive = true,
     this.onTap,
     this.controlsTop,
@@ -120,6 +121,7 @@ class MasariMap extends StatefulWidget {
 
   /// Optional status banner shown near the top.
   final Widget? banner;
+  final double bannerElevation;
 
   final bool interactive;
 
@@ -456,7 +458,11 @@ class _MasariMapState extends State<MasariMap> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (widget.banner != null) _FloatingBanner(child: widget.banner!),
+              if (widget.banner != null)
+                _FloatingBanner(
+                  elevation: widget.bannerElevation,
+                  child: widget.banner!,
+                ),
 
               if (!hasPoints && widget.banner == null)
                 _EmptyMapMessage(label: widget.emptyLabel),
@@ -795,15 +801,16 @@ class _EmptyMapMessage extends StatelessWidget {
 // ============================================================================
 
 class _FloatingBanner extends StatelessWidget {
-  const _FloatingBanner({required this.child});
+  const _FloatingBanner({required this.child, required this.elevation});
 
   final Widget child;
+  final double elevation;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      elevation: 3,
+      elevation: elevation,
       borderRadius: BorderRadius.circular(14),
       child: ClipRRect(borderRadius: BorderRadius.circular(14), child: child),
     );

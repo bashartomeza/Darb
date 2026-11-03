@@ -232,11 +232,23 @@ void main() {
     testWidgets('bottom navigation survives every tab', (tester) async {
       await _pumpApp(tester, handler: _merchantHandler);
 
-      for (final index in [1, 2, 3, 4, 0, 1]) {
+      for (final index in [1, 2, 4, 0, 1]) {
         await _tapTab(tester, index);
         expect(find.byType(RoleShellScaffold), findsOneWidget);
         expect(_bar(tester).currentIndex, index);
       }
+      expect(find.byKey(const ValueKey('roleNavigation-3')), findsNothing);
+    });
+
+    testWidgets('the merchant bell opens notifications with the bar intact', (
+      tester,
+    ) async {
+      await _pumpApp(tester, handler: _merchantHandler);
+      await tester.tap(find.byKey(const ValueKey('merchantNotifications')));
+      await tester.pumpAndSettle();
+      expect(_bar(tester).currentIndex, 3);
+      expect(find.byType(RoleShellScaffold), findsOneWidget);
+      expect(find.byKey(const ValueKey('notificationsTab')), findsOneWidget);
     });
 
     testWidgets('the shipments tab lists the merchant orders', (tester) async {

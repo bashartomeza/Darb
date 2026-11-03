@@ -6,15 +6,15 @@ import 'package:masari_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/language_switch.dart';
-import '../../../core/widgets/masari_section.dart';
-import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
-import '../../../core/widgets/status_chip.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
 import 'merchant_ui.dart';
+import '../../../core/theme/merchant_theme.dart';
+import '../../../core/presentation/localized_labels.dart';
+import '../../auth/application/auth_controller.dart';
+import 'widgets/merchant_design.dart';
 
 class MerchantOrderDetailScreen extends ConsumerStatefulWidget {
   const MerchantOrderDetailScreen({required this.orderId, super.key});
@@ -34,39 +34,37 @@ class _MerchantOrderDetailScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final detail = ref.watch(merchantOrderProvider(widget.orderId));
+    Future<void> refresh() async {
+      await ref.read(merchantOrderProvider(widget.orderId).notifier).refresh();
+    }
 
     return ForegroundRefresh(
-      refresh: () async {
-        await ref
-            .read(merchantOrderProvider(widget.orderId).notifier)
-            .refresh();
-      },
+      refresh: refresh,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.orderDetails),
-          actions: const [
-            LanguageSwitch(),
-            SizedBox(width: AppTokens.spaceSmall),
-          ],
-        ),
         body: SafeArea(
-          top: false,
           bottom: false,
-          child: RefreshIndicator(
-            onRefresh: () => ref
-                .read(merchantOrderProvider(widget.orderId).notifier)
-                .refresh(),
-            child: detail.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, _) => ErrorStateView(
-                title: merchantErrorLabel(l10n, error),
-                retryLabel: l10n.retry,
-                onRetry: () => ref
-                    .read(merchantOrderProvider(widget.orderId).notifier)
-                    .refresh(),
+          child: Column(
+            children: [
+              MerchantHeader(
+                title: l10n.orderDetails,
+                fallback: '/merchant/shipments',
               ),
-              data: (state) => _content(l10n, state),
-            ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: refresh,
+                  child: detail.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, _) => ErrorStateView(
+                      title: merchantErrorLabel(l10n, error),
+                      retryLabel: l10n.retry,
+                      onRetry: refresh,
+                    ),
+                    data: (state) => _content(l10n, state),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -75,118 +73,109 @@ class _MerchantOrderDetailScreenState
 
   Widget _content(AppLocalizations l10n, MerchantOrderViewState state) {
     final order = state.order;
-
+    final user = ref.watch(authControllerProvider).value?.user;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppTokens.marginMobile,
-        AppTokens.spaceMedium,
-        AppTokens.marginMobile,
-        AppTokens.spaceExtraLarge,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
       children: [
-        // ------------------------------------------------------------------
-        // Summary: what this order is and where it stands.
-        // ------------------------------------------------------------------
-        MasariInfoCard(
-          title: l10n.orderDetails,
-          icon: Icons.inventory_2_outlined,
-          statusLabel: merchantStatusLabel(l10n, order.status),
-          statusTone: statusToneFor(order.status),
-          statusKey: const ValueKey('merchantOrderStatus'),
-          primaryAction: order.canCancel
-              ? CardAction(
-                  key: const ValueKey('cancelMerchantOrderButton'),
-                  label: l10n.cancelRequest,
-                  onPressed: _busy ? null : _cancelOrder,
-                )
-              : null,
-          body: Column(
+        MerchantCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DetailRow(
-                label: l10n.pickup,
-                value: l10n.lockedCorridor,
-                icon: Icons.place_outlined,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      merchantReference(order.id),
+                      key: const ValueKey('merchantOrderId'),
+                      style: MerchantStyle.text(
+                        size: 20,
+                        weight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  MerchantStatusPill(
+                    key: const ValueKey('merchantOrderStatus'),
+                    status: order.status,
+                  ),
+                ],
               ),
-              DetailRow(
-                label: l10n.parcelCount,
-                value: '${order.parcels.length}',
-                icon: Icons.widgets_outlined,
-              ),
-              DetailRow(
-                label: l10n.createdTime,
-                value: _formatDate(context, order.createdAt),
-                icon: Icons.schedule_outlined,
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.inventory_2_outlined,
+                    color: MerchantStyle.orange,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    '${order.parcels.length} ${l10n.parcel}',
+                    style: MerchantStyle.text(size: 13),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: AppTokens.spaceLarge),
-
-        // ------------------------------------------------------------------
-        // Receiver hand-over code: what the receiver tells the driver at delivery.
-        // ------------------------------------------------------------------
+        const SizedBox(height: 14),
+        MerchantInfoTile(
+          icon: Icons.storefront_outlined,
+          title: merchantText(context, 'المنتجات', 'Shipment'),
+          value:
+              '${user?.name ?? l10n.merchant} · ${l10n.parcelCount}: ${order.parcels.length}',
+        ),
+        const SizedBox(height: 12),
+        MerchantInfoTile(
+          icon: Icons.person_outline_rounded,
+          title: merchantText(context, 'التسليم', 'Delivery'),
+          value: merchantOrderDestination(context, order),
+        ),
+        const SizedBox(height: 12),
+        MerchantInfoTile(
+          icon: Icons.location_on_outlined,
+          title: l10n.pickup,
+          value: localizedCorridorPlace(context, order.pickupLabel),
+        ),
+        const SizedBox(height: 12),
+        MerchantInfoTile(
+          icon: Icons.access_time_rounded,
+          title: l10n.createdTime,
+          value:
+              '${_formatDate(context, order.createdAt)} · ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(order.createdAt))}',
+        ),
+        const SizedBox(height: 16),
+        _BatchCard(order: order, busy: _busy, onCreateBatch: _createBatch),
+        const SizedBox(height: 12),
+        _MatchCard(state: state, busy: _busy, onRunMatch: _runMatch),
+        if (_error != null) ...[
+          const SizedBox(height: 12),
+          OfflineBanner(message: _error!, tone: BannerTone.error),
+        ],
         if (order.status != 'cancelled' &&
             order.status != 'failed' &&
             order.status != 'expired') ...[
+          const SizedBox(height: 20),
           HandoverCodeCard(orderId: order.id, initial: order.handover),
-          const SizedBox(height: AppTokens.spaceLarge),
         ],
-
-        // ------------------------------------------------------------------
-        // Batch: consolidating parcels into one corridor trip.
-        // ------------------------------------------------------------------
-        MasariSection(
-          title: l10n.parcelBatch,
-          child: _BatchCard(
-            order: order,
-            busy: _busy,
-            onCreateBatch: _createBatch,
-          ),
+        const SizedBox(height: 20),
+        Text(
+          '${l10n.parcel} (${order.parcels.length})',
+          style: MerchantStyle.text(size: 16, weight: FontWeight.w700),
         ),
-        const SizedBox(height: AppTokens.spaceLarge),
-
-        // ------------------------------------------------------------------
-        // Matching: finding a driver route for the batch.
-        // ------------------------------------------------------------------
-        MasariSection(
-          title: l10n.matchResult,
-          child: _MatchCard(state: state, busy: _busy, onRunMatch: _runMatch),
-        ),
-
-        if (_error != null) ...[
-          const SizedBox(height: AppTokens.spaceMedium),
-          OfflineBanner(message: _error!, tone: BannerTone.error),
+        const SizedBox(height: 12),
+        for (final (index, parcel) in order.parcels.indexed) ...[
+          _ParcelRow(index: index, parcel: parcel),
+          const SizedBox(height: 10),
         ],
-
-        // ------------------------------------------------------------------
-        // Parcels: the line items. Last, because they are reference detail
-        // rather than something the merchant acts on here.
-        // ------------------------------------------------------------------
-        const SizedBox(height: AppTokens.spaceLarge),
-        MasariSection(
-          title: '${l10n.parcel} (${order.parcels.length})',
-          child: Column(
-            children: [
-              for (final (index, parcel) in order.parcels.indexed) ...[
-                _ParcelRow(index: index, parcel: parcel),
-                if (index < order.parcels.length - 1)
-                  const SizedBox(height: AppTokens.spaceSmall),
-              ],
-            ],
+        if (order.canCancel) ...[
+          const SizedBox(height: 12),
+          TextButton(
+            key: const ValueKey('cancelMerchantOrderButton'),
+            onPressed: _busy ? null : _cancelOrder,
+            child: Text(l10n.cancelRequest),
           ),
-        ),
-
-        const SizedBox(height: AppTokens.spaceLarge),
-        DefaultTextStyle.merge(
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(color: AppTheme.onSurfaceVariant),
-          textAlign: TextAlign.center,
-          child: merchantTechnicalText(
-            order.id,
-            key: const ValueKey('merchantOrderId'),
-          ),
-        ),
+        ],
       ],
     );
   }
@@ -233,14 +222,12 @@ class _MerchantOrderDetailScreenState
   }
 }
 
-/// The order's parcel batch, or the action that creates one.
 class _BatchCard extends StatelessWidget {
   const _BatchCard({
     required this.order,
     required this.busy,
     required this.onCreateBatch,
   });
-
   final MerchantOrder order;
   final bool busy;
   final VoidCallback onCreateBatch;
@@ -249,53 +236,29 @@ class _BatchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final batch = order.latestBatch;
-
     if (batch == null) {
-      return MasariInfoCard(
-        title: l10n.createBatch,
-        subtitle: l10n.parcelBatchExplanationDemo(order.parcels.length),
-        icon: Icons.layers_outlined,
-        emphasis: order.canBatch,
-        primaryAction: CardAction(
-          key: const ValueKey('createBatchButton'),
-          label: l10n.createBatch,
-          onPressed: busy || !order.canBatch ? null : onCreateBatch,
-        ),
+      if (!order.canBatch) return const SizedBox.shrink();
+      return FilledButton(
+        key: const ValueKey('createBatchButton'),
+        onPressed: busy ? null : onCreateBatch,
+        child: Text(l10n.createBatch),
       );
     }
-
-    return MasariInfoCard(
-      title: l10n.parcelBatch,
+    return MerchantInfoTile(
       icon: Icons.layers_outlined,
-      statusLabel: merchantStatusLabel(l10n, batch.status),
-      statusTone: statusToneFor(batch.status),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          DetailRow(
-            label: l10n.estimatedDistanceSaved,
-            value: '${batch.estimatedDistanceSaved.toStringAsFixed(2)} km',
-            icon: Icons.eco_outlined,
-          ),
-          const SizedBox(height: AppTokens.spaceSmall),
-          ExplanationNote(
-            message: l10n.parcelBatchExplanationDemo(order.parcels.length),
-            icon: Icons.layers_outlined,
-          ),
-        ],
-      ),
+      title: l10n.parcelBatch,
+      value:
+          '${l10n.estimatedDistanceSaved}: ${batch.estimatedDistanceSaved.toStringAsFixed(2)} km',
     );
   }
 }
 
-/// Matching state for the order: run it, or show where the result stands.
 class _MatchCard extends StatelessWidget {
   const _MatchCard({
     required this.state,
     required this.busy,
     required this.onRunMatch,
   });
-
   final MerchantOrderViewState state;
   final bool busy;
   final VoidCallback onRunMatch;
@@ -303,42 +266,36 @@ class _MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final match = state.latestMatch;
-
-    if (match == null || state.canRunMatch) {
-      return MasariInfoCard(
-        title: l10n.runMatching,
-        subtitle: state.canRunMatch ? null : l10n.matchingUnavailable,
-        icon: Icons.travel_explore_outlined,
-        emphasis: state.canRunMatch,
-        primaryAction: state.canRunMatch
-            ? CardAction(
-                key: const ValueKey('runMerchantMatchButton'),
-                label: l10n.runMatching,
-                onPressed: busy ? null : onRunMatch,
-              )
-            : null,
+    if (state.canRunMatch) {
+      return FilledButton(
+        key: const ValueKey('runMerchantMatchButton'),
+        onPressed: busy ? null : onRunMatch,
+        child: Text(l10n.runMatching),
       );
     }
-
-    return MasariInfoCard(
-      title: l10n.matchResult,
-      icon: Icons.travel_explore_outlined,
-      statusLabel: merchantStatusLabel(l10n, match.status),
-      statusTone: statusToneFor(match.status),
-      primaryAction: CardAction(
-        key: const ValueKey('openOrderMatch'),
-        label: l10n.viewDetails,
-        onPressed: () => context.go('/merchant/match/${match.id}'),
-      ),
-      secondaryAction: state.trip != null
-          ? CardAction(
-              key: const ValueKey('openOrderTrip'),
-              label: l10n.openTrip,
-              filled: false,
-              onPressed: () => context.go('/merchant/trip/${state.trip!.id}'),
-            )
-          : null,
+    final match = state.latestMatch;
+    return Column(
+      children: [
+        if (state.trip != null)
+          FilledButton.icon(
+            key: const ValueKey('openOrderTrip'),
+            onPressed: () => context.push('/merchant/trip/${state.trip!.id}'),
+            icon: const Icon(Icons.local_shipping_outlined, size: 20),
+            label: Text(
+              merchantText(context, 'متابعة التوصيل', 'Track delivery'),
+            ),
+          ),
+        if (match != null) ...[
+          if (state.trip != null) const SizedBox(height: 12),
+          MerchantMenuRow(
+            key: const ValueKey('openOrderMatch'),
+            icon: Icons.route_outlined,
+            label:
+                '${l10n.matchResult} · ${merchantStatusLabel(l10n, match.status)}',
+            onTap: () => context.push('/merchant/match/${match.id}'),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -361,9 +318,9 @@ class _ParcelRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppTokens.gutterMobile),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
+        color: MerchantStyle.card,
         borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
-        border: Border.all(color: AppTheme.outlineVariant),
+        border: Border.all(color: MerchantStyle.border),
       ),
       child: Row(
         children: [
@@ -406,10 +363,7 @@ class _ParcelRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppTokens.spaceSmall),
-          StatusChip(
-            label: merchantStatusLabel(l10n, parcel.status),
-            tone: statusToneFor(parcel.status),
-          ),
+          MerchantStatusPill(status: parcel.status),
         ],
       ),
     );
