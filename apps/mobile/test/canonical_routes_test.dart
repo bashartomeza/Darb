@@ -27,21 +27,25 @@ void main() {
       expect(value.liveTrackingAvailable, isFalse);
     });
 
-    test('rejects unknown capability fields and non-boolean values', () {
-      expect(
-        () => MobileCapabilities.fromJson({
-          'canonical_route_catalog_available': true,
-          'canonical_multi_route_entry_available': true,
-          'canonical_matching_available': false,
-          'canonical_trip_creation_available': false,
-          'driver_canonical_offers_available': false,
-          'canonical_assignment_status_available': true,
-          'maps_available': false,
-          'live_tracking_available': false,
-          'environment': 'local',
-        }),
-        throwsFormatException,
-      );
+    test('ignores capability fields this build does not know', () {
+      final value = MobileCapabilities.fromJson({
+        'canonical_route_catalog_available': true,
+        'canonical_multi_route_entry_available': true,
+        'canonical_matching_available': false,
+        'canonical_trip_creation_available': false,
+        'driver_canonical_offers_available': false,
+        'canonical_assignment_status_available': true,
+        'maps_available': false,
+        'checkpoints_available': true,
+        'live_tracking_available': false,
+        'demo_reset_available': false,
+        'some_future_capability': {'nested': true},
+      });
+      expect(value.routeCatalogAvailable, isTrue);
+      expect(value.checkpointsAvailable, isTrue);
+    });
+
+    test('rejects non-boolean capability values', () {
       expect(
         () => MobileCapabilities.fromJson({
           'canonical_route_catalog_available': 'true',
@@ -94,6 +98,17 @@ void main() {
         );
       },
     );
+
+    test('ignores route catalog fields this build does not know', () {
+      final json = routeJson()..['route_key'] = 'hebron_bethlehem';
+      final version = json['current_version'] as Map<String, dynamic>;
+      version['description_en'] = 'Added later';
+      final stops = version['stops'] as List<Map<String, dynamic>>;
+      stops[0]['estimated_offset_seconds'] = 0;
+      (stops[0]['stop'] as Map<String, dynamic>)['stop_key'] = 'one';
+      final parsed = CanonicalRoute.fromJson(json);
+      expect(parsed.stops, hasLength(stops.length));
+    });
 
     test('parses every approved route direction and rejects another enum', () {
       for (final direction in ['outbound', 'inbound', 'loop']) {

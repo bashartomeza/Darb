@@ -440,6 +440,35 @@ describe("M7C3A canonical matching APIs", () => {
     });
   });
 
+  it("loads the canonical Trip version the app needs to read an accepted offer", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const findFirst = vi.fn().mockResolvedValue(offer);
+    const service = createCanonicalMatchingService(
+      { match: { findMany, findFirst } } as never,
+      enabled
+    );
+    await service.listDriverOffers("driver_1");
+    await service.getDriverOffer("driver_1", "offer_1");
+    expect(findMany.mock.calls[0]?.[0].include.canonical_trip.select.canonical_trip_version).toBe(true);
+    expect(findFirst.mock.calls[0]?.[0].include.canonical_trip.select.canonical_trip_version).toBe(true);
+
+    const accepted = canonicalMatchingSerializers.offerResponse({
+      ...offer,
+      status: "accepted",
+      canonical_trip: {
+        id: "trip_1",
+        status: "accepted",
+        canonical_trip_version: "canonical_route_trip_v1",
+        route_version_id: "version_1",
+        created_at: new Date(),
+        driver_route: { departure_at: new Date(), driver: { vehicle_type: "sedan" } }
+      }
+    });
+    expect(accepted.trip).toEqual(
+      expect.objectContaining({ trip_version: "canonical_route_trip_v1", shared_trip: false })
+    );
+  });
+
   it("scores deterministically and applies documented component weights", () => {
     const input = {
       departureAt: new Date("2026-07-26T10:30:00.000Z"),

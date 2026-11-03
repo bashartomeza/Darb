@@ -140,6 +140,24 @@ void main() {
       );
     });
 
+    test('an accepted offer reads the Trip version the server sends', () {
+      final accepted = CanonicalDriverOffer.fromJson(
+        offerJson(status: 'accepted'),
+      );
+      expect(accepted.trip?.version, CanonicalTripVersion.single);
+
+      // The server once left trip_version out of accepted offers, which made
+      // the whole offer list unreadable; the field stays required.
+      final missing = offerJson(status: 'accepted');
+      (missing['trip'] as Map<String, dynamic>)
+        ..remove('trip_version')
+        ..remove('shared_trip');
+      expect(
+        () => CanonicalDriverOffer.fromJson(missing),
+        throwsFormatException,
+      );
+    });
+
     test('single offers require the exact single-demand version', () {
       final shared = offerJson()
         ..['offer_version'] = 'canonical_shared_trip_match_v1';

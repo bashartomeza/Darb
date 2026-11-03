@@ -19,6 +19,7 @@ type Role = "passenger" | "driver" | "merchant" | "admin";
 const users: Record<string, { id: string; role: Role }> = {
   admin_1: { id: "admin_1", role: "admin" },
   driver_1: { id: "driver_1", role: "driver" },
+  merchant_1: { id: "merchant_1", role: "merchant" },
   passenger_1: { id: "passenger_1", role: "passenger" }
 };
 
@@ -211,8 +212,7 @@ describe("M7B route management APIs", () => {
       canonical_shared_assignment_status_available: false,
       maps_available: false,
       checkpoints_available: false,
-      live_tracking_available: false,
-      demo_reset_available: false
+      live_tracking_available: false
     });
 
     const disabled = app(serviceMock(), disabledConfig);
@@ -226,6 +226,34 @@ describe("M7B route management APIs", () => {
         canonical_multi_route_entry_available: false
       })
     );
+  });
+
+  it("sends mobile roles only the capability fields the installed app understands", async () => {
+    // Every key MobileCapabilities.fromJson knows. Older installed builds throw
+    // on any other key, which hides canonical entry and gated screens.
+    const mobileKeys = [
+      "canonical_route_catalog_available",
+      "canonical_multi_route_entry_available",
+      "canonical_matching_available",
+      "canonical_trip_creation_available",
+      "driver_canonical_offers_available",
+      "canonical_assignment_status_available",
+      "canonical_shared_trip_presentation_available",
+      "canonical_shared_driver_offers_available",
+      "canonical_shared_assignment_status_available",
+      "maps_available",
+      "checkpoints_available",
+      "live_tracking_available"
+    ].sort();
+    const target = app(serviceMock(), entryEnabledConfig);
+    for (const user of ["passenger_1", "driver_1", "merchant_1"] as const) {
+      const response = await request(target.server).get("/api/v1/capabilities").set(auth(user)).expect(200);
+      expect(Object.keys(response.body).sort()).toEqual(mobileKeys);
+    }
+
+    // The admin console is the only reader of the demo reset gate.
+    const admin = await request(target.server).get("/api/v1/capabilities").set(auth("admin_1")).expect(200);
+    expect(admin.body.demo_reset_available).toBe(false);
   });
 
   it("normalizes route keys and requires idempotency", async () => {

@@ -14,8 +14,10 @@ Reset therefore requires every gate below:
 6. the Serializable reset transaction finds no user with `demo_account=false`.
 
 Missing or malformed configuration disables only reset; it does not prevent the
-API from starting. The authenticated `/api/v1/capabilities` response reports
-`demo_reset_available=false`, without disclosing the database name. The reset
+API from starting. The `/api/v1/capabilities` response for an Admin session
+reports `demo_reset_available=false`, without disclosing the database name.
+Passenger, driver and merchant sessions never receive this field, because
+installed mobile builds reject capability fields they do not know. The reset
 endpoint returns the bounded `demo_reset_database_not_allowed` error before a
 transaction or write. Real-user detection returns
 `demo_reset_real_data_present` before destructive statements.
