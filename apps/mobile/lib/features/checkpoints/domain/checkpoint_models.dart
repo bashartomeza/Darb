@@ -63,6 +63,7 @@ class Checkpoint {
     this.enteringLastChangedText,
     this.leavingLastChangedText,
     this.positionFromOpenStreetMap = false,
+    this.positionApproximate = false,
   });
 
   final String id;
@@ -85,6 +86,10 @@ class Checkpoint {
 
   /// The pin comes from an OpenStreetMap name match, not from the provider.
   final bool positionFromOpenStreetMap;
+
+  /// A researched position the team rates low or unverified: shown, but
+  /// labelled approximate because it may sit at a nearby gate.
+  final bool positionApproximate;
 
   String get displayName => nameAr.trim().isNotEmpty
       ? nameAr.trim()
@@ -133,6 +138,7 @@ class Checkpoint {
       enteringLastChangedText: _text(json['entering_status_last_updated']),
       leavingLastChangedText: _text(json['leaving_status_last_updated']),
       positionFromOpenStreetMap: json['position_source'] == 'openstreetmap',
+      positionApproximate: json['position_approximate'] == true,
     );
   }
 }

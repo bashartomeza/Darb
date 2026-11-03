@@ -1139,6 +1139,7 @@
   "communityStatusClosed": "closed",
   "communityStatusOutdated": "status may be outdated",
   "checkpointPositionOsm": "Position: © OpenStreetMap contributors (ODbL)",
+  "checkpointPositionApproximate": "Approximate position; it may be a nearby gate",
   "checkpointsUnplacedTitle": "Checkpoints without a map position",
   "checkpointsUnplacedBody": "Listed by the provider, but no reliable position is known, so they are not pinned.",
   "communityPickLocation": "Tap the map to set where this is",

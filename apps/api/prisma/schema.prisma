@@ -1963,3 +1963,33 @@ model AppRating {
   @@index([updated_at])
   @@map("app_ratings")
 }
+
+/// Researched map position for a partner checkpoint that the OpenStreetMap extract cannot place
+/// by name. Keyed by the partner's city and name; used before the OpenStreetMap match.
+model CheckpointPosition {
+  id           String                       @id @default(cuid())
+  city_ar      String                       @db.VarChar(100)
+  name_ar      String                       @db.VarChar(191)
+  latitude     Decimal                      @db.Decimal(9, 6)
+  longitude    Decimal                      @db.Decimal(9, 6)
+  confidence   CheckpointPositionConfidence
+  /// Where the position came from ("corrected polygon centroid", "user screenshot").
+  source       String                       @db.VarChar(100)
+  /// The barrier's name in the dataset the position was taken from, if any.
+  dataset_name String?                      @db.VarChar(191)
+  note         String?                      @db.VarChar(500)
+  created_at   DateTime                     @default(now())
+  updated_at   DateTime                     @updatedAt
+
+  @@unique([city_ar, name_ar])
+  @@map("checkpoint_positions")
+}
+
+/// high / medium: matched to a mapped barrier. low: nearest barrier, may be another gate.
+/// unverified: given without a source. Apps label low and unverified pins as approximate.
+enum CheckpointPositionConfidence {
+  high
+  medium
+  low
+  unverified
+}

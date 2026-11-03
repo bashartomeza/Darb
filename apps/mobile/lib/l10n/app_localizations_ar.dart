@@ -3058,6 +3058,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get checkpointPositionOsm => 'الموقع: © مساهمو OpenStreetMap (ODbL)';
 
   @override
+  String get checkpointPositionApproximate =>
+      'الموقع تقريبي وقد يكون عند بوابة قريبة';
+
+  @override
   String get checkpointsUnplacedTitle => 'حواجز بلا موقع على الخريطة';
 
   @override

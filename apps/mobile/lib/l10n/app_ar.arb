@@ -1240,6 +1240,7 @@
   "communityStatusClosed": "مغلق",
   "communityStatusOutdated": "قد تكون الحالة قديمة",
   "checkpointPositionOsm": "الموقع: © مساهمو OpenStreetMap (ODbL)",
+  "checkpointPositionApproximate": "الموقع تقريبي وقد يكون عند بوابة قريبة",
   "checkpointsUnplacedTitle": "حواجز بلا موقع على الخريطة",
   "checkpointsUnplacedBody": "يذكرها المزود، لكن لا يوجد موقع موثوق لها لذلك لا تظهر على الخريطة.",
   "communityPickLocation": "اضغط على الخريطة لتحديد المكان",
