@@ -257,6 +257,7 @@ class DarbMap extends StatefulWidget {
     this.overlay,
     this.banner,
     this.notes = const [],
+    this.bannerElevation = 3,
     this.interactive = true,
     this.onTap,
     this.controlsTop,
@@ -286,6 +287,7 @@ class DarbMap extends StatefulWidget {
 
   /// Optional status banner shown near the top.
   final Widget? banner;
+  final double bannerElevation;
 
   /// Short, honest status lines shown as small chips under the banner, e.g.
   /// "checkpoint data unavailable" or "road route unavailable: straight line".
@@ -608,7 +610,11 @@ class _DarbMapState extends State<DarbMap> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (widget.banner != null) _FloatingBanner(child: widget.banner!),
+              if (widget.banner != null)
+                _FloatingBanner(
+                  elevation: widget.bannerElevation,
+                  child: widget.banner!,
+                ),
 
               if (!hasContent && widget.banner == null)
                 _EmptyMapMessage(label: widget.emptyLabel),
@@ -1133,15 +1139,16 @@ class _EmptyMapMessage extends StatelessWidget {
 // ============================================================================
 
 class _FloatingBanner extends StatelessWidget {
-  const _FloatingBanner({required this.child});
+  const _FloatingBanner({required this.child, required this.elevation});
 
   final Widget child;
+  final double elevation;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      elevation: 3,
+      elevation: elevation,
       borderRadius: BorderRadius.circular(14),
       child: ClipRRect(borderRadius: BorderRadius.circular(14), child: child),
     );
