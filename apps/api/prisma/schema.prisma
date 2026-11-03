@@ -869,6 +869,12 @@ model DriverRoute {
   remaining_seats           Int?
   total_parcel_capacity     Int?
   remaining_parcel_capacity Int?
+  /// Prices the driver chose inside the route's range when going online;
+  /// null means the route's default applies.
+  seat_price_minor          Int?
+  parcel_s_price_minor      Int?
+  parcel_m_price_minor      Int?
+  parcel_l_price_minor      Int?
   availability_status       DriverAvailabilityStatus?
   canonical_availability_version String?              @db.VarChar(50)
   operational_mode          String                    @default("legacy") @db.VarChar(50)
@@ -1026,6 +1032,10 @@ model RouteFare {
   service_route_id   String
   item               RouteFareItem
   amount_minor       Int?
+  /// Range a driver may choose within for this item; both null means the
+  /// default is fixed. Kept in the same append-only history row.
+  min_minor          Int?
+  max_minor          Int?
   currency           String        @default("ILS") @db.Char(3)
   effective_from     DateTime
   reason             String?       @db.VarChar(500)

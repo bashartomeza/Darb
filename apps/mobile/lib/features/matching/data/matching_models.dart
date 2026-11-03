@@ -1,3 +1,5 @@
+import '../../../core/fares/fare.dart';
+
 class MatchResult {
   const MatchResult({
     required this.id,
@@ -13,6 +15,8 @@ class MatchResult {
     this.routeNameEn,
     this.pickupDetails,
     this.dropoffDetails,
+    this.fare,
+    this.passengerCount,
   });
 
   final String id;
@@ -31,6 +35,11 @@ class MatchResult {
   final String? routeNameEn;
   final String? pickupDetails;
   final String? dropoffDetails;
+
+  /// The request's saved fare: this driver's price (their own inside the
+  /// route's range, else the route default). Null when the route has none.
+  final FareSnapshot? fare;
+  final int? passengerCount;
 
   /// The route's name in the reading language, falling back to the driver
   /// route's "origin -> destination" label.
@@ -68,6 +77,10 @@ class MatchResult {
       routeNameEn: named('route_name_en'),
       pickupDetails: _optionalString(passengerRequest, 'pickup_details'),
       dropoffDetails: _optionalString(passengerRequest, 'dropoff_details'),
+      fare: FareSnapshot.tryParse(passengerRequest['fare']),
+      passengerCount: passengerRequest['passenger_count'] is int
+          ? passengerRequest['passenger_count'] as int
+          : null,
     );
   }
 }

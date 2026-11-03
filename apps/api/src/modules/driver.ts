@@ -17,8 +17,14 @@ import {
   LEGACY_ROUTE_MAX_PARCEL_CAPACITY,
   LEGACY_ROUTE_MAX_SEATS,
   legacyDriverOnlineStateService,
+  sameDriverPrices,
   type LegacyDriverOnlineStateService,
 } from "../services/legacyDriverOnlineState.js";
+import {
+  MAX_FARE_MINOR,
+  driverPricesResponse,
+  routeFareService,
+} from "../services/routeFares.js";
 import {
   LEGACY_DEFAULT_ROUTE_KEY,
   driverRoutePlaces,
@@ -49,6 +55,26 @@ function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+/**
+ * The driver's own prices in integer agorot, per item. Each must sit inside
+ * the range the admin set for the route (checked against the tariff in force);
+ * an item left out charges the route's default.
+ */
+const driverPrice = z.number().int().min(1).max(MAX_FARE_MINOR);
+export const driverPricesSchema = z.strictObject({
+  passenger_seat: driverPrice.optional(),
+  parcel_s: driverPrice.optional(),
+  parcel_m: driverPrice.optional(),
+  parcel_l: driverPrice.optional(),
+});
+
+/** Only the prices the driver actually set; an empty set means "defaults". */
+function setPrices(prices: z.infer<typeof driverPricesSchema> | undefined) {
+  if (!prices) return undefined;
+  const entries = Object.entries(prices).filter(([, value]) => value !== undefined);
+  return entries.length > 0 ? (Object.fromEntries(entries) as z.infer<typeof driverPricesSchema>) : undefined;
+}
+
 // Older builds also sent the corridor's labels and key; they are accepted and
 // ignored, because the route's own cities now name both ends.
 const routeSchema = z.object({
@@ -59,12 +85,14 @@ const routeSchema = z.object({
   corridor_key: z.string().optional(),
   seats_available: z.coerce.number().int().min(0).max(LEGACY_ROUTE_MAX_SEATS).default(1),
   parcel_capacity_available: z.coerce.number().int().min(0).max(LEGACY_ROUTE_MAX_PARCEL_CAPACITY).default(0),
+  prices: driverPricesSchema.optional(),
 });
 
 const onlineStateSchema = z.strictObject({
   online: z.boolean(),
   expected_route_id: z.string().min(1).max(191).nullable().optional(),
   service_route_id: serviceRouteIdSchema.optional(),
+  prices: driverPricesSchema.optional(),
 });
 const idempotencyKeySchema = z
   .string()
@@ -96,6 +124,8 @@ function serializeLegacyDriverRoute(value: Record<string, unknown>) {
     remaining_parcel_capacity: value.remaining_parcel_capacity,
     availability_status: value.availability_status,
     availability_revision: value.availability_revision,
+    // The prices this driver chose; a null item charges the route's default.
+    prices: driverPricesResponse(value),
     activated_at: value.activated_at,
     paused_at: value.paused_at,
     filled_at: value.filled_at,
@@ -132,11 +162,13 @@ export function createDriverRouter(
         if (!key.success)
           throw new HttpError(400, "invalid_or_missing_idempotency_key");
         const input = onlineStateSchema.parse(req.body);
+        const prices = setPrices(input.prices);
         const result = await onlineStateService.setState(
           {
             online: input.online,
             expectedRouteId: input.expected_route_id,
             ...(input.service_route_id ? { serviceRouteId: input.service_route_id } : {}),
+            ...(prices ? { prices } : {}),
           },
           {
             id: req.user!.id,
@@ -161,6 +193,7 @@ export function createDriverRouter(
     async (req: AuthenticatedRequest, res, next) => {
       try {
         const input = routeSchema.parse(req.body);
+        const prices = setPrices(input.prices);
         // An older body only ever named the old corridor; any other place is
         // refused as before rather than moved onto Hebron → Bethlehem.
         if (!input.service_route_id && (
@@ -179,7 +212,9 @@ export function createDriverRouter(
             keyDigest: digest(idempotencyKey),
             keyVersion: 1,
             requestDigest: digest(JSON.stringify({ actor_id: req.user!.id, service_route_id: input.service_route_id,
-              seats_available: input.seats_available, parcel_capacity_available: input.parcel_capacity_available })),
+              seats_available: input.seats_available, parcel_capacity_available: input.parcel_capacity_available,
+              // Only present when sent, so earlier keys keep their digest.
+              ...(prices ? { prices } : {}) })),
             expiresAt: new Date(Date.now() + 86_400_000),
             retainCompleted: true,
           });
@@ -212,6 +247,8 @@ export function createDriverRouter(
           const operatingRoute = input.service_route_id
             ? await resolveOperatingRoute(tx, input.service_route_id)
             : await resolveOperatingRouteByKey(tx, LEGACY_DEFAULT_ROUTE_KEY);
+          // Each price the driver set must sit inside the range in force now.
+          const priceColumns = await routeFareService.driverPriceColumns(tx, operatingRoute.serviceRouteId, prices);
           const current = await tx.driverRoute.findFirst({
             where: { driver_id: profile.id, operational_mode: "legacy", canonical_availability_version: null,
               status: { in: ["active", "assigned", "on_trip"] } },
@@ -221,7 +258,8 @@ export function createDriverRouter(
           if (current) {
             if (current.status === "active" && current.seats_available === input.seats_available &&
               current.parcel_capacity_available === input.parcel_capacity_available &&
-              current.route_version?.service_route_id === operatingRoute.serviceRouteId) {
+              current.route_version?.service_route_id === operatingRoute.serviceRouteId &&
+              sameDriverPrices(current as unknown as Record<string, unknown>, priceColumns)) {
               await rememberRoute(current.id);
               return current;
             }
@@ -233,6 +271,7 @@ export function createDriverRouter(
               ...driverRoutePlaces(operatingRoute),
               seats_available: input.seats_available,
               parcel_capacity_available: input.parcel_capacity_available,
+              ...priceColumns,
               status: "active",
               activated_at: new Date(),
             },
@@ -244,7 +283,7 @@ export function createDriverRouter(
             action: AuditAction.driver_route_created,
             entityType: "DriverRoute",
             entityId: created.id,
-            metadata: { corridor_key: operatingRoute.routeKey, service_route_id: operatingRoute.serviceRouteId },
+            metadata: { corridor_key: operatingRoute.routeKey, service_route_id: operatingRoute.serviceRouteId, prices: priceColumns },
           });
           await rememberRoute(created.id);
           return created;

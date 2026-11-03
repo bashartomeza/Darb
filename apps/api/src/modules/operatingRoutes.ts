@@ -14,6 +14,7 @@ import {
   serializeOperatingRoute,
   setOperatingRouteActive
 } from "../services/operatingRoutes.js";
+import { routeFareService } from "../services/routeFares.js";
 
 const idSchema = z.string().trim().min(1).max(191);
 const noControlCharacters = (value: string) => !/[\u0000-\u001f\u007f]/.test(value);
@@ -48,7 +49,10 @@ export function createOperatingRoutesRouter(db: PrismaClient = prisma) {
   router.get("/operating-routes", async (_req, res, next) => {
     try {
       const routes = await listActiveOperatingRoutes(db);
-      res.json({ routes: routes.map(serializeOperatingRoute) });
+      // Each route's default prices and the range drivers may charge within,
+      // so prices show before booking and in the driver's route picker.
+      const fares = await routeFareService.fareViewsForRoutes(routes.map((route) => route.id), new Date(), db);
+      res.json({ routes: routes.map((route) => ({ ...serializeOperatingRoute(route), fares: fares.get(route.id) ?? null })) });
     } catch (error) {
       next(error);
     }
@@ -67,7 +71,10 @@ export function createAdminOperatingRoutesRouter(db: PrismaClient = prisma) {
       // A fresh database may have had no admin when the API started; the first
       // admin to open the list completes the predefined set.
       await ensurePredefinedRoutes(db, req.user!.id);
-      res.json({ routes: await listAdminOperatingRoutes(db) });
+      const routes = await listAdminOperatingRoutes(db);
+      // Current prices for the list; history and edits use the fares endpoint.
+      const fares = await routeFareService.fareViewsForRoutes(routes.map((route) => route.id), new Date(), db);
+      res.json({ routes: routes.map((route) => ({ ...route, fares: fares.get(route.id) ?? null })) });
     } catch (error) {
       next(error);
     }

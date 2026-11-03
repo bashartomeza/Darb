@@ -20,12 +20,12 @@ const prismaMock = vi.hoisted(() => ({
   serviceRouteVersion: { findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
   routeVersionStop: { createMany: vi.fn() },
   stop: { findMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
-  passengerRequest: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn(), groupBy: vi.fn() },
+  passengerRequest: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), updateMany: vi.fn(), groupBy: vi.fn() },
   merchantOrder: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), updateMany: vi.fn(), groupBy: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
   parcelBatch: { create: vi.fn() },
   driverProfile: { findUnique: vi.fn() },
-  driverRoute: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
+  driverRoute: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
   match: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
   deliveryHandover: { findUnique: vi.fn(), create: vi.fn() },
   routeFare: { findMany: vi.fn() }
@@ -115,7 +115,9 @@ describe("GET /operating-routes", () => {
         name_ar: "الخليل ← بيت لحم",
         name_en: "Hebron → Bethlehem",
         origin: { id: "stop_hebron", name_ar: "الخليل", name_en: "Hebron", latitude: 31.5326, longitude: 35.0998 },
-        destination: { id: "stop_bethlehem", name_ar: "بيت لحم", name_en: "Bethlehem", latitude: 31.7054, longitude: 35.2024 }
+        destination: { id: "stop_bethlehem", name_ar: "بيت لحم", name_en: "Bethlehem", latitude: 31.7054, longitude: 35.2024 },
+        // No tariff published for this route yet.
+        fares: null
       },
       expect.objectContaining({ id: RAMALLAH_NABLUS.id, route_key: "ramallah-to-nablus" })
     ]);
@@ -231,6 +233,20 @@ describe("matching by service route", () => {
     expect(where).not.toHaveProperty("corridor_key");
   });
 
+  it("shows each driver's price in the search results: their own, else the route default", async () => {
+    const tariffRow = { service_route_id: RAMALLAH_NABLUS.id, currency: "ILS", effective_from: new Date("2026-01-01T00:00:00Z"), created_at: new Date("2026-01-01T00:00:00Z") };
+    prismaMock.routeFare.findMany.mockResolvedValue([
+      { ...tariffRow, id: "fare_seat", item: "passenger_seat", amount_minor: 2000, min_minor: 1500, max_minor: 2500 }
+    ]);
+    const priced = { ...SUPPLY[1]!, id: "rn_priced", seat_price_minor: 2400 };
+    prismaMock.driverRoute.findMany.mockResolvedValue([SUPPLY[1], priced]);
+    const response = await request(createApp()).post("/api/v1/matches/search").set(auth("p1", "passenger"))
+      .send({ service_route_id: RAMALLAH_NABLUS.id, preferred_time: inOneHour(), passenger_count: 2 }).expect(200);
+    const byId = Object.fromEntries(response.body.results.map((result: { id: string; fare: unknown }) => [result.id, result.fare]));
+    expect(byId.rn_driver).toMatchObject({ unit_minor: 2000, total_minor: 4000, currency: "ILS" });
+    expect(byId.rn_priced).toMatchObject({ unit_minor: 2400, total_minor: 4800 });
+  });
+
   it("no longer limits coordinate searches to a Bethlehem destination", async () => {
     const response = await request(createApp()).post("/api/v1/matches/search").set(auth("p1", "passenger")).send({
       pickup_label: "Hebron", pickup_lat: 31.53, pickup_lng: 35.1,
@@ -288,6 +304,29 @@ describe("matching by service route", () => {
         service_route_id: HEBRON_BETHLEHEM.id, route_name_ar: "الخليل ← بيت لحم", pickup_details: "gate", dropoff_details: "station"
       });
       expect(response.body.match.explanation).toContain("Hebron → Bethlehem");
+    });
+
+    it("saves the request at the offered driver's own price and returns it", async () => {
+      const tariffRow = { service_route_id: HEBRON_BETHLEHEM.id, currency: "ILS", effective_from: new Date("2026-01-01T00:00:00Z"), created_at: new Date("2026-01-01T00:00:00Z") };
+      prismaMock.routeFare.findMany.mockResolvedValue([
+        { ...tariffRow, id: "fare_seat", item: "passenger_seat", amount_minor: 1500, min_minor: 1200, max_minor: 2000 }
+      ]);
+      prismaMock.driverRoute.findUnique.mockResolvedValue({
+        seat_price_minor: 1300, parcel_s_price_minor: null, parcel_m_price_minor: null, parcel_l_price_minor: null,
+        route_version: { service_route_id: HEBRON_BETHLEHEM.id }
+      });
+      const saved = {
+        id: "request_1", passenger_id: "p1", pickup_details: "gate", dropoff_details: "station",
+        fare_id: "fare_seat", fare_unit_minor: 1300, fare_total_minor: 1300, fare_currency: "ILS", route_version: routeSummary(HEBRON_BETHLEHEM)
+      };
+      prismaMock.passengerRequest.findUniqueOrThrow.mockResolvedValue(saved);
+      const response = await request(createApp()).post("/api/v1/matches/run").set(auth("p1", "passenger"))
+        .send({ passengerRequestId: "request_1" }).expect(201);
+      expect(prismaMock.passengerRequest.update).toHaveBeenCalledWith({
+        where: { id: "request_1" },
+        data: { fare_id: "fare_seat", fare_unit_minor: 1300, fare_total_minor: 1300, fare_currency: "ILS" }
+      });
+      expect(response.body.match.passenger_request.fare).toMatchObject({ currency: "ILS", unit_minor: 1300, total_minor: 1300 });
     });
 
     it("keeps requests from before routes on the locked corridor", async () => {
@@ -537,6 +576,54 @@ describe("drivers on a route", () => {
     const paused = await request(createApp()).post("/api/v1/driver/routes").set(auth("d1", "driver")).send({ service_route_id: PAUSED.id }).expect(409);
     expect(paused.body.error).toBe("route_unavailable");
     expect(prismaMock.driverRoute.create).not.toHaveBeenCalled();
+  });
+
+  describe("with the driver's own prices", () => {
+    beforeEach(() => {
+      const tariffRow = { service_route_id: RAMALLAH_NABLUS.id, currency: "ILS", effective_from: new Date("2026-01-01T00:00:00Z"), created_at: new Date("2026-01-01T00:00:00Z") };
+      prismaMock.routeFare.findMany.mockResolvedValue([
+        { ...tariffRow, id: "fare_seat", item: "passenger_seat", amount_minor: 2000, min_minor: 1500, max_minor: 2500 },
+        { ...tariffRow, id: "fare_l", item: "parcel_l", amount_minor: 1500, min_minor: 1000, max_minor: 2000 }
+      ]);
+    });
+
+    it("stores prices inside the admin range and returns them", async () => {
+      const response = await request(createApp()).post("/api/v1/driver/routes").set(auth("d1", "driver"))
+        .send({ service_route_id: RAMALLAH_NABLUS.id, seats_available: 3, parcel_capacity_available: 4, prices: { passenger_seat: 2500, parcel_l: 1000 } })
+        .expect(201);
+      expect(prismaMock.driverRoute.create.mock.calls[0][0].data).toMatchObject({
+        seat_price_minor: 2500, parcel_s_price_minor: null, parcel_m_price_minor: null, parcel_l_price_minor: 1000
+      });
+      expect(response.body.route.prices).toEqual({ currency: "ILS", passenger_seat_minor: 2500, parcel_minor: { S: null, M: null, L: 1000 } });
+    });
+
+    it("refuses a price outside the range with a clear error and opens no route", async () => {
+      const response = await request(createApp()).post("/api/v1/driver/routes").set(auth("d1", "driver"))
+        .send({ service_route_id: RAMALLAH_NABLUS.id, seats_available: 3, prices: { passenger_seat: 2600 } }).expect(422);
+      expect(response.body.error).toBe("driver_price_out_of_range");
+      expect(prismaMock.driverRoute.create).not.toHaveBeenCalled();
+    });
+
+    it("leaves every price to the route default when none is sent", async () => {
+      const response = await request(createApp()).post("/api/v1/driver/routes").set(auth("d1", "driver"))
+        .send({ service_route_id: RAMALLAH_NABLUS.id, seats_available: 3 }).expect(201);
+      expect(prismaMock.driverRoute.create.mock.calls[0][0].data).toMatchObject({ seat_price_minor: null, parcel_l_price_minor: null });
+      expect(response.body.route.prices).toMatchObject({ passenger_seat_minor: null });
+    });
+
+    it("passes the prices to the online-state service", async () => {
+      const service = { setState: vi.fn().mockResolvedValue({ online: true, routeId: "route_1", replayed: false, changed: true }) };
+      const app = createApp(undefined, { legacyDriverOnlineStateService: service as never });
+      await request(app).put("/api/v1/driver/online-state").set(auth("d1", "driver")).set("Idempotency-Key", "online-key-0002")
+        .send({ online: true, service_route_id: RAMALLAH_NABLUS.id, prices: { passenger_seat: 1800 } }).expect(200);
+      expect(service.setState).toHaveBeenCalledWith(
+        { online: true, expectedRouteId: undefined, serviceRouteId: RAMALLAH_NABLUS.id, prices: { passenger_seat: 1800 } },
+        expect.anything()
+      );
+      // Not an integer number of agorot: refused before any route is touched.
+      await request(app).put("/api/v1/driver/online-state").set(auth("d1", "driver")).set("Idempotency-Key", "online-key-0003")
+        .send({ online: true, service_route_id: RAMALLAH_NABLUS.id, prices: { passenger_seat: 18.5 } }).expect(400);
+    });
   });
 
   it("passes the route to the online-state service and rejects unknown fields", async () => {

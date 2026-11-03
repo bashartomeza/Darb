@@ -61,12 +61,22 @@ type FareRow = {
   service_route_id: string;
   item: string;
   amount_minor: number | null;
+  min_minor?: number | null;
+  max_minor?: number | null;
   currency: string;
   effective_from: Date;
   created_at: Date;
 };
 
-export type EffectiveFare = { id: string; amountMinor: number; currency: string; effectiveFrom: Date };
+export type EffectiveFare = {
+  id: string;
+  amountMinor: number;
+  /** The range a driver may choose within; both null when the default is fixed. */
+  minMinor: number | null;
+  maxMinor: number | null;
+  currency: string;
+  effectiveFrom: Date;
+};
 export type RouteFareSet = Record<FareItem, EffectiveFare | null>;
 
 function emptySet(): RouteFareSet {
@@ -100,18 +110,37 @@ export function resolveEffectiveFares(rows: FareRow[], at: Date): Map<string, Ro
     set[item] =
       row.amount_minor === null
         ? null
-        : { id: row.id, amountMinor: row.amount_minor, currency: row.currency, effectiveFrom: row.effective_from };
+        : {
+            id: row.id,
+            amountMinor: row.amount_minor,
+            minMinor: row.min_minor ?? null,
+            maxMinor: row.max_minor ?? null,
+            currency: row.currency,
+            effectiveFrom: row.effective_from
+          };
   }
   return result;
 }
+
+export type FareRange = { min_minor: number; max_minor: number } | null;
 
 export type FareView = {
   currency: string;
   estimated: true;
   paid_directly_to_driver: true;
+  /** The route's default prices. */
   passenger_seat_minor: number | null;
   parcel_minor: { S: number | null; M: number | null; L: number | null };
+  /** What a driver may charge instead of the default; null when it is fixed. */
+  driver_price_range: {
+    passenger_seat: FareRange;
+    parcel: { S: FareRange; M: FareRange; L: FareRange };
+  };
 };
+
+function rangeView(fare: EffectiveFare | null | undefined): FareRange {
+  return fare && fare.minMinor !== null && fare.maxMinor !== null ? { min_minor: fare.minMinor, max_minor: fare.maxMinor } : null;
+}
 
 /** Public/driver-facing tariff for one route. Null when nothing is published. */
 export function serializeFareSet(set: RouteFareSet | undefined): FareView | null {
@@ -126,7 +155,103 @@ export function serializeFareSet(set: RouteFareSet | undefined): FareView | null
     estimated: true,
     paid_directly_to_driver: true,
     passenger_seat_minor: passenger?.amountMinor ?? null,
-    parcel_minor: { S: s?.amountMinor ?? null, M: m?.amountMinor ?? null, L: l?.amountMinor ?? null }
+    parcel_minor: { S: s?.amountMinor ?? null, M: m?.amountMinor ?? null, L: l?.amountMinor ?? null },
+    driver_price_range: {
+      passenger_seat: rangeView(passenger),
+      parcel: { S: rangeView(s), M: rangeView(m), L: rangeView(l) }
+    }
+  };
+}
+
+// --------------------------------------------------------------------------
+// Driver prices
+// --------------------------------------------------------------------------
+
+/** The DriverRoute column holding the driver's own price for each item. */
+export const DRIVER_PRICE_COLUMNS = {
+  passenger_seat: "seat_price_minor",
+  parcel_s: "parcel_s_price_minor",
+  parcel_m: "parcel_m_price_minor",
+  parcel_l: "parcel_l_price_minor"
+} as const satisfies Record<FareItem, string>;
+
+export type DriverPriceColumn = (typeof DRIVER_PRICE_COLUMNS)[FareItem];
+export type DriverPriceColumns = Record<DriverPriceColumn, number | null>;
+/** Prices a driver asks for, per item; an absent item takes the route's default. */
+export type DriverPriceInput = Partial<Record<FareItem, number>>;
+
+export function noDriverPrices(): DriverPriceColumns {
+  return { seat_price_minor: null, parcel_s_price_minor: null, parcel_m_price_minor: null, parcel_l_price_minor: null };
+}
+
+/**
+ * Checks each price the driver asked for against the range in force for that
+ * item and returns the DriverRoute columns to store. A price for an item with
+ * no published fare, or one whose default is fixed, is `422 driver_price_fixed`
+ * (asking for exactly the fixed default is allowed); a price outside the range
+ * is `422 driver_price_out_of_range`.
+ */
+export function validateDriverPrices(set: RouteFareSet | undefined, prices: DriverPriceInput | undefined): DriverPriceColumns {
+  const columns = noDriverPrices();
+  if (!prices) return columns;
+  for (const item of FARE_ITEMS) {
+    const asked = prices[item];
+    if (asked === undefined) continue;
+    if (!isValidFareMinor(asked)) throw new HttpError(422, "driver_price_out_of_range");
+    const fare = set?.[item] ?? null;
+    if (!fare) throw new HttpError(422, "driver_price_fixed");
+    if (fare.minMinor === null || fare.maxMinor === null) {
+      if (asked !== fare.amountMinor) throw new HttpError(422, "driver_price_fixed");
+    } else if (asked < fare.minMinor || asked > fare.maxMinor) {
+      throw new HttpError(422, "driver_price_out_of_range");
+    }
+    columns[DRIVER_PRICE_COLUMNS[item]] = asked;
+  }
+  return columns;
+}
+
+/** A driver route's own prices as the API returns them; a null item takes the route's default. */
+export function driverPricesResponse(row: Record<string, unknown> | null | undefined) {
+  const value = (column: DriverPriceColumn) => {
+    const raw = row?.[column];
+    return typeof raw === "number" ? raw : null;
+  };
+  return {
+    currency: FARE_CURRENCY,
+    passenger_seat_minor: value("seat_price_minor"),
+    parcel_minor: { S: value("parcel_s_price_minor"), M: value("parcel_m_price_minor"), L: value("parcel_l_price_minor") }
+  };
+}
+
+export type DriverPriceRow = Partial<Record<DriverPriceColumn, number | null>>;
+
+/**
+ * The price one driver charges for one item: their own when they set one,
+ * otherwise the route's default in force. `fareId` names the tariff row in
+ * force for the item (whose default or range applies), for the history.
+ */
+export function driverFareFor(set: RouteFareSet | undefined, driverRoute: DriverPriceRow | null | undefined, item: FareItem) {
+  const fare = set?.[item] ?? null;
+  const own = driverRoute?.[DRIVER_PRICE_COLUMNS[item]];
+  if (typeof own === "number" && isValidFareMinor(own)) {
+    return { fareId: fare?.id ?? null, unitMinor: own, currency: fare?.currency ?? FARE_CURRENCY, source: "driver" as const };
+  }
+  if (!fare) return null;
+  return { fareId: fare.id, unitMinor: fare.amountMinor, currency: fare.currency, source: "route_default" as const };
+}
+
+/** One driver's prices for display (offers, search results): their own, else the default. */
+export function driverFareView(set: RouteFareSet | undefined, driverRoute: DriverPriceRow | null | undefined) {
+  const price = (item: FareItem) => driverFareFor(set, driverRoute, item)?.unitMinor ?? null;
+  const seat = price("passenger_seat");
+  const parcel = { S: price("parcel_s"), M: price("parcel_m"), L: price("parcel_l") };
+  if (seat === null && parcel.S === null && parcel.M === null && parcel.L === null) return null;
+  return {
+    currency: FARE_CURRENCY,
+    estimated: true as const,
+    paid_directly_to_driver: true as const,
+    passenger_seat_minor: seat,
+    parcel_minor: parcel
   };
 }
 
@@ -151,7 +276,20 @@ export type FareChangeEntry = {
   item: FareItem;
   /** Integer agorot, or null to withdraw the fare for this item. */
   amountMinor: number | null;
+  /**
+   * The range a driver may choose within. Omitted or null: the default is
+   * fixed. A withdrawn fare has no range.
+   */
+  range?: { minMinor: number; maxMinor: number } | null;
 };
+
+function validateRange(entry: FareChangeEntry) {
+  const range = entry.range ?? null;
+  if (range === null) return;
+  if (entry.amountMinor === null) throw new HttpError(400, "invalid_fare_range");
+  if (!isValidFareMinor(range.minMinor) || !isValidFareMinor(range.maxMinor)) throw new HttpError(400, "invalid_fare_range");
+  if (range.minMinor > entry.amountMinor || entry.amountMinor > range.maxMinor) throw new HttpError(400, "invalid_fare_range");
+}
 
 export function createRouteFareService(db: PrismaClient = prisma) {
   async function effectiveFor(client: Database, routeIds: string[], at: Date) {
@@ -197,6 +335,170 @@ export function createRouteFareService(db: PrismaClient = prisma) {
       });
     },
 
+    /**
+     * The DriverRoute price columns for the prices a driver asked for, checked
+     * against the range in force on [routeId] at [at]. No prices: all null
+     * (the route's defaults), without reading the tariff.
+     */
+    async driverPriceColumns(client: Database, routeId: string, prices: DriverPriceInput | undefined, at: Date = new Date()) {
+      if (!prices || Object.keys(prices).length === 0) return noDriverPrices();
+      return validateDriverPrices((await effectiveFor(client, [routeId], at)).get(routeId), prices);
+    },
+
+    /** Seat fare frozen on a request booked with one driver's offer: that driver's price. */
+    async passengerSnapshotForDriver(
+      client: Database,
+      routeId: string,
+      driverRoute: DriverPriceRow,
+      passengerCount: number,
+      at: Date
+    ): Promise<PassengerFareSnapshot> {
+      const set = (await effectiveFor(client, [routeId], at)).get(routeId);
+      const fare = driverFareFor(set, driverRoute, "passenger_seat");
+      if (!fare) return { fare_id: null, fare_unit_minor: null, fare_total_minor: null, fare_currency: null };
+      return {
+        fare_id: fare.fareId,
+        fare_unit_minor: fare.unitMinor,
+        fare_total_minor: seatFareTotal(fare.unitMinor, passengerCount),
+        fare_currency: fare.currency
+      };
+    },
+
+    /**
+     * Sets the saved fare of the demand a driver is offered or takes to that
+     * driver's price: their own for the item, else the route's default in
+     * force now. Runs inside the caller's match/accept transaction so the
+     * fare and the match commit together. A request or parcel on another
+     * route, or one with no price at all, keeps what it has. Each change is
+     * written to the audit trail with the price before and after.
+     */
+    async applyDriverFare(
+      tx: Prisma.TransactionClient,
+      input: {
+        driverRouteId: string;
+        passengerRequestId?: string | null;
+        merchantOrderIds?: string[];
+        matchId: string;
+        stage: "offered" | "accepted";
+        actorId: string;
+        at?: Date;
+      }
+    ) {
+      const route = await tx.driverRoute.findUnique({
+        where: { id: input.driverRouteId },
+        select: {
+          seat_price_minor: true,
+          parcel_s_price_minor: true,
+          parcel_m_price_minor: true,
+          parcel_l_price_minor: true,
+          route_version: { select: { service_route_id: true } }
+        }
+      });
+      const serviceRouteId = route?.route_version?.service_route_id ?? null;
+      // A driver route from before routes existed has no tariff to price from.
+      if (!route || !serviceRouteId) return { passengerChanged: false, parcelsChanged: 0 };
+      const set = (await effectiveFor(tx, [serviceRouteId], input.at ?? new Date())).get(serviceRouteId);
+      const audit = (entityType: string, entityId: string, changes: unknown[]) =>
+        auditEvent(tx, {
+          userId: input.actorId,
+          action: AuditAction.match_decision,
+          entityType,
+          entityId,
+          metadata: {
+            event: "fare_set_to_driver_price",
+            stage: input.stage,
+            match_id: input.matchId,
+            driver_route_id: input.driverRouteId,
+            changes
+          } as Prisma.InputJsonValue
+        });
+
+      let passengerChanged = false;
+      if (input.passengerRequestId) {
+        const request = await tx.passengerRequest.findUnique({
+          where: { id: input.passengerRequestId },
+          select: {
+            id: true,
+            passenger_count: true,
+            fare_id: true,
+            fare_unit_minor: true,
+            fare_total_minor: true,
+            fare_currency: true,
+            route_version: { select: { service_route_id: true } }
+          }
+        });
+        const fare = driverFareFor(set, route, "passenger_seat");
+        if (request && fare && request.route_version?.service_route_id === serviceRouteId) {
+          const next = {
+            fare_id: fare.fareId,
+            fare_unit_minor: fare.unitMinor,
+            fare_total_minor: seatFareTotal(fare.unitMinor, request.passenger_count),
+            fare_currency: fare.currency
+          };
+          if (
+            request.fare_id !== next.fare_id ||
+            request.fare_unit_minor !== next.fare_unit_minor ||
+            request.fare_total_minor !== next.fare_total_minor ||
+            request.fare_currency !== next.fare_currency
+          ) {
+            await tx.passengerRequest.update({ where: { id: request.id }, data: next });
+            await audit("PassengerRequest", request.id, [
+              {
+                source: fare.source,
+                before: { fare_id: request.fare_id, unit_minor: request.fare_unit_minor, total_minor: request.fare_total_minor },
+                after: { fare_id: next.fare_id, unit_minor: next.fare_unit_minor, total_minor: next.fare_total_minor }
+              }
+            ]);
+            passengerChanged = true;
+          }
+        }
+      }
+
+      let parcelsChanged = 0;
+      const orderIds = [...new Set(input.merchantOrderIds ?? [])];
+      if (orderIds.length > 0) {
+        const parcels = await tx.parcel.findMany({
+          where: { order_id: { in: orderIds }, status: { notIn: ["cancelled", "failed", "expired"] } },
+          select: {
+            id: true,
+            order_id: true,
+            size: true,
+            fare_id: true,
+            fare_minor: true,
+            fare_currency: true,
+            route_version: { select: { service_route_id: true } }
+          },
+          orderBy: { id: "asc" }
+        });
+        const byOrder = new Map<string, unknown[]>();
+        for (const parcel of parcels) {
+          if (parcel.route_version?.service_route_id !== serviceRouteId) continue;
+          const item = (FARE_ITEMS as readonly string[]).includes(`parcel_${parcel.size.toLowerCase()}`)
+            ? (`parcel_${parcel.size.toLowerCase()}` as FareItem)
+            : null;
+          const fare = item ? driverFareFor(set, route, item) : null;
+          if (!fare) continue;
+          if (parcel.fare_id === fare.fareId && parcel.fare_minor === fare.unitMinor && parcel.fare_currency === fare.currency) continue;
+          await tx.parcel.update({
+            where: { id: parcel.id },
+            data: { fare_id: fare.fareId, fare_minor: fare.unitMinor, fare_currency: fare.currency }
+          });
+          parcelsChanged += 1;
+          const changes = byOrder.get(parcel.order_id) ?? [];
+          changes.push({
+            parcel_id: parcel.id,
+            size: parcel.size,
+            source: fare.source,
+            before: { fare_id: parcel.fare_id, minor: parcel.fare_minor },
+            after: { fare_id: fare.fareId, minor: fare.unitMinor }
+          });
+          byOrder.set(parcel.order_id, changes);
+        }
+        for (const [orderId, changes] of byOrder) await audit("MerchantOrder", orderId, changes);
+      }
+      return { passengerChanged, parcelsChanged };
+    },
+
     async history(routeId: string, now: Date = new Date()) {
       const route = await db.serviceRoute.findUnique({ where: { id: routeId }, select: { id: true } });
       if (!route) throw new HttpError(404, "route_not_found");
@@ -227,6 +529,7 @@ export function createRouteFareService(db: PrismaClient = prisma) {
         if (seen.has(entry.item)) throw new HttpError(400, "duplicate_fare_item");
         seen.add(entry.item);
         if (entry.amountMinor !== null && !isValidFareMinor(entry.amountMinor)) throw new HttpError(400, "invalid_fare_amount");
+        validateRange(entry);
       }
       if (entries.length === 0) throw new HttpError(400, "no_fare_changes");
       const effectiveFrom = options.effectiveFrom ?? now;
@@ -248,14 +551,24 @@ export function createRouteFareService(db: PrismaClient = prisma) {
         const latest = (await effectiveFor(tx, [routeId], effectiveFrom)).get(routeId) ?? emptySet();
         const created = [];
         for (const entry of entries) {
-          const before = latest[entry.item]?.amountMinor ?? null;
-          if (before === entry.amountMinor) continue;
+          const before = latest[entry.item];
+          const minMinor = entry.range?.minMinor ?? null;
+          const maxMinor = entry.range?.maxMinor ?? null;
+          if (
+            (before?.amountMinor ?? null) === entry.amountMinor &&
+            (before?.minMinor ?? null) === minMinor &&
+            (before?.maxMinor ?? null) === maxMinor
+          ) {
+            continue;
+          }
           created.push(
             await tx.routeFare.create({
               data: {
                 service_route_id: routeId,
                 item: entry.item,
                 amount_minor: entry.amountMinor,
+                min_minor: minMinor,
+                max_minor: maxMinor,
                 currency: FARE_CURRENCY,
                 effective_from: effectiveFrom,
                 reason: options.reason,
@@ -277,7 +590,9 @@ export function createRouteFareService(db: PrismaClient = prisma) {
             changes: created.map((row) => ({
               fare_id: row.id,
               item: row.item,
-              amount_minor: row.amount_minor
+              amount_minor: row.amount_minor,
+              min_minor: row.min_minor ?? null,
+              max_minor: row.max_minor ?? null
             })),
             request_id: actor.requestId ?? null
           }

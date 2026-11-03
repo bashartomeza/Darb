@@ -53,29 +53,81 @@ export function formatMoney(minor: number, locale: "ar" | "en"): string {
   }).format(Number((minor / 100).toFixed(2)));
 }
 
-export type FareDrafts = Record<RouteFareItem, string>;
+/** What the admin typed for one item: the default and the driver range. */
+export type FareDraft = { amount: string; min: string; max: string };
+export type FareDrafts = Record<RouteFareItem, FareDraft>;
 
 export function draftsFromCurrent(current: Record<RouteFareItem, RouteFareCurrent> | undefined): FareDrafts {
-  return Object.fromEntries(FARE_ITEMS.map((item) => [item, minorToInput(current?.[item]?.amount_minor ?? null)])) as FareDrafts;
+  return Object.fromEntries(
+    FARE_ITEMS.map((item) => {
+      const fare = current?.[item] ?? null;
+      return [
+        item,
+        {
+          amount: minorToInput(fare?.amount_minor ?? null),
+          min: minorToInput(fare?.min_minor ?? null),
+          max: minorToInput(fare?.max_minor ?? null)
+        }
+      ];
+    })
+  ) as FareDrafts;
 }
 
-export type FareDiff =
-  | { ok: true; changes: Array<{ item: RouteFareItem; amount_minor: number | null }> }
-  | { ok: false; invalid: RouteFareItem[] };
+export type FareChange = { item: RouteFareItem; amount_minor: number | null; min_minor: number | null; max_minor: number | null };
 
-/** Only items whose parsed value differs from the current fare are sent. */
+export type FareDiff =
+  | { ok: true; changes: FareChange[] }
+  | { ok: false; invalid: RouteFareItem[]; invalidRange: RouteFareItem[] };
+
+function value(parsed: ParsedFare) {
+  return parsed.kind === "amount" ? parsed.minor : null;
+}
+
+/**
+ * Only items whose default or range differs from the current fare are sent.
+ * An amount that does not parse is `invalid`; a range with one bound, a range
+ * on an empty default, or a default outside its range is `invalidRange`. Both
+ * bounds empty means the driver cannot change the default.
+ */
 export function diffFares(drafts: FareDrafts, current: Record<RouteFareItem, RouteFareCurrent> | undefined): FareDiff {
   const invalid: RouteFareItem[] = [];
-  const changes: Array<{ item: RouteFareItem; amount_minor: number | null }> = [];
+  const invalidRange: RouteFareItem[] = [];
+  const changes: FareChange[] = [];
   for (const item of FARE_ITEMS) {
-    const parsed = parseFareInput(drafts[item]);
-    if (parsed.kind === "invalid") {
+    const amount = parseFareInput(drafts[item].amount);
+    const min = parseFareInput(drafts[item].min);
+    const max = parseFareInput(drafts[item].max);
+    if (amount.kind === "invalid" || min.kind === "invalid" || max.kind === "invalid") {
       invalid.push(item);
       continue;
     }
-    const before = current?.[item]?.amount_minor ?? null;
-    const after = parsed.kind === "empty" ? null : parsed.minor;
-    if (before !== after) changes.push({ item, amount_minor: after });
+    const after = { amount_minor: value(amount), min_minor: value(min), max_minor: value(max) };
+    const hasRange = after.min_minor !== null || after.max_minor !== null;
+    if (
+      hasRange &&
+      (after.amount_minor === null ||
+        after.min_minor === null ||
+        after.max_minor === null ||
+        after.min_minor > after.amount_minor ||
+        after.amount_minor > after.max_minor)
+    ) {
+      invalidRange.push(item);
+      continue;
+    }
+    const before = current?.[item] ?? null;
+    if (
+      (before?.amount_minor ?? null) !== after.amount_minor ||
+      (before?.min_minor ?? null) !== after.min_minor ||
+      (before?.max_minor ?? null) !== after.max_minor
+    ) {
+      changes.push({ item, ...after });
+    }
   }
-  return invalid.length > 0 ? { ok: false, invalid } : { ok: true, changes };
+  return invalid.length > 0 || invalidRange.length > 0 ? { ok: false, invalid, invalidRange } : { ok: true, changes };
+}
+
+/** "₪12.00 – ₪20.00", or null when the default is fixed. */
+export function formatRange(fare: { min_minor?: number | null; max_minor?: number | null } | null | undefined, locale: "ar" | "en") {
+  if (!fare || fare.min_minor == null || fare.max_minor == null) return null;
+  return `${formatMoney(fare.min_minor, locale)} – ${formatMoney(fare.max_minor, locale)}`;
 }

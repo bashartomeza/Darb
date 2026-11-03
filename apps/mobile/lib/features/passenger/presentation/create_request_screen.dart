@@ -12,6 +12,7 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/discard_saved_request_button.dart';
+import '../../canonical_routes/presentation/canonical_route_widgets.dart';
 import '../../matching/data/matching_repository.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../../operating_routes/presentation/operating_route_inputs.dart';
@@ -185,6 +186,13 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
     final canSubmit = !_loading && !_restoring && !_recoveryBlocked;
     final legacyPending =
         _pendingPayload != null && _pendingPayload!['service_route_id'] == null;
+    // The route's default seat price; the driver who takes the trip may
+    // charge their own price inside the admin's range.
+    final chosenRoute = ref
+        .watch(operatingRoutesProvider)
+        .value
+        ?.where((route) => route.id == _routeId)
+        .firstOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -320,6 +328,18 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
                 ],
               ),
             ),
+
+            if (chosenRoute != null) ...[
+              const SizedBox(height: AppTokens.spaceMedium),
+              KeyedSubtree(
+                key: const ValueKey('passengerRouteFare'),
+                child: passengerFareEstimate(
+                  context,
+                  chosenRoute.fares,
+                  _count,
+                ),
+              ),
+            ],
 
             if (_error != null) ...[
               const SizedBox(height: AppTokens.spaceMedium),

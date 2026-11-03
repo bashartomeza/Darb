@@ -56,3 +56,36 @@ Map<String, dynamic> operatingRoutesJson() => {
 
 List<OperatingRoute> testOperatingRoutes() =>
     parseOperatingRoutes(operatingRoutesJson());
+
+/// Prices for Hebron → Bethlehem as `GET /operating-routes` sends them: a
+/// seat at ₪15.00 that drivers may set between ₪12.00 and ₪20.00, a small
+/// parcel fixed at ₪8.00 and a medium parcel at ₪10.00 (₪9.00 to ₪14.00).
+Map<String, dynamic> hebronBethlehemFaresJson() => {
+  'currency': 'ILS',
+  'estimated': true,
+  'paid_directly_to_driver': true,
+  'passenger_seat_minor': 1500,
+  'parcel_minor': {'S': 800, 'M': 1000, 'L': null},
+  'driver_price_range': {
+    'passenger_seat': {'min_minor': 1200, 'max_minor': 2000},
+    'parcel': {
+      'S': null,
+      'M': {'min_minor': 900, 'max_minor': 1400},
+      'L': null,
+    },
+  },
+};
+
+/// [operatingRoutesJson] with prices on Hebron → Bethlehem only.
+Map<String, dynamic> operatingRoutesWithFaresJson() => {
+  'routes': [
+    for (final route in operatingRoutesJson()['routes'] as List)
+      {
+        ...(route as Map<String, dynamic>),
+        if (route['id'] == 'route-heb-bth') 'fares': hebronBethlehemFaresJson(),
+      },
+  ],
+};
+
+List<OperatingRoute> testOperatingRoutesWithFares() =>
+    parseOperatingRoutes(operatingRoutesWithFaresJson());

@@ -22,6 +22,7 @@ import {
 import { isLegacyRouteTimely, legacyRouteTimingWhere, legacyParcelUnits, reserveLegacyCapacity, releaseLegacyCapacity, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
 import { routeSummarySelect, withRouteFields, type RouteSummary } from "../services/operatingRoutes.js";
 import { assignedDriverSummary, type PublicDriverSource } from "../services/publicDriver.js";
+import { routeFareService } from "../services/routeFares.js";
 
 export const tripsRouter = Router();
 export const trackingSimulationRouter = Router();
@@ -286,6 +287,7 @@ tripsRouter.post("/matches/:id/accept", requireAuth, async (req: AuthenticatedRe
           }
         });
 
+        const pricedOrderIds: string[] = [];
         if (match.parcel_batch_id) {
           await tx.parcelBatch.update({ where: { id: match.parcel_batch_id }, data: { status: "assigned" } });
           const members = await tx.parcelBatchOrder.findMany({
@@ -293,6 +295,7 @@ tripsRouter.post("/matches/:id/accept", requireAuth, async (req: AuthenticatedRe
             select: { merchant_order_id: true }
           });
           const orderIds = members.map((member) => member.merchant_order_id);
+          pricedOrderIds.push(...orderIds);
           if (orderIds.length) {
             await tx.merchantOrder.updateMany({ where: { id: { in: orderIds } }, data: { status: "assigned" } });
             await tx.parcel.updateMany({ where: { order_id: { in: orderIds }, batch_id: match.parcel_batch_id }, data: { status: "assigned" } });
@@ -300,7 +303,21 @@ tripsRouter.post("/matches/:id/accept", requireAuth, async (req: AuthenticatedRe
         } else if (match.merchant_order_id) {
           await tx.merchantOrder.update({ where: { id: match.merchant_order_id }, data: { status: "assigned" } });
           await tx.parcel.updateMany({ where: { order_id: match.merchant_order_id }, data: { status: "assigned" } });
+          pricedOrderIds.push(match.merchant_order_id);
         }
+
+        // Authoritative fare: the order is saved at the price of the driver who
+        // takes it (their own price, else the route default in force now),
+        // committed with the trip. The offer set the same price; this also
+        // covers offers made before driver prices existed.
+        await routeFareService.applyDriverFare(tx, {
+          driverRouteId: match.driver_route_id,
+          passengerRequestId: match.passenger_request_id,
+          merchantOrderIds: pricedOrderIds,
+          matchId: match.id,
+          stage: "accepted",
+          actorId: req.user!.id
+        });
 
         await tx.auditEvent.create({
           data: {

@@ -128,6 +128,99 @@ void main() {
     expect(find.textContaining('الخليل ← بيت لحم'), findsWidgets);
   });
 
+  testWidgets('going online sends the driver price chosen inside the range', (
+    tester,
+  ) async {
+    final handler = _DriverHandler(routesEmpty: true)..withFares = true;
+    await _pumpApp(tester, handler: handler.call);
+    await tester.tap(find.byKey(const ValueKey('driverOnlineSwitch')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('driverRouteOption-route-heb-bth')),
+    );
+    await tester.pumpAndSettle();
+
+    final seat = find.byKey(const ValueKey('driverPrice-passenger_seat'));
+    VoidCallback? confirm() => tester
+        .widget<FilledButton>(
+          find.byKey(const ValueKey('driverRoutePickConfirm')),
+        )
+        .onPressed;
+    // Outside the admin's ₪12.00–₪20.00: refused in Arabic, nothing sent.
+    await tester.enterText(seat, '25');
+    await tester.pumpAndSettle();
+    expect(confirm(), isNull);
+    expect(find.textContaining('أدخل سعرًا بين'), findsOneWidget);
+
+    await tester.enterText(seat, '18');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('driverRoutePickConfirm')),
+    );
+    await tester.tap(find.byKey(const ValueKey('driverRoutePickConfirm')));
+    await tester.pumpAndSettle();
+
+    expect(handler.onlineBodies, [
+      {
+        'online': true,
+        'service_route_id': 'route-heb-bth',
+        'prices': {'passenger_seat': 1800},
+      },
+    ]);
+  });
+
+  testWidgets('going online with no price set charges the route default', (
+    tester,
+  ) async {
+    final handler = _DriverHandler(routesEmpty: true)..withFares = true;
+    await _pumpApp(tester, handler: handler.call);
+    await tester.tap(find.byKey(const ValueKey('driverOnlineSwitch')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('driverRouteOption-route-heb-bth')),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('driverRoutePickConfirm')),
+    );
+    await tester.tap(find.byKey(const ValueKey('driverRoutePickConfirm')));
+    await tester.pumpAndSettle();
+    expect(handler.onlineBodies, [
+      {'online': true, 'service_route_id': 'route-heb-bth'},
+    ]);
+  });
+
+  testWidgets('the route form sends the driver prices with the route', (
+    tester,
+  ) async {
+    final handler = _DriverHandler(routesEmpty: true)..withFares = true;
+    await _pumpApp(tester, handler: handler.call);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('driverHome'))),
+    ).go('/driver/route');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('driverRouteField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('الخليل ← بيت لحم').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('driverPrice-parcel_m')),
+      '13.5',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('activateRouteButton')));
+    await tester.pumpAndSettle();
+
+    expect(handler.createBodies, [
+      {
+        'service_route_id': 'route-heb-bth',
+        'seats_available': 2,
+        'parcel_capacity_available': 5,
+        'prices': {'parcel_m': 1350},
+      },
+    ]);
+  });
+
   testWidgets('dismissing the route question keeps the driver offline', (
     tester,
   ) async {
@@ -368,6 +461,9 @@ class _DriverHandler {
   int locationSequence = 0;
   bool routesFail = false;
 
+  /// Serve Hebron → Bethlehem with prices and a driver range.
+  bool withFares = false;
+
   /// Serve route-based match and trip payloads with typed details.
   bool routeBased = false;
   final paths = <String>[];
@@ -387,7 +483,14 @@ class _DriverHandler {
     if (path.endsWith('/operating-routes')) {
       return routesFail
           ? http.Response('{"error":"internal_error"}', 500)
-          : _utf8(jsonEncode(operatingRoutesJson()), 200);
+          : _utf8(
+              jsonEncode(
+                withFares
+                    ? operatingRoutesWithFaresJson()
+                    : operatingRoutesJson(),
+              ),
+              200,
+            );
     }
     if (path.endsWith('/driver/online-state') && request.method == 'PUT') {
       final body = jsonDecode(request.body) as Map<String, dynamic>;

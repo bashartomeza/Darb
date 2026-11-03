@@ -5,6 +5,7 @@ import '../../auth/data/token_storage.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../canonical_routes/data/canonical_operation_storage.dart';
 import '../data/driver_models.dart';
+import '../domain/driver_prices.dart';
 
 final legacyDriverRouteMutationProvider = Provider<LegacyDriverRouteMutation>((
   ref,
@@ -63,6 +64,7 @@ class LegacyDriverRouteMutation {
     required String? serviceRouteId,
     required int seats,
     required int parcels,
+    DriverPrices prices = DriverPrices.none,
     required Future<DriverRoute> Function(
       String key,
       Future<void> Function() beforeRetry,
@@ -79,6 +81,7 @@ class LegacyDriverRouteMutation {
         'service_route_id': ?serviceRouteId,
         'seats_available': seats,
         'parcel_capacity_available': parcels,
+        'prices': ?prices.toJson(),
       },
       allowExpiredReplay: true,
       send: (bundle) async {

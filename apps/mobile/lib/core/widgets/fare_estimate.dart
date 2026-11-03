@@ -24,6 +24,7 @@ class FareEstimateBox extends StatelessWidget {
     required this.currency,
     required this.lines,
     this.booked = false,
+    this.title,
     super.key,
   });
 
@@ -32,6 +33,9 @@ class FareEstimateBox extends StatelessWidget {
 
   /// True when this is the fare frozen on an existing request/parcel.
   final bool booked;
+
+  /// Replaces the default heading, e.g. "This driver's price".
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +57,8 @@ class FareEstimateBox extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              booked ? l10n.fareBookedTitle : l10n.fareEstimatedTitle,
+              title ??
+                  (booked ? l10n.fareBookedTitle : l10n.fareEstimatedTitle),
               style: theme.textTheme.titleSmall,
             ),
             const SizedBox(height: AppTokens.spaceExtraSmall),

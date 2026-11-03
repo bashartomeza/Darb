@@ -218,6 +218,7 @@ Widget fareSnapshotBox(
   BuildContext context,
   FareSnapshot? snapshot, {
   int? passengers,
+  String? title,
 }) {
   if (snapshot == null) return const SizedBox.shrink();
   final l10n = AppLocalizations.of(context);
@@ -225,6 +226,7 @@ Widget fareSnapshotBox(
   final seats = passengers;
   return FareEstimateBox(
     booked: true,
+    title: title,
     currency: snapshot.currency,
     lines: [
       if (unit != null && seats != null && seats > 1)

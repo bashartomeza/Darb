@@ -4,6 +4,8 @@ import { useLocale } from "../../i18n/LocaleContext";
 import type { TranslationKey } from "../../i18n/translations";
 import { BentoGrid, Button, Card, CardHeader, DataTable, EmptyState, Notice, RouteChip, Skeleton, StatusBadge, TechnicalValue, type Column } from "../../ui";
 import { RouteDialog } from "../routes/RouteDialog";
+import { RouteFares } from "../routes/RouteFares";
+import { formatMoney } from "../routes/routeFaresModel";
 import { AddCityDialog } from "./AddCityDialog";
 import { AddRouteDialog } from "./AddRouteDialog";
 import {
@@ -18,7 +20,13 @@ import {
 
 export type OperatingRoutesApi = Pick<
   ApiClient,
-  "operatingRoutes" | "createOperatingRoute" | "setOperatingRouteActive" | "operatingCities" | "createOperatingCity"
+  | "operatingRoutes"
+  | "createOperatingRoute"
+  | "setOperatingRouteActive"
+  | "operatingCities"
+  | "createOperatingCity"
+  | "routeFares"
+  | "setRouteFares"
 >;
 
 type Props = {
@@ -48,6 +56,7 @@ export function OperatingRoutesPage({ api, token, search = "", advancedHref = nu
   const [dialogBusy, setDialogBusy] = useState(false);
   const [dialogError, setDialogError] = useState<TranslationKey | null>(null);
   const [confirmOff, setConfirmOff] = useState<AdminOperatingRoute | null>(null);
+  const [pricing, setPricing] = useState<AdminOperatingRoute | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<PageNotice>(null);
   const mounted = useRef(true);
@@ -173,6 +182,50 @@ export function OperatingRoutesPage({ api, token, search = "", advancedHref = nu
     }
   }
 
+  function closePrices() {
+    setPricing(null);
+    // Saved prices show in the list at once.
+    void loadRoutes(true);
+  }
+
+  function pricesCell(route: AdminOperatingRoute) {
+    const fares = route.fares ?? null;
+    const money = (minor: number | null | undefined) => (minor == null ? "–" : formatMoney(minor, locale));
+    const seatRange = fares?.driver_price_range?.passenger_seat ?? null;
+    const parcels = fares ? [fares.parcel_minor.S, fares.parcel_minor.M, fares.parcel_minor.L] : [];
+    return (
+      <div className="operating-routes__prices">
+        {fares ? (
+          <>
+            <span>{t("opRoutesSeatPrice", { price: money(fares.passenger_seat_minor) })}</span>
+            {seatRange && (
+              <span className="muted">
+                {t("opRoutesSeatRange", { range: `${money(seatRange.min_minor)} – ${money(seatRange.max_minor)}` })}
+              </span>
+            )}
+            {parcels.some((minor) => minor !== null) && (
+              <span className="muted">{t("opRoutesParcelPrices", { prices: parcels.map(money).join(" / ") })}</span>
+            )}
+          </>
+        ) : (
+          <span className="muted">{t("opRoutesNoPrices")}</span>
+        )}
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label={t("opRoutesEditPrices", { name: routeName(route, locale) })}
+          data-prices-route-id={route.id}
+          onClick={() => {
+            setNotice(null);
+            setPricing(route);
+          }}
+        >
+          {t("opRoutesColumnPrices")}
+        </Button>
+      </div>
+    );
+  }
+
   const columns: Column<AdminOperatingRoute>[] = [
     {
       key: "name",
@@ -198,6 +251,7 @@ export function OperatingRoutesPage({ api, token, search = "", advancedHref = nu
         </StatusBadge>
       )
     },
+    { key: "prices", header: t("opRoutesColumnPrices"), cell: pricesCell },
     { key: "orders", header: t("opRoutesColumnOrders"), cell: (route) => number(route.orders_count ?? 0) },
     {
       key: "toggle",
@@ -332,6 +386,16 @@ export function OperatingRoutesPage({ api, token, search = "", advancedHref = nu
         </>}
       >
         {confirmOff && <RouteChip from={cityName(confirmOff.origin, locale)} to={cityName(confirmOff.destination, locale)} />}
+      </RouteDialog>
+      <RouteDialog
+        open={pricing !== null}
+        title={pricing ? t("opRoutesEditPrices", { name: routeName(pricing, locale) }) : t("opRoutesPricesTitle")}
+        description={t("opRoutesPricesDescription")}
+        dir={direction}
+        onClose={closePrices}
+        footer={<Button variant="outline" onClick={closePrices}>{t("opRoutesPricesClose")}</Button>}
+      >
+        {pricing && <RouteFares api={api} token={token} locale={locale} routeId={pricing.id} />}
       </RouteDialog>
     </div>
   );

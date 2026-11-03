@@ -13,6 +13,7 @@ import 'legacy_driver_route_mutation.dart';
 import '../../trips/data/trip_models.dart';
 import '../data/driver_models.dart';
 import '../data/driver_repository.dart';
+import '../domain/driver_prices.dart';
 
 class DriverDashboardState {
   const DriverDashboardState({
@@ -115,11 +116,13 @@ class LegacyDriverOnlineController {
   bool get busy => _busy;
 
   /// Going online without an operational route needs [serviceRouteId], the
-  /// route the driver chose; a saved, unconfirmed change is resent with the
-  /// route it was saved with.
+  /// route the driver chose, with their own [prices] on it (none: the route's
+  /// defaults); a saved, unconfirmed change is resent with the route and
+  /// prices it was saved with.
   Future<DriverDashboardState> setOnline(
     bool desiredOnline, {
     String? serviceRouteId,
+    DriverPrices prices = DriverPrices.none,
   }) async {
     if (_busy) throw StateError('operation_in_progress');
     _busy = true;
@@ -181,11 +184,19 @@ class LegacyDriverOnlineController {
           !pendingOnline) {
         throw const DriverRouteRequired();
       }
+      // Prices go with the route they were chosen for, and only when the
+      // driver set one (older saved changes carry none).
+      final chosenPrices = pendingOnline
+          ? pending.payload['prices']
+          : chosenRoute != null
+          ? prices.toJson()
+          : null;
       final payload = <String, dynamic>{
         'route_version_id': _legacyRouteSentinel,
         'online': desiredOnline,
         'expected_route_id': desiredOnline ? null : routeId,
         'service_route_id': ?chosenRoute,
+        'prices': ?chosenPrices,
       };
       final receipt = await ref
           .read(canonicalMutationRunnerProvider)
@@ -204,6 +215,7 @@ class LegacyDriverOnlineController {
                         bundle.payload['expected_route_id'] as String?,
                     serviceRouteId:
                         bundle.payload['service_route_id'] as String?,
+                    prices: DriverPrices.fromJson(bundle.payload['prices']),
                     idempotencyKey: bundle.idempotencyKey,
                     beforeRetry: () async => _requireCurrentActor(actorId),
                   );
@@ -301,6 +313,7 @@ class DriverRouteController extends AsyncNotifier<DriverRouteState> {
     required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
+    DriverPrices prices = DriverPrices.none,
   }) async {
     final mutation = ref.read(legacyDriverRouteMutationProvider);
     final pending = await mutation.pending();
@@ -316,12 +329,14 @@ class DriverRouteController extends AsyncNotifier<DriverRouteState> {
       serviceRouteId: serviceRouteId,
       seats: seatsAvailable,
       parcels: parcelCapacityAvailable,
+      prices: prices,
       send: (key, beforeRetry) => ref
           .read(driverRepositoryProvider)
           .createRoute(
             serviceRouteId: serviceRouteId,
             seatsAvailable: seatsAvailable,
             parcelCapacityAvailable: parcelCapacityAvailable,
+            prices: prices,
             idempotencyKey: key,
             beforeRetry: beforeRetry,
           ),

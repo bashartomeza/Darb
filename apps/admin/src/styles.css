@@ -349,6 +349,37 @@
   inset-inline-start: 22px;
 }
 
+.operating-routes__prices {
+  display: grid;
+  gap: 2px;
+  font-size: var(--body-sm-size);
+}
+
+.operating-routes__prices .muted {
+  color: var(--on-surface-variant);
+}
+
+/* Route prices: default and driver range per item. */
+.route-fares__item {
+  display: grid;
+  gap: var(--space-base);
+  margin: 0;
+  padding: var(--space-sm);
+  border: 1px solid var(--outline-variant, var(--outline));
+  border-radius: var(--radius-md, 8px);
+}
+
+.route-fares__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-sm);
+}
+
+.route-fares__fields label {
+  display: grid;
+  gap: 4px;
+}
+
 .order-route-details {
   margin-block-start: var(--space-xs);
 }

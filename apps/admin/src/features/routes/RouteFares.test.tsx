@@ -49,20 +49,50 @@ describe("fare diff", () => {
     parcel_l: null
   };
 
+  const draft = (amount: string, min = "", max = "") => ({ amount, min, max });
+
   it("sends only changed items and uses null to withdraw", () => {
-    const drafts = { ...draftsFromCurrent(current), passenger_seat: "", parcel_s: "7.5" };
+    const drafts = { ...draftsFromCurrent(current), passenger_seat: draft(""), parcel_s: draft("7.5") };
     expect(diffFares(drafts, current)).toEqual({
       ok: true,
       changes: [
-        { item: "passenger_seat", amount_minor: null },
-        { item: "parcel_s", amount_minor: 750 }
+        { item: "passenger_seat", amount_minor: null, min_minor: null, max_minor: null },
+        { item: "parcel_s", amount_minor: 750, min_minor: null, max_minor: null }
       ]
     });
   });
 
   it("reports no changes for untouched drafts and flags invalid ones", () => {
     expect(diffFares(draftsFromCurrent(current), current)).toEqual({ ok: true, changes: [] });
-    expect(diffFares({ ...draftsFromCurrent(current), parcel_m: "1.234" }, current)).toEqual({ ok: false, invalid: ["parcel_m"] });
+    expect(diffFares({ ...draftsFromCurrent(current), parcel_m: draft("1.234") }, current)).toEqual({
+      ok: false,
+      invalid: ["parcel_m"],
+      invalidRange: []
+    });
+  });
+
+  it("sends the driver range with the default, and a range change alone", () => {
+    const drafts = { ...draftsFromCurrent(current), passenger_seat: draft("15", "12", "20") };
+    expect(diffFares(drafts, current)).toEqual({
+      ok: true,
+      changes: [{ item: "passenger_seat", amount_minor: 1500, min_minor: 1200, max_minor: 2000 }]
+    });
+    const ranged = { ...current, passenger_seat: { ...current.passenger_seat, min_minor: 1200, max_minor: 2000 } };
+    expect(draftsFromCurrent(ranged).passenger_seat).toEqual({ amount: "15.00", min: "12.00", max: "20.00" });
+    expect(diffFares(draftsFromCurrent(ranged), ranged)).toEqual({ ok: true, changes: [] });
+  });
+
+  it.each([
+    ["only a minimum", draft("15", "12", "")],
+    ["a minimum above the default", draft("15", "16", "20")],
+    ["a maximum below the default", draft("15", "10", "14")],
+    ["a range without a default", draft("", "10", "14")]
+  ])("refuses %s", (_name, value) => {
+    expect(diffFares({ ...draftsFromCurrent(current), passenger_seat: value }, current)).toEqual({
+      ok: false,
+      invalid: [],
+      invalidRange: ["passenger_seat"]
+    });
   });
 });
 

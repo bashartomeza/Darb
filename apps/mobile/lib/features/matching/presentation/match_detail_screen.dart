@@ -14,6 +14,7 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../canonical_routes/presentation/canonical_route_widgets.dart';
 import '../../passenger/application/passenger_controller.dart';
 import '../data/matching_repository.dart';
 
@@ -144,6 +145,16 @@ class _MatchDetailScreenState extends ConsumerState<MatchDetailScreen> {
                     ],
                   ),
                 ),
+                if (match.fare != null)
+                  KeyedSubtree(
+                    key: const ValueKey('matchDriverFare'),
+                    child: fareSnapshotBox(
+                      context,
+                      match.fare,
+                      passengers: match.passengerCount,
+                      title: l10n.fareDriverTitle,
+                    ),
+                  ),
                 const SizedBox(height: AppTokens.spaceLarge),
 
                 DarbSection(

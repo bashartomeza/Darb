@@ -2720,6 +2720,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fareTotal => 'الإجمالي';
 
   @override
+  String get driverPricesTitle => 'أسعارك على هذا المسار';
+
+  @override
+  String get driverPricesBody =>
+      'اترك السعر فارغًا لتعتمد السعر الافتراضي للمسار. يرى الركاب والتجار سعرك قبل الحجز.';
+
+  @override
+  String get driverPriceSeat => 'سعر المقعد';
+
+  @override
+  String driverPriceParcel(String size) {
+    return 'سعر الطرد $size';
+  }
+
+  @override
+  String driverPriceRangeHint(String price, String min, String max) {
+    return 'الافتراضي $price. بين $min و$max.';
+  }
+
+  @override
+  String driverPriceFixedHint(String price) {
+    return 'سعر ثابت: $price';
+  }
+
+  @override
+  String driverPriceInvalid(String min, String max) {
+    return 'أدخل سعرًا بين $min و$max.';
+  }
+
+  @override
+  String get driverPriceOutOfRange =>
+      'أحد أسعارك خارج النطاق المسموح على هذا المسار. اختر سعرًا داخل النطاق.';
+
+  @override
+  String get driverPriceFixedError => 'سعر هذا المسار ثابت ولا يمكن تغييره.';
+
+  @override
+  String driverYourPrices(String prices) {
+    return 'أسعارك: $prices';
+  }
+
+  @override
+  String get driverPricesDefault => 'أسعارك: الأسعار الافتراضية للمسار';
+
+  @override
+  String get fareDriverTitle => 'سعر هذا السائق';
+
+  @override
   String get notifDriverApproachingTitle => 'سائقك يقترب';
 
   @override

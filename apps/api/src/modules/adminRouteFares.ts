@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import type { AppConfig } from "../config.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
-import { HttpError, notFoundHandler } from "../middleware/error.js";
+import { HttpError } from "../middleware/error.js";
 import {
   FARE_ITEMS,
   MAX_FARE_MINOR,
@@ -20,11 +20,18 @@ const reason = z
   .regex(/^[^\u0000-\u001f\u007f]+$/)
   .transform((value) => value.normalize("NFC"));
 
-const changeSchema = z.strictObject({
-  item: z.enum(FARE_ITEMS),
-  // Integer agorot only: the client converts "12.50" to 1250, the server never rounds money.
-  amount_minor: z.number().int().min(1).max(MAX_FARE_MINOR).nullable()
-});
+const minor = z.number().int().min(1).max(MAX_FARE_MINOR);
+const changeSchema = z
+  .strictObject({
+    item: z.enum(FARE_ITEMS),
+    // Integer agorot only: the client converts "12.50" to 1250, the server never rounds money.
+    amount_minor: minor.nullable(),
+    // The range a driver may choose within. Both or neither; omitted means
+    // the default is fixed (older clients send only the amount).
+    min_minor: minor.nullable().optional(),
+    max_minor: minor.nullable().optional()
+  })
+  .refine((change) => (change.min_minor == null) === (change.max_minor == null));
 const setFaresSchema = z.strictObject({
   changes: z.array(changeSchema).min(1).max(FARE_ITEMS.length),
   effective_from: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
@@ -39,6 +46,8 @@ function currentItems(set: RouteFareSet) {
         ? {
             fare_id: set[item]!.id,
             amount_minor: set[item]!.amountMinor,
+            min_minor: set[item]!.minMinor,
+            max_minor: set[item]!.maxMinor,
             currency: set[item]!.currency,
             effective_from: set[item]!.effectiveFrom
           }
@@ -51,6 +60,8 @@ type HistoryRow = {
   id: string;
   item: string;
   amount_minor: number | null;
+  min_minor?: number | null;
+  max_minor?: number | null;
   currency: string;
   effective_from: Date;
   reason: string | null;
@@ -63,6 +74,8 @@ function historyResponse(row: HistoryRow) {
     id: row.id,
     item: row.item,
     amount_minor: row.amount_minor,
+    min_minor: row.min_minor ?? null,
+    max_minor: row.max_minor ?? null,
     currency: row.currency,
     effective_from: row.effective_from,
     reason: row.reason,
@@ -71,12 +84,13 @@ function historyResponse(row: HistoryRow) {
   };
 }
 
-export function createAdminRouteFaresRouter(appConfig: AppConfig, service: RouteFareService = routeFareService) {
+/**
+ * Route prices: the default per item and the range a driver may choose
+ * within. Admin only. Not gated by ROUTE_MANAGEMENT_ENABLED: the Operating
+ * routes page sets the prices of the routes production runs on.
+ */
+export function createAdminRouteFaresRouter(_appConfig: AppConfig, service: RouteFareService = routeFareService) {
   const router = Router();
-  if (!appConfig.routeManagementEnabled) {
-    router.use("/admin/service-routes/:id/fares", notFoundHandler);
-    return router;
-  }
   router.use("/admin/service-routes/:id/fares", requireAuth, requireRole("admin"));
 
   async function respond(routeId: string, req: AuthenticatedRequest, res: import("express").Response, status = 200) {
@@ -108,7 +122,14 @@ export function createAdminRouteFaresRouter(appConfig: AppConfig, service: Route
       if (!input.success) throw new HttpError(400, "invalid_fare_request");
       await service.setFares(
         routeId,
-        input.data.changes.map((change) => ({ item: change.item, amountMinor: change.amount_minor })),
+        input.data.changes.map((change) => ({
+          item: change.item,
+          amountMinor: change.amount_minor,
+          range:
+            change.min_minor != null && change.max_minor != null
+              ? { minMinor: change.min_minor, maxMinor: change.max_minor }
+              : null
+        })),
         { effectiveFrom: input.data.effective_from, reason: input.data.reason },
         { id: req.user!.id, requestId: req.requestId }
       );

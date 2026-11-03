@@ -1,3 +1,5 @@
+import '../../../core/fares/fare.dart';
+
 /// One end of an operating route: a city, as served by
 /// `GET /operating-routes`.
 class RouteCity {
@@ -41,6 +43,7 @@ class OperatingRoute {
     required this.nameEn,
     required this.origin,
     required this.destination,
+    this.fares,
   });
 
   /// The service route id sent as `service_route_id`.
@@ -50,6 +53,10 @@ class OperatingRoute {
   final String nameEn;
   final RouteCity origin;
   final RouteCity destination;
+
+  /// The route's default prices and the range a driver may charge within;
+  /// null until an admin sets prices (or when they cannot be read).
+  final RouteFares? fares;
 
   String displayName({required bool arabic}) =>
       arabic && nameAr.trim().isNotEmpty ? nameAr : nameEn;
@@ -68,6 +75,7 @@ class OperatingRoute {
       nameEn: _string(json, 'name_en'),
       origin: RouteCity.fromJson(origin),
       destination: RouteCity.fromJson(destination),
+      fares: RouteFares.tryParse(json['fares']),
     );
   }
 }
