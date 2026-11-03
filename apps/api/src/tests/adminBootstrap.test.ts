@@ -16,7 +16,7 @@ const { createApp } = await import("../app.js");
 const { createOrResetAdmin, listAdmins, validateAdminInput, AdminBootstrapError } = await import("../services/adminBootstrap.js");
 const { parseCliArgs, stripTrailingNewline } = await import("../scripts/adminCliInput.js");
 
-const PASSWORD = "correct horse battery staple";
+const PASSWORD = "correct horse battery staple 42";
 const guard = { demoFeaturesEnabled: false, databaseName: "darb_prod", demoResetAllowedDatabases: ["darb_demo"], allowDemoDatabase: false };
 const db = prismaMock as never;
 const base = { email: "Owner@Example.com", name: "Owner", password: PASSWORD, resetPassword: false, dryRun: false, guard };
@@ -77,10 +77,12 @@ describe("admin bootstrap", () => {
     expect(prismaMock.auditEvent.create).not.toHaveBeenCalled();
   });
 
-  it("enforces the staff password policy", async () => {
-    expect(await rejection(createOrResetAdmin(db, { ...base, password: "short-password" }))).toBe("password_too_short");
-    expect(await rejection(createOrResetAdmin(db, { ...base, password: "a".repeat(73) }))).toBe("password_invalid");
-    expect(await rejection(createOrResetAdmin(db, { ...base, password: "ا".repeat(40) }))).toBe("password_invalid");
+  it("enforces the shared password rule for staff too", async () => {
+    for (const password of ["abc1234", "lettersonlypassword", "1234567890", `a1${"b".repeat(71)}`, "ا".repeat(40)]) {
+      expect(await rejection(createOrResetAdmin(db, { ...base, password }))).toBe("password_invalid");
+    }
+    expect(() => validateAdminInput({ email: "owner@example.com", password: "admin123" })).not.toThrow();
+    expect(() => validateAdminInput({ email: "owner@example.com", password: "مدير١٢٣٤" })).not.toThrow();
     expect(() => validateAdminInput({ email: "not-an-email" })).toThrow(AdminBootstrapError);
     expect(prismaMock.user.create).not.toHaveBeenCalled();
   });

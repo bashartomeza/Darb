@@ -17,7 +17,7 @@ const { createOperationalLogger } = await import("../lib/logger.js");
 const documents = ["terms", "privacy", "adult_self_attestation"].map((type, index) => ({
   id: `doc_${index}`, document_type: type, locale: "en", content_digest: String(index + 1).repeat(64)
 }));
-const registration = { name: "Passenger", email: "  Owner+tag@Example.COM ", password: "correct horse battery staple", locale: "en" };
+const registration = { name: "Passenger", email: "  Owner+tag@Example.COM ", password: "correct horse battery staple 42", locale: "en" };
 const consents = documents.map((d) => ({ id: d.id, type: d.document_type, content_hash: d.content_digest }));
 const actions: any[] = [];
 const users: any[] = [];
@@ -189,9 +189,53 @@ describe("email authentication lifecycle", () => {
     await request(app()).post("/api/v1/auth/mobile/register/complete").send(complete(r.body)).expect(409);
     expect(users).toHaveLength(1); expect(db.authSession.create).not.toHaveBeenCalled();
   });
-  it.each(["short", "a".repeat(73), "😀".repeat(19)])("rejects weak or bcrypt-truncated password %s", async (password) => {
-    await request(app()).post("/api/v1/auth/mobile/register/start").send({ ...registration, password }).expect(400);
-    expect(messages).toHaveLength(0);
+  describe("the shared password rule", () => {
+    it.each([
+      ["7 characters", "abcde12"],
+      ["letters only", "abcdefghijkl"],
+      ["digits only", "1234567890"],
+      ["more than 72 bytes", `a1${"b".repeat(71)}`],
+      ["more than 72 bytes of Arabic", `${"ب".repeat(36)}1`],
+      ["emoji only", "😀".repeat(19)]
+    ])("refuses sign-up with %s as invalid_password and sends nothing", async (_label, password) => {
+      const response = await request(app()).post("/api/v1/auth/mobile/register/start").send({ ...registration, password }).expect(400);
+      expect(response.body.error).toBe("invalid_password");
+      expect(JSON.stringify(response.body)).not.toContain(password);
+      expect(messages).toHaveLength(0);
+    });
+    it.each([
+      ["8 characters with a letter and a digit", "abcdefg1"],
+      ["Arabic letters with Arabic-Indic digits", "كلمةسر١٢"],
+      ["exactly 72 bytes", `a1${"b".repeat(70)}`]
+    ])("accepts sign-up with %s", async (_label, password) => {
+      await request(app()).post("/api/v1/auth/mobile/register/start").send({ ...registration, password }).expect(202);
+      expect(messages).toHaveLength(1);
+    });
+    it("keeps validation_error when the password is not the only problem", async () => {
+      const response = await request(app()).post("/api/v1/auth/mobile/register/start").send({ ...registration, email: "not-an-email", password: "short" }).expect(400);
+      expect(response.body.error).toBe("validation_error");
+    });
+    it("applies the rule to password reset and password set", async () => {
+      const u = actor({ password_hash: await bcrypt.hash(registration.password, 4) }); users.push(u);
+      await request(app()).post("/api/v1/auth/password/reset/start").send({ email: registration.email, locale: "en" }).expect(202);
+      const reset = await request(app()).post("/api/v1/auth/password/reset/confirm")
+        .send({ email: registration.email, code: messages[0].actionToken, password: "lettersonly" }).expect(400);
+      expect(reset.body.error).toBe("invalid_password");
+      const set = await request(app()).post("/api/v1/auth/password/set").set("Authorization", bearer(u))
+        .send({ password: "12345678", current_password: registration.password }).expect(400);
+      expect(set.body.error).toBe("invalid_password");
+      expect(await bcrypt.compare(registration.password, users[0].password_hash)).toBe(true);
+      await request(app()).post("/api/v1/auth/password/set").set("Authorization", bearer(u))
+        .send({ password: "newpass9", current_password: registration.password }).expect(200);
+      expect(await bcrypt.compare("newpass9", users[0].password_hash)).toBe(true);
+    });
+    it.each([
+      ["a short old password", "old"],
+      ["a long letters-only old password", "an old passphrase without any digits at all"]
+    ])("still signs in with %s set under an earlier rule", async (_label, password) => {
+      users.push(actor({ password_hash: await bcrypt.hash(password, 4) }));
+      await request(app()).post("/api/v1/auth/mobile/login").send({ email: registration.email, password }).expect(200);
+    });
   });
   it("disables the old immediate-registration bypass", async () => {
     await request(app()).post("/api/v1/auth/register").send(registration).expect(410); expect(users).toHaveLength(0);
@@ -292,7 +336,7 @@ describe("email authentication lifecycle", () => {
     const known = await request(app()).post("/api/v1/auth/password/reset/start").send({ email: registration.email, locale: "en" }).expect(202);
     expect(known.body).toEqual(unknown.body);
     expect(messages[0].actionToken).toMatch(/^\d{6}$/);
-    const payload = { email: registration.email, code: messages[0].actionToken, password: "a different strong password" };
+    const payload = { email: registration.email, code: messages[0].actionToken, password: "a different strong password 7" };
     await request(app()).post("/api/v1/auth/password/reset/confirm").send(payload).expect(200);
     expect(users[0].security_version).toBe(2); expect(await bcrypt.compare(payload.password, users[0].password_hash)).toBe(true);
     expect(db.authSession.updateMany).toHaveBeenCalled(); expect(db.refreshToken.updateMany).toHaveBeenCalled();
@@ -300,7 +344,7 @@ describe("email authentication lifecycle", () => {
     expect(users[0].security_version).toBe(2);
   });
   describe("six-digit password reset code", () => {
-    const strong = "a different strong password";
+    const strong = "a different strong password 7";
     const wrongOf = (right: string) => (right === "000000" ? "000001" : "000000");
     async function resetStart(server: ReturnType<typeof app>, email = registration.email) {
       await request(server).post("/api/v1/auth/password/reset/start").send({ email, locale: "en" }).expect(202);
@@ -360,8 +404,8 @@ describe("email authentication lifecycle", () => {
   it("password set requires fresh reauthentication and revokes existing sessions", async () => {
     const u = actor({ password_hash: await bcrypt.hash(registration.password, 4) }); users.push(u);
     const token = bearer(u);
-    await request(app()).post("/api/v1/auth/password/set").set("Authorization", token).send({ password: "a different strong password" }).expect(403);
-    await request(app()).post("/api/v1/auth/password/set").set("Authorization", token).send({ password: "a different strong password", current_password: registration.password }).expect(200);
+    await request(app()).post("/api/v1/auth/password/set").set("Authorization", token).send({ password: "a different strong password 7" }).expect(403);
+    await request(app()).post("/api/v1/auth/password/set").set("Authorization", token).send({ password: "a different strong password 7", current_password: registration.password }).expect(200);
     expect(users[0].security_version).toBe(2); expect(db.authSession.updateMany).toHaveBeenCalled();
   });
   it("verifies existing email through one-time proof", async () => {

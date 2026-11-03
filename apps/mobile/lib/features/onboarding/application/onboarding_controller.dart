@@ -1,9 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/i18n/domain_labels.dart';
+import '../../../core/validation/password_rule.dart';
 import '../data/onboarding_repository.dart';
 import '../data/onboarding_storage.dart';
 import '../domain/onboarding_models.dart';
@@ -424,18 +423,16 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
       state = AsyncData(current.copyWith(errorCode: 'validation_error'));
       return;
     }
-    final config = current.config;
     final normalizedName = displayName.trim().replaceAll(RegExp(r'\s+'), ' ');
-    final passwordCharacters = password.runes.length;
-    if (config == null ||
+    if (current.config == null ||
         normalizedName.runes.length < 2 ||
         normalizedName.runes.length > 80 ||
-        RegExp(r'[\x00-\x1f\x7f<>]').hasMatch(normalizedName) ||
-        passwordCharacters < config.minimumPasswordCharacters ||
-        passwordCharacters > config.maximumPasswordCharacters ||
-        utf8.encode(password).length > config.maximumPasswordUtf8Bytes ||
-        password.trim().isEmpty) {
+        RegExp(r'[\x00-\x1f\x7f<>]').hasMatch(normalizedName)) {
       state = AsyncData(current.copyWith(errorCode: 'validation_error'));
+      return;
+    }
+    if (!validNewPassword(password)) {
+      state = AsyncData(current.copyWith(errorCode: 'invalid_password'));
       return;
     }
     final payload = <String, String>{
@@ -1001,9 +998,6 @@ const _disabledConfig = OnboardingConfig(
   enabled: false,
   registrationRoles: [],
   supportedLocales: [],
-  minimumPasswordCharacters: 15,
-  maximumPasswordCharacters: 64,
-  maximumPasswordUtf8Bytes: 72,
   otpDigits: 6,
   resendCooldownSeconds: 60,
 );

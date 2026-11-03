@@ -142,7 +142,7 @@ Gap G3 is resolved by `npm run admin:create`. Admin sign-in is by **email and pa
    ```
 
    Non-interactive alternatives, both still keeping the password out of argv and shell history: `--password-file <path>` (a file with mode 0600, delete it afterwards) or `--password-stdin`. `ADMIN_EMAIL` and `ADMIN_NAME` may replace the flags.
-4. The command creates a user with role `admin`, status `active`, email verified, a bcrypt (cost 12) hash exactly as the login route expects, and writes an `admin_action` audit event (`admin_created_cli`). The password must be 16 or more characters (and at most 72 bytes); use a unique one from the owner's password manager.
+4. The command creates a user with role `admin`, status `active`, email verified, a bcrypt (cost 12) hash exactly as the login route expects, and writes an `admin_action` audit event (`admin_created_cli`). The password follows the same rule as every other account: at least 8 characters with at least one letter and one number, and at most 72 bytes. That is only the floor; use a long, unique one from the owner's password manager.
 5. Confirm with the read-only listing (email, status, created and last login times; no hashes):
 
    ```sh

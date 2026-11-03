@@ -6,6 +6,7 @@ import type { AppConfig } from "../config.js";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { AuthActionError, checkAuthActionCode, consumeAuthAction, consumeCheckedAuthAction, issueAuthAction, revokeAuthActions } from "../lib/authActionTokens.js";
 import { normalizeEmailForAbuse } from "../lib/contactEmail.js";
+import { newPassword } from "../lib/passwordRule.js";
 import { abuseSubjectDigest, hexDigestMatches, keyedDigest, type VersionedKey } from "../lib/keyedDigest.js";
 import { revokeAllUserSessions } from "../lib/refreshTokens.js";
 import { HttpError } from "../middleware/error.js";
@@ -16,7 +17,6 @@ export type EmailDelivery = {
   send(message: { to: string; locale: "ar" | "en"; purpose: "email_verification" | "password_reset" | "password_set" | "phone_code"; actionToken: string; expiresAt: Date }): Promise<void>;
 };
 export const canonicalEmail = z.string().trim().toLowerCase().email().max(191);
-export const newPassword = z.string().min(12).max(72).refine((value) => Buffer.byteLength(value, "utf8") <= 72);
 const locale = z.enum(["ar", "en"]);
 const actionToken = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 const registrationToken = z.string().min(1).max(2048);
