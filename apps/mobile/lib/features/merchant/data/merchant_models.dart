@@ -1,3 +1,4 @@
+import '../../../core/fares/fare.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
@@ -297,10 +298,15 @@ class MerchantOrder {
     this.routeNameAr,
     this.routeNameEn,
     this.pickupDetails,
+    this.fare,
   });
 
   final String id;
   final String pickupLabel;
+
+  /// The order's fare frozen at creation (the sum of its parcels' size
+  /// fares); null when the route had no fare for every parcel.
+  final FareSnapshot? fare;
 
   /// The pickup stored with the order; null when the record has none.
   final GeoPoint? pickupPosition;
@@ -382,6 +388,7 @@ class MerchantOrder {
       routeNameAr: _text(json['route_name_ar']),
       routeNameEn: _text(json['route_name_en']),
       pickupDetails: _text(json['pickup_details']),
+      fare: FareSnapshot.tryParse(json['fare']),
     );
   }
 }

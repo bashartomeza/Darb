@@ -223,6 +223,8 @@ class _ParcelCardState extends ConsumerState<ParcelCard> {
             const SizedBox(height: AppTokens.spaceSmall),
             Text(dateTimeLabel(context, parcel.collectionTime!)),
           ],
+          // The fare frozen when the parcel was sent; absent without a fare.
+          fareSnapshotBox(context, parcel.fare),
           const SizedBox(height: AppTokens.spaceSmall),
           if (parcel.receiverDetailsRemoved)
             Text(l10n.parcelReceiverRemoved, style: theme.textTheme.bodySmall)

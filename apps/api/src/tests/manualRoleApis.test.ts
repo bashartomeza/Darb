@@ -21,6 +21,7 @@ const prismaMock = vi.hoisted(() => ({
   incident: { count: vi.fn() },
   deliveryHandover: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
   serviceRoute: { findUnique: vi.fn() },
+  routeFare: { findMany: vi.fn(async () => []) },
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));

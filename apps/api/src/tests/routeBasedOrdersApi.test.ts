@@ -27,7 +27,8 @@ const prismaMock = vi.hoisted(() => ({
   driverProfile: { findUnique: vi.fn() },
   driverRoute: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
   match: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
-  deliveryHandover: { findUnique: vi.fn(), create: vi.fn() }
+  deliveryHandover: { findUnique: vi.fn(), create: vi.fn() },
+  routeFare: { findMany: vi.fn() }
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
 vi.mock("../lib/abuseCounters.js", () => ({
@@ -88,6 +89,8 @@ beforeEach(() => {
   prismaMock.serviceRoute.findUnique.mockImplementation(findOperatingRoute(ROUTES));
   prismaMock.deliveryHandover.findUnique.mockResolvedValue(null);
   prismaMock.deliveryHandover.create.mockResolvedValue({});
+  // No route has a fare unless a test publishes one.
+  prismaMock.routeFare.findMany.mockResolvedValue([]);
   // Matching filters its supply by the demand's service route.
   prismaMock.driverRoute.findMany.mockImplementation(async ({ where }: any) =>
     SUPPLY.filter((route) => {
@@ -408,6 +411,100 @@ describe("merchant orders on a route", () => {
         expect.objectContaining({ row: 3, field: "receiver_phone", code: "row_invalid_phone" })
       ]);
     });
+  });
+});
+
+describe("fares on route orders", () => {
+  const hourAgo = () => new Date(Date.now() - 3_600_000);
+  /** Tariff rows for Hebron → Bethlehem only, as `routeFare.findMany` returns them. */
+  const HB_FARES = () => [
+    { id: "fare_seat", service_route_id: HEBRON_BETHLEHEM.id, item: "passenger_seat", amount_minor: 1250, currency: "ILS", effective_from: hourAgo(), created_at: hourAgo() },
+    { id: "fare_s", service_route_id: HEBRON_BETHLEHEM.id, item: "parcel_s", amount_minor: 800, currency: "ILS", effective_from: hourAgo(), created_at: hourAgo() },
+    { id: "fare_m", service_route_id: HEBRON_BETHLEHEM.id, item: "parcel_m", amount_minor: 1500, currency: "ILS", effective_from: hourAgo(), created_at: hourAgo() }
+  ];
+
+  beforeEach(() => {
+    prismaMock.routeFare.findMany.mockImplementation(async ({ where }: any) =>
+      HB_FARES().filter((row) => where.service_route_id.in.includes(row.service_route_id)));
+    prismaMock.passengerRequest.create.mockImplementation(async ({ data }: any) => ({
+      id: "request_1", created_at: new Date(), status: "pending", ...data, route_version: routeSummary(HEBRON_BETHLEHEM)
+    }));
+    prismaMock.merchantOrder.create.mockImplementation(async ({ data }: any) => ({
+      id: "order_1", status: "submitted", created_at: new Date(), ...data, route_version: routeSummary(HEBRON_BETHLEHEM),
+      parcels: data.parcels.create.map((parcel: Record<string, unknown>, index: number) => ({ id: `parcel_${index}`, order_id: "order_1", ...parcel }))
+    }));
+  });
+
+  const passengerBody = (serviceRouteId: string, passengers = 2) => ({
+    service_route_id: serviceRouteId, pickup_details: "PPU main gate", dropoff_details: "Bethlehem bus station",
+    preferred_time: inOneHour(), passenger_count: passengers
+  });
+
+  it("freezes the seat fare times the party size on a passenger request and returns it", async () => {
+    const response = await request(createApp()).post("/api/v1/passenger/requests").set(auth("p1", "passenger"))
+      .send(passengerBody(HEBRON_BETHLEHEM.id, 3)).expect(201);
+    expect(prismaMock.routeFare.findMany.mock.calls[0][0].where.service_route_id).toEqual({ in: [HEBRON_BETHLEHEM.id] });
+    expect(prismaMock.passengerRequest.create.mock.calls[0][0].data).toMatchObject({
+      fare_id: "fare_seat", fare_unit_minor: 1250, fare_total_minor: 3750, fare_currency: "ILS"
+    });
+    expect(response.body.request.fare).toEqual({
+      currency: "ILS", unit_minor: 1250, total_minor: 3750, estimated: true, paid_directly_to_driver: true
+    });
+  });
+
+  it("still creates a passenger request on a route without a fare, with a null fare", async () => {
+    const response = await request(createApp()).post("/api/v1/passenger/requests").set(auth("p1", "passenger"))
+      .send(passengerBody(RAMALLAH_NABLUS.id)).expect(201);
+    expect(prismaMock.passengerRequest.create.mock.calls[0][0].data).toMatchObject({
+      fare_id: null, fare_unit_minor: null, fare_total_minor: null, fare_currency: null
+    });
+    expect(response.body.request.fare).toBeNull();
+  });
+
+  it("returns the frozen fare on passenger request reads", async () => {
+    prismaMock.passengerRequest.findFirst.mockResolvedValue({
+      id: "request_1", passenger_id: "p1", status: "pending", passenger_count: 2, route_version: routeSummary(HEBRON_BETHLEHEM),
+      fare_id: "fare_seat", fare_unit_minor: 1250, fare_total_minor: 2500, fare_currency: "ILS"
+    });
+    const response = await request(createApp()).get("/api/v1/passenger/requests/request_1").set(auth("p1", "passenger")).expect(200);
+    expect(response.body.request.fare).toMatchObject({ currency: "ILS", unit_minor: 1250, total_minor: 2500 });
+  });
+
+  it("freezes each parcel's size fare on a merchant order and returns the parcel and order fares", async () => {
+    const response = await request(createApp()).post("/api/v1/merchant/orders").set(auth("m1", "merchant")).send({
+      service_route_id: HEBRON_BETHLEHEM.id,
+      pickup_details: "store, Ein Sarah street",
+      parcels: [{ dropoff_details: "Manger Street 12", size: "S" }, { dropoff_details: "Beit Jala junction", size: "M" }]
+    }).expect(201);
+    expect(prismaMock.merchantOrder.create.mock.calls[0][0].data.parcels.create).toEqual([
+      expect.objectContaining({ size: "S", fare_id: "fare_s", fare_minor: 800, fare_currency: "ILS" }),
+      expect.objectContaining({ size: "M", fare_id: "fare_m", fare_minor: 1500, fare_currency: "ILS" })
+    ]);
+    expect(response.body.order.parcels.map((parcel: { fare: { total_minor: number } }) => parcel.fare.total_minor)).toEqual([800, 1500]);
+    expect(response.body.order.fare).toEqual({
+      currency: "ILS", unit_minor: null, total_minor: 2300, estimated: true, paid_directly_to_driver: true
+    });
+  });
+
+  it("leaves a size without a fare null and gives no misleading order total", async () => {
+    const response = await request(createApp()).post("/api/v1/merchant/orders").set(auth("m1", "merchant")).send({
+      service_route_id: HEBRON_BETHLEHEM.id,
+      pickup_details: "store",
+      parcels: [{ dropoff_details: "Manger Street 12", size: "S" }, { dropoff_details: "Beit Jala junction", size: "L" }]
+    }).expect(201);
+    expect(prismaMock.merchantOrder.create.mock.calls[0][0].data.parcels.create[1]).toMatchObject({ size: "L", fare_id: null, fare_minor: null, fare_currency: null });
+    expect(response.body.order.parcels[0].fare).toMatchObject({ total_minor: 800 });
+    expect(response.body.order.parcels[1].fare).toBeNull();
+    expect(response.body.order.fare).toBeNull();
+  });
+
+  it("still creates a merchant order on a route without a fare, with null fares", async () => {
+    const response = await request(createApp()).post("/api/v1/merchant/orders").set(auth("m1", "merchant")).send({
+      service_route_id: RAMALLAH_NABLUS.id, pickup_details: "store", parcels: [{ dropoff_details: "Rafidia", size: "S" }]
+    }).expect(201);
+    expect(prismaMock.merchantOrder.create.mock.calls[0][0].data.parcels.create[0]).toMatchObject({ fare_id: null, fare_minor: null, fare_currency: null });
+    expect(response.body.order.fare).toBeNull();
+    expect(response.body.order.parcels[0].fare).toBeNull();
   });
 });
 

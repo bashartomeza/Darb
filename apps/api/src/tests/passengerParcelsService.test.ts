@@ -277,7 +277,9 @@ describe("route-based passenger parcels (legacy pipeline)", () => {
       },
       deliveryHandover: { findUnique: vi.fn().mockResolvedValue(null), create: vi.fn().mockResolvedValue({}) },
       match: { findMany: vi.fn().mockResolvedValue([]), updateMany: vi.fn() },
-      driverRoute: { update: vi.fn() }
+      driverRoute: { update: vi.fn() },
+      // No fare configured unless a test publishes one.
+      routeFare: { findMany: vi.fn().mockResolvedValue([]) }
     });
     db.merchantOrder.create = vi.fn(async ({ data }: any) => ({
       id: "order_1", ...data, parcels: data.parcels.create.map((parcel: object, index: number) => ({ id: `parcel_${index + 1}`, ...parcel }))
@@ -319,6 +321,31 @@ describe("route-based passenger parcels (legacy pipeline)", () => {
     await expect(createPassengerParcelService(past).createForRoute({ ...routeInput, preferredTime: new Date(Date.now() - 1000) }, routeActor))
       .rejects.toMatchObject({ statusCode: 400, message: "preferred_time_in_past" });
     expect(past.merchantOrder.create).not.toHaveBeenCalled();
+  });
+
+  it("freezes the route's fare for the parcel size and returns it", async () => {
+    const db = await routeDb();
+    const hourAgo = new Date(Date.now() - 3_600_000);
+    db.routeFare.findMany.mockResolvedValue([
+      { id: "fare_m", service_route_id: "service_route_hebron_bethlehem", item: "parcel_m", amount_minor: 1500, currency: "ILS", effective_from: hourAgo, created_at: hourAgo },
+      { id: "fare_s", service_route_id: "service_route_hebron_bethlehem", item: "parcel_s", amount_minor: 800, currency: "ILS", effective_from: hourAgo, created_at: hourAgo }
+    ]);
+    await createPassengerParcelService(db).createForRoute(routeInput, routeActor);
+    expect(db.routeFare.findMany.mock.calls[0][0].where.service_route_id).toEqual({ in: ["service_route_hebron_bethlehem"] });
+    expect(db.merchantOrder.create.mock.calls[0][0].data.parcels.create[0]).toMatchObject({
+      size: "M", fare_id: "fare_m", fare_minor: 1500, fare_currency: "ILS"
+    });
+    const stored = db.merchantOrder.create.mock.calls[0][0].data.parcels.create[0];
+    const view = serializePassengerParcel(detailRow({ size: "M" }, { canonical_dispatch: null }, stored) as never);
+    expect(view.fare).toEqual({ currency: "ILS", unit_minor: 1500, total_minor: 1500, estimated: true, paid_directly_to_driver: true });
+  });
+
+  it("still creates the parcel on a route without a fare, with a null fare", async () => {
+    const db = await routeDb();
+    await createPassengerParcelService(db).createForRoute(routeInput, routeActor);
+    const stored = db.merchantOrder.create.mock.calls[0][0].data.parcels.create[0];
+    expect(stored).toMatchObject({ fare_id: null, fare_minor: null, fare_currency: null });
+    expect(serializePassengerParcel(detailRow({}, { canonical_dispatch: null }, stored) as never).fare).toBeNull();
   });
 
   it("answers route_unavailable for a route that is not live", async () => {

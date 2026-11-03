@@ -19,6 +19,7 @@ class PassengerRequest {
     this.routeNameEn,
     this.pickupDetails,
     this.dropoffDetails,
+    this.fare,
   });
 
   final String id;
@@ -48,6 +49,10 @@ class PassengerRequest {
   final String? routeNameEn;
   final String? pickupDetails;
   final String? dropoffDetails;
+
+  /// The route's seat fare frozen when the request was made (per seat and for
+  /// the whole party); null when the route had no fare.
+  final FareSnapshot? fare;
 
   /// The route's name in the reading language, or null for older requests.
   String? routeName({required bool arabic}) {
@@ -88,6 +93,7 @@ class PassengerRequest {
       routeNameEn: _optionalString(json, 'route_name_en'),
       pickupDetails: _optionalString(json, 'pickup_details'),
       dropoffDetails: _optionalString(json, 'dropoff_details'),
+      fare: FareSnapshot.tryParse(json['fare']),
     );
   }
 }

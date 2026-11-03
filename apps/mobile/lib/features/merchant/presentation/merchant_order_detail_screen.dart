@@ -7,6 +7,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../canonical_routes/presentation/canonical_route_widgets.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
@@ -155,6 +156,11 @@ class _MerchantOrderDetailScreenState
           value:
               '${_formatDate(context, order.createdAt)} · ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(order.createdAt))}',
         ),
+        // The fare frozen at creation; absent when the route had no fare.
+        if (order.fare != null) ...[
+          const SizedBox(height: 4),
+          fareSnapshotBox(context, order.fare),
+        ],
         // The order's own pickup and parcel drop-offs on the map.
         if (order.routeWaypoints.length >= 2) ...[
           const SizedBox(height: 16),

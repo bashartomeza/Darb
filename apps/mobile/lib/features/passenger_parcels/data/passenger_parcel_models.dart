@@ -1,3 +1,5 @@
+import '../../../core/fares/fare.dart';
+
 /// Where a parcel sent by a passenger is, from the sender's point of view.
 ///
 /// Mirrors `tracking_state` in the API. Unknown values from a newer server fall
@@ -69,6 +71,7 @@ class PassengerParcel {
     this.pickupDetails,
     this.dropoffDetails,
     this.preferredTime,
+    this.fare,
   });
 
   final String id;
@@ -96,6 +99,10 @@ class PassengerParcel {
   final String? pickupDetails;
   final String? dropoffDetails;
   final DateTime? preferredTime;
+
+  /// The route's fare for this parcel size, frozen when it was sent; null
+  /// when the route had no fare.
+  final FareSnapshot? fare;
 
   /// The route's name in the reading language, or null for older parcels.
   String? routeName({required bool arabic}) {
@@ -152,6 +159,7 @@ class PassengerParcel {
       pickupDetails: pickupDetails,
       dropoffDetails: optionalString('dropoff_details'),
       preferredTime: optionalDate('preferred_time'),
+      fare: FareSnapshot.tryParse(json['fare']),
     );
   }
 }

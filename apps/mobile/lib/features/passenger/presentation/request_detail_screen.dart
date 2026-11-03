@@ -10,6 +10,7 @@ import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../auth/application/auth_actor_binding.dart';
+import '../../canonical_routes/presentation/canonical_route_widgets.dart';
 import '../../security/presentation/security_actions.dart';
 import '../../matching/data/matching_repository.dart';
 import '../application/passenger_controller.dart';
@@ -187,6 +188,13 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                       DetailRow(
                         label: l10n.passengerCount,
                         value: '${request.passengerCount}',
+                      ),
+                      // The fare frozen when the request was made; nothing
+                      // when the route had no fare.
+                      fareSnapshotBox(
+                        context,
+                        request.fare,
+                        passengers: request.passengerCount,
                       ),
                       const SizedBox(height: 12),
                       DetailRow(

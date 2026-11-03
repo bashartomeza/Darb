@@ -24,6 +24,7 @@ import {
   serviceRouteIdSchema,
   type RouteSummary
 } from "../services/operatingRoutes.js";
+import { orderFareResponse, parcelFareResponse } from "../services/routeFares.js";
 
 /** Older app builds: a place name and coordinates per parcel; mapped to the Hebron → Bethlehem route. */
 export const parcelSchema = z.object({
@@ -130,7 +131,9 @@ function serializeLegacyParcel(value: Record<string, unknown>) {
     dropoff_details: value.dropoff_details ?? null,
     receiver_name: value.receiver_name ?? null,
     // The full number is only ever read by the delivering driver's trip.
-    receiver_phone_masked: maskedPhone(value.receiver_phone)
+    receiver_phone_masked: maskedPhone(value.receiver_phone),
+    // The size fare frozen at creation; null when the route had no fare.
+    fare: parcelFareResponse(value)
   };
 }
 
@@ -201,6 +204,8 @@ function serializeLegacyMerchantOrder(value: Record<string, unknown>) {
     parcels: Array.isArray(value.parcels)
       ? value.parcels.map((parcel) => serializeLegacyParcel(parcel as Record<string, unknown>))
       : undefined,
+    // Order total, only when every parcel has a frozen fare.
+    fare: Array.isArray(value.parcels) ? orderFareResponse(value.parcels as Array<Record<string, unknown>>) : null,
     // Confirmation state only; the code itself is shown once, when it is issued.
     handover: describeHandover((value.delivery_handover ?? null) as Parameters<typeof describeHandover>[0]),
     parcel_batches: batches
