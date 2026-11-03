@@ -31,7 +31,17 @@ No authentication cache is used. A database lookup per protected request is inte
 - a safe session summary;
 - the existing safe user summary plus account status.
 
-Admin browser logins create revocable sessions but never receive a long-lived refresh token in JSON. The existing admin and Flutter clients continue to read `token`; M6C1B will add mobile refresh consumption and expiry handling.
+Admin browser logins create revocable sessions but never receive a long-lived refresh token in JSON. The Flutter clients continue to read `token`; M6C1B added mobile refresh consumption and expiry handling.
+
+## Admin console cookie session
+
+The Admin console (ADR-023) sends `X-Darb-Admin-Session: 1` with every request. With that header, `POST /api/v1/auth/admin/login` and `POST /api/v1/auth/admin/google` set an HttpOnly, `SameSite=Strict`, `Path=/api/v1` cookie (`Secure` and named `__Secure-darb_admin_session` in staging and production) and return only the session summary and user, with no token in the body. Without the header they return the short Bearer access token as before, for operator tooling.
+
+- The cookie value is a JWT bound to the session and security version and marked for cookie use only; Bearer authentication refuses it, and cookie authentication refuses ordinary access tokens.
+- Each cookie request moves the session's `expires_at` to one idle timeout from now, capped at the absolute timeout from sign-in (`ADMIN_SESSION_IDLE_TIMEOUT_SECONDS`, default 1800; `ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS`, default 43200).
+- Cookie requests must carry the session header; state-changing ones must also come from an allowed origin (`Origin`, else `Referer`, checked against the CORS rule). Otherwise the API answers `403 csrf_rejected`.
+- Logout and logout-all clear the cookie; any `401` on a cookie request clears it as well.
+- A Bearer header always takes precedence, so mobile authentication is unchanged.
 
 Refresh credentials are bound to the passenger, driver, or merchant role that received them. A role change makes the earlier credential ineligible and revokes its session; role-management operations must also revoke sessions and increment `security_version`. Rotation is bounded by the absolute session expiry established at login.
 
@@ -51,3 +61,5 @@ Session responses allow only ID, client type, optional device name, created/last
 ## Configuration
 
 `ACCESS_TOKEN_TTL_SECONDS`, `REFRESH_TOKEN_TTL_DAYS`, and `REFRESH_TOKEN_PEPPER` are documented in every API environment template. Staging/production default to a 900-second access token, enforce a 300–1800 second range, cap refresh lifetime at 90 days, and fail closed without a non-placeholder pepper of at least 32 characters. Demo/test retain configurable demo-friendly access duration and may derive non-production refresh protection from the JWT secret.
+
+`ADMIN_SESSION_IDLE_TIMEOUT_SECONDS` (default 1800) and `ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS` (default 43200) bound the Admin cookie session. Startup fails if the idle timeout exceeds the absolute one, and in staging/production unless idle is 300–3600 seconds and absolute is 3600–43200 seconds.

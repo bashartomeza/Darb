@@ -3,7 +3,7 @@ import { createApiClient, createDemoApiClient, type AccountStatus, type BatchRes
 import { demoUiEnabled, getAdminBuildConfig, routeManagementUiEnabled, type AdminBuildConfig } from "./config";
 import { useLocale } from "./i18n/LocaleContext";
 import type { TranslationKey } from "./i18n/translations";
-import { ADMIN_TOKEN_KEY, clearAdminSession, createAdminSessionExpiryHandler, isAdminSessionEndError, type TokenStorage } from "./session";
+import { createAdminSessionExpiryHandler, isAdminSessionEndError, newAdminSessionHandle, purgeStoredAdminTokens, type TokenStorage } from "./session";
 import { RouteManagement } from "./features/routes/RouteManagement";
 import { OperatingRoutesPage } from "./features/operatingRoutes/OperatingRoutesPage";
 import { OverviewDashboard, type OverviewData } from "./features/overview/OverviewDashboard";
@@ -41,7 +41,7 @@ import {
 import { AppShell, Button, Notice, SideNav, TopBar } from "./ui";
 import { GoogleAdminSignIn } from "./GoogleAdminSignIn";
 
-export { ADMIN_TOKEN_KEY, clearAdminSession } from "./session";
+export { ADMIN_TOKEN_KEY, purgeStoredAdminTokens } from "./session";
 
 const tripFlow = ["accepted", "pickup_started", "picked_up", "in_transit", "delivered", "completed"];
 
@@ -65,16 +65,26 @@ export function App({
   legacyStore = window.localStorage
 }: {
   config?: AdminBuildConfig;
+  /** Browser stores where older builds kept a bearer token; they are only purged. */
   sessionStore?: TokenStorage;
   legacyStore?: TokenStorage;
 } = {}) {
   const { direction, locale, toggleLocale, t, status } = useLocale();
   const demoEnabled = demoUiEnabled(config, __DARB_DEMO_BUILD__);
   const routeManagementEnabled = routeManagementUiEnabled(config);
+  // `token` is the in-memory handle of the current sign-in, never a credential:
+  // the API authenticates the HttpOnly session cookie. The ref mirrors it for
+  // callbacks that outlive a render.
   const [token, setToken] = useState(() => {
-    legacyStore.removeItem(ADMIN_TOKEN_KEY);
-    return sessionStore.getItem(ADMIN_TOKEN_KEY) ?? "";
+    purgeStoredAdminTokens(sessionStore, legacyStore);
+    return "";
   });
+  const sessionRef = useRef("");
+  function setSession(handle: string) {
+    sessionRef.current = handle;
+    setToken(handle);
+  }
+  const [restoring, setRestoring] = useState(true);
   const [admin, setAdmin] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
@@ -133,16 +143,15 @@ export function App({
 
   const sessionExpiry = useMemo(
     () => createAdminSessionExpiryHandler({
-      sessionStore,
-      legacyStore,
+      currentSession: () => sessionRef.current,
       onExpired: () => {
         authAttempt.current += 1;
-        setToken("");
+        setSession("");
         clearAuthenticatedData();
         setNotice({ type: "error", message: t("sessionExpired") });
       }
     }),
-    [legacyStore, sessionStore, t]
+    [t]
   );
   const api = useMemo(
     () => createApiClient(config.apiBaseUrl, { onSessionEnded: sessionExpiry.handle }),
@@ -155,6 +164,21 @@ export function App({
     }).catch(() => { if (mounted) setGoogleClientId(null); });
     return () => { mounted = false; };
   }, [api]);
+  useEffect(() => {
+    // A reload keeps the staff member signed in while the cookie session is
+    // alive. Without one the sign-in screen shows, with no expiry notice. A
+    // sign-in started meanwhile wins over this check.
+    const attempt = authAttempt.current;
+    api.currentSession()
+      .then((result) => {
+        if (attempt !== authAttempt.current || result?.user?.role !== "admin") return;
+        sessionExpiry.reset();
+        setSession(newAdminSessionHandle());
+        setAdmin(result.user);
+      })
+      .catch(() => undefined)
+      .finally(() => setRestoring(false));
+  }, []);
   const demoApi = useMemo(
     () => createDemoApiClient(config.apiBaseUrl, { onSessionEnded: sessionExpiry.handle }),
     [config.apiBaseUrl, sessionExpiry]
@@ -271,27 +295,27 @@ export function App({
   async function acceptLogin(attempt: number, result: Awaited<ReturnType<typeof api.login>>) {
     if (attempt !== authAttempt.current) return false;
     sessionExpiry.reset();
-    sessionStore.setItem(ADMIN_TOKEN_KEY, result.token);
-    setToken(result.token);
+    const session = newAdminSessionHandle();
+    setSession(session);
     setAdmin(result.user);
-    const capabilities = await api.capabilities(result.token).catch(() => ({ demo_reset_available: false }));
+    const capabilities = await api.capabilities(session).catch(() => ({ demo_reset_available: false }));
     if (attempt !== authAttempt.current) return false;
     setDemoResetAvailable(capabilities.demo_reset_available === true);
-    await refreshOverview(result.token);
+    await refreshOverview(session);
     return true;
   }
 
   function signOut() {
-    // Best effort: start revoking the server session first, but never let a slow or
-    // failed request keep this browser signed in.
-    const signedInToken = sessionStore.getItem(ADMIN_TOKEN_KEY) ?? token;
-    if (signedInToken) void api.logout(signedInToken).catch(() => undefined);
+    // Best effort: start revoking the server session (and clearing its cookie)
+    // first, but never let a slow or failed request keep this browser signed in.
+    const signedIn = sessionRef.current || token;
+    if (signedIn) void api.logout(signedIn).catch(() => undefined);
     authAttempt.current += 1;
-    clearAdminSession(sessionStore, legacyStore);
+    purgeStoredAdminTokens(sessionStore, legacyStore);
     sessionExpiry.reset();
     clearAuthenticatedData();
     setNotice(null);
-    setToken("");
+    setSession("");
   }
 
   async function loadMe(currentToken = token) {
@@ -305,12 +329,12 @@ export function App({
     const attempt = ++authAttempt.current;
     const result = await runAction("reset", () => demoApi.reset(token || undefined, resetKey), t("demoDataReset"));
     if (!result) return;
-    const session = await api.login(email, password);
+    const signedIn = await api.login(email, password);
     if (attempt !== authAttempt.current) return;
     sessionExpiry.reset();
-    sessionStore.setItem(ADMIN_TOKEN_KEY, session.token);
-    setToken(session.token);
-    setAdmin(session.user);
+    const session = newAdminSessionHandle();
+    setSession(session);
+    setAdmin(signedIn.user);
     setMatchResult(null);
     setBatchResult(null);
     setComparison(null);
@@ -319,7 +343,7 @@ export function App({
     setLatestLocation(null);
     setLocationTrail([]);
     setDemoSteps([]);
-    await refreshOverview(session.token);
+    await refreshOverview(session);
   }
 
   async function runMatch() {
@@ -430,13 +454,12 @@ export function App({
       mark("stepReset");
       await demoApi.reset(token || undefined, resetKey);
       mark("stepLogin");
-      const session = await api.login(email, password);
+      const signedIn = await api.login(email, password);
       if (attempt !== authAttempt.current) return;
       sessionExpiry.reset();
-      sessionStore.setItem(ADMIN_TOKEN_KEY, session.token);
-      setToken(session.token);
-      setAdmin(session.user);
-      const currentToken = session.token;
+      const currentToken = newAdminSessionHandle();
+      setSession(currentToken);
+      setAdmin(signedIn.user);
       mark("stepLoadInputs");
       const overview = await Promise.all([api.requests(currentToken), api.orders(currentToken)]);
       const request = overview[0].requests[0];
@@ -476,9 +499,9 @@ export function App({
     if (!token) return;
     void loadMe(token).then(() => {
       // A transient /me failure must not leave the overview in permanent
-      // skeleton state. Terminal session failures clear the stored token, so
+      // skeleton state. Terminal session failures end the current sign-in, so
       // only a still-current Admin session proceeds with independent loads.
-      if (sessionStore.getItem(ADMIN_TOKEN_KEY) === token) {
+      if (sessionRef.current === token) {
         void api.capabilities(token)
           .then((capabilities) => setDemoResetAvailable(capabilities.demo_reset_available === true))
           .catch(() => setDemoResetAvailable(false));
@@ -499,6 +522,14 @@ export function App({
     setNotice(null);
     const nextHash = hashForModule(id);
     if (window.location.hash !== nextHash) window.location.hash = nextHash.slice(1);
+  }
+
+  if (!token && restoring) {
+    return (
+      <main className="login-shell" dir={direction} lang={locale} aria-busy="true">
+        <p className="login-card__description" role="status">{t("sessionRestoring")}</p>
+      </main>
+    );
   }
 
   if (!token) {

@@ -1,6 +1,6 @@
 # ADR-005: Client refresh coordination
 
-- Status: Accepted
+- Status: Accepted; the Admin console paragraph is superseded by ADR-023 (Admin console cookie session)
 - Date: 2026-07-17
 - Milestone: M6C1B
 
