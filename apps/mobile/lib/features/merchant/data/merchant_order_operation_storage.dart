@@ -39,6 +39,11 @@ class MerchantPendingOrder {
       !now.toUtc().isBefore(createdAt.add(recoveryWindow)) ||
       createdAt.isAfter(now.toUtc().add(const Duration(minutes: 5)));
 
+  /// Past the retry window by the clock; unlike [expired], not set off by a
+  /// clock that moved backwards.
+  bool windowPassed(DateTime now) =>
+      !now.toUtc().isBefore(createdAt.add(recoveryWindow));
+
   factory MerchantPendingOrder.create({
     required String actorId,
     required Map<String, dynamic> payload,
@@ -225,6 +230,9 @@ class MerchantOrderOperationStorage {
       );
     }
   }
+
+  /// Removes whatever is saved for [actorId], even an unreadable record.
+  Future<void> discard(String actorId) => _storage.delete(key: _key(actorId));
 
   Future<void> clear(
     MerchantPendingOrder operation, {

@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/core/api/saved_request_outcome.dart';
 import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
 import 'package:darb_mobile/features/merchant/application/merchant_order_submission.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_models.dart';
@@ -195,24 +196,96 @@ void main() {
   );
 
   test(
-    'a confirmed first-attempt validation rejection clears pending but a reconciliation rejection does not',
+    'a confirmed first-attempt validation rejection clears pending',
     () async {
       final invalid = http.Response('{"error":"validation_error"}', 400);
       await expectLater(
         runner((_) async => invalid).send(),
-        throwsA(isA<ApiException>()),
+        throwsA(
+          isA<ApiException>().having(
+            (error) => error is SavedRequestRejected,
+            'resend',
+            isFalse,
+          ),
+        ),
       );
       expect(await storage.read('merchant_A'), isNull);
-      final service = runner(
-        (request) async => request.method == 'GET' ? missing : invalid,
-      );
-      await storage.save(
-        MerchantPendingOrder.create(actorId: 'merchant_A', payload: body),
-      );
-      await expectLater(service.resume(), throwsA(isA<ApiException>()));
-      expect(await storage.read('merchant_A'), isNotNull);
     },
   );
+
+  test(
+    'a resend refused for good clears the saved order and unlocks a new one',
+    () async {
+      for (final refusal in [
+        http.Response('{"error":"validation_error"}', 400),
+        http.Response('{"error":"forbidden"}', 403),
+        http.Response('{"error":"not_found"}', 404),
+        http.Response('{"error":"route_unavailable"}', 409),
+        http.Response('{"error":"idempotency_conflict"}', 409),
+        http.Response('{"error":"route_retired"}', 410),
+        http.Response('{"error":"validation_error"}', 422),
+      ]) {
+        FlutterSecureStorage.setMockInitialValues({});
+        await storage.save(
+          MerchantPendingOrder.create(actorId: 'merchant_A', payload: body),
+        );
+        final service = runner(
+          (request) async => request.method == 'GET' ? missing : refusal,
+        );
+        await expectLater(
+          service.resume(),
+          throwsA(isA<SavedRequestRejected>()),
+        );
+        expect(await storage.read('merchant_A'), isNull, reason: refusal.body);
+        expect(await service.pending(), isNull);
+        expect(
+          (await runner((request) async => saved(201)).send()).id,
+          'saved_order',
+        );
+      }
+    },
+  );
+
+  test(
+    'a resend lost again or failing on the server keeps the order',
+    () async {
+      for (final failure in <Future<http.Response> Function()>[
+        () async => throw http.ClientException('lost again'),
+        () async => http.Response('{"error":"internal_error"}', 500),
+        () async => http.Response('{"error":"rate_limited"}', 429),
+        () async => http.Response('{"error":"idempotency_in_progress"}', 409),
+      ]) {
+        FlutterSecureStorage.setMockInitialValues({});
+        final pending = MerchantPendingOrder.create(
+          actorId: 'merchant_A',
+          payload: body,
+        );
+        await storage.save(pending);
+        final service = runner(
+          (request) async => request.method == 'GET' ? missing : failure(),
+        );
+        await expectLater(service.resume(), throwsA(anything));
+        expect(
+          (await storage.read('merchant_A'))?.idempotencyKey,
+          pending.idempotencyKey,
+        );
+      }
+    },
+  );
+
+  test('discard removes even an unreadable saved order', () async {
+    FlutterSecureStorage.setMockInitialValues({
+      'darb_merchant_order_v1:merchant_A': '{"not":"an order"}',
+    });
+    final service = runner((_) async => saved(201));
+    await expectLater(
+      service.pending(),
+      throwsA(isA<MerchantOrderRecoveryException>()),
+    );
+    await service.discard();
+    expect(await service.pending(), isNull);
+    expect((await service.send()).id, 'saved_order');
+  });
 
   test(
     'double submission is single flight even during secure persistence',
@@ -300,13 +373,50 @@ void main() {
   });
 
   test(
-    'expired or future-dated recovery does only a lookup, never a POST or key replacement',
+    'an expired order unknown to the server is looked up only, then cleared',
     () async {
       final now = DateTime.utc(2026, 10, 21);
-      for (final created in [
-        now.subtract(const Duration(days: 7)),
-        now.add(const Duration(minutes: 6)),
-      ]) {
+      final pending = MerchantPendingOrder.create(
+        actorId: 'merchant_A',
+        payload: body,
+        now: now.subtract(const Duration(days: 7)),
+      );
+      await storage.save(pending);
+      final methods = <String>[];
+      final service = runner((request) async {
+        methods.add(request.method);
+        return missing;
+      }, now: () => now);
+      await expectLater(service.resume(), throwsA(isA<SavedRequestExpired>()));
+      expect(methods, ['GET']);
+      expect(await storage.read('merchant_A'), isNull);
+    },
+  );
+
+  test(
+    'an expired order the server did save is still recovered by lookup',
+    () async {
+      final now = DateTime.utc(2026, 10, 21);
+      await storage.save(
+        MerchantPendingOrder.create(
+          actorId: 'merchant_A',
+          payload: body,
+          now: now.subtract(const Duration(days: 7)),
+        ),
+      );
+      expect(
+        (await runner((_) async => saved(), now: () => now).recover())?.id,
+        'saved_order',
+      );
+      expect(await storage.read('merchant_A'), isNull);
+    },
+  );
+
+  test(
+    'future-dated recovery does only a lookup, never a POST or key replacement',
+    () async {
+      final now = DateTime.utc(2026, 10, 21);
+      for (final created in [now.add(const Duration(minutes: 6))]) {
         FlutterSecureStorage.setMockInitialValues({});
         final pending = MerchantPendingOrder.create(
           actorId: 'merchant_A',

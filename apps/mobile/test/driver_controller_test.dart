@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:darb_mobile/core/api/api_client.dart';
 import 'package:darb_mobile/core/api/api_error.dart';
+import 'package:darb_mobile/core/api/saved_request_outcome.dart';
 import 'package:darb_mobile/core/config/app_config.dart';
 import 'package:darb_mobile/features/auth/application/auth_controller.dart';
 import 'package:darb_mobile/features/auth/application/auth_actor_binding.dart';
@@ -248,6 +249,104 @@ void main() {
       );
       expect(fake.onlineCalls, 0);
     });
+
+    test(
+      'driver can go online after the saved change is refused on resend',
+      () async {
+        final fake = _FakeDriverRepository()
+          ..onlineFailures.addAll(const [
+            ApiException(ApiErrorType.timeout, 'request_timeout'),
+            ApiException(
+              ApiErrorType.unknown,
+              'route_unavailable',
+              statusCode: 409,
+            ),
+          ]);
+        final storage = _MemoryCanonicalStorage();
+        final container = await _onlineContainer(fake, storage);
+        addTearDown(container.dispose);
+        final controller = container.read(legacyDriverOnlineControllerProvider);
+
+        await expectLater(
+          controller.setOnline(true, serviceRouteId: _routeId),
+          throwsA(isA<ApiException>()),
+        );
+        expect(storage.bundle, isNotNull);
+        await expectLater(
+          controller.setOnline(true),
+          throwsA(isA<SavedRequestRejected>()),
+        );
+        expect(storage.bundle, isNull);
+
+        final state = await controller.setOnline(
+          true,
+          serviceRouteId: _routeId,
+        );
+        expect(state.currentRoute?.isOperational, isTrue);
+        expect(fake.onlineCalls, 3);
+        expect(fake.observedKeys[2], isNot(fake.observedKeys[0]));
+        expect(storage.bundle, isNull);
+      },
+    );
+
+    test(
+      'an expired operation from another flow stops blocking the switch',
+      () async {
+        final fake = _FakeDriverRepository();
+        final storage = _MemoryCanonicalStorage()
+          ..bundle = CanonicalOperationBundle.create(
+            operation: 'driver_availability_create',
+            scope: 'driver',
+            actorId: 'driver_1',
+            payload: const {'route_version_id': 'version_1'},
+            now: DateTime.now().subtract(const Duration(hours: 25)),
+          );
+        final container = await _onlineContainer(fake, storage);
+        addTearDown(container.dispose);
+        final controller = container.read(legacyDriverOnlineControllerProvider);
+
+        await expectLater(
+          controller.setOnline(true, serviceRouteId: _routeId),
+          throwsA(isA<SavedRequestExpired>()),
+        );
+        expect(storage.bundle, isNull);
+        expect(fake.onlineCalls, 0);
+        final state = await controller.setOnline(
+          true,
+          serviceRouteId: _routeId,
+        );
+        expect(state.currentRoute?.isOperational, isTrue);
+      },
+    );
+
+    test(
+      'discarding an operation from another flow lets the driver go online',
+      () async {
+        final fake = _FakeDriverRepository();
+        final storage = _MemoryCanonicalStorage()
+          ..bundle = CanonicalOperationBundle.create(
+            operation: 'driver_availability_create',
+            scope: 'driver',
+            actorId: 'driver_1',
+            payload: const {'route_version_id': 'version_1'},
+          );
+        final container = await _onlineContainer(fake, storage);
+        addTearDown(container.dispose);
+        final controller = container.read(legacyDriverOnlineControllerProvider);
+
+        await expectLater(
+          controller.setOnline(true, serviceRouteId: _routeId),
+          throwsA(isA<CanonicalOperationBlocked>()),
+        );
+        await container.read(canonicalMutationRunnerProvider).discard();
+        final state = await controller.setOnline(
+          true,
+          serviceRouteId: _routeId,
+        );
+        expect(state.currentRoute?.isOperational, isTrue);
+        expect(storage.bundle, isNull);
+      },
+    );
 
     test('global unresolved-operation slot cannot be overwritten', () async {
       final fake = _FakeDriverRepository();
@@ -635,6 +734,9 @@ class _FakeDriverRepository extends DriverRepository {
   String? lastMatchStatus;
   int onlineCalls = 0;
   bool timeoutOnlineOnce = false;
+
+  /// Failures answered to the next online-state sends, in order.
+  final List<ApiException> onlineFailures = [];
   Completer<void>? onlineBarrier;
   void Function()? onOnlineSend;
   void Function()? afterOnlineCommit;
@@ -710,6 +812,7 @@ class _FakeDriverRepository extends DriverRepository {
     observedKeys.add(idempotencyKey);
     onlineServiceRouteIds.add(serviceRouteId);
     onOnlineSend?.call();
+    if (onlineFailures.isNotEmpty) throw onlineFailures.removeAt(0);
     await onlineBarrier?.future;
     if (timeoutOnlineOnce) {
       timeoutOnlineOnce = false;

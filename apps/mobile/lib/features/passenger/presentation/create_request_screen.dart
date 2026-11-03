@@ -11,6 +11,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../matching/data/matching_repository.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../../operating_routes/presentation/operating_route_inputs.dart';
@@ -130,6 +131,34 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
         _pendingPayload = null;
         _error = AppLocalizations.of(context).canonicalRecoveryRequired;
       });
+    }
+  }
+
+  /// Drops the saved booking after the passenger confirms, so the form
+  /// opens again for a new one.
+  Future<void> _discard() async {
+    _retryTimer?.cancel();
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(legacyPassengerRequestMutationProvider).discard();
+      if (mounted) {
+        setState(() {
+          _pendingPayload = null;
+          _recoveryBlocked = false;
+          _automaticRetries = 0;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = AppLocalizations.of(context).canonicalRecoveryRequired,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -296,6 +325,11 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
               const SizedBox(height: AppTokens.spaceMedium),
               Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
             ],
+            if (_pendingPayload != null || _recoveryBlocked)
+              DiscardSavedRequestButton(
+                enabled: !_loading,
+                onDiscard: _discard,
+              ),
 
             const SizedBox(height: AppTokens.spaceLarge),
 
@@ -485,10 +519,14 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
                     ..remove('route_version_id'));
             _error = pending != null
                 ? AppLocalizations.of(context).bookingOutcomeUnknown
-                : _matchingCreateErrorLabel(
-                    AppLocalizations.of(context),
-                    error,
-                  );
+                : savedRequestOutcomeLabel(
+                        AppLocalizations.of(context),
+                        error,
+                      ) ??
+                      _matchingCreateErrorLabel(
+                        AppLocalizations.of(context),
+                        error,
+                      );
           });
         }
       } catch (_) {

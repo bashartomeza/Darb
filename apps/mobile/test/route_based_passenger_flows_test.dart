@@ -784,6 +784,96 @@ void main() {
       expect(repository.keys.single, isNotEmpty);
       expect(find.text('Your parcel request was recorded.'), findsOneWidget);
     });
+
+    testWidgets('a sent parcel is settled at once, so Back leaves nothing', (
+      tester,
+    ) async {
+      final repository = _ParcelRepository();
+      final storage = MemoryBookingStorage();
+      await _pumpSendParcel(tester, repository, storage);
+      await _fillParcel(tester);
+      await tester.tap(find.byKey(const ValueKey('submitPassengerParcel')));
+      await tester.pumpAndSettle();
+      expect(find.text('Your parcel request was recorded.'), findsOneWidget);
+      // Settled as soon as the result is shown, not only on "My parcels".
+      expect(storage.bundle, isNull);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('openSendParcel')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('openSendParcel')));
+      await tester.pumpAndSettle();
+      // The old parcel is not pre-filled and nothing blocks a new one.
+      expect(find.text(_parcelPickup), findsNothing);
+      expect(find.byKey(const ValueKey('discardSavedRequest')), findsNothing);
+      expect(repository.payloads, hasLength(1));
+    });
+
+    testWidgets('a saved parcel refused on resend is removed and says so', (
+      tester,
+    ) async {
+      final repository = _ParcelRepository()
+        ..failures.addAll(const [
+          ApiException(ApiErrorType.network, 'network_unavailable'),
+          ApiException(
+            ApiErrorType.forbidden,
+            'parcel_not_allowed',
+            statusCode: 403,
+          ),
+        ]);
+      final storage = MemoryBookingStorage();
+      await _pumpSendParcel(tester, repository, storage);
+      await _fillParcel(tester);
+      await tester.tap(find.byKey(const ValueKey('submitPassengerParcel')));
+      await tester.pumpAndSettle();
+      expect(storage.bundle, isNotNull);
+      expect(find.byKey(const ValueKey('discardSavedRequest')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('submitPassengerParcel')));
+      await tester.pumpAndSettle();
+      expect(repository.keys, hasLength(2));
+      expect(repository.keys[1], repository.keys[0]);
+      expect(storage.bundle, isNull);
+      expect(
+        find.textContaining('Darb did not accept the saved request'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('discardSavedRequest')), findsNothing);
+    });
+
+    testWidgets('a saved parcel can be discarded after confirming', (
+      tester,
+    ) async {
+      final repository = _ParcelRepository()
+        ..failures.add(
+          const ApiException(ApiErrorType.network, 'network_unavailable'),
+        );
+      final storage = MemoryBookingStorage();
+      await _pumpSendParcel(tester, repository, storage);
+      await _fillParcel(tester);
+      await tester.tap(find.byKey(const ValueKey('submitPassengerParcel')));
+      await tester.pumpAndSettle();
+      final saved = storage.bundle!;
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('discardSavedRequest')),
+      );
+      await tester.tap(find.byKey(const ValueKey('discardSavedRequest')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('duplicate'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('confirmDiscardSavedRequest')),
+      );
+      await tester.pumpAndSettle();
+      expect(storage.bundle, isNull);
+      expect(find.byKey(const ValueKey('discardSavedRequest')), findsNothing);
+
+      // A new send uses a new key.
+      await tester.tap(find.byKey(const ValueKey('submitPassengerParcel')));
+      await tester.pumpAndSettle();
+      expect(repository.keys.last, isNot(saved.idempotencyKey));
+      expect(find.text('Your parcel request was recorded.'), findsOneWidget);
+    });
   });
 
   group('passenger home', () {
@@ -931,6 +1021,77 @@ http.Response _utf8Json(Object body, [int status = 200]) => http.Response.bytes(
   status,
   headers: {'content-type': 'application/json; charset=utf-8'},
 );
+
+const _parcelPickup = 'The shop next to Ibn Rushd roundabout';
+
+/// A home screen that opens the parcel form, so leaving it can be tested.
+Future<void> _pumpSendParcel(
+  WidgetTester tester,
+  _ParcelRepository repository,
+  MemoryBookingStorage storage,
+) async {
+  tester.view.physicalSize = const Size(1000, 3000);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        authControllerProvider.overrideWith(_SignedIn.new),
+        operatingRoutesProvider.overrideWith(
+          (ref) async => testOperatingRoutes(),
+        ),
+        passengerParcelRepositoryProvider.overrideWithValue(repository),
+        passengerParcelMutationRunnerProvider.overrideWithValue(
+          CanonicalMutationRunner(storage: storage),
+        ),
+      ],
+      child: MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              key: const ValueKey('openSendParcel'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SendParcelScreen(),
+                ),
+              ),
+              child: const Text('Send a parcel'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('openSendParcel')));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _fillParcel(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('parcelRouteField')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(_hebronToBethlehem).last);
+  await tester.pumpAndSettle();
+  await tester.enterText(
+    find.byKey(const ValueKey('parcelPickupDetails')),
+    _parcelPickup,
+  );
+  await tester.enterText(
+    find.byKey(const ValueKey('parcelDropoffDetails')),
+    'Receiver house near the Church of the Nativity',
+  );
+  await tester.enterText(find.byKey(const ValueKey('receiverName')), 'Sami');
+  await tester.enterText(
+    find.byKey(const ValueKey('receiverPhone')),
+    '+970591234567',
+  );
+  await tester.tap(find.byKey(const ValueKey('forbiddenItemsAck')));
+  await tester.pumpAndSettle();
+}
 
 Future<void> _chooseRoute(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('passengerRouteField')));
@@ -1114,6 +1275,9 @@ class _ParcelRepository implements PassengerParcelRepository {
   final payloads = <Map<String, dynamic>>[];
   final keys = <String>[];
 
+  /// Answered to the next sends, in order, instead of saving the parcel.
+  final failures = <Object>[];
+
   @override
   AuthenticatedApiClient get apiClient => throw UnimplementedError();
 
@@ -1127,6 +1291,7 @@ class _ParcelRepository implements PassengerParcelRepository {
   }) async {
     payloads.add(payload);
     keys.add(idempotencyKey);
+    if (failures.isNotEmpty) throw failures.removeAt(0);
     return PassengerParcel.fromJson({
       'id': 'parcel-1',
       'tracking_state': 'searching',

@@ -9,6 +9,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/canonical_route_controller.dart';
 import '../data/canonical_operation_storage.dart';
@@ -37,6 +38,9 @@ class _PassengerRouteRequestScreenState
   CanonicalOperationBundle? _completedOperation;
   CanonicalPassengerRequest? _result;
 
+  /// A saved, unconfirmed operation is holding the shared slot.
+  bool _savedPending = false;
+
   @override
   void initState() {
     super.initState();
@@ -47,9 +51,15 @@ class _PassengerRouteRequestScreenState
       try {
         bundle = await ref.read(canonicalOperationStorageProvider).read();
       } catch (error) {
-        if (mounted) setState(() => _error = error);
+        if (mounted) {
+          setState(() {
+            _error = error;
+            _savedPending = true;
+          });
+        }
         return;
       }
+      if (mounted && bundle != null) setState(() => _savedPending = true);
       if (!mounted ||
           bundle?.operation != 'passenger_route_request_create' ||
           bundle?.scope != 'passenger' ||
@@ -247,6 +257,11 @@ class _PassengerRouteRequestScreenState
                         ),
                       ],
                       if (_error != null) Text(_errorLabel(l10n, _error!)),
+                      if (_savedPending)
+                        DiscardSavedRequestButton(
+                          enabled: !_busy,
+                          onDiscard: _discard,
+                        ),
                       const SizedBox(height: AppTokens.spaceLarge),
                       FilledButton(
                         key: const ValueKey('submitCanonicalPassengerRequest'),
@@ -305,6 +320,7 @@ class _PassengerRouteRequestScreenState
     // Captured up front so the list still learns about a saved request if
     // this screen is closed while the create is in flight.
     final container = ProviderScope.containerOf(context, listen: false);
+    final runner = ref.read(canonicalMutationRunnerProvider);
     try {
       final actorId = ref.read(authControllerProvider).value?.user?.id;
       if (actorId == null) {
@@ -315,72 +331,110 @@ class _PassengerRouteRequestScreenState
         );
       }
       // A fresh catalog result above is required before this operation can run.
-      final result = await ref
-          .read(canonicalMutationRunnerProvider)
-          .run<CanonicalPassengerRequest>(
-            operation: 'passenger_route_request_create',
-            scope: 'passenger',
-            allowExpiredReplay: true,
-            onBundle: (bundle) => _completedOperation = bundle,
-            actorId: actorId,
-            payload: payload,
-            preflight: () async {
-              if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
-                throw const ApiException(
-                  ApiErrorType.validation,
-                  'invalid_departure_window',
-                  statusCode: 400,
-                );
-              }
-              await ref
-                  .read(canonicalRouteRepositoryProvider)
-                  .requireFreshRoute(_routeVersionId!);
-            },
-            send: (bundle) => ref
-                .read(canonicalRouteRepositoryProvider)
-                .createPassengerRequest(
-                  payload: bundle.payload,
-                  idempotencyKey: bundle.idempotencyKey,
-                ),
-          );
+      final result = await runner.run<CanonicalPassengerRequest>(
+        operation: 'passenger_route_request_create',
+        scope: 'passenger',
+        allowExpiredReplay: true,
+        onBundle: (bundle) => _completedOperation = bundle,
+        actorId: actorId,
+        payload: payload,
+        preflight: () async {
+          if (!_from.isAfter(DateTime.now()) || !_until.isAfter(_from)) {
+            throw const ApiException(
+              ApiErrorType.validation,
+              'invalid_departure_window',
+              statusCode: 400,
+            );
+          }
+          await ref
+              .read(canonicalRouteRepositoryProvider)
+              .requireFreshRoute(_routeVersionId!);
+        },
+        send: (bundle) => ref
+            .read(canonicalRouteRepositoryProvider)
+            .createPassengerRequest(
+              payload: bundle.payload,
+              idempotencyKey: bundle.idempotencyKey,
+            ),
+      );
       // The request is saved server-side; make the passenger's route request
       // list re-read so it appears without a manual pull.
       container.invalidate(passengerCanonicalAssignmentsProvider);
-      if (mounted) setState(() => _result = result);
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _savedPending = false;
+        });
+      }
+      // Saved server-side: settle it now, so leaving this screen any way
+      // never leaves it holding the shared slot.
+      await _settleCompleted(runner, actorId);
     } catch (error) {
       if (error is ApiException && error.statusCode == 404) {
         ref.invalidate(mobileCapabilitiesProvider);
         ref.invalidate(canonicalRouteCatalogProvider);
       }
-      if (mounted) setState(() => _error = error);
+      final saved = await savedOperationPresent(runner.storage);
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _savedPending = saved;
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _acknowledgeResult() async {
-    final actorId = ref.read(authControllerProvider).value?.user?.id;
-    if (actorId == null) return;
+  /// Clears the saved create once its result is in hand. False while it
+  /// could not be cleared; the result button tries again.
+  Future<bool> _settleCompleted(
+    CanonicalMutationRunner runner,
+    String? actorId,
+  ) async {
     final completed = _completedOperation;
-    if (completed == null || completed.actorId != actorId) return;
+    if (completed == null) return true;
+    if (actorId == null || completed.actorId != actorId) return false;
     try {
-      await ref
-          .read(canonicalMutationRunnerProvider)
-          .acknowledge(
-            actorId: actorId,
-            operation: 'passenger_route_request_create',
-            idempotencyKey: completed.idempotencyKey,
-          );
-      if (!mounted) return;
-      // Land where the new request is listed, not on the legacy dashboard
-      // that only shows location-based requests.
-      context.go(
-        _requestListAvailable
-            ? '/passenger/canonical-assignments'
-            : '/passenger',
+      await runner.acknowledge(
+        actorId: actorId,
+        operation: 'passenger_route_request_create',
+        idempotencyKey: completed.idempotencyKey,
       );
+      _completedOperation = null;
+      return true;
     } catch (error) {
       if (mounted) setState(() => _error = error);
+      return false;
+    }
+  }
+
+  Future<void> _acknowledgeResult() async {
+    final actorId = ref.read(authControllerProvider).value?.user?.id;
+    final runner = ref.read(canonicalMutationRunnerProvider);
+    if (!await _settleCompleted(runner, actorId) || !mounted) return;
+    // Land where the new request is listed, not on the legacy dashboard
+    // that only shows location-based requests.
+    context.go(
+      _requestListAvailable ? '/passenger/canonical-assignments' : '/passenger',
+    );
+  }
+
+  /// Drops the saved operation after the passenger confirms, so a new
+  /// request can be sent.
+  Future<void> _discard() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(canonicalMutationRunnerProvider).discard();
+      _completedOperation = null;
+      if (mounted) setState(() => _savedPending = false);
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 }
@@ -456,6 +510,8 @@ class _CatalogError extends StatelessWidget {
 }
 
 String _errorLabel(AppLocalizations l10n, Object error) {
+  final saved = savedRequestOutcomeLabel(l10n, error);
+  if (saved != null) return saved;
   if (error is ApiException && error.message == 'invalid_departure_window') {
     return l10n.invalidDepartureWindow;
   }

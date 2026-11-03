@@ -7,6 +7,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/darb_card.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../operating_routes/data/operating_route_models.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../application/driver_controller.dart';
@@ -255,6 +256,11 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
                                 : null,
                           ),
                         ],
+                        if (_recovering || _blocked)
+                          DiscardSavedRequestButton(
+                            enabled: !_busy,
+                            onDiscard: _discard,
+                          ),
                       ],
                     ),
                   );
@@ -392,6 +398,31 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
         setState(() => _busy = false);
         _scheduleVerification();
       }
+    }
+  }
+
+  /// Drops the saved route the driver no longer wants verified, so the form
+  /// opens again.
+  Future<void> _discard() async {
+    final l10n = AppLocalizations.of(context);
+    _retryTimer?.cancel();
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await ref.read(legacyDriverRouteMutationProvider).discard();
+      if (mounted) {
+        setState(() {
+          _recovering = false;
+          _blocked = false;
+          _automaticRetries = 0;
+        });
+      }
+    } catch (error) {
+      _show(driverErrorLabel(l10n, error), true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 

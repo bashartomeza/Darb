@@ -12,6 +12,7 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/darb_section.dart';
+import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../operating_routes/data/operating_route_models.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../application/merchant_controller.dart';
@@ -125,16 +126,52 @@ class _CreateMerchantOrderScreenState
       }
     } catch (error) {
       if (mounted) _error = _recoveryError(error);
+      await _unlockIfCleared(service);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  /// A saved order removed along the way (refused on resend or too old to
+  /// confirm) opens the form again.
+  Future<void> _unlockIfCleared(MerchantOrderSubmission service) async {
+    try {
+      if (await service.pending() == null && mounted) {
+        _locked = false;
+        _pending = null;
+      }
+    } catch (_) {
+      // Still unreadable: the form stays locked and offers to discard it.
+    }
+  }
+
   String _recoveryError(Object error) {
     final l10n = AppLocalizations.of(context);
-    return error is MerchantOrderRecoveryException
+    return error is MerchantOrderRecoveryException ||
+            savedRequestOutcomeLabel(l10n, error) != null
         ? merchantErrorLabel(l10n, error)
         : l10n.merchantOrderUncertain;
+  }
+
+  /// Drops the saved order after the merchant confirms, so a new one can be
+  /// written.
+  Future<void> _discard() async {
+    final service = ref.read(merchantOrderSubmissionProvider);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await service.discard();
+      if (mounted) {
+        _locked = false;
+        _pending = null;
+      }
+    } catch (error) {
+      if (mounted) _error = _recoveryError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   /// The chosen route while it is still offered; a single route is chosen
@@ -202,6 +239,8 @@ class _CreateMerchantOrderScreenState
                   key: const ValueKey('merchantOrderError'),
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
+              if (_locked && !_busy)
+                DiscardSavedRequestButton(onDiscard: _discard),
               const SizedBox(height: AppTokens.spaceLarge),
               TextButton.icon(
                 key: const ValueKey('openBulkOrders'),

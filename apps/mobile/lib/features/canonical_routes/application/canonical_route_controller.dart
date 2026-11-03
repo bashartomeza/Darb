@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/api/saved_request_outcome.dart';
 import '../data/canonical_operation_storage.dart';
 import '../data/canonical_route_repository.dart';
 import '../domain/canonical_route_models.dart';
@@ -270,6 +271,13 @@ class CanonicalMutationRunner {
           now: _now(),
         );
         final pending = await storage.read();
+        if (pending != null &&
+            !allowExpiredReplay &&
+            pending.recoveryWindowPassed(_now())) {
+          // Too old to confirm: drop it so it cannot hold every later action.
+          await storage.clear();
+          throw const SavedRequestExpired();
+        }
         final bundle = pending == null
             ? candidate
             : _requireExactPending(
@@ -288,7 +296,14 @@ class CanonicalMutationRunner {
           onBundle?.call(bundle);
           return await send(bundle);
         } catch (error) {
-          if (pending == null && !_ambiguous(error)) await storage.clear();
+          if (pending == null) {
+            if (!_ambiguous(error)) await storage.clear();
+          } else if (isDefiniteRejection(error)) {
+            // The server refused the resend for good; keeping it would only
+            // block every later action. Lost responses and 5xx stay saved.
+            await storage.clear();
+            throw SavedRequestRejected(error as ApiException);
+          }
           rethrow;
         }
       });
@@ -322,6 +337,13 @@ class CanonicalMutationRunner {
     return pending;
   }
 
+  /// Drops the saved operation, readable or not, so the person can start
+  /// again. The screen asks first, as a send that did arrive is then lost.
+  Future<void> discard() async {
+    if (_busy) throw StateError('operation_in_progress');
+    await _serialize<void>(storage.clear);
+  }
+
   Future<void> acknowledge({
     required String actorId,
     required String operation,
@@ -338,6 +360,16 @@ class CanonicalMutationRunner {
     }
     await storage.clear();
   });
+}
+
+/// Whether a saved operation sits in [storage]; an unreadable one counts, as
+/// it blocks the same way.
+Future<bool> savedOperationPresent(CanonicalOperationStorage storage) async {
+  try {
+    return await storage.read() != null;
+  } catch (_) {
+    return true;
+  }
 }
 
 class CanonicalOperationBlocked implements Exception {
