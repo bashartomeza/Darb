@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import jwt from "jsonwebtoken";
@@ -6,6 +8,7 @@ import { LimitedCheckpointDirectoryService, mapLimitedPartnerResponse } from "..
 import {
   OsmCheckpointIndex,
   PartnerCheckpointMapService,
+  checkpointPositionKey,
   loadOsmCheckpoints,
   nameSkeleton,
   normaliseArabicName,
@@ -13,7 +16,8 @@ import {
   partnerDirectionStatus,
   partnerOverallStatus,
   placePartnerCheckpoints,
-  type OsmCheckpointFile
+  type OsmCheckpointFile,
+  type ResearchedCheckpointPosition
 } from "../services/partnerCheckpointMap.js";
 
 const db = vi.hoisted(() => ({ authSession: { findUnique: vi.fn(), update: vi.fn() } }));
@@ -127,7 +131,7 @@ describe("placing partner rows", () => {
       index,
       osm
     );
-    expect(result.checkpoints.map((c) => [c.id, c.position_osm_id, c.position_match])).toEqual([
+    expect(result.checkpoints.map((c) => (c.position_source === "openstreetmap" ? [c.id, c.position_osm_id, c.position_match] : [c.id]))).toEqual([
       ["aweenrayeh:p1", "node/1", "exact"],
       // "دير شرف" / "ديار شرف": the same name written with an extra long vowel.
       ["aweenrayeh:p2", "node/2", "spelling_variant"],
@@ -153,6 +157,57 @@ describe("placing partner rows", () => {
     ]);
     expect(result.unplaced[0]).not.toHaveProperty("latitude");
     expect(result.position_attribution).toContain("OpenStreetMap");
+  });
+
+  it("uses a researched position first, labels low and unverified ones approximate, and keeps the rest unplaced", () => {
+    const researched: ResearchedCheckpointPosition[] = [
+      // Wins over the OpenStreetMap match for the same partner row.
+      { city_ar: "نابلس", name_ar: "حوارة", latitude: 32.17, longitude: 35.27, confidence: "high" },
+      // Spelled with a plain alef here and a hamza in the feed: still the same row.
+      { city_ar: "نابلس", name_ar: "المربعه", latitude: 32.195486, longitude: 35.2311, confidence: "medium" },
+      { city_ar: "أريحا - طوباس", name_ar: "البنانا", latitude: 32.3155, longitude: 35.0682, confidence: "unverified" },
+      // Same name in another city is another checkpoint.
+      { city_ar: "الخليل", name_ar: "التوأم", latitude: 31.53, longitude: 35.1, confidence: "low" }
+    ];
+    const result = placePartnerCheckpoints(
+      partner([
+        { id: "r1", city: "نابلس", checkpoint: "حوارة" },
+        { id: "r2", city: "نابلس", checkpoint: "المربعة" },
+        { id: "r3", city: "أريحا  -  طوباس", checkpoint: "البنانا", entering_status: "مغلق", leaving_status: "سالك" },
+        { id: "r4", city: "القدس", checkpoint: "التوأم" },
+        { id: "r5", city: "نابلس", checkpoint: "غير موجود" }
+      ]),
+      index,
+      osm,
+      researched
+    );
+    expect(result.checkpoints.map((c) => [c.id, c.position_source, c.latitude])).toEqual([
+      ["aweenrayeh:r1", "darb_research", 32.17],
+      ["aweenrayeh:r2", "darb_research", 32.195486],
+      ["aweenrayeh:r3", "darb_research", 32.3155]
+    ]);
+    expect(result.checkpoints[1]).toMatchObject({ position_confidence: "medium", position_approximate: false });
+    expect(result.checkpoints[2]).toMatchObject({ position_confidence: "unverified", position_approximate: true, status: "closed", entering_status: "مغلق" });
+    expect(result.checkpoints[2]).not.toHaveProperty("position_osm_id");
+    expect(result.unplaced.map((c) => c.id)).toEqual(["aweenrayeh:r4", "aweenrayeh:r5"]);
+  });
+
+  it("the committed positions cover the 63 researched checkpoints, each once and inside the West Bank", () => {
+    const sql = readFileSync(
+      fileURLToPath(new URL("../../prisma/migrations/20261108120000_checkpoint_positions/migration.sql", import.meta.url)),
+      "utf8"
+    );
+    const rows = [...sql.matchAll(/\('cpos_\d{3}', '([^']*)', '((?:[^']|'')*)', (-?\d+\.\d+), (-?\d+\.\d+), '(high|medium|low|unverified)'/g)];
+    expect(rows).toHaveLength(63);
+    expect(new Set(rows.map((r) => checkpointPositionKey(r[1]!, r[2]!.replaceAll("''", "'")))).size).toBe(63);
+    for (const [, , , lat, lng] of rows) {
+      expect(Number(lat)).toBeGreaterThan(31.2);
+      expect(Number(lat)).toBeLessThan(32.7);
+      expect(Number(lng)).toBeGreaterThan(34.8);
+      expect(Number(lng)).toBeLessThan(35.7);
+    }
+    // No trustworthy position yet: left unplaced rather than pinned at a guess.
+    expect(sql).not.toMatch(/'الرام'|'كفر عقب'/);
   });
 
   it("the committed OSM extract loads and carries its licence", () => {
@@ -194,7 +249,7 @@ describe("GET /api/v1/checkpoints from the partner source", () => {
     db.authSession.update.mockResolvedValue({});
   });
 
-  function app(mapEnabled: boolean) {
+  function app(mapEnabled: boolean, positions = { list: async (): Promise<ResearchedCheckpointPosition[]> => [] }) {
     const transport = vi.fn(
       async () =>
         new Response(
@@ -222,7 +277,7 @@ describe("GET /api/v1/checkpoints from the partner source", () => {
       transport,
       app: createApp(appConfig, {
         limitedCheckpointDirectoryService: directory,
-        partnerCheckpointMapService: new PartnerCheckpointMapService(directory, osm)
+        partnerCheckpointMapService: new PartnerCheckpointMapService(directory, osm, positions)
       })
     };
   }
@@ -246,6 +301,19 @@ describe("GET /api/v1/checkpoints from the partner source", () => {
       expect(res.body.unplaced).toEqual([expect.objectContaining({ id: "aweenrayeh:p2", reason: "no_name_match" })]);
       expect((await request(server).get("/api/v1/capabilities").set(auth(next)).expect(200)).body.checkpoints_available).toBe(true);
     }
+  });
+
+  it("pins a row from the researched positions and still serves the map when they cannot be read", async () => {
+    const researched = { list: async (): Promise<ResearchedCheckpointPosition[]> => [{ city_ar: "نابلس", name_ar: "غير موجود", latitude: 32.2, longitude: 35.2, confidence: "low" }] };
+    let res = await request(app(true, researched).app).get("/api/v1/checkpoints").set(auth("passenger")).expect(200);
+    expect(res.body.checkpoints.map((c: { id: string }) => c.id)).toEqual(["aweenrayeh:p1", "aweenrayeh:p2"]);
+    expect(res.body.checkpoints[1]).toMatchObject({ position_source: "darb_research", position_approximate: true, latitude: 32.2 });
+    expect(res.body.unplaced).toEqual([]);
+
+    const broken = { list: async (): Promise<ResearchedCheckpointPosition[]> => { throw new Error("database unavailable"); } };
+    res = await request(app(true, broken).app).get("/api/v1/checkpoints").set(auth("passenger")).expect(200);
+    expect(res.body.checkpoints).toHaveLength(1);
+    expect(res.body.unplaced).toHaveLength(1);
   });
 
   it("refuses merchants before contacting the provider", async () => {

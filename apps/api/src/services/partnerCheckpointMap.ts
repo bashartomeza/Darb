@@ -8,10 +8,11 @@ import type { LimitedCheckpointDirectory, PartnerTimestamp } from "./limitedChec
  *
  * The partner feed has names, cities, the entering/leaving state ("سالك",
  * "مغلق", "أزمة متوسطة", "أزمة خانقة") and when each last changed, but no
- * coordinates. Positions come from a committed OpenStreetMap extract
- * (`apps/api/data/osm-checkpoints.json`, ODbL), matched by normalised Arabic
- * name. A row that does not match exactly one place is returned in `unplaced`,
- * never given a guessed position. A state the feed leaves out or words
+ * coordinates. A position comes first from the researched positions kept in the
+ * database (`checkpoint_positions`, keyed by the partner's city and name), then
+ * from a committed OpenStreetMap extract (`apps/api/data/osm-checkpoints.json`,
+ * ODbL) matched by normalised Arabic name. A row with neither is returned in
+ * `unplaced`, never given a guessed position. A state the feed leaves out or words
  * differently stays `unknown`; it is never inferred from a time.
  */
 
@@ -233,7 +234,41 @@ type PartnerStatusFields = {
   timezone_specified: boolean;
 };
 
-export type PartnerMapCheckpoint = PartnerStatusFields & {
+export type CheckpointPositionConfidence = "high" | "medium" | "low" | "unverified";
+
+/** A researched position from `checkpoint_positions`. */
+export type ResearchedCheckpointPosition = {
+  city_ar: string;
+  name_ar: string;
+  latitude: number;
+  longitude: number;
+  confidence: CheckpointPositionConfidence;
+};
+
+export interface CheckpointPositionStore {
+  list(): Promise<ResearchedCheckpointPosition[]>;
+}
+
+/** Reads `checkpoint_positions`. Prisma is loaded on first use, so tests without a database never touch it. */
+export function createPrismaCheckpointPositionStore(): CheckpointPositionStore {
+  return {
+    async list() {
+      const { prisma } = await import("../lib/prisma.js");
+      const rows = await prisma.checkpointPosition.findMany({
+        select: { city_ar: true, name_ar: true, latitude: true, longitude: true, confidence: true }
+      });
+      return rows.map((row) => ({ ...row, latitude: Number(row.latitude), longitude: Number(row.longitude) }));
+    }
+  };
+}
+
+/** Same partner row, whatever the spacing or alef/hamza/ta-marbuta spelling. */
+export function checkpointPositionKey(city: string, name: string): string {
+  const clean = (value: string) => unifyLetters(value).replace(/\s+/g, " ").trim();
+  return `${clean(city)}|${clean(name)}`;
+}
+
+type PlacedBase = {
   id: string;
   name_ar: string;
   name_en: null;
@@ -241,11 +276,22 @@ export type PartnerMapCheckpoint = PartnerStatusFields & {
   latitude: number;
   longitude: number;
   updated_at: null;
-  position_source: "openstreetmap";
-  position_osm_id: string;
-  /** How the name matched: exactly, without "ال", or as a spelling variant. */
-  position_match: MatchQuality;
 };
+
+export type PartnerMapCheckpoint = PartnerStatusFields & PlacedBase & (
+  | {
+      position_source: "openstreetmap";
+      position_osm_id: string;
+      /** How the name matched: exactly, without "ال", or as a spelling variant. */
+      position_match: MatchQuality;
+    }
+  | {
+      position_source: "darb_research";
+      position_confidence: CheckpointPositionConfidence;
+      /** Low or unverified: the pin may be off by a gate or more, and the apps say so. */
+      position_approximate: boolean;
+    }
+);
 export type PartnerUnplacedCheckpoint = PartnerStatusFields & {
   id: string;
   name_ar: string;
@@ -255,11 +301,17 @@ export type PartnerUnplacedCheckpoint = PartnerStatusFields & {
 
 const tzSpecified = (a: PartnerTimestamp, b: PartnerTimestamp) => a.timezone_specified && b.timezone_specified;
 
-export function placePartnerCheckpoints(directory: LimitedCheckpointDirectory, index: OsmCheckpointIndex, osm: Pick<OsmCheckpointFile, "attribution" | "licence" | "fetched_at">) {
+export function placePartnerCheckpoints(
+  directory: LimitedCheckpointDirectory,
+  index: OsmCheckpointIndex,
+  osm: Pick<OsmCheckpointFile, "attribution" | "licence" | "fetched_at">,
+  researched: ResearchedCheckpointPosition[] = []
+) {
   const checkpoints: PartnerMapCheckpoint[] = [];
   const unplaced: PartnerUnplacedCheckpoint[] = [];
+  const byKey = new Map(researched.map((position) => [checkpointPositionKey(position.city_ar, position.name_ar), position]));
   for (const row of directory.checkpoints) {
-    const match = index.match(row.checkpoint_name_ar, row.city_ar);
+    const position = byKey.get(checkpointPositionKey(row.city_ar, row.checkpoint_name_ar));
     const base = {
       id: `aweenrayeh:${row.provider_checkpoint_id}`,
       name_ar: row.checkpoint_name_ar,
@@ -271,6 +323,20 @@ export function placePartnerCheckpoints(directory: LimitedCheckpointDirectory, i
       leaving_status_last_updated: row.leaving_status_last_updated.raw,
       timezone_specified: tzSpecified(row.entering_status_last_updated, row.leaving_status_last_updated)
     };
+    if (position) {
+      checkpoints.push({
+        ...base,
+        name_en: null,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        updated_at: null,
+        position_source: "darb_research",
+        position_confidence: position.confidence,
+        position_approximate: position.confidence === "low" || position.confidence === "unverified"
+      });
+      continue;
+    }
+    const match = index.match(row.checkpoint_name_ar, row.city_ar);
     if (match.entry) {
       checkpoints.push({
         ...base,
@@ -302,12 +368,16 @@ export class PartnerCheckpointMapService {
   private readonly index: OsmCheckpointIndex;
   constructor(
     private readonly directory: { list(): Promise<LimitedCheckpointDirectory> },
-    private readonly osm: OsmCheckpointFile = loadOsmCheckpoints()
+    private readonly osm: OsmCheckpointFile = loadOsmCheckpoints(),
+    private readonly positions: CheckpointPositionStore = createPrismaCheckpointPositionStore()
   ) {
     this.index = new OsmCheckpointIndex(osm.checkpoints);
   }
 
   async list() {
-    return placePartnerCheckpoints(await this.directory.list(), this.index, this.osm);
+    const directory = await this.directory.list();
+    // A database hiccup must not empty the map: fall back to the OpenStreetMap matches.
+    const researched = await this.positions.list().catch(() => []);
+    return placePartnerCheckpoints(directory, this.index, this.osm, researched);
   }
 }

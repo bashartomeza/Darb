@@ -28,8 +28,21 @@ authenticated Darb endpoint.
 
 With the partner source the response also carries `source: "aweenrayeh_partner"`,
 an `unplaced` list (rows with no reliable position, never pinned), the raw
-`entering_status_last_updated` / `leaving_status_last_updated` times and
-`position_source: "openstreetmap"` on each pin. Its `status` is always `unknown`.
+`entering_status_last_updated` / `leaving_status_last_updated` times, the
+partner's `entering_status` / `leaving_status`, and a `status` taken from them
+(the worst direction; `unknown` unless both are known).
+
+Each pin says where its position came from:
+
+- `position_source: "darb_research"`: a researched position from the
+  `checkpoint_positions` table, keyed by the partner's city and name. This is used first.
+  It also carries `position_confidence` (`high`, `medium`, `low` or `unverified`) and
+  `position_approximate` (`true` for `low` and `unverified`; the apps label those pins
+  as approximate).
+- `position_source: "openstreetmap"`: an OpenStreetMap name match, with
+  `position_osm_id` and `position_match`.
+
+If the table cannot be read, the response falls back to the OpenStreetMap matches.
 
 ## Response
 

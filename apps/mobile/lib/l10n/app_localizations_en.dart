@@ -3082,6 +3082,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Position: © OpenStreetMap contributors (ODbL)';
 
   @override
+  String get checkpointPositionApproximate =>
+      'Approximate position; it may be a nearby gate';
+
+  @override
   String get checkpointsUnplacedTitle => 'Checkpoints without a map position';
 
   @override

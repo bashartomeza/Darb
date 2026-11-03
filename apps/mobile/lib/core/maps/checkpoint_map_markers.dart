@@ -147,5 +147,7 @@ String _buildLabel(
     if (l10n != null && community != null) community.text(l10n),
     if (l10n != null && checkpoint.positionFromOpenStreetMap)
       l10n.checkpointPositionOsm,
+    if (l10n != null && checkpoint.positionApproximate)
+      l10n.checkpointPositionApproximate,
   ].join('\n');
 }

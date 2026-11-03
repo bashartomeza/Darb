@@ -25,7 +25,14 @@ With `PARTNER_CHECKPOINT_MAP_ENABLED=true` (requires
 the API serves `GET /checkpoints` from that feed
 (`apps/api/src/services/partnerCheckpointMap.ts`):
 
-- Each partner row is matched to the committed OpenStreetMap extract
+- A row with a researched position in the `checkpoint_positions` table is pinned there
+  first. The table is keyed by the partner's city and name and filled by migration
+  `20261108120000_checkpoint_positions`. The pin carries `position_source: "darb_research"`,
+  `position_confidence` and `position_approximate`. Pins rated `low` (the nearest mapped
+  barrier, which may be another gate) or `unverified` (given without a source) are
+  labelled "approximate position" in the app. To correct a position, update its row;
+  no release is needed.
+- Every other partner row is matched to the committed OpenStreetMap extract
   `apps/api/data/osm-checkpoints.json` by **normalised Arabic name** (diacritics,
   tatweel, alef/hamza/ya/ta-marbuta variants and generic words such as "حاجز",
   "معبر", "نقطة تفتيش" are ignored; "a - b" names try each part). Tiers, in
@@ -118,3 +125,22 @@ are listed as unplaced (`no_name_match`): OpenStreetMap has no Arabic-named
 checkpoint for them. Coverage grows by adding `name:ar` to the checkpoints in
 OpenStreetMap and re-running the fetch script, or by an owner-approved
 coordinate source; positions are never guessed.
+
+**Update 2026-11-03:** the team's researched positions cover 63 of those 65 rows
+(`checkpoint_positions`):
+
+| Confidence | Rows |
+| --- | --- |
+| high | 24 |
+| medium | 21 |
+| low | 10 |
+| unverified | 8 |
+
+Two rows have no trustworthy position yet and stay unplaced:
+
+- **الرام**: the candidate point is the Jaba' checkpoint.
+- **كفر عقب**: the candidate point is Qalandiya itself.
+
+Two unverified rows need checking. البنانا and الهيئة are filed under أريحا - طوباس,
+but their given points lie near Tulkarm; البنانا's longitude may be 35.3682 rather than
+35.0682. Each row's `note` records the reason behind its position.

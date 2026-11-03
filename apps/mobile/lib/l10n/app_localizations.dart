@@ -5630,6 +5630,12 @@ abstract class AppLocalizations {
   /// **'الموقع: © مساهمو OpenStreetMap (ODbL)'**
   String get checkpointPositionOsm;
 
+  /// No description provided for @checkpointPositionApproximate.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع تقريبي وقد يكون عند بوابة قريبة'**
+  String get checkpointPositionApproximate;
+
   /// No description provided for @checkpointsUnplacedTitle.
   ///
   /// In ar, this message translates to:

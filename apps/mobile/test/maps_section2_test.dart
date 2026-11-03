@@ -486,6 +486,62 @@ void main() {
       ],
     });
 
+    test(
+      'a researched position is pinned; a low one is labelled approximate',
+      () {
+        final snapshot = CheckpointSnapshot.fromJson({
+          'source': 'aweenrayeh_partner',
+          'fetched_at': '2026-11-01T10:00:01Z',
+          'stale': false,
+          'checkpoints': [
+            {
+              'id': 'aweenrayeh:r1',
+              'name_ar': 'حاجز موثق',
+              'city': 'مدينة اختبار',
+              'latitude': 31.711387,
+              'longitude': 35.174972,
+              'entering_status': 'سالك',
+              'leaving_status': 'سالك',
+              'position_source': 'darb_research',
+              'position_confidence': 'high',
+              'position_approximate': false,
+            },
+            {
+              'id': 'aweenrayeh:r2',
+              'name_ar': 'حاجز تقريبي',
+              'city': 'مدينة اختبار',
+              'latitude': 31.952,
+              'longitude': 35.2116,
+              'entering_status': 'مغلق',
+              'leaving_status': 'سالك',
+              'position_source': 'darb_research',
+              'position_confidence': 'low',
+              'position_approximate': true,
+            },
+          ],
+        });
+        final markers = checkpointTrafficMarkers(
+          snapshot.checkpoints,
+          l10n: l10n,
+        );
+        expect(markers, hasLength(2));
+        expect(snapshot.checkpoints.first.positionFromOpenStreetMap, isFalse);
+        expect(
+          markers.first.label,
+          isNot(contains(l10n.checkpointPositionOsm)),
+        );
+        expect(
+          markers.first.label,
+          isNot(contains(l10n.checkpointPositionApproximate)),
+        );
+        expect(
+          markers.last.label,
+          contains(l10n.checkpointPositionApproximate),
+        );
+        expect(markers.last.color, SemanticColors.checkpointClosed);
+      },
+    );
+
     test('partner rows parse; unplaced rows are listed, never pinned', () {
       expect(partner.source, 'aweenrayeh_partner');
       expect(partner.checkpoints.single.positionFromOpenStreetMap, isTrue);
