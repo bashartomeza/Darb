@@ -272,7 +272,11 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
           initialRouteId: _lastRouteId(),
         );
         if (chosen == null || !mounted) return;
-        await online.setOnline(value, serviceRouteId: chosen);
+        await online.setOnline(
+          value,
+          serviceRouteId: chosen.serviceRouteId,
+          prices: chosen.prices,
+        );
       }
     } catch (error) {
       if (mounted) {

@@ -617,7 +617,18 @@ export type OperatingRoute = {
   origin: OperatingCity;
   destination: OperatingCity;
 };
-export type AdminOperatingRoute = OperatingRoute & { active: boolean; orders_count: number };
+export type FareRangeView = { min_minor: number; max_minor: number } | null;
+/** A route's current prices as the operating-routes list returns them; null when none is set. */
+export type OperatingRouteFares = {
+  currency: string;
+  passenger_seat_minor: number | null;
+  parcel_minor: { S: number | null; M: number | null; L: number | null };
+  driver_price_range?: {
+    passenger_seat: FareRangeView;
+    parcel: { S: FareRangeView; M: FareRangeView; L: FareRangeView };
+  };
+} | null;
+export type AdminOperatingRoute = OperatingRoute & { active: boolean; orders_count: number; fares?: OperatingRouteFares };
 export type OperatingRouteDraft = { origin_city_id: string; destination_city_id: string; both_directions: boolean };
 /** The contract does not pin the success body, so the console reloads the list instead of reading it. */
 export type OperatingRouteCreateResponse = { route?: AdminOperatingRoute; routes?: AdminOperatingRoute[] };
@@ -951,11 +962,21 @@ export type ReportSummary = {
   drivers: { total: number; verified: number; pending_verification: number };
 };
 export type RouteFareItem = "passenger_seat" | "parcel_s" | "parcel_m" | "parcel_l";
-export type RouteFareCurrent = { fare_id: string; amount_minor: number; currency: string; effective_from: string } | null;
+/** A fare in force: the default and the range a driver may choose within (both null: fixed). */
+export type RouteFareCurrent = {
+  fare_id: string;
+  amount_minor: number;
+  min_minor?: number | null;
+  max_minor?: number | null;
+  currency: string;
+  effective_from: string;
+} | null;
 export type RouteFareHistoryRow = {
   id: string;
   item: RouteFareItem;
   amount_minor: number | null;
+  min_minor?: number | null;
+  max_minor?: number | null;
   currency: string;
   effective_from: string;
   reason: string | null;
@@ -971,7 +992,7 @@ export type RouteFaresResponse = {
   server_now: string;
 };
 export type RouteFaresUpdate = {
-  changes: Array<{ item: RouteFareItem; amount_minor: number | null }>;
+  changes: Array<{ item: RouteFareItem; amount_minor: number | null; min_minor?: number | null; max_minor?: number | null }>;
   effective_from?: string;
   reason: string;
 };

@@ -2745,6 +2745,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fareTotal => 'Total';
 
   @override
+  String get driverPricesTitle => 'Your prices on this route';
+
+  @override
+  String get driverPricesBody =>
+      'Leave a price empty to charge the route\'s default. Passengers and merchants see your price before they book.';
+
+  @override
+  String get driverPriceSeat => 'Seat price';
+
+  @override
+  String driverPriceParcel(String size) {
+    return 'Parcel $size price';
+  }
+
+  @override
+  String driverPriceRangeHint(String price, String min, String max) {
+    return 'Default $price. Between $min and $max.';
+  }
+
+  @override
+  String driverPriceFixedHint(String price) {
+    return 'Fixed price: $price';
+  }
+
+  @override
+  String driverPriceInvalid(String min, String max) {
+    return 'Enter a price between $min and $max.';
+  }
+
+  @override
+  String get driverPriceOutOfRange =>
+      'One of your prices is outside the range allowed on this route. Choose a price within it.';
+
+  @override
+  String get driverPriceFixedError =>
+      'This route\'s price is fixed and cannot be changed.';
+
+  @override
+  String driverYourPrices(String prices) {
+    return 'Your prices: $prices';
+  }
+
+  @override
+  String get driverPricesDefault => 'Your prices: the route\'s defaults';
+
+  @override
+  String get fareDriverTitle => 'This driver\'s price';
+
+  @override
   String get notifDriverApproachingTitle => 'Your driver is approaching';
 
   @override

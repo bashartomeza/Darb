@@ -15,7 +15,8 @@ const prismaMock = vi.hoisted(() => ({
   merchantOrder: { update: vi.fn(), updateMany: vi.fn() },
   parcelBatch: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   parcelBatchOrder: { findMany: vi.fn(), updateMany: vi.fn() },
-  parcel: { count: vi.fn(), updateMany: vi.fn() },
+  parcel: { count: vi.fn(), updateMany: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+  routeFare: { findMany: vi.fn() },
   locationEvent: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
   deliveryHandover: { findMany: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn(), create: vi.fn() }
 }));
@@ -154,6 +155,47 @@ describe("trip acceptance, status, and tracking", () => {
     expect(prismaMock.passengerRequest.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: "accepted" } })
     );
+  });
+
+  it("saves the order at the accepting driver's price, in the acceptance transaction", async () => {
+    prismaMock.match.findUnique.mockResolvedValue(baseMatch);
+    prismaMock.trip.create.mockResolvedValue({ id: "trip_1", status: "accepted" });
+    // The accepting driver charges 18.00 a seat and keeps the route's parcel defaults.
+    prismaMock.driverRoute.findUnique.mockImplementation(async ({ select }: { select?: Record<string, unknown> }) =>
+      select?.seat_price_minor
+        ? { seat_price_minor: 1800, parcel_s_price_minor: null, parcel_m_price_minor: null, parcel_l_price_minor: null, route_version: { service_route_id: "route_hb" } }
+        : { id: "route_1", status: "assigned" });
+    const tariffRow = { service_route_id: "route_hb", currency: "ILS", effective_from: new Date("2026-01-01T00:00:00Z"), created_at: new Date("2026-01-01T00:00:00Z") };
+    prismaMock.routeFare.findMany.mockResolvedValue([
+      { ...tariffRow, id: "fare_seat", item: "passenger_seat", amount_minor: 1500, min_minor: 1200, max_minor: 2000 },
+      { ...tariffRow, id: "fare_m", item: "parcel_m", amount_minor: 900, min_minor: null, max_minor: null }
+    ]);
+    prismaMock.passengerRequest.findUnique.mockImplementation(async ({ select }: { select?: Record<string, unknown> }) =>
+      select?.fare_unit_minor
+        ? { id: "request_1", passenger_count: 2, fare_id: "fare_seat", fare_unit_minor: 1500, fare_total_minor: 3000, fare_currency: "ILS", route_version: { service_route_id: "route_hb" } }
+        : { passenger_count: 2 });
+    prismaMock.parcel.findMany.mockResolvedValue([
+      { id: "parcel_1", order_id: "order_1", size: "M", fare_id: null, fare_minor: null, fare_currency: null, route_version: { service_route_id: "route_hb" } }
+    ]);
+
+    await request(createApp()).post("/api/v1/matches/match_1/accept").set(auth("driver_1")).expect(201);
+
+    expect(prismaMock.passengerRequest.update).toHaveBeenCalledWith({
+      where: { id: "request_1" },
+      data: { fare_id: "fare_seat", fare_unit_minor: 1800, fare_total_minor: 3600, fare_currency: "ILS" }
+    });
+    expect(prismaMock.parcel.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ order_id: { in: ["order_1"] } })
+    }));
+    expect(prismaMock.parcel.update).toHaveBeenCalledWith({ where: { id: "parcel_1" }, data: { fare_id: "fare_m", fare_minor: 900, fare_currency: "ILS" } });
+    expect(prismaMock.auditEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        entity_type: "PassengerRequest",
+        metadata: expect.objectContaining({ event: "fare_set_to_driver_price", stage: "accepted", match_id: "match_1" })
+      })
+    });
+    // Same transaction as the trip.
+    expect(prismaMock.$transaction).toHaveBeenCalledOnce();
   });
 
   it.each([

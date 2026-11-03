@@ -250,6 +250,10 @@ export function createApp(
   if (appConfig.invitationsEnabled)
     app.use("/api/v1", createAdminInvitationRouter(appConfig));
   else app.use("/api/v1/admin/invitations", notFoundHandler);
+  // Route prices are set from the Operating routes page in production, so the
+  // fares router is mounted before the flag-gated workspace router, which
+  // answers 404 for every /admin/service-routes path when it is off.
+  app.use("/api/v1", createAdminRouteFaresRouter(appConfig));
   app.use(
     "/api/v1",
     createAdminRouteManagementRouter(
@@ -257,7 +261,6 @@ export function createApp(
       dependencies.routeManagementService,
     ),
   );
-  app.use("/api/v1", createAdminRouteFaresRouter(appConfig));
   app.use("/api/v1", createAdminOperatingRoutesRouter());
   const routePreviewService = dependencies.routePreviewService ?? createRoutePreviewService({
     provider: createRouteProvider(appConfig),

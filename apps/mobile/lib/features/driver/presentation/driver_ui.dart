@@ -57,6 +57,8 @@ String driverErrorLabel(AppLocalizations l10n, Object error) {
     'invalid_trip_status_transition' => l10n.tripTransitionConflict,
     'route_unavailable' => l10n.orderRouteUnavailable,
     'route_required' => l10n.orderRouteRequired,
+    'driver_price_out_of_range' => l10n.driverPriceOutOfRange,
+    'driver_price_fixed' => l10n.driverPriceFixedError,
     _ => l10n.requestFailed,
   };
 }

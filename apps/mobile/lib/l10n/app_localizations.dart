@@ -5054,6 +5054,78 @@ abstract class AppLocalizations {
   /// **'الإجمالي'**
   String get fareTotal;
 
+  /// No description provided for @driverPricesTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أسعارك على هذا المسار'**
+  String get driverPricesTitle;
+
+  /// No description provided for @driverPricesBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اترك السعر فارغًا لتعتمد السعر الافتراضي للمسار. يرى الركاب والتجار سعرك قبل الحجز.'**
+  String get driverPricesBody;
+
+  /// No description provided for @driverPriceSeat.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر المقعد'**
+  String get driverPriceSeat;
+
+  /// No description provided for @driverPriceParcel.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر الطرد {size}'**
+  String driverPriceParcel(String size);
+
+  /// No description provided for @driverPriceRangeHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الافتراضي {price}. بين {min} و{max}.'**
+  String driverPriceRangeHint(String price, String min, String max);
+
+  /// No description provided for @driverPriceFixedHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر ثابت: {price}'**
+  String driverPriceFixedHint(String price);
+
+  /// No description provided for @driverPriceInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل سعرًا بين {min} و{max}.'**
+  String driverPriceInvalid(String min, String max);
+
+  /// No description provided for @driverPriceOutOfRange.
+  ///
+  /// In ar, this message translates to:
+  /// **'أحد أسعارك خارج النطاق المسموح على هذا المسار. اختر سعرًا داخل النطاق.'**
+  String get driverPriceOutOfRange;
+
+  /// No description provided for @driverPriceFixedError.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر هذا المسار ثابت ولا يمكن تغييره.'**
+  String get driverPriceFixedError;
+
+  /// No description provided for @driverYourPrices.
+  ///
+  /// In ar, this message translates to:
+  /// **'أسعارك: {prices}'**
+  String driverYourPrices(String prices);
+
+  /// No description provided for @driverPricesDefault.
+  ///
+  /// In ar, this message translates to:
+  /// **'أسعارك: الأسعار الافتراضية للمسار'**
+  String get driverPricesDefault;
+
+  /// No description provided for @fareDriverTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر هذا السائق'**
+  String get fareDriverTitle;
+
   /// No description provided for @notifDriverApproachingTitle.
   ///
   /// In ar, this message translates to:

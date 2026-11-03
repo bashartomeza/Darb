@@ -189,6 +189,31 @@ describe("setFares (audited, append-only)", () => {
     expect(created[0].item).toBe("parcel_l");
   });
 
+  it("records a range change as a new history row and skips an unchanged range", async () => {
+    const { service, created } = makeService([row({ id: "old", amount_minor: 1500 })]);
+    const range = { minMinor: 1200, maxMinor: 2000 };
+    await service.setFares("route_1", [{ item: "passenger_seat", amountMinor: 1500, range }], { reason: "Driver range" }, actor, T0);
+    expect(created).toEqual([
+      expect.objectContaining({ item: "passenger_seat", amount_minor: 1500, min_minor: 1200, max_minor: 2000, reason: "Driver range" })
+    ]);
+    const { service: same } = makeService([row({ id: "ranged", amount_minor: 1500, min_minor: 1200, max_minor: 2000 })]);
+    await expect(
+      same.setFares("route_1", [{ item: "passenger_seat", amountMinor: 1500, range }], { reason: "Same again" }, actor, T0)
+    ).rejects.toMatchObject({ statusCode: 409, message: "fare_unchanged" });
+    // Dropping the range is a change too: the default becomes fixed again.
+    const { service: drop, created: dropped } = makeService([row({ id: "ranged", amount_minor: 1500, min_minor: 1200, max_minor: 2000 })]);
+    await drop.setFares("route_1", [{ item: "passenger_seat", amountMinor: 1500, range: null }], { reason: "Fixed price" }, actor, T0);
+    expect(dropped[0]).toMatchObject({ amount_minor: 1500, min_minor: null, max_minor: null });
+  });
+
+  it("resolves the range with the fare in force and shows it to the apps", () => {
+    const set = fares.resolveEffectiveFares([row({ amount_minor: 1500, min_minor: 1200, max_minor: 2000 })] as never, T0).get("route_1");
+    expect(fares.serializeFareSet(set)).toMatchObject({
+      passenger_seat_minor: 1500,
+      driver_price_range: { passenger_seat: { min_minor: 1200, max_minor: 2000 }, parcel: { S: null, M: null, L: null } }
+    });
+  });
+
   it("validates amounts, duplicates and the effective date", async () => {
     const { service } = makeService();
     const set = (entries: Array<{ item: any; amountMinor: number | null }>, effectiveFrom?: Date) =>
@@ -446,9 +471,69 @@ describe("admin fare API permissions and validation", () => {
     expect(prismaMock.routeFare.create).not.toHaveBeenCalled();
   });
 
-  it("is not exposed when route management is disabled", async () => {
-    const disabled = createConfig({ ...env, ROUTE_MANAGEMENT_ENABLED: "false" });
-    expect((await put(disabled, auth("admin_1"), validBody)).status).toBe(404);
+  describe("with production flags (route management off)", () => {
+    const production = createConfig({ ...env, ROUTE_MANAGEMENT_ENABLED: "false" });
+    const rangeBody = {
+      changes: [
+        { item: "passenger_seat", amount_minor: 1500, min_minor: 1200, max_minor: 2000 },
+        { item: "parcel_m", amount_minor: 900, min_minor: null, max_minor: null }
+      ],
+      reason: "Operating routes prices"
+    };
+
+    it("lets an admin set a default price and the driver range from the Operating routes page", async () => {
+      const response = await put(production, auth("admin_1"), rangeBody);
+      expect(response.status).toBe(200);
+      expect(prismaMock.routeFare.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ item: "passenger_seat", amount_minor: 1500, min_minor: 1200, max_minor: 2000, reason: "Operating routes prices" })
+      });
+      expect(prismaMock.routeFare.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ item: "parcel_m", amount_minor: 900, min_minor: null, max_minor: null })
+      });
+      expect(prismaMock.auditEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          metadata: expect.objectContaining({
+            event: "route_fares_changed",
+            changes: expect.arrayContaining([expect.objectContaining({ item: "passenger_seat", min_minor: 1200, max_minor: 2000 })])
+          })
+        })
+      });
+    });
+
+    it("returns the current range and the history with the range", async () => {
+      const rows = [
+        row({ id: "f2", amount_minor: 1500, min_minor: 1200, max_minor: 2000, effective_from: new Date("2026-10-20T00:00:00Z"), reason: "Range", created_by: { id: "admin_1", name: "A" } }),
+        row({ id: "f1", amount_minor: 1500, reason: "Initial", created_by: { id: "admin_1", name: "A" } })
+      ];
+      prismaMock.routeFare.findMany.mockResolvedValue(rows);
+      const response = await request(createApp(production)).get("/api/v1/admin/service-routes/route_1/fares").set(auth("admin_1"));
+      expect(response.status).toBe(200);
+      expect(response.body.current.passenger_seat).toMatchObject({ fare_id: "f2", amount_minor: 1500, min_minor: 1200, max_minor: 2000 });
+      // Append-only: the older row without a range is still listed.
+      expect(response.body.history.map((entry: { id: string }) => entry.id)).toEqual(["f2", "f1"]);
+      expect(response.body.history[1]).toMatchObject({ amount_minor: 1500, min_minor: null, max_minor: null, reason: "Initial" });
+    });
+
+    it("stays admin-only", async () => {
+      expect((await put(production, {}, rangeBody)).status).toBe(401);
+      for (const id of ["driver_1", "passenger_1", "merchant_1"]) {
+        expect((await put(production, auth(id), rangeBody)).status).toBe(403);
+        expect((await request(createApp(production)).get("/api/v1/admin/service-routes/route_1/fares").set(auth(id))).status).toBe(403);
+      }
+      expect(prismaMock.routeFare.create).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["only a minimum", { item: "passenger_seat", amount_minor: 1500, min_minor: 1200 }, "invalid_fare_request"],
+      ["a minimum above the default", { item: "passenger_seat", amount_minor: 1500, min_minor: 1600, max_minor: 2000 }, "invalid_fare_range"],
+      ["a maximum below the default", { item: "passenger_seat", amount_minor: 1500, min_minor: 1000, max_minor: 1400 }, "invalid_fare_range"],
+      ["a range on a withdrawn fare", { item: "passenger_seat", amount_minor: null, min_minor: 1000, max_minor: 1400 }, "invalid_fare_range"]
+    ])("refuses %s", async (_name, change, error) => {
+      const response = await put(production, auth("admin_1"), { changes: [change], reason: "Bad range" });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe(error);
+      expect(prismaMock.routeFare.create).not.toHaveBeenCalled();
+    });
   });
 });
 

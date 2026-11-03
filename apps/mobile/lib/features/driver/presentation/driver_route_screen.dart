@@ -11,8 +11,12 @@ import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../operating_routes/data/operating_route_models.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../application/driver_controller.dart';
+import '../../../core/fares/fare.dart';
 import '../application/legacy_driver_route_mutation.dart';
+import '../data/driver_models.dart';
+import '../domain/driver_prices.dart';
 import 'driver_ui.dart';
+import 'widgets/driver_price_fields.dart';
 
 class DriverRouteScreen extends ConsumerStatefulWidget {
   const DriverRouteScreen({super.key});
@@ -28,6 +32,9 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
   /// The predefined route chosen in the form, or restored from a saved,
   /// unconfirmed route (null for one saved before routes existed).
   String? _routeId;
+
+  /// The driver's own prices on the chosen route; null while one is invalid.
+  DriverPrices? _prices = DriverPrices.none;
   bool _busy = false;
   String? _message;
   bool _messageIsError = false;
@@ -76,6 +83,7 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
           _seats = pending.payload['seats_available'] as int;
           _parcels = pending.payload['parcel_capacity_available'] as int;
           _routeId = pending.payload['service_route_id'] as String?;
+          _prices = DriverPrices.fromJson(pending.payload['prices']);
         }
       });
       if (pending != null) await _create();
@@ -160,6 +168,8 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
                         else
                           _routeField(l10n, routes, arabic),
                         const SizedBox(height: AppTokens.spaceMedium),
+                        if (route == null && !_recovering)
+                          ..._priceFields(routes.value),
                         if (route == null || _recovering) ...[
                           DropdownButtonFormField<int>(
                             key: const ValueKey('driverSeatsField'),
@@ -209,7 +219,8 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
                                     _restoring ||
                                     _blocked ||
                                     (!_recovering &&
-                                        _chosenRoute(routes.value) == null)
+                                        (_chosenRoute(routes.value) == null ||
+                                            _prices == null))
                                 ? null
                                 : _create,
                             child: Text(
@@ -225,6 +236,10 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
                           ),
                           Text(
                             '${l10n.parcelCapacity}: ${route.parcelCapacityAvailable}',
+                          ),
+                          Text(
+                            _pricesSummary(context, l10n, route),
+                            key: const ValueKey('driverActiveRoutePrices'),
                           ),
                           Text(
                             '${l10n.routeStatus}: ${driverStatusLabel(l10n, route.status)}',
@@ -271,6 +286,40 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
         ),
       ),
     );
+  }
+
+  /// The driver's own prices for the route chosen in the form.
+  List<Widget> _priceFields(List<OperatingRoute>? routes) {
+    final id = _chosenRoute(routes);
+    final chosen = routes?.where((route) => route.id == id).firstOrNull;
+    if (chosen == null) return const [];
+    return [
+      DriverPriceFields(
+        key: ValueKey('driverRoutePrices-${chosen.id}'),
+        fares: chosen.fares,
+        enabled: !_busy && !_restoring && !_blocked,
+        onChanged: (prices) => setState(() => _prices = prices),
+      ),
+      const SizedBox(height: AppTokens.spaceMedium),
+    ];
+  }
+
+  /// "Your prices: seat ₪18.00, parcel S ₪7.00", or the route's defaults.
+  String _pricesSummary(
+    BuildContext context,
+    AppLocalizations l10n,
+    DriverRoute route,
+  ) {
+    final prices = route.prices;
+    if (prices.isEmpty) return l10n.driverPricesDefault;
+    final language = Localizations.localeOf(context).languageCode;
+    final parts = [
+      for (final item in driverPriceItems)
+        if (prices[item] != null)
+          '${item == driverPriceSeatItem ? l10n.driverPriceSeat : l10n.driverPriceParcel(item.substring('parcel_'.length).toUpperCase())} '
+              '${formatFare(prices[item]!, 'ILS', language)}',
+    ];
+    return l10n.driverYourPrices(parts.join(language == 'ar' ? '، ' : ', '));
   }
 
   /// The route in the form while it is still running; a single running route
@@ -342,7 +391,10 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
               ],
               onChanged: _busy || _restoring || _blocked
                   ? null
-                  : (id) => setState(() => _routeId = id),
+                  : (id) => setState(() {
+                      _routeId = id;
+                      _prices = DriverPrices.none;
+                    }),
             ),
           ),
   );
@@ -369,6 +421,7 @@ class _DriverRouteScreenState extends ConsumerState<DriverRouteScreen>
             serviceRouteId: serviceRouteId,
             seatsAvailable: _seats,
             parcelCapacityAvailable: _parcels,
+            prices: _prices ?? DriverPrices.none,
           );
       if (mounted) setState(() => _recovering = false);
       _show(

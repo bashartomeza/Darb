@@ -11,6 +11,13 @@ import {
   resolveOperatingRoute,
   resolveOperatingRouteByKey,
 } from "./operatingRoutes.js";
+import {
+  DRIVER_PRICE_COLUMNS,
+  FARE_ITEMS,
+  routeFareService,
+  validateDriverPrices,
+  type DriverPriceInput,
+} from "./routeFares.js";
 
 const OPERATION = "legacy_driver_online_state_v1";
 const IDEMPOTENCY_TTL_MS = 86_400_000;
@@ -98,7 +105,24 @@ export type LegacyOnlineStateInput = {
   expectedRouteId?: string | null;
   /** The predefined route to drive; required to go online without an active route. */
   serviceRouteId?: string;
+  /**
+   * The driver's own prices for this route, each inside the admin's range.
+   * An item left out charges the route's default.
+   */
+  prices?: DriverPriceInput;
 };
+
+/** The same prices as stored on the route (a null item charges the default). */
+export function sameDriverPrices(
+  route: Record<string, unknown>,
+  columns: Record<string, number | null>,
+) {
+  return FARE_ITEMS.every(
+    (item) =>
+      (route[DRIVER_PRICE_COLUMNS[item]] ?? null) ===
+      columns[DRIVER_PRICE_COLUMNS[item]],
+  );
+}
 
 export type LegacyOnlineActor = {
   id: string;
@@ -121,6 +145,7 @@ export function createLegacyDriverOnlineStateService(
               expected_route_id: input.expectedRouteId ?? null,
               // Only present when sent, so earlier keys keep their digest.
               ...(input.serviceRouteId ? { service_route_id: input.serviceRouteId } : {}),
+              ...(input.prices ? { prices: input.prices } : {}),
             }),
           );
           const claim = await claimIdempotency(tx, {
@@ -175,6 +200,21 @@ export function createLegacyDriverOnlineStateService(
                 });
                 if (!onRoute) throw new HttpError(409, "route_already_active");
               }
+              if (input.prices) {
+                // Prices are chosen when going online; a different set needs
+                // the running route ended first.
+                const running = await tx.driverRoute.findUniqueOrThrow({
+                  where: { id: current.id },
+                  include: { route_version: { select: { service_route_id: true } } },
+                });
+                const serviceRouteId = running.route_version?.service_route_id;
+                const asked = serviceRouteId
+                  ? await routeFareService.driverPriceColumns(tx, serviceRouteId, input.prices)
+                  : validateDriverPrices(undefined, input.prices);
+                if (!sameDriverPrices(running as unknown as Record<string, unknown>, asked)) {
+                  throw new HttpError(409, "route_already_active");
+                }
+              }
               routeId = current.id;
             } else {
               // Older app builds name no route: they drive the Hebron → Bethlehem
@@ -182,11 +222,19 @@ export function createLegacyDriverOnlineStateService(
               const operatingRoute = input.serviceRouteId
                 ? await resolveOperatingRoute(tx, input.serviceRouteId)
                 : await resolveOperatingRouteByKey(tx, LEGACY_DEFAULT_ROUTE_KEY);
+              // Each price the driver set must sit inside the range in force
+              // now; nothing is created when one does not.
+              const prices = await routeFareService.driverPriceColumns(
+                tx,
+                operatingRoute.serviceRouteId,
+                input.prices,
+              );
               const route = await tx.driverRoute.create({
                 data: {
                   driver_id: profile.id,
                   ...driverRoutePlaces(operatingRoute),
                   ...legacyRouteCapacityFromProfile(profile),
+                  ...prices,
                   status: "active",
                   operational_mode: "legacy",
                   activated_at: new Date(),
@@ -202,6 +250,8 @@ export function createLegacyDriverOnlineStateService(
                 metadata: {
                   transition: "offline_to_online",
                   request_id: actor.requestId,
+                  service_route_id: operatingRoute.serviceRouteId,
+                  prices,
                 },
               });
             }

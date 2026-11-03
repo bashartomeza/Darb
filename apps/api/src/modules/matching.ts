@@ -21,6 +21,14 @@ import {
   withRouteFields
 } from "../services/operatingRoutes.js";
 import { publicDriverSelect, publicDriverSummary } from "../services/publicDriver.js";
+import {
+  driverFareView,
+  driverPricesResponse,
+  orderFareResponse,
+  passengerFareResponse,
+  routeFareService,
+  seatFareTotal
+} from "../services/routeFares.js";
 
 const runMatchSchema = z
   .object({
@@ -73,7 +81,10 @@ const matchParcelSelect = {
   dropoff_details: true,
   size: true,
   priority: true,
-  status: true
+  status: true,
+  // The parcel's saved fare: the price of the driver it is offered to or taken by.
+  fare_minor: true,
+  fare_currency: true
 } satisfies Prisma.ParcelSelect;
 
 const matchSummarySelect = {
@@ -96,6 +107,10 @@ const matchSummarySelect = {
       seats_available: true,
       parcel_capacity_available: true,
       status: true,
+      seat_price_minor: true,
+      parcel_s_price_minor: true,
+      parcel_m_price_minor: true,
+      parcel_l_price_minor: true,
       route_version: routeSummarySelect,
       driver: { select: { user_id: true, ...publicDriverSelect } }
     }
@@ -112,6 +127,9 @@ const matchSummarySelect = {
       created_at: true,
       pickup_details: true,
       dropoff_details: true,
+      fare_unit_minor: true,
+      fare_total_minor: true,
+      fare_currency: true,
       route_version: routeSummarySelect
     }
   },
@@ -188,6 +206,8 @@ function toMatchSummary(match: MatchSummaryRecord) {
       parcel_capacity_available: match.driver_route.parcel_capacity_available,
       status: match.driver_route.status,
       ...routeFields(match.driver_route.route_version),
+      // The driver's own prices; a null item charges the route's default.
+      prices: driverPricesResponse(match.driver_route),
       driver: publicDriverSummary(match.driver_route.driver)
     },
     passenger_request: match.passenger_request
@@ -201,7 +221,9 @@ function toMatchSummary(match: MatchSummaryRecord) {
           created_at: match.passenger_request.created_at,
           ...routeFields(match.passenger_request.route_version),
           pickup_details: match.passenger_request.pickup_details ?? null,
-          dropoff_details: match.passenger_request.dropoff_details ?? null
+          dropoff_details: match.passenger_request.dropoff_details ?? null,
+          // The saved fare: this driver's price once the match exists.
+          fare: passengerFareResponse(match.passenger_request)
         }
       : null,
     merchant_order: match.merchant_order
@@ -213,7 +235,8 @@ function toMatchSummary(match: MatchSummaryRecord) {
           created_at: match.merchant_order.created_at,
           ...routeFields(match.merchant_order.route_version),
           pickup_details: match.merchant_order.pickup_details ?? null,
-          parcels: match.merchant_order.parcels ?? []
+          parcels: match.merchant_order.parcels ?? [],
+          fare: orderFareResponse(match.merchant_order.parcels)
         }
       : null,
     parcel_batch: match.parcel_batch
@@ -360,7 +383,15 @@ async function rankDriverRoutes(input: {
 
 type RankedDriverRoute = Awaited<ReturnType<typeof rankDriverRoutes>>[number];
 
-function passengerSearchResult(candidate: RankedDriverRoute) {
+function passengerSearchResult(
+  candidate: RankedDriverRoute,
+  fares: Awaited<ReturnType<typeof routeFareService.effectiveFor>>,
+  serviceRouteId: string,
+  passengerCount: number
+) {
+  // What this driver charges: their own seat price, else the route's default.
+  const fare = driverFareView(fares.get(serviceRouteId), candidate.route);
+  const unit = fare?.passenger_seat_minor ?? null;
   return {
     id: candidate.route.id,
     origin_label: candidate.route.origin_label,
@@ -371,6 +402,15 @@ function passengerSearchResult(candidate: RankedDriverRoute) {
     ...routeFields(candidate.route.route_version),
     score: candidate.breakdown.finalScore,
     scoring_breakdown: candidate.breakdown,
+    fare: unit === null
+      ? null
+      : {
+          currency: fare!.currency,
+          unit_minor: unit,
+          total_minor: seatFareTotal(unit, passengerCount),
+          estimated: true as const,
+          paid_directly_to_driver: true as const
+        },
     driver: publicDriverSummary(candidate.route.driver)
   };
 }
@@ -442,6 +482,7 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
   let match;
   try {
     match = await prisma.$transaction(async (tx) => {
+      const pricedOrderIds: string[] = [];
       if (passengerRequest) {
         const claimedRequest = await tx.passengerRequest.updateMany({
           where: {
@@ -490,6 +531,7 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
           });
           if (!members.length) throw new HttpError(409, "batch_not_matchable");
           const orderIds = members.map((item) => item.merchant_order_id);
+          pricedOrderIds.push(...orderIds);
           const claimed = await tx.merchantOrder.updateMany({
             where: { id: { in: orderIds }, status: { in: ["batched", "submitted"] } },
             data: { status: "matched" }
@@ -501,6 +543,7 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
             data: { status: "matched" }
           });
           if (claimed.count !== 1) throw new HttpError(409, "merchant_order_not_matchable");
+          pricedOrderIds.push(merchantOrder.id);
         }
 
         if (merchantBatchId) {
@@ -556,6 +599,24 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
           metadata: { method: created.method, score: best.breakdown.finalScore }
         }
       });
+
+      // The demand's saved fare becomes this driver's price, in the same
+      // transaction as the offer; acceptance sets it again, authoritatively.
+      const priced = await routeFareService.applyDriverFare(tx, {
+        driverRouteId: best.route.id,
+        passengerRequestId: passengerRequest?.id,
+        merchantOrderIds: pricedOrderIds,
+        matchId: created.id,
+        stage: "offered",
+        actorId: actor.id
+      });
+      if (priced.passengerChanged && created.passenger_request) {
+        const request = await tx.passengerRequest.findUniqueOrThrow({
+          where: { id: created.passenger_request.id },
+          include: { route_version: routeSummarySelect }
+        });
+        return { ...created, passenger_request: request };
+      }
       return created;
     });
   } catch (error) {
@@ -573,7 +634,9 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
     match: {
       ...match,
       driver_route: withRouteFields({ ...match.driver_route, driver }),
-      passenger_request: match.passenger_request ? withRouteFields(match.passenger_request) : null,
+      passenger_request: match.passenger_request
+        ? { ...withRouteFields(match.passenger_request), fare: passengerFareResponse(match.passenger_request) }
+        : null,
       merchant_order: match.merchant_order ? withRouteFields(match.merchant_order) : null
     },
     scoringBreakdown: best.breakdown,
@@ -608,8 +671,11 @@ matchingRouter.post(
         parcelCount: 0
       });
 
+      const fares = await routeFareService.effectiveFor(prisma, [route.serviceRouteId], new Date());
       res.json({
-        results: candidates.map(passengerSearchResult),
+        results: candidates.map((candidate) =>
+          passengerSearchResult(candidate, fares, route.serviceRouteId, input.passenger_count)
+        ),
         request_id: req.requestId
       });
     } catch (error) {

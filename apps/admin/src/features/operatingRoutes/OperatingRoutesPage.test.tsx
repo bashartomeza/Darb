@@ -410,3 +410,104 @@ describe("Routes page", () => {
     expect(withoutLink.querySelector('a[href="#/routes/advanced"]')).toBeNull();
   });
 });
+
+describe("Route prices on the Routes page", () => {
+  const fareResponse = (current: Record<string, unknown> = {}, history: unknown[] = []) => ({
+    route_id: hebronToBethlehem.id,
+    currency: "ILS",
+    display_only: true,
+    current: { passenger_seat: null, parcel_s: null, parcel_m: null, parcel_l: null, ...current },
+    history,
+    server_now: "2026-11-03T10:00:00Z"
+  });
+  const pricedRoute = route(hebron, bethlehem, {
+    orders_count: 12,
+    fares: {
+      currency: "ILS",
+      passenger_seat_minor: 1500,
+      parcel_minor: { S: 800, M: null, L: null },
+      driver_price_range: { passenger_seat: { min_minor: 1200, max_minor: 2000 }, parcel: { S: null, M: null, L: null } }
+    }
+  });
+
+  function pricesButton(scope: ParentNode, routeId: string) {
+    return scope.querySelector<HTMLButtonElement>(`button[data-prices-route-id="${routeId}"]`)!;
+  }
+
+  function priceForm() {
+    const form = dialog()!.querySelector<HTMLFormElement>("form")!;
+    return { form, field: (name: string) => form.querySelector<HTMLInputElement>(`input[name="${name}"]`)! };
+  }
+
+  it("shows each route's seat price, driver range and parcel prices", async () => {
+    const page = await mount(fakeApi({ operatingRoutes: vi.fn().mockResolvedValue({ routes: [pricedRoute, ramallahToNablus] }) }));
+    const [priced, unpriced] = rows(page);
+    expect(priced!.textContent).toContain("Seat: ₪15.00");
+    expect(priced!.textContent).toContain("Driver: ₪12.00 – ₪20.00");
+    expect(priced!.textContent).toContain("Parcels S/M/L: ₪8.00 / – / –");
+    expect(unpriced!.textContent).toContain("No prices set");
+  });
+
+  it("sets the default seat price and the driver range with a reason, then refreshes the list", async () => {
+    const routeFares = vi.fn().mockResolvedValue(fareResponse());
+    const setRouteFares = vi.fn().mockResolvedValue(
+      fareResponse({ passenger_seat: { fare_id: "f1", amount_minor: 1500, min_minor: 1200, max_minor: 2000, currency: "ILS", effective_from: "2026-11-03T10:00:00Z" } })
+    );
+    const api = fakeApi({ routeFares, setRouteFares });
+    const page = await mount(api);
+
+    act(() => pricesButton(page, hebronToBethlehem.id).click());
+    await settle();
+    expect(routeFares).toHaveBeenCalledWith("admin-token", hebronToBethlehem.id);
+    const { form, field } = priceForm();
+    type(field("passenger_seat_amount"), "15");
+    type(field("passenger_seat_min"), "12");
+    type(field("passenger_seat_max"), "20");
+    const reason = [...form.querySelectorAll<HTMLInputElement>("input")].find((input) => input.maxLength === 500)!;
+    type(reason, "Opening prices");
+    await submit(form);
+
+    expect(setRouteFares).toHaveBeenCalledWith("admin-token", hebronToBethlehem.id, {
+      changes: [{ item: "passenger_seat", amount_minor: 1500, min_minor: 1200, max_minor: 2000 }],
+      effective_from: undefined,
+      reason: "Opening prices"
+    });
+    expect(dialog()!.textContent).toContain("Fares saved and recorded in the history.");
+
+    api.operatingRoutes.mockClear();
+    act(() => buttonNamed(dialog()!, "Close").click());
+    await settle();
+    expect(api.operatingRoutes).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a range that does not hold the default before calling the server", async () => {
+    const setRouteFares = vi.fn();
+    const api = fakeApi({ routeFares: vi.fn().mockResolvedValue(fareResponse()), setRouteFares });
+    const page = await mount(api);
+    act(() => pricesButton(page, hebronToBethlehem.id).click());
+    await settle();
+    const { form, field } = priceForm();
+    type(field("passenger_seat_amount"), "15");
+    type(field("passenger_seat_min"), "16");
+    type(field("passenger_seat_max"), "20");
+    await submit(form);
+    expect(setRouteFares).not.toHaveBeenCalled();
+    expect(dialog()!.textContent).toContain("Enter both limits, with minimum ≤ default price ≤ maximum.");
+  });
+
+  it("shows the change history with the range in Arabic", async () => {
+    const history = [
+      { id: "h2", item: "passenger_seat", amount_minor: 1500, min_minor: 1200, max_minor: 2000, currency: "ILS", effective_from: "2026-11-03T10:00:00Z", reason: "نطاق جديد", created_at: "2026-11-03T10:00:00Z", created_by: { id: "a1", name: "مدير" } },
+      { id: "h1", item: "passenger_seat", amount_minor: 1500, min_minor: null, max_minor: null, currency: "ILS", effective_from: "2026-11-01T10:00:00Z", reason: "أول سعر", created_at: "2026-11-01T10:00:00Z", created_by: { id: "a1", name: "مدير" } }
+    ];
+    const api = fakeApi({ routeFares: vi.fn().mockResolvedValue(fareResponse({}, history)) });
+    const page = await mount(api, { locale: "ar" });
+    act(() => pricesButton(page, hebronToBethlehem.id).click());
+    await settle();
+    const text = dialog()!.textContent ?? "";
+    expect(text).toContain("نطاق السائق");
+    expect(text).toContain("ثابت");
+    expect(text).toContain("أول سعر");
+    expect(dialog()!.querySelectorAll("tbody tr")).toHaveLength(2);
+  });
+});

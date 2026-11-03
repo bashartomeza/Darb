@@ -124,11 +124,12 @@ export function createLegacyPassengerCreationService(db: PrismaClient = prisma) 
         const route = isRoutePassengerInput(input)
           ? await resolveOperatingRoute(tx, input.service_route_id)
           : await resolveOperatingRouteByKey(tx, LEGACY_DEFAULT_ROUTE_KEY);
+        let selected: { id: string; seat_price_minor: number | null } | null = null;
         if (input.selected_driver_route_id) {
           // Nothing is saved for an unavailable pick: the claim rolls back with it.
-          const selected = await tx.driverRoute.findFirst({
+          selected = await tx.driverRoute.findFirst({
             where: selectableRouteWhere(input.selected_driver_route_id, input.passenger_count, new Date(), route.serviceRouteId),
-            select: { id: true },
+            select: { id: true, seat_price_minor: true },
           });
           if (!selected) throw new HttpError(409, "selected_driver_route_unavailable");
         }
@@ -155,7 +156,11 @@ export function createLegacyPassengerCreationService(db: PrismaClient = prisma) 
             };
         // The route's seat fare in force now, frozen on the request so later
         // tariff edits never change it. A route without a fare stores nulls.
-        const fare = await routeFareService.passengerSnapshot(tx, route.serviceRouteId, input.passenger_count, new Date());
+        // Booked with one driver's offer, it is that driver's price; matching
+        // sets it to the price of the driver offered and taking the request.
+        const fare = selected
+          ? await routeFareService.passengerSnapshotForDriver(tx, route.serviceRouteId, selected, input.passenger_count, new Date())
+          : await routeFareService.passengerSnapshot(tx, route.serviceRouteId, input.passenger_count, new Date());
         const resource = await tx.passengerRequest.create({
           data: {
             passenger_id: actor.id,

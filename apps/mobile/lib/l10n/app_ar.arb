@@ -1085,6 +1085,62 @@
     }
   },
   "fareTotal": "الإجمالي",
+  "driverPricesTitle": "أسعارك على هذا المسار",
+  "driverPricesBody": "اترك السعر فارغًا لتعتمد السعر الافتراضي للمسار. يرى الركاب والتجار سعرك قبل الحجز.",
+  "driverPriceSeat": "سعر المقعد",
+  "driverPriceParcel": "سعر الطرد {size}",
+  "@driverPriceParcel": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "driverPriceRangeHint": "الافتراضي {price}. بين {min} و{max}.",
+  "@driverPriceRangeHint": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "driverPriceFixedHint": "سعر ثابت: {price}",
+  "@driverPriceFixedHint": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "driverPriceInvalid": "أدخل سعرًا بين {min} و{max}.",
+  "@driverPriceInvalid": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "driverPriceOutOfRange": "أحد أسعارك خارج النطاق المسموح على هذا المسار. اختر سعرًا داخل النطاق.",
+  "driverPriceFixedError": "سعر هذا المسار ثابت ولا يمكن تغييره.",
+  "driverYourPrices": "أسعارك: {prices}",
+  "@driverYourPrices": {
+    "placeholders": {
+      "prices": {
+        "type": "String"
+      }
+    }
+  },
+  "driverPricesDefault": "أسعارك: الأسعار الافتراضية للمسار",
+  "fareDriverTitle": "سعر هذا السائق",
   "notifDriverApproachingTitle": "سائقك يقترب",
   "notifDriverApproachingBody": "سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.",
   "ratingPromptTitle": "كيف كانت رحلتك؟",

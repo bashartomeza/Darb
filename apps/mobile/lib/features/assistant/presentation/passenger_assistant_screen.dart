@@ -637,6 +637,8 @@ class _TripSearchResults extends StatelessWidget {
     matchScore: option.score,
     departureAt: option.departureAt,
     remainingSeats: option.seatsAvailable,
+    fareSeatMinor: option.fare?.unitMinor,
+    fareCurrency: option.fare?.currency,
   );
 }
 

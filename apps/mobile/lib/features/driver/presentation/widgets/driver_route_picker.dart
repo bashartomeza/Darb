@@ -7,13 +7,16 @@ import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/darb_bottom_nav.dart';
 import '../../../operating_routes/data/operating_route_models.dart';
 import '../../../operating_routes/data/operating_route_repository.dart';
+import '../../domain/driver_prices.dart';
+import 'driver_price_fields.dart';
 
 /// Asks the driver which predefined route they are driving before they go
-/// online. Returns the chosen service route id, or null when dismissed.
-Future<String?> showDriverRoutePicker(
+/// online, and their own prices on it inside the admin's range. Returns the
+/// choice, or null when dismissed.
+Future<DriverRouteChoice?> showDriverRoutePicker(
   BuildContext context, {
   String? initialRouteId,
-}) => showDarbBottomSheet<String>(
+}) => showDarbBottomSheet<DriverRouteChoice>(
   context: context,
   child: DriverRoutePicker(initialRouteId: initialRouteId),
 );
@@ -31,6 +34,9 @@ class DriverRoutePicker extends ConsumerStatefulWidget {
 class _DriverRoutePickerState extends ConsumerState<DriverRoutePicker> {
   String? _chosen;
 
+  /// The prices typed for the chosen route; null while one is invalid.
+  DriverPrices? _prices = DriverPrices.none;
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +50,8 @@ class _DriverRoutePickerState extends ConsumerState<DriverRoutePicker> {
     final arabic = Localizations.localeOf(context).languageCode == 'ar';
     final routes = ref.watch(operatingRoutesProvider);
     final list = routes.value ?? const <OperatingRoute>[];
-    final chosen = list.any((route) => route.id == _chosen) ? _chosen : null;
+    final chosenRoute = list.where((route) => route.id == _chosen).firstOrNull;
+    final chosen = chosenRoute?.id;
 
     return Column(
       key: const ValueKey('driverRoutePicker'),
@@ -88,7 +95,10 @@ class _DriverRoutePickerState extends ConsumerState<DriverRoutePicker> {
                 )
               : RadioGroup<String>(
                   groupValue: chosen,
-                  onChanged: (id) => setState(() => _chosen = id),
+                  onChanged: (id) => setState(() {
+                    _chosen = id;
+                    _prices = DriverPrices.none;
+                  }),
                   child: Column(
                     children: [
                       for (final route in list)
@@ -102,12 +112,22 @@ class _DriverRoutePickerState extends ConsumerState<DriverRoutePicker> {
                   ),
                 ),
         ),
+        if (chosenRoute != null) ...[
+          const SizedBox(height: AppTokens.spaceMedium),
+          DriverPriceFields(
+            key: ValueKey('driverPickerPrices-${chosenRoute.id}'),
+            fares: chosenRoute.fares,
+            onChanged: (prices) => setState(() => _prices = prices),
+          ),
+        ],
         const SizedBox(height: AppTokens.spaceMedium),
         FilledButton(
           key: const ValueKey('driverRoutePickConfirm'),
-          onPressed: chosen == null
+          onPressed: chosen == null || _prices == null
               ? null
-              : () => Navigator.of(context).pop(chosen),
+              : () => Navigator.of(
+                  context,
+                ).pop(DriverRouteChoice(chosen, _prices!)),
           child: Text(l10n.driverRoutePickConfirm),
         ),
         TextButton(

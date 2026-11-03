@@ -1,3 +1,4 @@
+import 'package:darb_mobile/core/fares/fare.dart';
 import 'package:darb_mobile/features/ai_directives/ai_ui_directives.dart';
 
 enum PassengerAssistantReplyType { clarification, requestReview, result }
@@ -123,6 +124,7 @@ class PassengerAssistantTripOption {
     this.availabilityWindowEnd,
     this.vehicleType,
     this.trustScore,
+    this.fare,
   });
 
   factory PassengerAssistantTripOption.fromJson(Map<String, dynamic> json) {
@@ -156,6 +158,7 @@ class PassengerAssistantTripOption {
       vehicleType: driver['vehicle_type'] as String?,
       trustScore: (driver['trust_score'] as num?)?.toInt(),
       score: rawScore.toDouble(),
+      fare: FareSnapshot.tryParse(json['fare']),
     );
   }
 
@@ -169,6 +172,10 @@ class PassengerAssistantTripOption {
   final String? vehicleType;
   final int? trustScore;
   final double score;
+
+  /// This driver's seat price (their own, else the route default); null when
+  /// the route has no fare.
+  final FareSnapshot? fare;
 }
 
 class PassengerAssistantReply {

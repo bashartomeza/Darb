@@ -19,6 +19,7 @@ import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_s
 import 'package:darb_mobile/features/driver/application/driver_controller.dart';
 import 'package:darb_mobile/features/driver/data/driver_models.dart';
 import 'package:darb_mobile/features/driver/data/driver_repository.dart';
+import 'package:darb_mobile/features/driver/domain/driver_prices.dart';
 import 'package:darb_mobile/features/matching/data/matching_models.dart';
 import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
@@ -729,6 +730,8 @@ class _FakeDriverRepository extends DriverRepository {
   int rejectCalls = 0;
   String? lastServiceRouteId;
   final List<String?> onlineServiceRouteIds = [];
+  final List<DriverPrices> onlinePrices = [];
+  DriverPrices? lastCreatePrices;
   int? lastSeats;
   int? lastParcels;
   String? lastMatchStatus;
@@ -772,11 +775,13 @@ class _FakeDriverRepository extends DriverRepository {
     required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
+    DriverPrices prices = DriverPrices.none,
     String? idempotencyKey,
     Future<void> Function()? beforeRetry,
   }) async {
     createCalls += 1;
     lastServiceRouteId = serviceRouteId;
+    lastCreatePrices = prices;
     lastSeats = seatsAvailable;
     lastParcels = parcelCapacityAvailable;
     final route = _route(
@@ -806,11 +811,13 @@ class _FakeDriverRepository extends DriverRepository {
     required String idempotencyKey,
     String? expectedRouteId,
     String? serviceRouteId,
+    DriverPrices prices = DriverPrices.none,
     Future<void> Function()? beforeRetry,
   }) async {
     onlineCalls += 1;
     observedKeys.add(idempotencyKey);
     onlineServiceRouteIds.add(serviceRouteId);
+    onlinePrices.add(prices);
     onOnlineSend?.call();
     if (onlineFailures.isNotEmpty) throw onlineFailures.removeAt(0);
     await onlineBarrier?.future;

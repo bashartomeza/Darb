@@ -1,6 +1,7 @@
 import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
+import '../domain/driver_prices.dart';
 
 const driverTripTimeline = [
   'accepted',
@@ -29,6 +30,7 @@ class DriverRoute {
     this.serviceRouteId,
     this.routeNameAr,
     this.routeNameEn,
+    this.prices = DriverPrices.none,
   });
 
   final String id;
@@ -50,6 +52,10 @@ class DriverRoute {
   final String? serviceRouteId;
   final String? routeNameAr;
   final String? routeNameEn;
+
+  /// The prices the driver chose when going online; an item left out
+  /// charges the route's default.
+  final DriverPrices prices;
 
   String? routeName({required bool arabic}) =>
       _routeName(routeNameAr, routeNameEn, arabic: arabic);
@@ -76,6 +82,7 @@ class DriverRoute {
       serviceRouteId: _text(json['service_route_id']),
       routeNameAr: _text(json['route_name_ar']),
       routeNameEn: _text(json['route_name_en']),
+      prices: DriverPrices.fromRouteJson(json['prices']),
     );
   }
 }

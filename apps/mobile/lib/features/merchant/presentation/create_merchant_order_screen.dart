@@ -13,6 +13,7 @@ import '../../../core/widgets/darb_back_button.dart';
 import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/discard_saved_request_button.dart';
+import '../../canonical_routes/presentation/canonical_route_widgets.dart';
 import '../../operating_routes/data/operating_route_models.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../application/merchant_controller.dart';
@@ -225,6 +226,18 @@ class _CreateMerchantOrderScreenState
                     ),
                   ),
                 ),
+                // The route's default prices for these sizes; the driver who
+                // takes the order may charge their own inside the range.
+                if (routeList
+                        .where((route) => route.id == _selectedRoute(routeList))
+                        .firstOrNull
+                    case final route?)
+                  KeyedSubtree(
+                    key: const ValueKey('merchantRouteFare'),
+                    child: parcelFareEstimate(context, route.fares, [
+                      for (final parcel in parcels) parcel.size,
+                    ]),
+                  ),
                 OutlinedButton.icon(
                   key: const ValueKey('addParcelButton'),
                   onPressed: editable && draft.canAdd ? draft.addParcel : null,

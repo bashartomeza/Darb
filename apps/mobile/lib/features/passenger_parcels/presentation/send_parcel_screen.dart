@@ -298,6 +298,18 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
           ),
         ),
         Text(l10n.parcelSizeLargeNotAllowed, style: theme.textTheme.bodySmall),
+        // The route's default price for this size; the driver who takes the
+        // parcel may charge their own inside the admin's range.
+        if (ref
+                .watch(operatingRoutesProvider)
+                .value
+                ?.where((route) => route.id == _draft.serviceRouteId)
+                .firstOrNull
+            case final route?)
+          KeyedSubtree(
+            key: const ValueKey('parcelRouteFare'),
+            child: parcelFareEstimate(context, route.fares, [_draft.size]),
+          ),
         const SizedBox(height: AppTokens.spaceMedium),
         TextField(
           key: const ValueKey('receiverName'),

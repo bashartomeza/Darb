@@ -124,6 +124,31 @@ void main() {
   });
 
   group('create request screen', () {
+    testWidgets('shows the route default seat price before booking', (
+      tester,
+    ) async {
+      await _pumpCreate(
+        tester,
+        routes: (_) async => testOperatingRoutesWithFares(),
+      );
+      expect(find.byKey(const ValueKey('passengerRouteFare')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('passengerRouteField')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(_hebronToBethlehem).last);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('passengerRouteFare')), findsOneWidget);
+      expect(find.text('₪15.00'), findsOneWidget);
+      expect(find.textContaining('paid directly to the driver'), findsWidgets);
+
+      // A route without prices says so instead of inventing one.
+      await tester.tap(find.byKey(const ValueKey('passengerRouteField')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bethlehem → Hebron').last);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('fareNotSetNote')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     testWidgets('shows a loading route list while the routes are read', (
       tester,
     ) async {

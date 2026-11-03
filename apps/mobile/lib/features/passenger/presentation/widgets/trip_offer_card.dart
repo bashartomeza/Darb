@@ -167,6 +167,19 @@ class TripOfferCard extends StatelessWidget {
                         icon: Icons.event_seat_outlined,
                         text: l10n.seatsRemaining(offer.remainingSeats!),
                       ),
+                    // A scored offer shows the score up top; this driver's
+                    // own seat price goes here.
+                    if (offer.matchScore != null && offer.fareSeatMinor != null)
+                      KeyedSubtree(
+                        key: const ValueKey('tripOfferDriverFare'),
+                        child: _DetailLine(
+                          icon: Icons.payments_outlined,
+                          text:
+                              '${l10n.fareDriverTitle}: '
+                              '${formatFare(offer.fareSeatMinor!, offer.fareCurrency ?? 'ILS', Localizations.localeOf(context).languageCode)} '
+                              '${l10n.perPassenger}',
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -194,7 +207,7 @@ class TripOfferCard extends StatelessWidget {
               ],
             ],
           ),
-          if (offer.matchScore == null && offer.fareSeatMinor != null)
+          if (offer.fareSeatMinor != null)
             Padding(
               padding: const EdgeInsets.only(top: AppTokens.spaceSmall),
               child: Text(

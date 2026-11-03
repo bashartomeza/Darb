@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import '../../auth/data/authenticated_api_client.dart';
 import '../../trips/data/trip_models.dart';
+import '../domain/driver_prices.dart';
 import 'driver_models.dart';
 
 const _compileTimeDemoFeatures = bool.fromEnvironment(
@@ -122,16 +123,19 @@ class DriverRepository {
     required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
+    DriverPrices prices = DriverPrices.none,
   }) => {
     'service_route_id': ?serviceRouteId,
     'seats_available': seatsAvailable,
     'parcel_capacity_available': parcelCapacityAvailable,
+    'prices': ?prices.toJson(),
   };
 
   Future<DriverRoute> createRoute({
     required String? serviceRouteId,
     required int seatsAvailable,
     required int parcelCapacityAvailable,
+    DriverPrices prices = DriverPrices.none,
     String? idempotencyKey,
     Future<void> Function()? beforeRetry,
   }) async {
@@ -143,6 +147,7 @@ class DriverRepository {
         serviceRouteId: serviceRouteId,
         seatsAvailable: seatsAvailable,
         parcelCapacityAvailable: parcelCapacityAvailable,
+        prices: prices,
       ),
     );
     return DriverRoute.fromJson(json['route'] as Map<String, dynamic>);
@@ -160,6 +165,7 @@ class DriverRepository {
     required String idempotencyKey,
     String? expectedRouteId,
     String? serviceRouteId,
+    DriverPrices prices = DriverPrices.none,
     Future<void> Function()? beforeRetry,
   }) async {
     final body = <String, dynamic>{'online': online};
@@ -168,6 +174,9 @@ class DriverRepository {
     }
     if (serviceRouteId != null) {
       body['service_route_id'] = serviceRouteId;
+      // The driver's own prices on the route; none means its defaults.
+      final chosen = prices.toJson();
+      if (chosen != null) body['prices'] = chosen;
     }
     final json = await apiClient.putJson(
       '/driver/online-state',
