@@ -6,11 +6,14 @@ import type { DocumentStorage } from "./driverDocumentStorage.js";
 /**
  * Deletes uploaded documents once their application was decided and the
  * retention window has passed. Pending applications are never touched.
+ * Each document row is deleted in one transaction with its audit event; the
+ * bytes in `document_files` go with it (ON DELETE CASCADE). A disk copy left
+ * from before the bytes moved into the database is removed afterwards.
  * Safe to run repeatedly (for example from a daily scheduled job).
  */
 export async function purgeDecidedDriverDocuments(
   db: PrismaClient,
-  storage: DocumentStorage,
+  storage: Pick<DocumentStorage, "removeLegacyCopy">,
   options: { retentionDays: number; now?: Date; batchSize?: number }
 ) {
   const now = options.now ?? new Date();
@@ -28,7 +31,6 @@ export async function purgeDecidedDriverDocuments(
   });
   let purged = 0;
   for (const document of documents) {
-    await storage.remove(document.storage_key);
     await db.$transaction(async (tx) => {
       await tx.driverVerificationDocument.delete({ where: { id: document.id } });
       await auditEvent(tx, {
@@ -38,6 +40,7 @@ export async function purgeDecidedDriverDocuments(
         metadata: { action: "driver_document_purged", kind: document.kind, retention_days: options.retentionDays }
       });
     });
+    await storage.removeLegacyCopy(document.storage_key);
     purged += 1;
   }
 
@@ -48,7 +51,6 @@ export async function purgeDecidedDriverDocuments(
     orderBy: { created_at: "asc" }
   });
   for (const document of merchantDocuments) {
-    await storage.remove(document.storage_key);
     await db.$transaction(async (tx) => {
       await tx.merchantApplicationDocument.delete({ where: { id: document.id } });
       await auditEvent(tx, {
@@ -58,6 +60,7 @@ export async function purgeDecidedDriverDocuments(
         metadata: { action: "merchant_document_purged", kind: document.kind, retention_days: options.retentionDays }
       });
     });
+    await storage.removeLegacyCopy(document.storage_key);
     purged += 1;
   }
   return { purged };

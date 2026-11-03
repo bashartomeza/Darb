@@ -139,8 +139,10 @@ export function runPreflight(env, options = {}) {
   add("ROUTE_PROVIDER_CACHE_TTL_SECONDS", (val("ROUTE_PROVIDER_CACHE_TTL_SECONDS") || "0") === "0", "ROUTE_PROVIDER_CACHE_TTL_SECONDS must be 0");
 
   if (bool("DRIVER_DOCUMENTS_ENABLED")) {
+    // Document bytes are stored in MySQL. The directory is optional and only read for
+    // documents uploaded before that change (npm run documents:import copies them in).
     const dir = val("DRIVER_DOCUMENTS_DIR");
-    add("DRIVER_DOCUMENTS_DIR", dir !== "" && isAbsolute(dir), "DRIVER_DOCUMENTS_DIR must be an absolute path on persistent storage when driver documents are enabled");
+    add("DRIVER_DOCUMENTS_DIR", dir === "" || isAbsolute(dir), "DRIVER_DOCUMENTS_DIR, when set, must be an absolute path");
   } else {
     results.push({ id: "DRIVER_DOCUMENTS", status: "WARN", message: "DRIVER_DOCUMENTS_ENABLED is not true; driver and merchant document uploads will be unavailable" });
   }

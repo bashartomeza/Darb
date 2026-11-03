@@ -248,8 +248,10 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (partnerCheckpointMapEnabled && !limitedCheckpointDirectoryEnabled) {
     problems.push("PARTNER_CHECKPOINT_MAP_ENABLED requires AWEENRAYEH_LIMITED_DIRECTORY_ENABLED");
   }
-  if (driverDocumentsEnabled && (!raw.DRIVER_DOCUMENTS_DIR || !isAbsolute(raw.DRIVER_DOCUMENTS_DIR))) {
-    problems.push("DRIVER_DOCUMENTS_DIR must be an absolute path when driver documents are enabled");
+  // Document bytes are stored in MySQL. The directory is optional: it is only read for
+  // documents uploaded before that change and not yet imported (npm run documents:import).
+  if (driverDocumentsEnabled && raw.DRIVER_DOCUMENTS_DIR && !isAbsolute(raw.DRIVER_DOCUMENTS_DIR)) {
+    problems.push("DRIVER_DOCUMENTS_DIR must be an absolute path when set");
   }
   if (checkpointDirectoryEnabled && !raw.CHECKPOINT_DIRECTORY_FILE) {
     problems.push("CHECKPOINT_DIRECTORY_FILE is required when the directory is enabled");
@@ -336,7 +338,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     problems.push("OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp (and the SMTP_* settings)");
   }
   // Driver and shop-owner registration is self-service: applicants upload their own documents
-  // before the application reaches the Admin review queue, so storage must be configured.
+  // before the application reaches the Admin review queue, so uploads must be enabled.
   if (publicOnboardingEnabled && !driverDocumentsEnabled) {
     problems.push("PUBLIC_ONBOARDING_ENABLED requires DRIVER_DOCUMENTS_ENABLED so applicants can upload their documents");
   }
@@ -681,7 +683,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     phoneVerificationDisabled,
     openSignupMaxStartsPerHour: raw.OPEN_SIGNUP_MAX_STARTS_PER_HOUR,
     driverDocuments: driverDocumentsEnabled
-      ? { dir: raw.DRIVER_DOCUMENTS_DIR!, retentionDays: raw.DRIVER_DOCUMENT_RETENTION_DAYS }
+      ? { legacyDir: raw.DRIVER_DOCUMENTS_DIR, retentionDays: raw.DRIVER_DOCUMENT_RETENTION_DAYS }
       : undefined,
     publicRegistration: publicOnboardingEnabled
       ? {

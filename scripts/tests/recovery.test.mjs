@@ -124,7 +124,8 @@ test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secre
       "20261105120000_user_contact_phone",
       "20261106120000_passenger_profile_complete",
       "20261107120000_app_ratings",
-      "20261108120000_checkpoint_positions"
+      "20261108120000_checkpoint_positions",
+      "20261109120000_document_files_in_database"
     ]
   );
   rmSync(directory, { recursive: true, force: true });

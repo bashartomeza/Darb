@@ -176,7 +176,7 @@ describe("enforcement", () => {
       driverVerificationDocument: { findMany: vi.fn().mockResolvedValue([]) },
       merchantApplicationDocument: { findMany: vi.fn().mockResolvedValue([]) }
     };
-    await purgeDecidedDriverDocuments(db as never, { remove: vi.fn() } as never, { retentionDays: 90, now: new Date("2026-11-01T00:00:00Z") });
+    await purgeDecidedDriverDocuments(db as never, { removeLegacyCopy: vi.fn() }, { retentionDays: 90, now: new Date("2026-11-01T00:00:00Z") });
     expect(db.driverVerificationDocument.findMany.mock.calls[0][0].where.verification.status).toEqual({ in: ["approved", "rejected"] });
   });
 });

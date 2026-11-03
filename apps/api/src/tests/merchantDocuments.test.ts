@@ -1,4 +1,5 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import jwt from "jsonwebtoken";
@@ -9,6 +10,7 @@ import { createConfig } from "../config.js";
 const tx = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
   merchantApplicationDocument: { count: vi.fn(), create: vi.fn(), delete: vi.fn() },
+  documentFile: { create: vi.fn() },
   auditEvent: { create: vi.fn() }
 }));
 
@@ -17,8 +19,12 @@ const prismaMock = vi.hoisted(() => ({
   authSession: { findUnique: vi.fn(), update: vi.fn() },
   auditEvent: { create: vi.fn() },
   merchantApplicationDocument: { findMany: vi.fn(), findFirst: vi.fn() },
+  documentFile: { findUnique: vi.fn() },
   $transaction: vi.fn()
 }));
+
+/** Stand-in for the `document_files` table, keyed by the owning document row. */
+const storedFiles = vi.hoisted(() => new Map<string, Record<string, unknown>>());
 
 const onboardingContext = vi.hoisted(() => ({ current: null as null | Record<string, unknown> }));
 vi.mock("../middleware/onboardingAuth.js", async () => {
@@ -90,6 +96,14 @@ describe("shop owner documents", () => {
       created_at: new Date(),
       ...data
     }));
+    storedFiles.clear();
+    tx.documentFile.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+      storedFiles.set(String(data.merchant_document_id), data);
+      return data;
+    });
+    prismaMock.documentFile.findUnique.mockImplementation(
+      async ({ where }: { where: { merchant_document_id: string } }) => storedFiles.get(where.merchant_document_id) ?? null
+    );
     prismaMock.user.findUnique.mockImplementation(async (args: { where: { id: string } }) =>
       args.where.id === "admin_1"
         ? { ...admin, account_status: "active", security_version: 1 }
@@ -112,13 +126,16 @@ describe("shop owner documents", () => {
     await request(disabledApp).get("/api/v1/onboarding/merchant-documents").expect(404);
   });
 
-  it("stores a document on disk and records it against the shop owner", async () => {
+  it("stores a document in the database and records it against the shop owner", async () => {
     const response = await upload(JPEG).expect(201);
 
     expect(response.body.document).toMatchObject({ id: "mdoc_1", kind: "commercial_register", mime_type: "image/jpeg" });
     const data = tx.merchantApplicationDocument.create.mock.calls[0][0].data;
     expect(data).toMatchObject({ user_id: "shop_user", mime_type: "image/jpeg" });
-    expect(await readFile(join(dir, data.storage_key))).toEqual(JPEG);
+    const file = storedFiles.get("mdoc_1")!;
+    expect(file).toMatchObject({ merchant_document_id: "mdoc_1", content_type: "image/jpeg", size_bytes: JPEG.length, sha256: data.sha256 });
+    expect(Buffer.from(file.bytes as Uint8Array)).toEqual(JPEG);
+    expect(await readdir(dir)).toEqual([]);
   });
 
   it("rejects unknown content, empty bodies and driver-only kinds without writing anything", async () => {
@@ -140,10 +157,11 @@ describe("shop owner documents", () => {
     expect(await readdir(dir)).toEqual([]);
   });
 
-  it("caps the number of documents and removes the file it just wrote", async () => {
+  it("caps the number of documents without storing the bytes", async () => {
     tx.merchantApplicationDocument.count.mockResolvedValue(6);
     await upload(JPEG).expect(409);
     expect(await readdir(dir)).toEqual([]);
+    expect(tx.documentFile.create).not.toHaveBeenCalled();
   });
 
   it("lists and deletes only the shop owner's own documents", async () => {
@@ -168,7 +186,8 @@ describe("shop owner documents", () => {
       user_id: "shop_user",
       kind: "commercial_register",
       mime_type: "image/jpeg",
-      storage_key: key
+      storage_key: key,
+      sha256: createHash("sha256").update(JPEG).digest("hex")
     });
 
     const list = await request(app).get("/api/v1/admin/merchant-approvals/shop_user/documents").set(adminAuth()).expect(200);
@@ -178,6 +197,8 @@ describe("shop owner documents", () => {
     expect(download.headers["content-disposition"]).toContain("attachment");
     expect(download.headers["x-content-type-options"]).toBe("nosniff");
     expect(Buffer.from(download.body)).toEqual(JPEG);
+    expect(download.headers["content-length"]).toBe(String(JPEG.length));
+    expect(prismaMock.documentFile.findUnique.mock.calls[0][0].where).toEqual({ merchant_document_id: "mdoc_1" });
     expect(prismaMock.auditEvent.create).toHaveBeenCalled();
   });
 

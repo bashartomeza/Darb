@@ -1833,7 +1833,8 @@ model DriverVerificationEvidence {
 }
 
 /// A document the applicant uploaded for one verification revision. The bytes
-/// live on server storage under `storage_key`; the row holds only metadata.
+/// live in `document_files`; `storage_key` also names the file of a document
+/// uploaded before that table existed (read-only fallback until imported).
 model DriverVerificationDocument {
   id              String   @id @default(cuid())
   verification_id String
@@ -1846,13 +1847,14 @@ model DriverVerificationDocument {
   created_at      DateTime @default(now())
 
   verification DriverVerification @relation(fields: [verification_id], references: [id], onDelete: Cascade)
+  file         DocumentFile?
 
   @@index([verification_id, revision, created_at], map: "dvd_verification_revision_idx")
   @@map("driver_verification_documents")
 }
 
 /// Documents a shop owner uploads while the account waits for Admin review. The
-/// file bytes live on server storage under `storage_key`, never in the database.
+/// bytes live in `document_files`, like driver documents.
 model MerchantApplicationDocument {
   id          String   @id @default(cuid())
   user_id     String
@@ -1863,10 +1865,31 @@ model MerchantApplicationDocument {
   storage_key String   @unique @db.VarChar(64)
   created_at  DateTime @default(now())
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  file DocumentFile?
 
   @@index([user_id, created_at], map: "mad_user_created_idx")
   @@map("merchant_application_documents")
+}
+
+/// The bytes of one uploaded driver or shop-owner document, kept in the database
+/// so a redeploy or a second API instance never loses them. Exactly one owner
+/// column is set; the row is deleted together with its document. Uploads are
+/// capped at 5 MiB, so MEDIUMBLOB (16 MiB) is enough.
+model DocumentFile {
+  id                   String   @id @default(cuid())
+  driver_document_id   String?  @unique
+  merchant_document_id String?  @unique
+  content_type         String   @db.VarChar(40)
+  size_bytes           Int
+  sha256               String   @db.VarChar(64)
+  bytes                Bytes    @db.MediumBlob
+  created_at           DateTime @default(now())
+
+  driver_document   DriverVerificationDocument?  @relation(fields: [driver_document_id], references: [id], onDelete: Cascade)
+  merchant_document MerchantApplicationDocument? @relation(fields: [merchant_document_id], references: [id], onDelete: Cascade)
+
+  @@map("document_files")
 }
 
 /// Store details a shop owner gives at Google onboarding.

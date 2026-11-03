@@ -12,7 +12,7 @@ let db: any; let releases: any; let verifier: any;
 const onboardingKeys = { phoneDigest: { secret: "p".repeat(40), version: 1 }, onboardingSession: { secret: "s".repeat(40), version: 1 }, abuse: { secret: "a".repeat(40), version: 1 } };
 function service(mode: "disabled" | "allowlist" | "open" = "open", allowlist: string[] = [], driverSignup = true) {
   return new GoogleAuthService(db, { ...config, authActions: { key }, googleAuth: { mobileClientIds: ["mobile-client"], adminClientIds: ["admin-client"], passengerSignupMode: mode, passengerAllowlist: allowlist },
-    ...(driverSignup ? { publicOnboardingEnabled: true, onboarding: { keys: onboardingKeys }, publicRegistration: { pendingStatusTtlDays: 14 }, driverDocuments: { dir: "/tmp/docs" } } : { publicOnboardingEnabled: false }) } as any, verifier, releases);
+    ...(driverSignup ? { publicOnboardingEnabled: true, onboarding: { keys: onboardingKeys }, publicRegistration: { pendingStatusTtlDays: 14 }, driverDocuments: { retentionDays: 90 } } : { publicOnboardingEnabled: false }) } as any, verifier, releases);
 }
 function roleCompletion(grant: any, role: string, profile: Record<string, unknown>) { return googleCompleteSchema.parse({ ...completion(grant), name: "Rana Haddad", role, profile }); }
 const futureDate = new Date(Date.now() + 400 * 86_400_000).toISOString().slice(0, 10);

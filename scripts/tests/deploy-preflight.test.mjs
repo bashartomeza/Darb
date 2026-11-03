@@ -30,6 +30,11 @@ test("a complete production environment has no failures", () => {
   assert.deepEqual(failing(runPreflight(goodEnv())), []);
 });
 
+test("document uploads need no storage directory: the bytes live in the database", () => {
+  const { DRIVER_DOCUMENTS_DIR: _unused, ...env } = goodEnv();
+  assert.deepEqual(failing(runPreflight(env)), []);
+});
+
 test("template placeholders, short and reused secrets fail", () => {
   const env = { ...goodEnv(), JWT_SECRET: "<at-least-32-random-characters>", REFRESH_TOKEN_PEPPER: fill("x"), AUTH_ACTION_TOKEN_PEPPER: fill("x") };
   const ids = failing(runPreflight(env));
