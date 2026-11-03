@@ -75,6 +75,8 @@ class DarbRouteMap extends ConsumerWidget {
     this.routeColor = SemanticColors.activeRoute,
     this.showOverlay = true,
     this.banner,
+    this.bannerElevation = 3,
+    this.controlsTop,
     this.onTap,
     this.tileProvider,
     super.key,
@@ -95,6 +97,10 @@ class DarbRouteMap extends ConsumerWidget {
   /// Draw checkpoints and community reports too.
   final bool showOverlay;
   final Widget? banner;
+  final double bannerElevation;
+
+  /// Distance of the zoom controls from the top, to clear a tall [banner].
+  final double? controlsTop;
   final ValueChanged<LatLng>? onTap;
   final TileProvider? tileProvider;
 
@@ -114,6 +120,8 @@ class DarbRouteMap extends ConsumerWidget {
       emptyLabel: emptyLabel,
       attributionLabel: l10n.mapAttribution,
       banner: banner,
+      bannerElevation: bannerElevation,
+      controlsTop: controlsTop,
       onTap: onTap,
       tileProvider: tileProvider,
       paths: roadRoutePaths(road, color: routeColor),

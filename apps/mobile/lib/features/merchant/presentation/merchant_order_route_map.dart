@@ -14,6 +14,10 @@ class MerchantOrderRouteMap extends StatelessWidget {
     required this.order,
     this.vehicle,
     this.height = 240,
+    this.banner,
+    this.bannerElevation = 3,
+    this.controlsTop,
+    this.routeColor,
     super.key,
   });
 
@@ -23,6 +27,12 @@ class MerchantOrderRouteMap extends StatelessWidget {
   final GeoPoint? vehicle;
   final double height;
 
+  /// Optional status card drawn over the top of the map.
+  final Widget? banner;
+  final double bannerElevation;
+  final double? controlsTop;
+  final Color? routeColor;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -30,6 +40,10 @@ class MerchantOrderRouteMap extends StatelessWidget {
     final drops = order.routeDropLabels;
     return DarbRouteMap(
       height: height,
+      banner: banner,
+      bannerElevation: bannerElevation,
+      controlsTop: controlsTop,
+      routeColor: routeColor ?? SemanticColors.activeRoute,
       emptyLabel: l10n.mapRouteMissingCoordinates,
       waypoints: waypoints,
       originLabel: order.pickupLabel,

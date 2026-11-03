@@ -1,214 +1,221 @@
-import '../../../core/widgets/foreground_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
-import '../../../core/presentation/localized_labels.dart';
-import '../../../core/theme/app_tokens.dart';
-import '../../../core/widgets/darb_section.dart';
-import '../../../core/widgets/route_chip.dart';
+import '../../../core/theme/merchant_theme.dart';
+import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
 import 'merchant_ui.dart';
+import 'widgets/merchant_design.dart';
 
-/// The merchant's "Shipments" tab.
-///
-/// This destination previously rooted at the match inbox while being labelled
-/// "orders", so the merchant's own shipments — the thing `GET /merchant/orders`
-/// returns — had no list of their own and appeared only as a "recent" strip on
-/// the home screen. The tab now lists every order with its parcels, batch state
-/// and a route into tracking; the match inbox is reachable from the section
-/// below it, where it belongs.
-class MerchantShipmentsScreen extends ConsumerWidget {
+enum MerchantOrderFilter { all, newOrders, inDelivery, completed }
+
+bool merchantOrderMatchesFilter(
+  MerchantOrder order,
+  MerchantOrderFilter filter,
+) => switch (filter) {
+  MerchantOrderFilter.all => true,
+  MerchantOrderFilter.newOrders => const {
+    'draft',
+    'submitted',
+    'pending',
+    'batched',
+    'matched',
+  }.contains(order.status),
+  MerchantOrderFilter.inDelivery => const {
+    'accepted',
+    'assigned',
+    'pickup_started',
+    'picked_up',
+    'in_transit',
+  }.contains(order.status),
+  MerchantOrderFilter.completed => const {
+    'completed',
+    'delivered',
+  }.contains(order.status),
+};
+
+class MerchantShipmentsScreen extends ConsumerStatefulWidget {
   const MerchantShipmentsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MerchantShipmentsScreen> createState() =>
+      _MerchantShipmentsScreenState();
+}
+
+class _MerchantShipmentsScreenState
+    extends ConsumerState<MerchantShipmentsScreen> {
+  MerchantOrderFilter _filter = MerchantOrderFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final dashboard = ref.watch(merchantDashboardProvider);
+    Future<void> refresh() async {
+      await ref.read(merchantDashboardProvider.notifier).refresh();
+    }
 
     return ForegroundRefresh(
-      refresh: () async {
-        await ref.read(merchantDashboardProvider.notifier).refresh();
-      },
+      refresh: refresh,
       child: Scaffold(
         body: SafeArea(
-          top: false,
           bottom: false,
-          child: RefreshIndicator(
-            onRefresh: () =>
-                ref.read(merchantDashboardProvider.notifier).refresh(),
-            child: ListView(
-              key: const ValueKey('merchantShipmentsList'),
-              padding: const EdgeInsets.fromLTRB(
-                AppTokens.marginMobile,
-                AppTokens.spaceMedium,
-                AppTokens.marginMobile,
-                AppTokens.spaceExtraLarge,
-              ),
-              children: [
-                dashboard.when(
-                  skipError: dashboard.hasValue,
-                  loading: () => const Column(
+          child: Column(
+            children: [
+              MerchantHeader(title: l10n.orders),
+              Padding(
+                padding: MerchantStyle.pagePadding,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F0E8),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Row(
                     children: [
-                      LoadingSkeleton.card(),
-                      SizedBox(height: AppTokens.spaceMedium),
-                      LoadingSkeleton.card(),
-                    ],
-                  ),
-                  error: (error, _) => ErrorStateView(
-                    title: l10n.shipmentsFailed,
-                    message: merchantErrorLabel(l10n, error),
-                    retryLabel: l10n.retry,
-                    onRetry: () =>
-                        ref.read(merchantDashboardProvider.notifier).refresh(),
-                  ),
-                  data: (state) => state.orders.isEmpty
-                      ? EmptyState(
-                          title: l10n.noShipments,
-                          message: l10n.noShipmentsBody,
-                          icon: Icons.inventory_2_outlined,
-                          actionLabel: l10n.createShipment,
-                          onAction: () => context.go('/merchant/order/new'),
-                        )
-                      : Column(
-                          children: [
-                            for (final (index, order)
-                                in state.orders.indexed) ...[
-                              if (index > 0)
-                                const SizedBox(height: AppTokens.spaceMedium),
-                              _OrderCard(
-                                order: order,
-                                // Only the live trip gets a tracking action; the
-                                // trips endpoint carries no order id, so tying it
-                                // to any other row would be a guess.
-                                tripId: index == 0
-                                    ? state.activeTrip?.id
-                                    : null,
+                      for (final filter in MerchantOrderFilter.values)
+                        Expanded(
+                          child: Semantics(
+                            selected: _filter == filter,
+                            child: InkWell(
+                              key: ValueKey(
+                                'merchantOrderFilter-${filter.name}',
                               ),
-                            ],
-                          ],
-                        ),
-                ),
-
-                const SizedBox(height: AppTokens.spaceLarge),
-                DarbSection(
-                  title: l10n.merchantMatchInbox,
-                  child: DarbInfoCard(
-                    title: l10n.matchInbox,
-                    icon: Icons.inbox_outlined,
-                    body: StatStrip(
-                      stats: [
-                        (
-                          label: l10n.waitingForDriver,
-                          value: '${dashboard.value?.waitingMatchCount ?? 0}',
-                          valueKey: const ValueKey(
-                            'shipmentsWaitingMatchCount',
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => setState(() => _filter = filter),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 160),
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                  horizontal: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _filter == filter
+                                      ? MerchantStyle.orange
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  switch (filter) {
+                                    MerchantOrderFilter.all => merchantText(
+                                      context,
+                                      'الكل',
+                                      'All',
+                                    ),
+                                    MerchantOrderFilter.newOrders =>
+                                      merchantText(context, 'جديدة', 'New'),
+                                    MerchantOrderFilter.inDelivery =>
+                                      merchantText(
+                                        context,
+                                        'قيد التوصيل',
+                                        'In delivery',
+                                      ),
+                                    MerchantOrderFilter.completed =>
+                                      merchantText(
+                                        context,
+                                        'مكتملة',
+                                        'Completed',
+                                      ),
+                                  },
+                                  style: MerchantStyle.text(
+                                    size: 11,
+                                    weight: FontWeight.w600,
+                                    color: _filter == filter
+                                        ? Colors.white
+                                        : MerchantStyle.ink,
+                                  ),
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                    primaryAction: CardAction(
-                      key: const ValueKey('openMerchantMatchesFromShipments'),
-                      label: l10n.viewDetails,
-                      onPressed: () => context.go('/merchant/matches'),
-                    ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 18),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: refresh,
+                  child: ListView(
+                    key: const ValueKey('merchantShipmentsList'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                    children: [
+                      dashboard.when(
+                        skipError: dashboard.hasValue,
+                        loading: () => const LoadingSkeleton.card(),
+                        error: (error, _) => ErrorStateView(
+                          title: l10n.shipmentsFailed,
+                          message: merchantErrorLabel(l10n, error),
+                          onRetry: refresh,
+                        ),
+                        data: (state) {
+                          final orders = state.orders
+                              .where(
+                                (o) => merchantOrderMatchesFilter(o, _filter),
+                              )
+                              .toList();
+                          if (orders.isEmpty) {
+                            return EmptyState(
+                              title: l10n.noOrders,
+                              message: _filter == MerchantOrderFilter.all
+                                  ? l10n.noShipmentsBody
+                                  : merchantText(
+                                      context,
+                                      'لا توجد طلبات بهذه الحالة حاليًا',
+                                      'No orders with this status yet',
+                                    ),
+                              icon: Icons.inventory_2_outlined,
+                              actionLabel: _filter == MerchantOrderFilter.all
+                                  ? l10n.createShipment
+                                  : null,
+                              onAction: _filter == MerchantOrderFilter.all
+                                  ? () => context.push('/merchant/order/new')
+                                  : null,
+                            );
+                          }
+                          return Column(
+                            children: [
+                              for (final order in orders) ...[
+                                MerchantOrderCard(
+                                  key: ValueKey('merchantShipment-${order.id}'),
+                                  order: order,
+                                  tripId: _activeTripId(state, order.id),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      MerchantMenuRow(
+                        key: const ValueKey('openMerchantMatchesFromShipments'),
+                        icon: Icons.inbox_outlined,
+                        label: l10n.merchantMatchInbox,
+                        onTap: () => context.push('/merchant/matches'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, this.tripId});
-
-  final MerchantOrder order;
-  final String? tripId;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final material = MaterialLocalizations.of(context);
-    final batch = order.latestBatch;
-    final routeName = order.routeName(
-      arabic: Localizations.localeOf(context).languageCode == 'ar',
-    );
-
-    // Parcels can fan out to several destinations, so the card names the set
-    // rather than pretending there is one.
-    final destinations = {
-      for (final parcel in order.parcels)
-        merchantDestinationLabel(context, parcel.destinationLabel),
-    };
-
-    return DarbInfoCard(
-      key: ValueKey('merchantShipment-${order.id}'),
-      title: l10n.orderReference(order.id.substring(0, 6)),
-      icon: Icons.inventory_2_outlined,
-      statusLabel: merchantStatusLabel(l10n, order.status),
-      statusTone: statusToneFor(order.status),
-      body: Column(
-        children: [
-          // Route orders are named by their route and the merchant's own
-          // pickup words; older orders keep their corridor places.
-          if (routeName != null) ...[
-            DetailRow(
-              label: l10n.orderRouteLabel,
-              value: routeName,
-              icon: Icons.route_outlined,
-            ),
-            DetailRow(
-              label: l10n.pickup,
-              value: merchantPickupText(context, order),
-              icon: Icons.storefront_outlined,
-            ),
-          ] else
-            RouteChip(
-              from: localizedCorridorPlace(context, order.pickupLabel),
-              // A bare count would read as a place name, so the plural case
-              // is spelled out.
-              to: destinations.length == 1
-                  ? destinations.first
-                  : l10n.destinationCount(destinations.length),
-              compact: true,
-            ),
-          const SizedBox(height: AppTokens.spaceSmall),
-          DetailRow(
-            label: l10n.parcelCount,
-            value: '${order.parcels.length}',
-            icon: Icons.widgets_outlined,
-          ),
-          DetailRow(
-            label: l10n.created,
-            value: material.formatCompactDate(order.createdAt),
-            icon: Icons.event_outlined,
-          ),
-          if (batch != null)
-            DetailRow(
-              label: l10n.parcelBatch,
-              value: merchantStatusLabel(l10n, batch.status),
-              icon: Icons.merge_type_outlined,
-            ),
-        ],
-      ),
-      primaryAction: CardAction(
-        label: l10n.orderDetails,
-        onPressed: () => context.go('/merchant/order/${order.id}'),
-      ),
-      secondaryAction: tripId == null
-          ? null
-          : CardAction(
-              label: l10n.openTrip,
-              filled: false,
-              onPressed: () => context.go('/merchant/trip/$tripId'),
-            ),
-    );
+  String? _activeTripId(MerchantDashboardState state, String orderId) {
+    for (final trip in state.trips) {
+      if (trip.order.id == orderId && trip.isActive) return trip.id;
+    }
+    return null;
   }
 }
