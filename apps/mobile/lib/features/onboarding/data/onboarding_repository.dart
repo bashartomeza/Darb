@@ -315,11 +315,7 @@ class OnboardingRepository {
   ) async {
     try {
       final response = await send().timeout(timeout);
-      final decoded = _decodeObject(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return decoded;
-      }
-      throw _mapStatus(response.statusCode, decoded);
+      return decodeApiResponse(response);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -328,30 +324,7 @@ class OnboardingRepository {
       throw const ApiException(ApiErrorType.network, 'network_unavailable');
     } on http.ClientException {
       throw const ApiException(ApiErrorType.network, 'network_unavailable');
-    } on FormatException {
-      throw const ApiException(ApiErrorType.validation, 'invalid_response');
     }
-  }
-
-  Map<String, dynamic> _decodeObject(String body) {
-    final decoded = jsonDecode(body);
-    if (decoded is Map<String, dynamic>) return decoded;
-    throw const FormatException('Expected JSON object');
-  }
-
-  ApiException _mapStatus(int statusCode, Map<String, dynamic> body) {
-    final message = body['error'] is String
-        ? body['error'] as String
-        : 'request_failed';
-    final type = switch (statusCode) {
-      400 || 422 => ApiErrorType.validation,
-      401 => ApiErrorType.unauthorized,
-      403 => ApiErrorType.forbidden,
-      413 || 415 => ApiErrorType.validation,
-      >= 500 => ApiErrorType.server,
-      _ => ApiErrorType.unknown,
-    };
-    return ApiException(type, message, statusCode: statusCode);
   }
 }
 
