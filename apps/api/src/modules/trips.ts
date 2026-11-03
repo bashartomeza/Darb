@@ -21,6 +21,7 @@ import {
 } from "../services/deliveryHandover.js";
 import { isLegacyRouteTimely, legacyRouteTimingWhere, legacyParcelUnits, reserveLegacyCapacity, releaseLegacyCapacity, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
 import { routeSummarySelect, withRouteFields, type RouteSummary } from "../services/operatingRoutes.js";
+import { assignedDriverSummary, type PublicDriverSource } from "../services/publicDriver.js";
 
 export const tripsRouter = Router();
 export const trackingSimulationRouter = Router();
@@ -50,11 +51,20 @@ function serializeTrip<T extends { driver_route: WithRoute; passenger_request: W
   };
 }
 
+/**
+ * Admin and the trip's own driver keep the full driver profile; the passenger or
+ * merchant on the trip sees only who drives and which car to look for.
+ */
+function withViewerDriver<T extends { driver_route: { driver: PublicDriverSource } }>(trip: T, req: AuthenticatedRequest) {
+  if (req.user!.role === "admin" || req.user!.role === "driver") return trip;
+  return { ...trip, driver_route: { ...trip.driver_route, driver: assignedDriverSummary(trip.driver_route.driver) } };
+}
+
 async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
   const trip = await prisma.trip.findUnique({
     where: { id },
     include: {
-      driver_route: { include: { driver: true, route_version: routeSummarySelect } },
+      driver_route: { include: { driver: { include: { user: { select: { name: true } } } }, route_version: routeSummarySelect } },
       passenger_request: { include: { route_version: routeSummarySelect } },
       merchant_order: { include: { parcels: true, route_version: routeSummarySelect } },
       parcel_batch: true
@@ -413,7 +423,7 @@ tripsRouter.get("/trips", requireAuth, async (req: AuthenticatedRequest, res, ne
 tripsRouter.get("/trips/:id", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const trip = await getVisibleTrip(routeParam(req.params.id), req);
-    res.json({ trip: serializeTrip(trip), delivery_confirmation: await tripDeliverySummary(prisma, trip) });
+    res.json({ trip: serializeTrip(withViewerDriver(trip, req)), delivery_confirmation: await tripDeliverySummary(prisma, trip) });
   } catch (error) {
     next(error);
   }
