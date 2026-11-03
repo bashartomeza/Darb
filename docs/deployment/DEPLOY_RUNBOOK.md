@@ -62,7 +62,7 @@ Run it once per secret and paste the result straight into the secret store, not 
 | `JWT_SECRET` | Signs access tokens. 32+ chars, random. |
 | `REFRESH_TOKEN_PEPPER` | Hashes refresh tokens. 32+ chars, different from `JWT_SECRET`. |
 | `AUTH_ACTION_TOKEN_PEPPER` | Hashes email-action codes (verification, reset, six-digit short codes). 32+ chars, different from the two above. Generate with the command above. Needed for any email action. |
-| `CORS_ORIGINS` | `https://darb.aynur.ps` (explicit https, no wildcard, no localhost). |
+| `CORS_ORIGINS` | `https://darb.aynur.ps` (explicit https, no wildcard, no localhost). It must include the origin the Admin console is served from: the console's cookie session (ADR-023) refuses state changes from any other origin, and the console and API must stay on the same site. |
 | `TRUST_PROXY` | Proxy hop count `1` through `5` (use `1` for one nginx), or `none`. Must be explicit. |
 | `ENABLE_DEMO_FEATURES` | `false`. Any `true` aborts startup. |
 
@@ -79,7 +79,7 @@ Run it once per secret and paste the result straight into the secret store, not 
 
 ### Optional with safe defaults
 
-`PORT` (3000), `LOG_LEVEL`, `ACCESS_TOKEN_TTL_SECONDS` (900; allowed 300-1800), `REFRESH_TOKEN_TTL_DAYS` (30; max 90), `READINESS_TIMEOUT_MS` (2000), `RATE_LIMIT_GLOBAL_WINDOW_MS`/`_MAX` (900000 / 300, max 50-1000), `RATE_LIMIT_LOGIN_WINDOW_MS`/`_MAX` (900000 / 10, max 3-50), `SUPPORTED_PHONE_REGIONS` (`PS` only), `AUTH_ACTION_TOKEN_KEY_VERSION`, and the `OTP_*` and `ONBOARDING_*` tuning values in the template.
+`PORT` (3000), `LOG_LEVEL`, `ACCESS_TOKEN_TTL_SECONDS` (900; allowed 300-1800), `REFRESH_TOKEN_TTL_DAYS` (30; max 90), `ADMIN_SESSION_IDLE_TIMEOUT_SECONDS` (1800; allowed 300-3600), `ADMIN_SESSION_ABSOLUTE_TIMEOUT_SECONDS` (43200; allowed 3600-43200, not below the idle value), `READINESS_TIMEOUT_MS` (2000), `RATE_LIMIT_GLOBAL_WINDOW_MS`/`_MAX` (900000 / 300, max 50-1000), `RATE_LIMIT_LOGIN_WINDOW_MS`/`_MAX` (900000 / 10, max 3-50), `SUPPORTED_PHONE_REGIONS` (`PS` only), `AUTH_ACTION_TOKEN_KEY_VERSION`, and the `OTP_*` and `ONBOARDING_*` tuning values in the template.
 
 ### Must stay off or unset in production (startup is refused otherwise)
 
@@ -142,7 +142,7 @@ Gap G3 is resolved by `npm run admin:create`. Admin sign-in is by **email and pa
    ```
 
    Non-interactive alternatives, both still keeping the password out of argv and shell history: `--password-file <path>` (a file with mode 0600, delete it afterwards) or `--password-stdin`. `ADMIN_EMAIL` and `ADMIN_NAME` may replace the flags.
-4. The command creates a user with role `admin`, status `active`, email verified, a bcrypt (cost 12) hash exactly as the login route expects, and writes an `admin_action` audit event (`admin_created_cli`). The password must be 16 or more characters (and at most 72 bytes); use a unique one from the owner's password manager.
+4. The command creates a user with role `admin`, status `active`, email verified, a bcrypt (cost 12) hash exactly as the login route expects, and writes an `admin_action` audit event (`admin_created_cli`). The password follows the same rule as every other account: at least 8 characters with at least one letter and one number, and at most 72 bytes. That is only the floor; use a long, unique one from the owner's password manager.
 5. Confirm with the read-only listing (email, status, created and last login times; no hashes):
 
    ```sh

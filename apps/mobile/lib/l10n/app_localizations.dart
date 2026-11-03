@@ -440,11 +440,11 @@ abstract class AppLocalizations {
   /// **'أدخل كلمة المرور.'**
   String get passwordRequired;
 
-  /// No description provided for @passwordTooShort.
+  /// No description provided for @passwordRuleHint.
   ///
   /// In ar, this message translates to:
-  /// **'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.'**
-  String get passwordTooShort;
+  /// **'8 أحرف أو أكثر، تتضمن حرفاً ورقماً'**
+  String get passwordRuleHint;
 
   /// No description provided for @emailAlreadyRegistered.
   ///
@@ -5833,6 +5833,24 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مسار الطلب'**
   String get merchantOrderMapTitle;
+
+  /// No description provided for @driverPhoneLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'هاتف السائق'**
+  String get driverPhoneLabel;
+
+  /// No description provided for @callDriver.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتصل بالسائق'**
+  String get callDriver;
+
+  /// No description provided for @callDriverUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر.'**
+  String get callDriverUnavailable;
 }
 
 class _AppLocalizationsDelegate

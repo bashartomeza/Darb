@@ -15,7 +15,7 @@ test('API runtime layout starts with only the explicitly packaged public directo
     const api = join(temporary, 'apps/api'); mkdirSync(api, { recursive: true });
     // Security CI intentionally runs tooling before building the API. Compile
     // only the real import boundary here; no generated Prisma or build needed.
-    for (const relative of ['services/checkpointDirectory', 'middleware/error', 'maps/contracts']) {
+    for (const relative of ['services/checkpointDirectory', 'middleware/error', 'lib/passwordRule', 'maps/contracts']) {
       const source = readFileSync(join(root, 'apps/api/src', relative + '.ts'), 'utf8');
       const output = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
       const destination = join(api, 'dist', relative + '.js'); mkdirSync(dirname(destination), { recursive: true });

@@ -13,7 +13,7 @@ import 'package:darb_mobile/features/onboarding/data/onboarding_storage.dart';
 import 'package:darb_mobile/features/onboarding/domain/onboarding_models.dart';
 
 const _policy =
-    '"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60';
+    '"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":8,"maximum_characters":72,"maximum_utf8_bytes":72,"requires_letter":true,"requires_digit":true},"otp_digits":6,"resend_cooldown_seconds":60';
 
 void main() {
   group('registration config', () {
@@ -368,9 +368,6 @@ class _FakeRepository extends OnboardingRepository {
     enabled: true,
     registrationRoles: const [OnboardingRole.driver, OnboardingRole.merchant],
     supportedLocales: const ['ar', 'en'],
-    minimumPasswordCharacters: 15,
-    maximumPasswordCharacters: 64,
-    maximumPasswordUtf8Bytes: 72,
     otpDigits: 6,
     resendCooldownSeconds: 60,
   );

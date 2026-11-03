@@ -19,7 +19,7 @@ describe("Admin driver verification API client", () => {
     vi.stubGlobal("fetch", fetchMock);
     const onSessionEnded = vi.fn();
     await expect(createApiClient("http://api.test", { onSessionEnded }).logout("admin-token")).rejects.toThrow("access_token_expired");
-    expect(fetchMock).toHaveBeenCalledWith("http://api.test/api/v1/auth/logout", expect.objectContaining({ method: "POST", headers: expect.objectContaining({ Authorization: "Bearer admin-token" }) }));
+    expect(fetchMock).toHaveBeenCalledWith("http://api.test/api/v1/auth/logout", expect.objectContaining({ method: "POST", headers: expect.objectContaining({ "X-Darb-Admin-Session": "1" }) }));
     expect(onSessionEnded).not.toHaveBeenCalled();
   });
 
@@ -30,7 +30,20 @@ describe("Admin driver verification API client", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://api.test/api/v1/auth/admin/login", expect.objectContaining({ body: JSON.stringify({ email: "admin@example.com", password: "secret" }) }));
   });
 
-  it("loads the pending queue and detail with the Admin bearer token", async () => {
+  it("asks both sign-ins for the cookie session and sends credentials so the browser keeps the cookie", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => response({ user: { id: "admin", role: "admin" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApiClient("http://api.test");
+    await api.login("admin@example.com", "secret");
+    await api.googleLogin("credential");
+    await api.logout("handle-1");
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init).toEqual(expect.objectContaining({ credentials: "include", headers: expect.objectContaining({ "X-Darb-Admin-Session": "1" }) }));
+      expect((init?.headers as Record<string, string>).Authorization).toBeUndefined();
+    }
+  });
+
+  it("loads the pending queue and detail with the Admin session cookie", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({ verifications: [], page: 1, limit: 50, total: 0 }))
       .mockResolvedValueOnce(response({ verification: { id: "verification_1" } }));
@@ -40,7 +53,7 @@ describe("Admin driver verification API client", () => {
     await api.driverVerifications("admin-token", "pending");
     await api.driverVerification("admin-token", "driver/user 1");
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://api.test/api/v1/admin/driver-verifications?status=pending&page=1&limit=50", expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer admin-token" }) }));
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "http://api.test/api/v1/admin/driver-verifications?status=pending&page=1&limit=50", expect.objectContaining({ headers: expect.objectContaining({ "X-Darb-Admin-Session": "1" }) }));
     expect(fetchMock).toHaveBeenNthCalledWith(2, "http://api.test/api/v1/admin/driver-verifications/driver%2Fuser%201", expect.objectContaining({ method: "GET" }));
   });
 
@@ -103,7 +116,7 @@ describe("Admin driver verification API client", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "http://api.test/api/v1/admin/users?page=2&limit=25&search=QA+driver&role=driver&account_status=pending&demo_account=false",
-      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer admin-token" }) })
+      expect.objectContaining({ headers: expect.objectContaining({ "X-Darb-Admin-Session": "1" }) })
     );
   });
 
@@ -145,7 +158,7 @@ describe("Admin driver verification API client", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "http://api.test/api/v1/admin/trips?page=2&limit=25&search=QA+driver&status=accepted&kind=legacy",
-      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer admin-token" }) }),
+      expect.objectContaining({ headers: expect.objectContaining({ "X-Darb-Admin-Session": "1" }) }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(2, "http://api.test/api/v1/admin/trips/trip%2F1", expect.objectContaining({ method: "GET" }));
     expect(fetchMock).toHaveBeenNthCalledWith(3, "http://api.test/api/v1/admin/trips/trip%2F1/status", expect.objectContaining({
@@ -269,7 +282,8 @@ describe("Admin matching and batching monitoring API client", () => {
     expectedUrls.forEach((url, index) => {
       expect(fetchMock).toHaveBeenNthCalledWith(index + 1, url, {
         method: "GET",
-        headers: { "Content-Type": "application/json", Authorization: "Bearer admin-token" },
+        headers: { "Content-Type": "application/json", "X-Darb-Admin-Session": "1" },
+        credentials: "include",
         body: undefined
       });
     });
@@ -310,7 +324,7 @@ describe("Admin matching and batching monitoring API client", () => {
 describe("Admin operating routes API client", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("uses the route-based order contract endpoints with the Admin bearer token", async () => {
+  it("uses the route-based order contract endpoints with the Admin session cookie", async () => {
     const fetchMock = vi.fn().mockImplementation(async () => response({ routes: [], cities: [] }));
     vi.stubGlobal("fetch", fetchMock);
     const api = createApiClient("http://api.test");
@@ -330,7 +344,7 @@ describe("Admin operating routes API client", () => {
       ["http://api.test/api/v1/admin/cities", "POST", JSON.stringify({ name_ar: "جنين", name_en: "Jenin", latitude: 32.4637, longitude: 35.2938 })]
     ]);
     for (const [, init] of fetchMock.mock.calls) {
-      expect(init.headers).toEqual(expect.objectContaining({ Authorization: "Bearer admin-token" }));
+      expect(init.headers).toEqual(expect.objectContaining({ "X-Darb-Admin-Session": "1" }));
     }
   });
 

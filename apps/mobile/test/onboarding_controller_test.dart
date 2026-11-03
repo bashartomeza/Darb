@@ -134,24 +134,24 @@ void main() {
 
       await controller.complete(
         displayName: 'Secure User',
-        password: 'first secure password',
-        confirmPassword: 'first secure password',
+        password: 'first secure password 1',
+        confirmPassword: 'first secure password 1',
         acceptedTerms: true,
         acceptedPrivacy: true,
         adult: true,
       );
       await controller.complete(
         displayName: 'Secure User',
-        password: 'first secure password',
-        confirmPassword: 'first secure password',
+        password: 'first secure password 1',
+        confirmPassword: 'first secure password 1',
         acceptedTerms: true,
         acceptedPrivacy: true,
         adult: true,
       );
       await controller.complete(
         displayName: 'Secure User',
-        password: 'second secure password',
-        confirmPassword: 'second secure password',
+        password: 'second secure password 2',
+        confirmPassword: 'second secure password 2',
         acceptedTerms: true,
         acceptedPrivacy: true,
         adult: true,
@@ -205,8 +205,8 @@ void main() {
 
       await controller.complete(
         displayName: 'Secure User',
-        password: 'first secure password',
-        confirmPassword: 'first secure password',
+        password: 'first secure password 1',
+        confirmPassword: 'first secure password 1',
         acceptedTerms: true,
         acceptedPrivacy: true,
         adult: true,
@@ -234,8 +234,8 @@ void main() {
 
     await controller.complete(
       displayName: 'Secure User',
-      password: 'first secure password',
-      confirmPassword: 'first secure password',
+      password: 'first secure password 1',
+      confirmPassword: 'first secure password 1',
       acceptedTerms: true,
       acceptedPrivacy: true,
       adult: true,
@@ -368,9 +368,6 @@ class _FakeOnboardingRepository extends OnboardingRepository {
     enabled: true,
     registrationRoles: OnboardingRole.values,
     supportedLocales: ['ar', 'en'],
-    minimumPasswordCharacters: 15,
-    maximumPasswordCharacters: 64,
-    maximumPasswordUtf8Bytes: 72,
     otpDigits: 6,
     resendCooldownSeconds: 60,
   );

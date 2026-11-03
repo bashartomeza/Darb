@@ -15,6 +15,7 @@ class PassengerTrip {
     this.routeNameEn,
     this.pickupDetails,
     this.dropoffDetails,
+    this.driverPhone,
   });
 
   final String id;
@@ -58,6 +59,10 @@ class PassengerTrip {
   final String? routeNameEn;
   final String? pickupDetails;
   final String? dropoffDetails;
+
+  /// The driver's phone, sent only from the driver's acceptance until drop-off.
+  /// Null whenever the server leaves it out: the call action hides with it.
+  final String? driverPhone;
 
   /// The route's name in the reading language, or null for older trips.
   String? routeName({required bool arabic}) {
@@ -111,8 +116,19 @@ class PassengerTrip {
       routeNameEn: named('route_name_en'),
       pickupDetails: _optionalString(request, 'pickup_details'),
       dropoffDetails: _optionalString(request, 'dropoff_details'),
+      driverPhone: tripDriverPhone(json),
     );
   }
+}
+
+/// The driver's phone in a trip detail (`driver_route.driver.phone`), or null
+/// when the server did not send one.
+String? tripDriverPhone(Map<String, dynamic> trip) {
+  final route = trip['driver_route'];
+  if (route is! Map<String, dynamic>) return null;
+  final driver = route['driver'];
+  if (driver is! Map<String, dynamic>) return null;
+  return _optionalString(driver, 'phone');
 }
 
 class TripLocation {

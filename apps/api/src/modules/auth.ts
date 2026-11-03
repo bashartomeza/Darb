@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { config, type AppConfig } from "../config.js";
@@ -18,10 +18,18 @@ import {
 import {
   requireAuth,
   requireLogoutAuth,
+  signAdminCookieToken,
   signAuthToken,
   type AuthUser,
   type AuthenticatedRequest
 } from "../middleware/auth.js";
+import {
+  adminSessionExpiresAt,
+  assertAdminSessionRequest,
+  clearAdminSessionCookie,
+  requestsAdminCookieSession,
+  setAdminSessionCookie
+} from "../middleware/adminSession.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction, Prisma } from "../generated/prisma/client.js";
 import type { GoogleVerifier } from "../lib/googleIdentity.js";
@@ -91,6 +99,9 @@ type SessionUser = {
  * a fresh refresh token, writes the login + session-created audit trail, and
  * signs an access token. Shared by password login, email registration, and
  * Google sign-in so the session invariants live in exactly one place.
+ *
+ * With `adminCookie` the Admin session is a sliding browser session: the
+ * credential is the HttpOnly cookie value instead of a Bearer access token.
  */
 export async function establishMobileSession(
   user: SessionUser,
@@ -98,15 +109,19 @@ export async function establishMobileSession(
     deviceName?: string;
     loginAction: AuditAction;
     loginMetadata?: Prisma.InputJsonValue;
+    adminCookie?: boolean;
   },
   transaction?: Prisma.TransactionClient
 ) {
   const now = new Date();
+  const adminCookie = options.adminCookie === true;
+  if (adminCookie && user.role !== "admin") throw new HttpError(401, "invalid_credentials");
   const refreshMaterial = isRefreshTokenRole(user.role) ? createRefreshToken(user.role) : null;
   const clientType = refreshMaterial ? "mobile" : "admin";
   const refreshExpiresAt = refreshMaterial ? refreshTokenExpiresAt(now) : null;
-  const sessionExpiresAt =
-    refreshExpiresAt ?? new Date(now.getTime() + config.accessTokenTtlSeconds * 1_000);
+  const sessionExpiresAt = adminCookie
+    ? adminSessionExpiresAt(now, now)
+    : refreshExpiresAt ?? new Date(now.getTime() + config.accessTokenTtlSeconds * 1_000);
 
   const create = async (tx: Prisma.TransactionClient) => {
     const eligible = await tx.user.updateMany({
@@ -154,9 +169,11 @@ export async function establishMobileSession(
       action: AuditAction.session_created,
       entityType: "AuthSession",
       entityId: created.id,
-      metadata: { client_type: clientType }
+      metadata: adminCookie ? { client_type: clientType, transport: "cookie" } : { client_type: clientType }
     });
-    const token = accessToken(user, created.id);
+    const token = adminCookie
+      ? signAdminCookieToken({ id: user.id, role: user.role, sessionId: created.id, securityVersion: user.security_version })
+      : accessToken(user, created.id);
     return { kind: "success", session: created, token } as const;
   };
   const result = transaction ? await create(transaction) : await prisma.$transaction(create);
@@ -172,13 +189,17 @@ export async function establishMobileSession(
     throw new HttpError(403, "account_unavailable");
   }
 
-  return { token: result.token, session: result.session, refreshMaterial };
+  return { token: result.token, session: result.session, refreshMaterial, adminCookie };
 }
 
 function sessionResponseBody(
   established: Awaited<ReturnType<typeof establishMobileSession>>,
   user: Parameters<typeof publicUser>[0]
 ) {
+  // The cookie session's credential travels only in the HttpOnly cookie, never in a body JavaScript can read.
+  if (established.adminCookie) {
+    return { session: safeSession(established.session, established.session.id), user: publicUser(user) };
+  }
   return {
     token: established.token,
     access_token: established.token,
@@ -245,6 +266,19 @@ async function markRefreshReuse(
   });
 }
 
+/**
+ * The Admin console asks for a cookie session by sending its session header.
+ * Such a sign-in is CSRF-checked like any cookie request, so another site
+ * cannot sign a browser into an account of its choosing. Without the header
+ * (operator scripts, smoke checks) the Admin sign-in still returns the
+ * short-lived Bearer access token.
+ */
+function adminCookieSignIn(req: Request, appConfig: AppConfig) {
+  if (!requestsAdminCookieSession(req)) return false;
+  assertAdminSessionRequest(req, appConfig);
+  return true;
+}
+
 export function createAuthRouter(appConfig: AppConfig = config, dependencies: { emailDelivery?: EmailDelivery; consentReleaseService?: ConsentReleaseService; googleVerifier?: GoogleVerifier; phoneVerificationProvider?: PhoneVerificationProvider } = {}) {
 const authRouter = Router();
 const emailAuth = new EmailAuthService(prisma, appConfig, dependencies.emailDelivery, dependencies.consentReleaseService);
@@ -295,6 +329,7 @@ authRouter.post(["/auth/login", "/auth/mobile/login", "/auth/admin/login"], asyn
     const input = loginSchema.parse(req.body);
     // The Admin console signs in with email only.
     if (input.phone && req.path.toLowerCase().replace(/\/+$/, "") === "/auth/admin/login") throw new HttpError(400, "validation_error");
+    const adminCookie = req.path.toLowerCase().replace(/\/+$/, "") === "/auth/admin/login" && adminCookieSignIn(req, appConfig);
     let user = null;
     if (input.phone) {
       let phone: string | null = null;
@@ -331,8 +366,10 @@ authRouter.post(["/auth/login", "/auth/mobile/login", "/auth/admin/login"], asyn
     const established = await establishMobileSession(user, {
       deviceName: input.device_name,
       loginAction: AuditAction.auth_login,
-      loginMetadata: { role: user.role, demo_account: user.demo_account, method: "password" }
+      loginMetadata: { role: user.role, demo_account: user.demo_account, method: "password" },
+      adminCookie
     });
+    if (established.adminCookie) setAdminSessionCookie(res, established.token, appConfig);
     res.json(sessionResponseBody(established, user));
   } catch (error) {
     next(error);
@@ -400,8 +437,10 @@ authRouter.post(["/auth/google", "/auth/mobile/google"], async (req, res, next) 
 authRouter.post("/auth/admin/google", async (req, res, next) => {
   try {
     const input = googleSchema.parse(req.body);
+    const adminCookie = adminCookieSignIn(req, appConfig);
     const user = await googleAuth.adminLogin(input.id_token);
-    const established = await establishMobileSession(user, { deviceName: input.device_name, loginAction: AuditAction.auth_google_login, loginMetadata: { method: "google", role: "admin" } });
+    const established = await establishMobileSession(user, { deviceName: input.device_name, loginAction: AuditAction.auth_google_login, loginMetadata: { method: "google", role: "admin" }, adminCookie });
+    if (established.adminCookie) setAdminSessionCookie(res, established.token, appConfig);
     res.json(sessionResponseBody(established, user));
   } catch (error) { next(error); }
 });
@@ -699,6 +738,7 @@ authRouter.post("/auth/logout", requireLogoutAuth, async (req: AuthenticatedRequ
         });
       }
     });
+    if (req.user!.transport === "admin_cookie") clearAdminSessionCookie(res, appConfig);
     res.json({ ok: true });
   } catch (error) {
     next(error);
@@ -718,6 +758,7 @@ authRouter.post("/auth/logout-all", requireAuth, async (req: AuthenticatedReques
         metadata: { request_id: req.requestId }
       });
     });
+    if (req.user!.transport === "admin_cookie") clearAdminSessionCookie(res, appConfig);
     res.json({ ok: true });
   } catch (error) {
     next(error);

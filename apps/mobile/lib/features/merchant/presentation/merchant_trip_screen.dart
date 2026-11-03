@@ -15,6 +15,7 @@ import '../../incidents/presentation/report_incident_sheet.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../trips/data/trip_models.dart';
 import '../../trips/data/trip_repository.dart';
+import '../../trips/presentation/driver_call_card.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
 import 'merchant_order_route_map.dart';
@@ -285,6 +286,15 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
             ],
           ),
         ),
+        if (state.trip.driverPhone case final phone?) ...[
+          const SizedBox(height: 12),
+          DriverCallCard(
+            phone: phone,
+            accent: MerchantStyle.orange,
+            background: MerchantStyle.card,
+            border: MerchantStyle.border,
+          ),
+        ],
         const SizedBox(height: 14),
         FilledButton.icon(
           onPressed: () =>

@@ -1,5 +1,5 @@
 import type { NextFunction, Response } from "express";
-import { authenticateAuthToken, type AuthenticatedRequest } from "./auth.js";
+import { authenticateRequest, type AuthenticatedRequest } from "./auth.js";
 import { HttpError } from "./error.js";
 
 const completionSafePaths = new Set([
@@ -28,7 +28,7 @@ export function isProfileCompletionSafePath(req: AuthenticatedRequest) {
  * reach a newly added operational router before its verified phone profile is
  * complete. Public and account-completion routes are deliberately exempt.
  */
-export async function requireCompleteProfile(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
+export async function requireCompleteProfile(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
     if (isProfileCompletionSafePath(req)) return next();
 
@@ -38,11 +38,8 @@ export async function requireCompleteProfile(req: AuthenticatedRequest, _res: Re
       return next();
     }
 
-    const header = req.header("authorization");
-    const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
-    if (!token) return next();
-
-    const user = await authenticateAuthToken(token);
+    const user = await authenticateRequest(req, res);
+    if (!user) return next();
     req.user = user;
     if (user.profileState !== "complete") throw new HttpError(403, "profile_incomplete");
     if (!user.emailVerified) throw new HttpError(403, "email_verification_required");

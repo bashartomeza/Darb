@@ -8,23 +8,53 @@ import type { TokenStorage } from "./session";
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root; let host: HTMLDivElement;
 afterEach(() => { if (root) act(() => root.unmount()); host?.remove(); vi.unstubAllGlobals(); });
-async function render(locale: "ar" | "en", google = false, sessionStore: TokenStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} }) {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ google_admin_login_available: google, google_admin_client_id: google ? "admin-web" : null }))));
-  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
-  await act(async () => { root.render(<LocaleProvider storage={{ getItem: () => locale, setItem: () => {} }}><App config={{ appEnv: "test", apiBaseUrl: "http://api.test", demoFeaturesEnabled: false, routeManagementEnabled: false }} sessionStore={sessionStore} legacyStore={{ getItem: () => null, setItem: () => {}, removeItem: () => {} }} /></LocaleProvider>); });
+const noStore: TokenStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+function recordingStore(initial: string | null = null) {
+  let value = initial; const writes: string[] = [];
+  return { writes, current: () => value, store: { getItem: () => value, setItem: (_key: string, next: string) => { writes.push(next); value = next; }, removeItem: () => { value = null; } } satisfies TokenStorage };
 }
+const signedInBody = { user: { id: "admin", role: "admin", name: "Admin", phone: "+12025550123" }, counts: {}, drivers: [], routes: [], requests: [], orders: [], trips: [], demo_reset_available: false };
+async function render(locale: "ar" | "en", google = false, sessionStore: TokenStorage = noStore, fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>, legacyStore: TokenStorage = noStore) {
+  vi.stubGlobal("fetch", fetchImpl ? vi.fn(fetchImpl) : vi.fn().mockResolvedValue(new Response(JSON.stringify({ google_admin_login_available: google, google_admin_client_id: google ? "admin-web" : null }))));
+  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+  await act(async () => { root.render(<LocaleProvider storage={{ getItem: () => locale, setItem: () => {} }}><App config={{ appEnv: "test", apiBaseUrl: "http://api.test", demoFeaturesEnabled: false, routeManagementEnabled: false }} sessionStore={sessionStore} legacyStore={legacyStore} /></LocaleProvider>); });
+}
+const signedIn = () => host.querySelector(".btn--signout") !== null;
+const onSignInScreen = () => host.querySelector('input[type="email"]') !== null;
 describe("Admin login", () => {
+  it("resumes a live cookie session on reload without storing any token", async () => {
+    const session = recordingStore();
+    await render("en", false, session.store, (url) => Promise.resolve(new Response(JSON.stringify(url.endsWith("/auth/capabilities") ? { google_admin_login_available: false, google_admin_client_id: null } : signedInBody))));
+    expect(signedIn()).toBe(true);
+    const meCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith("/me"));
+    expect(meCall?.[1]).toEqual(expect.objectContaining({ credentials: "include", headers: expect.objectContaining({ "X-Darb-Admin-Session": "1" }) }));
+    expect(session.writes).toEqual([]);
+  });
+  it("shows the sign-in screen without an expiry notice when there is no cookie session", async () => {
+    await render("en", false, noStore, (url) => Promise.resolve(url.endsWith("/me")
+      ? new Response(JSON.stringify({ error: "missing_token" }), { status: 401 })
+      : new Response(JSON.stringify({ google_admin_login_available: false, google_admin_client_id: null }))));
+    expect(onSignInScreen()).toBe(true);
+    expect(host.textContent).not.toContain("expired");
+  });
+  it("purges bearer tokens that older console builds stored", async () => {
+    const session = recordingStore("old-session-token"); const legacy = recordingStore("old-local-token");
+    await render("en", false, session.store, undefined, legacy.store);
+    expect(session.current()).toBeNull(); expect(legacy.current()).toBeNull();
+  });
   it("enables email retry when the new session expires during login capability loading", async () => {
-    let stored: string | null = null;
-    await render("en", false, { getItem: () => stored, setItem: (_key, token) => { stored = token; }, removeItem: () => { stored = null; } });
-    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve(new Response(JSON.stringify(url.endsWith("/auth/admin/login") ? { token: "expired-session", user: { id: "admin", role: "admin", name: "Admin" } } : { error: "access_token_expired" }), { status: url.endsWith("/auth/admin/login") ? 200 : 401 }))));
+    const session = recordingStore();
+    await render("en", false, session.store);
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve(new Response(JSON.stringify(url.endsWith("/auth/admin/login") ? { user: { id: "admin", role: "admin", name: "Admin" } } : { error: "session_expired" }), { status: url.endsWith("/auth/admin/login") ? 200 : 401 }))));
     await act(async () => host.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-    expect(stored).toBeNull();
+    expect(signedIn()).toBe(false);
+    expect(host.textContent).toContain("Your session has expired");
     const submit = host.querySelector<HTMLButtonElement>("form > button.btn--primary");
     expect(submit).not.toBeNull(); expect(submit?.disabled).toBe(false);
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ token: "retry-session", user: { id: "admin", role: "admin", name: "Admin", phone: "+12025550123" }, counts: {}, drivers: [], routes: [], requests: [], orders: [], trips: [], demo_reset_available: false })))));
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify(signedInBody)))));
     await act(async () => host.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-    expect(stored).toBe("retry-session");
+    expect(signedIn()).toBe(true);
+    expect(session.writes).toEqual([]);
   });
   it.each([200, 401])("does not announce a stale email outcome (%s) during a newer Google attempt", async (status) => {
     let credentialCallback!: (value: { credential: string }) => void;
@@ -42,59 +72,61 @@ describe("Admin login", () => {
   it("keeps logout effective when an older Google exchange finishes after email login", async () => {
     let credentialCallback!: (value: { credential: string }) => void;
     vi.stubGlobal("google", { accounts: { id: { initialize: (options: { callback: typeof credentialCallback }) => { credentialCallback = options.callback; }, renderButton: () => {}, cancel: () => {} } } });
-    let stored: string | null = null;
-    await render("en", true, { getItem: () => stored, setItem: (_key, token) => { stored = token; }, removeItem: () => { stored = null; } });
+    await render("en", true);
     let resolveGoogle!: (response: Response) => void;
     const pending = new Promise<Response>((resolve) => { resolveGoogle = resolve; });
     vi.stubGlobal("fetch", vi.fn((url: string) => {
       if (url.endsWith("/auth/admin/google")) return pending;
-      return Promise.resolve(new Response(JSON.stringify({ token: "email-session", user: { id: "admin", role: "admin", name: "Email Admin", phone: "+12025550123" }, counts: {}, drivers: [], routes: [], requests: [], orders: [], trips: [], demo_reset_available: false })));
+      return Promise.resolve(new Response(JSON.stringify({ ...signedInBody, user: { ...signedInBody.user, name: "Email Admin" } })));
     }));
     act(() => credentialCallback({ credential: "google-proof" }));
     await act(async () => host.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-    expect(stored).toBe("email-session");
+    expect(signedIn()).toBe(true);
     const logout = host.querySelector<HTMLButtonElement>(".btn--signout"); expect(logout).not.toBeNull();
     await act(async () => logout?.click());
-    expect(stored).toBeNull();
-    await act(async () => resolveGoogle(new Response(JSON.stringify({ token: "stale-google-session", user: { id: "old", role: "admin", name: "Old Admin" } }))));
-    expect(stored).toBeNull(); expect(host.querySelector('input[type="email"]')).not.toBeNull();
+    expect(signedIn()).toBe(false);
+    await act(async () => resolveGoogle(new Response(JSON.stringify({ user: { id: "old", role: "admin", name: "Old Admin" } }))));
+    expect(signedIn()).toBe(false); expect(onSignInScreen()).toBe(true);
   });
   it.each(["succeeds", "fails", "never answers"])("sign-out revokes the server session and signs out locally when logout %s", async (outcome) => {
-    let stored: string | null = null;
-    await render("en", false, { getItem: () => stored, setItem: (_key, token) => { stored = token; }, removeItem: () => { stored = null; } });
+    const session = recordingStore();
+    await render("en", false, session.store);
     const fetchMock = vi.fn((url: string) => {
       if (url.endsWith("/auth/logout")) {
         if (outcome === "never answers") return new Promise<Response>(() => {});
         if (outcome === "fails") return Promise.reject(new TypeError("Failed to fetch"));
         return Promise.resolve(new Response(JSON.stringify({ ok: true })));
       }
-      return Promise.resolve(new Response(JSON.stringify({ token: "live-session", user: { id: "admin", role: "admin", name: "Admin", phone: "+12025550123" }, counts: {}, drivers: [], routes: [], requests: [], orders: [], trips: [], demo_reset_available: false })));
+      return Promise.resolve(new Response(JSON.stringify(signedInBody)));
     });
     vi.stubGlobal("fetch", fetchMock);
     await act(async () => host.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-    expect(stored).toBe("live-session");
+    expect(signedIn()).toBe(true);
     await act(async () => host.querySelector<HTMLButtonElement>(".btn--signout")?.click());
     const logoutCalls = fetchMock.mock.calls.filter(([url]) => url.endsWith("/auth/logout"));
     expect(logoutCalls).toHaveLength(1);
-    expect(logoutCalls[0]).toEqual(["http://api.test/api/v1/auth/logout", expect.objectContaining({ method: "POST", headers: expect.objectContaining({ Authorization: "Bearer live-session" }) })]);
-    expect(stored).toBeNull();
-    expect(host.querySelector('input[type="email"]')).not.toBeNull();
+    // The cookie identifies the session; the request carries no bearer token.
+    expect(logoutCalls[0]).toEqual(["http://api.test/api/v1/auth/logout", expect.objectContaining({ method: "POST", credentials: "include", headers: expect.objectContaining({ "X-Darb-Admin-Session": "1" }) })]);
+    expect((logoutCalls[0] as unknown as [string, RequestInit])[1].headers).not.toHaveProperty("Authorization");
+    expect(session.writes).toEqual([]);
+    expect(onSignInScreen()).toBe(true);
     expect(host.textContent).not.toContain("expired");
   });
   it.each(["newer email attempt", "unmount"])("discards a deferred Google success after %s", async (superseding) => {
     let credentialCallback!: (value: { credential: string }) => void;
     vi.stubGlobal("google", { accounts: { id: { initialize: (options: { callback: typeof credentialCallback }) => { credentialCallback = options.callback; }, renderButton: () => {}, cancel: () => {} } } });
-    const saved: string[] = [];
-    await render("en", true, { getItem: () => null, setItem: (_key, token) => saved.push(token), removeItem: () => {} });
+    const session = recordingStore();
+    await render("en", true, session.store);
     let resolveGoogle!: (response: Response) => void;
     const pending = new Promise<Response>((resolve) => { resolveGoogle = resolve; });
     vi.stubGlobal("fetch", vi.fn((url: string) => url.endsWith("/auth/admin/google") ? pending : Promise.resolve(new Response(JSON.stringify({ error: "invalid_credentials" }), { status: 401 }))));
     act(() => credentialCallback({ credential: "google-proof" }));
     if (superseding === "unmount") act(() => root.unmount());
     else await act(async () => host.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-    await act(async () => resolveGoogle(new Response(JSON.stringify({ token: "stale-google-session", user: { id: "old", role: "admin", name: "Old Admin" } }))));
-    expect(saved).toEqual([]);
+    await act(async () => resolveGoogle(new Response(JSON.stringify({ user: { id: "old", role: "admin", name: "Old Admin" } }))));
+    expect(session.writes).toEqual([]);
     if (superseding === "newer email attempt") {
+      expect(signedIn()).toBe(false);
       expect(host.querySelector('section[aria-label="Google"]')?.getAttribute("aria-busy")).toBe("false");
       const retry = [...host.querySelectorAll("button")].find((b) => b.textContent === "Retry");
       expect(retry).toBeDefined(); act(() => retry?.click());

@@ -184,8 +184,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get passwordRequired => 'أدخل كلمة المرور.';
 
   @override
-  String get passwordTooShort =>
-      'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.';
+  String get passwordRuleHint => '8 أحرف أو أكثر، تتضمن حرفاً ورقماً';
 
   @override
   String get emailAlreadyRegistered =>
@@ -3177,4 +3176,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get merchantOrderMapTitle => 'مسار الطلب';
+
+  @override
+  String get driverPhoneLabel => 'هاتف السائق';
+
+  @override
+  String get callDriver => 'اتصل بالسائق';
+
+  @override
+  String get callDriverUnavailable =>
+      'لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر.';
 }

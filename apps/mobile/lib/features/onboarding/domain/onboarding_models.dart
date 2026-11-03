@@ -29,9 +29,6 @@ class OnboardingConfig {
     required this.enabled,
     required this.registrationRoles,
     required this.supportedLocales,
-    required this.minimumPasswordCharacters,
-    required this.maximumPasswordCharacters,
-    required this.maximumPasswordUtf8Bytes,
     required this.otpDigits,
     required this.resendCooldownSeconds,
     this.requestId,
@@ -41,9 +38,6 @@ class OnboardingConfig {
   final List<OnboardingRole> registrationRoles;
 
   final List<String> supportedLocales;
-  final int minimumPasswordCharacters;
-  final int maximumPasswordCharacters;
-  final int maximumPasswordUtf8Bytes;
   final int otpDigits;
   final int resendCooldownSeconds;
   final String? requestId;
@@ -55,9 +49,6 @@ class OnboardingConfig {
         enabled: false,
         registrationRoles: const [],
         supportedLocales: const [],
-        minimumPasswordCharacters: 15,
-        maximumPasswordCharacters: 64,
-        maximumPasswordUtf8Bytes: 72,
         otpDigits: 6,
         resendCooldownSeconds: 60,
         requestId: _optionalString(json, 'request_id'),
@@ -68,7 +59,6 @@ class OnboardingConfig {
     final roles = rawRoles.map(_roleFromApi).toList(growable: false);
     final rawLocales = _requiredStringList(json, 'supported_locales');
     final phonePolicy = json['phone_policy'];
-    final policy = json['password_policy'];
     if (phonePolicy is! Map<String, dynamic> ||
         phonePolicy['canonical_format'] != 'E.164' ||
         phonePolicy['international_prefix_required_without_region'] != true ||
@@ -79,29 +69,20 @@ class OnboardingConfig {
         rawLocales.toSet().length != rawLocales.length ||
         rawLocales.any((locale) => locale != 'ar' && locale != 'en') ||
         !rawLocales.contains('ar') ||
-        !rawLocales.contains('en') ||
-        policy is! Map<String, dynamic>) {
+        !rawLocales.contains('en')) {
       throw const FormatException('Invalid onboarding configuration');
     }
-    final minimum = _requiredInt(policy, 'minimum_characters');
-    final maximum = _requiredInt(policy, 'maximum_characters');
-    final maximumBytes = _requiredInt(policy, 'maximum_utf8_bytes');
+    // The server still sends password_policy for older builds; this build
+    // applies the shared rule in core/validation/password_rule.dart instead.
     final otpDigits = _requiredInt(json, 'otp_digits');
     final cooldown = _requiredInt(json, 'resend_cooldown_seconds');
-    if (minimum < 1 ||
-        maximum < minimum ||
-        maximumBytes < minimum ||
-        otpDigits != 6 ||
-        cooldown < 1) {
+    if (otpDigits != 6 || cooldown < 1) {
       throw const FormatException('Invalid onboarding policy');
     }
     return OnboardingConfig(
       enabled: true,
       registrationRoles: roles.cast<OnboardingRole>(),
       supportedLocales: rawLocales,
-      minimumPasswordCharacters: minimum,
-      maximumPasswordCharacters: maximum,
-      maximumPasswordUtf8Bytes: maximumBytes,
       otpDigits: otpDigits,
       resendCooldownSeconds: cooldown,
       requestId: _optionalString(json, 'request_id'),

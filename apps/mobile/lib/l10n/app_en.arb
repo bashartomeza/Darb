@@ -57,7 +57,7 @@
   "emailInvalid": "Enter a valid email address.",
   "nameRequired": "Enter your name.",
   "passwordRequired": "Enter your password.",
-  "passwordTooShort": "Password must be at least 8 characters.",
+  "passwordRuleHint": "8+ characters with a letter and a number",
   "emailAlreadyRegistered": "That email is already registered. Try signing in.",
   "googleSignInFailed": "Google sign-in failed. Please try again.",
   "googleSignInUnavailable": "Google sign-in is not available right now.",
@@ -1172,5 +1172,8 @@
   "communityLocationSet": "Place set on the map",
   "communityClearLocation": "Remove place",
   "mapRouteLabel": "Route",
-  "merchantOrderMapTitle": "Order route"
+  "merchantOrderMapTitle": "Order route",
+  "driverPhoneLabel": "Driver's phone",
+  "callDriver": "Call driver",
+  "callDriverUnavailable": "This device can't place the call. Dial the number shown."
 }

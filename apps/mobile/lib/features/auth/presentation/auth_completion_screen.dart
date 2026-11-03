@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/validation/password_rule.dart';
 import '../../../core/widgets/darb_page.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../application/auth_controller.dart';
@@ -35,11 +36,7 @@ String authFailure(BuildContext context, Object? error) {
       'The proof is incorrect or expired. Request a new code, or restart email registration.',
       'الإثبات غير صحيح أو منتهي. اطلب رمزاً جديداً أو أعد بدء التسجيل بالبريد.',
     ),
-    'invalid_password' => authText(
-      context,
-      'Use 12–72 characters, with no more than 72 UTF-8 bytes.',
-      'استخدم 12–72 حرفاً، وبحد أقصى 72 بايت UTF-8.',
-    ),
+    'invalid_password' => passwordRuleHint(context),
     'consent_version_changed' => authText(
       context,
       'The documents changed. Read and accept the latest versions.',

@@ -584,6 +584,34 @@ void main() {
       find.byKey(const ValueKey('tripAction-pickup_started')),
       findsNothing,
     );
+    // No driver phone in the trip, so nothing to call.
+    expect(find.byKey(const ValueKey('driverCallCard')), findsNothing);
+    expect(find.byKey(const ValueKey('callDriverButton')), findsNothing);
+  });
+
+  testWidgets('merchant tracking offers to call the driver when sent', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(withTrip: true, initiallyBatched: true)
+      ..driverPhone = '+970599000111';
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/trip/trip_1');
+    await tester.pumpAndSettle();
+    final l10n = AppLocalizations.of(
+      tester.element(find.byKey(const ValueKey('merchantTripStatus'))),
+    );
+
+    expect(find.byKey(const ValueKey('driverCallCard')), findsOneWidget);
+    expect(find.text('+970599000111'), findsOneWidget);
+    expect(find.byKey(const ValueKey('callDriverButton')), findsOneWidget);
+    expect(find.text(l10n.callDriver), findsOneWidget);
+
+    // The number and the action share one row, even on a narrow phone.
+    tester.view.physicalSize = const Size(320, 844);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('merchant route guards block passenger and driver screens', (
@@ -773,6 +801,9 @@ class _MerchantHandler {
 
   /// The order fare the detail read returns; none when null.
   Map<String, dynamic>? orderFare;
+
+  /// The driver's phone the trip detail carries; none when null.
+  String? driverPhone;
   final lookupKeys = <String?>[];
   final paths = <String>[];
 
@@ -952,7 +983,18 @@ class _MerchantHandler {
       return http.Response('{"location":$_locationJson}', 200);
     }
     if (path.endsWith('/trips/trip_1')) {
-      return http.Response('{"trip":$_tripJson}', 200);
+      final phone = driverPhone;
+      if (phone == null) return http.Response('{"trip":$_tripJson}', 200);
+      final trip = jsonDecode(_tripJson) as Map<String, dynamic>;
+      final route = trip['driver_route'] as Map<String, dynamic>;
+      route['driver'] = {
+        'name': 'Driver One',
+        'vehicle_type': 'sedan',
+        'verified': true,
+        'trust_score': 86,
+        'phone': phone,
+      };
+      return http.Response(jsonEncode({'trip': trip}), 200);
     }
     if (path.endsWith('/trips')) {
       return http.Response(

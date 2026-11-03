@@ -185,7 +185,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passwordRequired => 'Enter your password.';
 
   @override
-  String get passwordTooShort => 'Password must be at least 8 characters.';
+  String get passwordRuleHint => '8+ characters with a letter and a number';
 
   @override
   String get emailAlreadyRegistered =>
@@ -3204,4 +3204,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get merchantOrderMapTitle => 'Order route';
+
+  @override
+  String get driverPhoneLabel => 'Driver\'s phone';
+
+  @override
+  String get callDriver => 'Call driver';
+
+  @override
+  String get callDriverUnavailable =>
+      'This device can\'t place the call. Dial the number shown.';
 }

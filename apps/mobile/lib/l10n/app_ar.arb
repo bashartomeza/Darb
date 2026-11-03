@@ -57,7 +57,7 @@
   "emailInvalid": "أدخل بريداً إلكترونياً صحيحاً.",
   "nameRequired": "أدخل اسمك.",
   "passwordRequired": "أدخل كلمة المرور.",
-  "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
+  "passwordRuleHint": "8 أحرف أو أكثر، تتضمن حرفاً ورقماً",
   "emailAlreadyRegistered": "هذا البريد الإلكتروني مسجّل بالفعل. حاول تسجيل الدخول.",
   "googleSignInFailed": "فشل تسجيل الدخول عبر Google. حاول مرة أخرى.",
   "googleSignInUnavailable": "تسجيل الدخول عبر Google غير متاح حالياً.",
@@ -1317,5 +1317,8 @@
   "communityLocationSet": "تم تحديد المكان على الخريطة",
   "communityClearLocation": "إزالة المكان",
   "mapRouteLabel": "المسار",
-  "merchantOrderMapTitle": "مسار الطلب"
+  "merchantOrderMapTitle": "مسار الطلب",
+  "driverPhoneLabel": "هاتف السائق",
+  "callDriver": "اتصل بالسائق",
+  "callDriverUnavailable": "لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر."
 }
