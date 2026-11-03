@@ -21,7 +21,12 @@ import {
 } from "../services/deliveryHandover.js";
 import { isLegacyRouteTimely, legacyRouteTimingWhere, legacyParcelUnits, reserveLegacyCapacity, releaseLegacyCapacity, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
 import { routeSummarySelect, withRouteFields, type RouteSummary } from "../services/operatingRoutes.js";
-import { assignedDriverSummary, type PublicDriverSource } from "../services/publicDriver.js";
+import {
+  assignedDriverSummary,
+  assignedDriverUserSelect,
+  withoutRiderContactFields,
+  type PublicDriverSource
+} from "../services/publicDriver.js";
 
 export const tripsRouter = Router();
 export const trackingSimulationRouter = Router();
@@ -53,18 +58,24 @@ function serializeTrip<T extends { driver_route: WithRoute; passenger_request: W
 
 /**
  * Admin and the trip's own driver keep the full driver profile; the passenger or
- * merchant on the trip sees only who drives and which car to look for.
+ * merchant on the trip sees only who drives, which car to look for and, while
+ * the trip runs, the driver's phone.
  */
-function withViewerDriver<T extends { driver_route: { driver: PublicDriverSource } }>(trip: T, req: AuthenticatedRequest) {
-  if (req.user!.role === "admin" || req.user!.role === "driver") return trip;
-  return { ...trip, driver_route: { ...trip.driver_route, driver: assignedDriverSummary(trip.driver_route.driver) } };
+function withViewerDriver<T extends { status: string; driver_route: { driver: PublicDriverSource } }>(
+  trip: T,
+  req: AuthenticatedRequest
+) {
+  if (req.user!.role === "admin" || req.user!.role === "driver") {
+    return { ...trip, driver_route: { ...trip.driver_route, driver: withoutRiderContactFields(trip.driver_route.driver) } };
+  }
+  return { ...trip, driver_route: { ...trip.driver_route, driver: assignedDriverSummary(trip.driver_route.driver, trip.status) } };
 }
 
 async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
   const trip = await prisma.trip.findUnique({
     where: { id },
     include: {
-      driver_route: { include: { driver: { include: { user: { select: { name: true } } } }, route_version: routeSummarySelect } },
+      driver_route: { include: { driver: { include: { user: { select: assignedDriverUserSelect } } }, route_version: routeSummarySelect } },
       passenger_request: { include: { route_version: routeSummarySelect } },
       merchant_order: { include: { parcels: true, route_version: routeSummarySelect } },
       parcel_batch: true

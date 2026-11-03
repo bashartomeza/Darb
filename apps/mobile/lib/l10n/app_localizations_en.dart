@@ -3155,4 +3155,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get merchantOrderMapTitle => 'Order route';
+
+  @override
+  String get driverPhoneLabel => 'Driver\'s phone';
+
+  @override
+  String get callDriver => 'Call driver';
+
+  @override
+  String get callDriverUnavailable =>
+      'This device can\'t place the call. Dial the number shown.';
 }

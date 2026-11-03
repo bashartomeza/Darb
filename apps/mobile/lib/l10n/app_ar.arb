@@ -1261,5 +1261,8 @@
   "communityLocationSet": "تم تحديد المكان على الخريطة",
   "communityClearLocation": "إزالة المكان",
   "mapRouteLabel": "المسار",
-  "merchantOrderMapTitle": "مسار الطلب"
+  "merchantOrderMapTitle": "مسار الطلب",
+  "driverPhoneLabel": "هاتف السائق",
+  "callDriver": "اتصل بالسائق",
+  "callDriverUnavailable": "لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر."
 }

@@ -3129,4 +3129,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get merchantOrderMapTitle => 'مسار الطلب';
+
+  @override
+  String get driverPhoneLabel => 'هاتف السائق';
+
+  @override
+  String get callDriver => 'اتصل بالسائق';
+
+  @override
+  String get callDriverUnavailable =>
+      'لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر.';
 }
