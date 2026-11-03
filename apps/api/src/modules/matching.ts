@@ -20,6 +20,7 @@ import {
   serviceRouteIdSchema,
   withRouteFields
 } from "../services/operatingRoutes.js";
+import { publicDriverSelect, publicDriverSummary } from "../services/publicDriver.js";
 
 const runMatchSchema = z
   .object({
@@ -96,15 +97,7 @@ const matchSummarySelect = {
       parcel_capacity_available: true,
       status: true,
       route_version: routeSummarySelect,
-      driver: {
-        select: {
-          user_id: true,
-          user: { select: { name: true } },
-          vehicle_type: true,
-          verified: true,
-          trust_score: true
-        }
-      }
+      driver: { select: { user_id: true, ...publicDriverSelect } }
     }
   },
   passenger_request: {
@@ -195,12 +188,7 @@ function toMatchSummary(match: MatchSummaryRecord) {
       parcel_capacity_available: match.driver_route.parcel_capacity_available,
       status: match.driver_route.status,
       ...routeFields(match.driver_route.route_version),
-      driver: {
-        name: match.driver_route.driver.user.name,
-        vehicle_type: match.driver_route.driver.vehicle_type,
-        verified: match.driver_route.driver.verified,
-        trust_score: match.driver_route.driver.trust_score
-      }
+      driver: publicDriverSummary(match.driver_route.driver)
     },
     passenger_request: match.passenger_request
       ? {
@@ -383,12 +371,7 @@ function passengerSearchResult(candidate: RankedDriverRoute) {
     ...routeFields(candidate.route.route_version),
     score: candidate.breakdown.finalScore,
     scoring_breakdown: candidate.breakdown,
-    driver: {
-      name: candidate.route.driver.user.name,
-      vehicle_type: candidate.route.driver.vehicle_type,
-      trust_score: candidate.route.driver.trust_score,
-      verified: candidate.route.driver.verified
-    }
+    driver: publicDriverSummary(candidate.route.driver)
   };
 }
 
@@ -557,7 +540,7 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
             : null
         },
         include: {
-          driver_route: { include: { driver: true, route_version: routeSummarySelect } },
+          driver_route: { include: { driver: { include: { user: { select: { name: true } } } }, route_version: routeSummarySelect } },
           passenger_request: { include: { route_version: routeSummarySelect } },
           merchant_order: { include: { route_version: routeSummarySelect } },
           parcel_batch: true
@@ -584,10 +567,12 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
 
   await notifyMatchOffered(prisma, match);
 
+  // Admin keeps the driver profile; the passenger or merchant gets the public driver.
+  const driver = actor.role === "admin" ? match.driver_route.driver : publicDriverSummary(match.driver_route.driver);
   return {
     match: {
       ...match,
-      driver_route: withRouteFields(match.driver_route),
+      driver_route: withRouteFields({ ...match.driver_route, driver }),
       passenger_request: match.passenger_request ? withRouteFields(match.passenger_request) : null,
       merchant_order: match.merchant_order ? withRouteFields(match.merchant_order) : null
     },

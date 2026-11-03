@@ -348,6 +348,66 @@ describe("trip acceptance, status, and tracking", () => {
     await request(createApp()).get("/api/v1/trips/trip_1").set(auth("admin_1")).expect(200);
   });
 
+  describe("driver data on a trip", () => {
+    // The full DriverProfile row as the database returns it.
+    function profiledTrip() {
+      const trip = baseTrip();
+      return {
+        ...trip,
+        driver_route: {
+          ...trip.driver_route,
+          driver: {
+            ...trip.driver_route.driver,
+            vehicle_type: "sedan",
+            seats_total: 4,
+            parcel_capacity: 5,
+            vehicle_make_model: "Kia Picanto",
+            vehicle_color: "White",
+            plate_number: "1-2345-67",
+            national_id_number: "900000001",
+            licence_number: "LIC-5551234",
+            verified: true,
+            trust_score: 86,
+            trust_components: { completion_rate: 0.9 },
+            trust_computed_at: new Date("2026-07-01T00:00:00.000Z"),
+            created_at: new Date("2026-01-01T00:00:00.000Z"),
+            user: { name: "Driver 1" }
+          }
+        }
+      };
+    }
+    const assignedDriver = {
+      name: "Driver 1",
+      vehicle_type: "sedan",
+      verified: true,
+      trust_score: 86,
+      vehicle_make_model: "Kia Picanto",
+      vehicle_color: "White",
+      plate_number: "1-2345-67"
+    };
+
+    it.each(["passenger_1", "merchant_1"] as const)("%s sees who drives and which car, nothing more", async (viewer) => {
+      prismaMock.trip.findUnique.mockResolvedValue(profiledTrip());
+
+      const response = await request(createApp()).get("/api/v1/trips/trip_1").set(auth(viewer)).expect(200);
+
+      expect(response.body.trip.driver_route.driver).toEqual(assignedDriver);
+      expect(JSON.stringify(response.body)).not.toMatch(/900000001|LIC-5551234|trust_components|"driver_1"/);
+    });
+
+    it.each(["driver_1", "admin_1"] as const)("%s keeps the driver profile", async (viewer) => {
+      prismaMock.trip.findUnique.mockResolvedValue(profiledTrip());
+
+      const response = await request(createApp()).get("/api/v1/trips/trip_1").set(auth(viewer)).expect(200);
+
+      expect(response.body.trip.driver_route.driver).toMatchObject({
+        user_id: "driver_1",
+        national_id_number: "900000001",
+        licence_number: "LIC-5551234"
+      });
+    });
+  });
+
   it("unrelated user cannot see trip", async () => {
     prismaMock.trip.findUnique.mockResolvedValue(baseTrip());
 

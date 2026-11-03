@@ -409,6 +409,99 @@ describe("matching, batching, comparison", () => {
     }));
   });
 
+  describe("driver data in a new match", () => {
+    // The full DriverProfile row as the database returns it.
+    const profiledRoute = {
+      ...compatibleRoute,
+      driver: {
+        ...compatibleRoute.driver,
+        user_id: "driver_user_1",
+        seats_total: 4,
+        parcel_capacity: 5,
+        vehicle_make_model: "Kia Picanto",
+        vehicle_color: "White",
+        plate_number: "1-2345-67",
+        national_id_number: "900000001",
+        licence_number: "LIC-5551234",
+        trust_components: { completion_rate: 0.9 },
+        trust_computed_at: new Date("2026-07-01T00:00:00.000Z"),
+        created_at: new Date("2026-01-01T00:00:00.000Z")
+      }
+    };
+    const publicDriver = { name: "Driver One", vehicle_type: "sedan", verified: true, trust_score: 86 };
+
+    beforeEach(() => {
+      prismaMock.driverRoute.findMany.mockResolvedValue([profiledRoute]);
+      prismaMock.match.create.mockImplementation(({ data }) => ({ id: "match_profiled", ...data, driver_route: profiledRoute }));
+    });
+
+    it("gives the passenger only the public driver", async () => {
+      prismaMock.passengerRequest.findUnique.mockResolvedValue(passengerRequest);
+      prismaMock.merchantOrder.findUnique.mockResolvedValue(null);
+
+      const response = await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("passenger_1"))
+        .send({ passengerRequestId: "req_1" })
+        .expect(201);
+
+      expect(response.body.match.driver_route.driver).toEqual(publicDriver);
+      expect(JSON.stringify(response.body)).not.toMatch(/900000001|LIC-5551234|driver_user_1|trust_components|1-2345-67/);
+    });
+
+    it("gives the merchant only the public driver", async () => {
+      prismaMock.passengerRequest.findUnique.mockResolvedValue(null);
+      prismaMock.merchantOrder.findUnique.mockResolvedValue(merchantOrder);
+
+      const response = await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("merchant_1"))
+        .send({ merchantOrderId: "order_1" })
+        .expect(201);
+
+      expect(response.body.match.driver_route.driver).toEqual(publicDriver);
+      expect(JSON.stringify(response.body)).not.toMatch(/900000001|LIC-5551234|driver_user_1|trust_components|1-2345-67/);
+    });
+
+    it("still offers the match to the driver behind the public view", async () => {
+      prismaMock.passengerRequest.findUnique.mockResolvedValue(passengerRequest);
+      prismaMock.merchantOrder.findUnique.mockResolvedValue(null);
+      const notification = vi.fn().mockResolvedValue({});
+      (prismaMock as Record<string, unknown>).notification = { create: notification };
+      try {
+        await request(createApp())
+          .post("/api/v1/matches/run")
+          .set(auth("passenger_1"))
+          .send({ passengerRequestId: "req_1" })
+          .expect(201);
+
+        expect(notification).toHaveBeenCalledWith(expect.objectContaining({
+          data: expect.objectContaining({ user_id: "driver_user_1", type: "match_offered" })
+        }));
+      } finally {
+        delete (prismaMock as Record<string, unknown>).notification;
+      }
+    });
+
+    it("keeps the driver profile for Admin", async () => {
+      prismaMock.passengerRequest.findUnique.mockResolvedValue(passengerRequest);
+      prismaMock.merchantOrder.findUnique.mockResolvedValue(null);
+
+      const response = await request(createApp())
+        .post("/api/v1/matches/run")
+        .set(auth("admin_1"))
+        .send({ passengerRequestId: "req_1" })
+        .expect(201);
+
+      expect(response.body.match.driver_route.driver).toMatchObject({
+        user_id: "driver_user_1",
+        national_id_number: "900000001",
+        licence_number: "LIC-5551234",
+        user: { name: "Driver One" }
+      });
+    });
+  });
+
   it("does not rematch a passenger to a route they already rejected", async () => {
     prismaMock.passengerRequest.findUnique.mockResolvedValue(passengerRequest);
     prismaMock.merchantOrder.findUnique.mockResolvedValue(null);
