@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler, Request } from "express";
 import { ZodError } from "zod";
+import { INVALID_PASSWORD, isPasswordRuleIssue } from "../lib/passwordRule.js";
 import { RouteProviderError } from "../maps/contracts.js";
 
 export class HttpError extends Error {
@@ -38,7 +39,9 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
       code: issue.code,
       message: "Invalid value"
     }));
-    res.status(400).json(errorShape("validation_error", req, { details }));
+    // A request whose only problem is the shared password rule gets its own stable code so the apps can show the rule.
+    const otherProblems = error.issues.length === 0 || !error.issues.every(isPasswordRuleIssue);
+    res.status(400).json(errorShape(otherProblems ? "validation_error" : INVALID_PASSWORD, req, { details }));
     return;
   }
 

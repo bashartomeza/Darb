@@ -346,7 +346,7 @@ Future<http.Response> _common(http.Request request) async {
 }
 
 const _enabledConfigBody =
-    '{"enabled":true,"registration_roles":["passenger","driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
+    '{"enabled":true,"registration_roles":["passenger","driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":8,"maximum_characters":72,"maximum_utf8_bytes":72,"requires_letter":true,"requires_digit":true},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
 
 Future<ProviderContainer> _pumpApp(
   WidgetTester tester, {

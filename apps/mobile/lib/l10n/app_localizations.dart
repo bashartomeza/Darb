@@ -440,11 +440,11 @@ abstract class AppLocalizations {
   /// **'أدخل كلمة المرور.'**
   String get passwordRequired;
 
-  /// No description provided for @passwordTooShort.
+  /// No description provided for @passwordRuleHint.
   ///
   /// In ar, this message translates to:
-  /// **'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.'**
-  String get passwordTooShort;
+  /// **'8 أحرف أو أكثر، تتضمن حرفاً ورقماً'**
+  String get passwordRuleHint;
 
   /// No description provided for @emailAlreadyRegistered.
   ///

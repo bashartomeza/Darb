@@ -89,7 +89,7 @@ void main() {
       );
       await tester.enterText(
         find.widgetWithText(TextField, 'New password'),
-        'a-long-enough-password',
+        'a-long-enough-password-1',
       );
       await tester.pump();
       expect(_confirm(tester).onPressed, isNotNull);
@@ -98,7 +98,7 @@ void main() {
       expect(jsonDecode(requests.single.body), {
         'email': 'a@example.com',
         'code': '123456',
-        'password': 'a-long-enough-password',
+        'password': 'a-long-enough-password-1',
       });
     },
   );

@@ -6,10 +6,10 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/validation/password_rule.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../application/auth_controller.dart';
 import 'auth_completion_screen.dart';
-import 'credential_actions.dart';
 import 'widgets/auth_divider.dart';
 import 'widgets/auth_style.dart';
 import 'widgets/google_auth_button.dart';
@@ -133,11 +133,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         obscureText: !_showPassword,
                         autofillHints: const [AutofillHints.newPassword],
                         onFieldSubmitted: (_) => _register(),
-                        helperText: authText(
-                          context,
-                          'Use 12–72 characters (maximum 72 UTF-8 bytes).',
-                          'استخدم 12–72 حرفاً (بحد أقصى 72 بايت UTF-8).',
-                        ),
+                        helperText: passwordRuleHint(context),
                         suffix: IconButton(
                           tooltip: _showPassword
                               ? l10n.hidePassword
@@ -154,11 +150,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         ),
                         validator: (value) =>
                             (value == null || !validNewPassword(value))
-                            ? authText(
-                                context,
-                                'Use 12–72 characters (maximum 72 UTF-8 bytes).',
-                                'استخدم 12–72 حرفاً (بحد أقصى 72 بايت UTF-8).',
-                              )
+                            ? passwordRuleHint(context)
                             : null,
                       ),
                       if (error != null || _googleFailed) ...[
@@ -279,6 +271,7 @@ String _errorMessage(AppLocalizations l10n, Object error) {
   if (error is! ApiException) return l10n.requestFailed;
   if (error.message == 'email_taken') return l10n.emailAlreadyRegistered;
   if (error.message == 'account_unavailable') return l10n.accountUnavailable;
+  if (error.message == 'invalid_password') return l10n.passwordRuleHint;
   if (error.message == 'google_email_unverified' ||
       error.message == 'invalid_google_token') {
     return l10n.googleSignInFailed;

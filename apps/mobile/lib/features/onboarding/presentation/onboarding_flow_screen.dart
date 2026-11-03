@@ -400,6 +400,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             obscureText: !_showPassword,
             decoration: InputDecoration(
               labelText: l10n.password,
+              helperText: l10n.passwordRuleHint,
               suffixIcon: IconButton(
                 tooltip: _showPassword ? l10n.hidePassword : l10n.showPassword,
                 onPressed: () => setState(() => _showPassword = !_showPassword),
@@ -867,6 +868,7 @@ String _safeError(AppLocalizations l10n, String? code) => switch (code) {
   'consent_version_changed' => l10n.consentDocumentsChanged,
   'invalid_credentials' => l10n.invalidCredentials,
   'validation_error' => l10n.validationError,
+  'invalid_password' => l10n.passwordRuleHint,
   'network_unavailable' => l10n.networkUnavailable,
   'request_timeout' => l10n.requestTimedOut,
   'account_unavailable' => l10n.accountUnavailable,

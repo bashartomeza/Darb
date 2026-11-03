@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_error.dart';
+import '../../../../core/validation/password_rule.dart';
 import '../../../../core/widgets/darb_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/data/auth_repository.dart';
@@ -53,13 +54,7 @@ class _PassengerChangePasswordScreenState
 
   String? _newError(BuildContext context) {
     if (!_submitted) return null;
-    if (!validNewPassword(_new.text)) {
-      return authText(
-        context,
-        'Use 12–72 characters.',
-        'استخدم من 12 إلى 72 حرفاً.',
-      );
-    }
+    if (!validNewPassword(_new.text)) return passwordRuleHint(context);
     if (_new.text == _current.text) {
       return authText(
         context,
@@ -181,11 +176,7 @@ class _PassengerChangePasswordScreenState
           obscureText: !_showNew,
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.newPassword],
-          helper: authText(
-            context,
-            'At least 12 characters.',
-            '12 حرفاً على الأقل.',
-          ),
+          helper: passwordRuleHint(context),
           errorText: _newError(context),
           onChanged: (_) => setState(() {}),
           suffixIcon: _visibilityToggle(

@@ -826,7 +826,10 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('passwordSubmit')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Use 12–72 characters.'), findsOneWidget);
+      expect(
+        find.text('8+ characters with a letter and a number'),
+        findsOneWidget,
+      );
       expect(find.text('Passwords do not match.'), findsOneWidget);
       expect(calls, 0);
     });
@@ -848,13 +851,13 @@ void main() {
       await tapRow(tester, 'settingsPassword');
 
       await enter(tester, 'passwordCurrent', 'old-password-123');
-      await enter(tester, 'passwordNew', 'a-brand-new-password');
-      await enter(tester, 'passwordConfirm', 'a-brand-new-password');
+      await enter(tester, 'passwordNew', 'a-brand-new-password-1');
+      await enter(tester, 'passwordConfirm', 'a-brand-new-password-1');
       await tester.tap(find.byKey(const ValueKey('passwordSubmit')));
       await tester.pumpAndSettle();
 
       expect(sent, {
-        'password': 'a-brand-new-password',
+        'password': 'a-brand-new-password-1',
         'current_password': 'old-password-123',
       });
       expect(find.text('Password changed'), findsOneWidget);
@@ -875,8 +878,8 @@ void main() {
       );
       await tapRow(tester, 'settingsPassword');
       await enter(tester, 'passwordCurrent', 'not-my-password');
-      await enter(tester, 'passwordNew', 'a-brand-new-password');
-      await enter(tester, 'passwordConfirm', 'a-brand-new-password');
+      await enter(tester, 'passwordNew', 'a-brand-new-password-1');
+      await enter(tester, 'passwordConfirm', 'a-brand-new-password-1');
       await tester.tap(find.byKey(const ValueKey('passwordSubmit')));
       await tester.pumpAndSettle();
 

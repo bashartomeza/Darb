@@ -57,7 +57,7 @@
   "emailInvalid": "Enter a valid email address.",
   "nameRequired": "Enter your name.",
   "passwordRequired": "Enter your password.",
-  "passwordTooShort": "Password must be at least 8 characters.",
+  "passwordRuleHint": "8+ characters with a letter and a number",
   "emailAlreadyRegistered": "That email is already registered. Try signing in.",
   "googleSignInFailed": "Google sign-in failed. Please try again.",
   "googleSignInUnavailable": "Google sign-in is not available right now.",

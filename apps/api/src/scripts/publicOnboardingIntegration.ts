@@ -627,17 +627,17 @@ async function main() {
   check(conflictVerify.status === 409 && conflictVerify.body.error === "registration_conflict", "same idempotency key with different payload conflicts");
 
   const mismatchedConsents = legal.map((document, index) => index === 0 ? { ...document, content_hash: "0".repeat(64) } : document);
-  const consentMismatch = await complete(replayStart.body.attempt.id, replayStart.body.onboarding_token, secondVerify.body.registration_grant, mismatchedConsents, "Concurrency User", "concurrency secure pass", key("consent-mismatch"));
+  const consentMismatch = await complete(replayStart.body.attempt.id, replayStart.body.onboarding_token, secondVerify.body.registration_grant, mismatchedConsents, "Concurrency User", "concurrency secure pass 2026", key("consent-mismatch"));
   check(consentMismatch.status === 409 && consentMismatch.body.error === "consent_version_changed", "consent version mismatch is rejected");
   const missingAdult = await request(app)
     .post(`/api/v1/onboarding/attempts/${replayStart.body.attempt.id}/complete`)
     .set("authorization", `Onboarding ${replayStart.body.onboarding_token}`)
     .set("idempotency-key", key("adult-required"))
-    .send({ registration_grant: secondVerify.body.registration_grant, display_name: "Concurrency User", password: "concurrency secure pass", locale: "ar", consents: legal, adult_self_attestation: false });
+    .send({ registration_grant: secondVerify.body.registration_grant, display_name: "Concurrency User", password: "concurrency secure pass 2026", locale: "ar", consents: legal, adult_self_attestation: false });
   check(missingAdult.status === 400, "adult self-attestation is required");
   const concurrentCompletions = await Promise.all([
-    complete(replayStart.body.attempt.id, replayStart.body.onboarding_token, secondVerify.body.registration_grant, legal, "Concurrency User", "concurrency secure pass", key("complete-race-a")),
-    complete(replayStart.body.attempt.id, replayStart.body.onboarding_token, secondVerify.body.registration_grant, legal, "Concurrency User", "concurrency secure pass", key("complete-race-b"))
+    complete(replayStart.body.attempt.id, replayStart.body.onboarding_token, secondVerify.body.registration_grant, legal, "Concurrency User", "concurrency secure pass 2026", key("complete-race-a")),
+    complete(replayStart.body.attempt.id, replayStart.body.onboarding_token, secondVerify.body.registration_grant, legal, "Concurrency User", "concurrency secure pass 2026", key("complete-race-b"))
   ]);
   check(concurrentCompletions.filter((response) => response.status === 201).length === 1, "concurrent completion has one winner");
   check(await prisma.user.count({ where: { phone: "+970599111117" } }) === 1, "concurrent completion creates exactly one user");

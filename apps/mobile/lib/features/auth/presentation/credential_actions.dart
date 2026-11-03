@@ -1,15 +1,12 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_error.dart';
+import '../../../core/validation/password_rule.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
 import 'auth_completion_screen.dart';
 import 'widgets/google_auth_button.dart';
-
-bool validNewPassword(String value) =>
-    value.length >= 12 && value.length <= 72 && utf8.encode(value).length <= 72;
 
 /// Action proofs stay in this dialog's memory and are cleared on disposal.
 class CredentialActionDialog extends ConsumerStatefulWidget {
@@ -239,11 +236,7 @@ class _CredentialActionDialogState
                           'New password',
                           'كلمة المرور الجديدة',
                         ),
-                        helperText: authText(
-                          context,
-                          '12–72 characters; maximum 72 UTF-8 bytes.',
-                          '12–72 حرفاً؛ بحد أقصى 72 بايت UTF-8.',
-                        ),
+                        helperText: passwordRuleHint(context),
                       ),
                     ),
                   if (widget.action == 'link') ...[

@@ -32,6 +32,7 @@ import { contactEmailSchema, normalizeEmailForAbuse } from "../lib/contactEmail.
 import { PHONE_INPUT_MAX_LENGTH, maskPhone, normalizePhoneToE164, phoneLast4 } from "../lib/phone.js";
 import { consentDigestMatches } from "../lib/consentContent.js";
 import { missingDocumentKinds, requiredDocumentKinds } from "../lib/applicationReview.js";
+import { INVALID_PASSWORD, PASSWORD_MAX_UTF8_BYTES, PASSWORD_MIN_CHARACTERS, isValidNewPassword } from "../lib/passwordRule.js";
 import { prisma } from "../lib/prisma.js";
 import {
   requireOnboardingToken,
@@ -43,9 +44,6 @@ const REQUIRED_CONSENTS = ["terms", "privacy", "adult_self_attestation"] as cons
 const SUPPORTED_ROLES = ["passenger", "driver", "merchant"] as const;
 const SUPPORTED_LOCALES = ["ar", "en"] as const;
 const OPEN_ROLES = ["driver", "merchant"] as const;
-const PASSWORD_MIN_CHARACTERS = 15;
-const PASSWORD_MAX_CHARACTERS = 64;
-const PASSWORD_MAX_BYTES = 72;
 const IDEMPOTENCY_TTL_MS = 10 * 60 * 1_000;
 const DUMMY_PASSWORD = "darb-pending-recovery-dummy-value";
 const dummyHash = bcrypt.hash(DUMMY_PASSWORD, 10);
@@ -116,13 +114,7 @@ function safeDisplayName(value: string) {
 }
 
 function validatePassword(value: string) {
-  const bytes = Buffer.byteLength(value, "utf8");
-  if (
-    value.length < PASSWORD_MIN_CHARACTERS ||
-    value.length > PASSWORD_MAX_CHARACTERS ||
-    bytes > PASSWORD_MAX_BYTES ||
-    value.trim().length === 0
-  ) throw new HttpError(400, "validation_error");
+  if (!isValidNewPassword(value)) throw new HttpError(400, INVALID_PASSWORD);
 }
 
 async function currentConsentDocuments(db: Db, locale: ConsentLocale, now = new Date()) {
@@ -403,10 +395,14 @@ export function createPublicOnboardingRouter(
                 local_numbers_require_region: true
               },
               supported_locales: [...SUPPORTED_LOCALES],
+              // The shared rule (lib/passwordRule.ts). The character ceiling equals the byte ceiling:
+              // the byte limit is the real bound, and older app builds still read these three numbers.
               password_policy: {
                 minimum_characters: PASSWORD_MIN_CHARACTERS,
-                maximum_characters: PASSWORD_MAX_CHARACTERS,
-                maximum_utf8_bytes: PASSWORD_MAX_BYTES
+                maximum_characters: PASSWORD_MAX_UTF8_BYTES,
+                maximum_utf8_bytes: PASSWORD_MAX_UTF8_BYTES,
+                requires_letter: true,
+                requires_digit: true
               },
               otp_digits: 6,
               resend_cooldown_seconds: appConfig.onboarding!.otpResendCooldownSeconds

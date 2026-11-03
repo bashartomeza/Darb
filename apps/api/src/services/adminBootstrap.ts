@@ -5,12 +5,11 @@ import type { PrismaClient } from "../generated/prisma/client.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { auditEvent } from "../lib/audit.js";
 import { revokeAllUserSessions } from "../lib/refreshTokens.js";
-import { canonicalEmail, newPassword } from "./emailAuth.js";
+import { isValidNewPassword } from "../lib/passwordRule.js";
+import { canonicalEmail } from "./emailAuth.js";
 
 /** Same cost the API uses for every password hash (services/emailAuth.ts). */
 export const ADMIN_BCRYPT_COST = 12;
-/** Staff accounts: the runbook requires 16 or more characters; the shared newPassword rule (12..72 bytes) also applies. */
-export const ADMIN_MIN_PASSWORD_LENGTH = 16;
 
 export class AdminBootstrapError extends Error {
   constructor(public readonly code: string) {
@@ -29,10 +28,8 @@ export function validateAdminInput(input: { email: string; name?: string; passwo
     if (!parsed.success) throw new AdminBootstrapError("invalid_name");
     name = parsed.data;
   }
-  if (input.password !== undefined) {
-    if ([...input.password].length < ADMIN_MIN_PASSWORD_LENGTH) throw new AdminBootstrapError("password_too_short");
-    if (!newPassword.safeParse(input.password).success) throw new AdminBootstrapError("password_invalid");
-  }
+  // Staff accounts follow the same password rule as everyone else (lib/passwordRule.ts).
+  if (input.password !== undefined && !isValidNewPassword(input.password)) throw new AdminBootstrapError("password_invalid");
   return { email: email.data, name };
 }
 

@@ -45,6 +45,9 @@ void main() {
 
     expect(find.byKey(const ValueKey('emailField')), findsOneWidget);
     expect(find.byKey(const ValueKey('invitationCodeField')), findsNothing);
+    // The one password rule is shown under the sign-up password field.
+    expect(find.text(_passwordRuleAr), findsOneWidget);
+    expect(find.textContaining('12–72'), findsNothing);
   });
 
   testWidgets('driver registers without an invitation', (tester) async {
@@ -210,11 +213,11 @@ void main() {
     );
     await tester.enterText(
       find.byKey(const ValueKey('onboardingPasswordField')),
-      'first secure password',
+      'first secure password 1',
     );
     await tester.enterText(
       find.byKey(const ValueKey('confirmPasswordField')),
-      'first secure password',
+      'first secure password 1',
     );
     for (var index = 0; index < 3; index += 1) {
       await tester.tap(find.byType(CheckboxListTile).at(index));
@@ -228,6 +231,69 @@ void main() {
     expect(checkboxes.map((checkbox) => checkbox.value), everyElement(isFalse));
     expect(find.textContaining('v2'), findsWidgets);
   });
+
+  testWidgets(
+    'account details show the password rule and refuse a password without a number',
+    (tester) async {
+      var completeRequests = 0;
+      final future = DateTime.now().toUtc().add(const Duration(hours: 1));
+      final bundle = {
+        'version': 1,
+        'type': 'continuation',
+        'safe_stage': 'enteringAccountDetails',
+        'locale': 'ar',
+        'selected_role': 'driver',
+        'attempt_id': 'attempt_1',
+        'continuation_token': 'continuation-token',
+        'continuation_expires_at': future.toIso8601String(),
+        'registration_grant': 'registration-grant',
+        'registration_grant_expires_at': future.toIso8601String(),
+      };
+      await _pumpApp(
+        tester,
+        onboardingEnabled: true,
+        secureInitialValues: {OnboardingStorage.bundleKey: jsonEncode(bundle)},
+        handler: (request) async {
+          if (request.url.path.endsWith('/onboarding/config')) {
+            return http.Response(_enabledConfigBody, 200);
+          }
+          if (request.url.path.endsWith('/onboarding/status')) {
+            return http.Response(
+              '{"role":"driver","onboarding_status":"phone_verified","next_action":"complete_registration","request_id":"req"}',
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/onboarding/consents')) {
+            return http.Response(_consentBody('v1'), 200);
+          }
+          if (request.url.path.endsWith('/complete')) completeRequests += 1;
+          return http.Response('{"error":"not_found"}', 404);
+        },
+      );
+
+      await tester.tap(find.text('متابعة التسجيل'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('displayNameField')), findsOneWidget);
+      expect(find.text(_passwordRuleAr), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('displayNameField')),
+        'Secure User',
+      );
+      for (final key in ['onboardingPasswordField', 'confirmPasswordField']) {
+        await tester.enterText(find.byKey(ValueKey(key)), 'onlyletters');
+      }
+      for (var index = 0; index < 3; index += 1) {
+        await tester.tap(find.byType(CheckboxListTile).at(index));
+      }
+      await tester.tap(find.byKey(const ValueKey('createAccountButton')));
+      await tester.pumpAndSettle();
+
+      expect(completeRequests, 0);
+      // Once under the field, once as the error explaining the refusal.
+      expect(find.text(_passwordRuleAr), findsNWidgets(2));
+    },
+  );
 
   testWidgets('server-valid pending bundle restores to the pending screen', (
     tester,
@@ -473,11 +539,13 @@ Future<void> _pumpApp(
   await tester.pumpAndSettle();
 }
 
+const _passwordRuleAr = '8 أحرف أو أكثر، تتضمن حرفاً ورقماً';
+
 const _openConfigBody =
-    '{"enabled":true,"registration_roles":["driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
+    '{"enabled":true,"registration_roles":["driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":8,"maximum_characters":72,"maximum_utf8_bytes":72,"requires_letter":true,"requires_digit":true},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
 
 const _enabledConfigBody =
-    '{"enabled":true,"registration_roles":["driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":15,"maximum_characters":64,"maximum_utf8_bytes":72},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
+    '{"enabled":true,"registration_roles":["driver","merchant"],"phone_policy":{"canonical_format":"E.164","international_prefix_required_without_region":true,"local_numbers_require_region":true},"supported_locales":["ar","en"],"password_policy":{"minimum_characters":8,"maximum_characters":72,"maximum_utf8_bytes":72,"requires_letter":true,"requires_digit":true},"otp_digits":6,"resend_cooldown_seconds":60,"request_id":"req"}';
 
 String _consentBody(String version) => jsonEncode({
   'documents': [
