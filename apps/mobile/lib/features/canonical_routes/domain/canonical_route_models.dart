@@ -143,21 +143,10 @@ class MobileCapabilities {
   final bool checkpointsAvailable;
   final bool liveTrackingAvailable;
 
+  /// Reads the fields this build knows and ignores any others, so a newer
+  /// server can add a capability without breaking installed versions. Every
+  /// known field is still type-checked.
   factory MobileCapabilities.fromJson(Map<String, dynamic> json) {
-    _requireKeys(json, const {
-      'canonical_route_catalog_available',
-      'canonical_multi_route_entry_available',
-      'canonical_matching_available',
-      'canonical_trip_creation_available',
-      'driver_canonical_offers_available',
-      'canonical_assignment_status_available',
-      'canonical_shared_trip_presentation_available',
-      'canonical_shared_driver_offers_available',
-      'canonical_shared_assignment_status_available',
-      'maps_available',
-      'checkpoints_available',
-      'live_tracking_available',
-    });
     return MobileCapabilities(
       routeCatalogAvailable: _bool(json, 'canonical_route_catalog_available'),
       multiRouteEntryAvailable: _bool(
@@ -224,22 +213,7 @@ class CanonicalStop {
   final GeoPoint? position;
 
   factory CanonicalStop.fromMembership(Map<String, dynamic> json) {
-    _requireKeys(json, const {
-      'sequence',
-      'passenger_pickup_allowed',
-      'passenger_dropoff_allowed',
-      'parcel_pickup_allowed',
-      'parcel_dropoff_allowed',
-      'stop',
-    });
     final stop = _object(json, 'stop');
-    _requireKeys(stop, const {
-      'id',
-      'name_ar',
-      'name_en',
-      'latitude',
-      'longitude',
-    });
     final latitude = _coordinate(stop['latitude'], 90);
     final longitude = _coordinate(stop['longitude'], 180);
     return CanonicalStop(
@@ -332,25 +306,7 @@ class CanonicalRoute {
   );
 
   factory CanonicalRoute.fromJson(Map<String, dynamic> json) {
-    _requireKeys(json, const {
-      'id',
-      'direction',
-      'status',
-      'current_version',
-      'fares',
-    });
     final version = _object(json, 'current_version');
-    _requireKeys(version, const {
-      'id',
-      'version_number',
-      'status',
-      'name_ar',
-      'name_en',
-      'active_from',
-      'active_until',
-      'stops',
-      'geometry',
-    });
     final direction = CanonicalRouteDirection.values
         .where((value) => value.name == _string(json, 'direction'))
         .firstOrNull;
@@ -632,10 +588,4 @@ DateTime? _optionalDate(Map<String, dynamic> json, String key) {
   final parsed = DateTime.tryParse(value);
   if (parsed == null) throw FormatException('Invalid $key');
   return parsed.toUtc();
-}
-
-void _requireKeys(Map<String, dynamic> json, Set<String> allowed) {
-  if (json.keys.any((key) => !allowed.contains(key))) {
-    throw const FormatException('Unexpected response field');
-  }
 }

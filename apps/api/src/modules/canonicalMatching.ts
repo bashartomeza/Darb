@@ -214,11 +214,7 @@ export function createCanonicalMatchingRouter(
       const offer = await service.getDriverOffer(req.user!.id, id.parse(req.params.id));
       res.json({
         offer: offerResponse(offer),
-        trip: tripResponse(offer.canonical_trip) ?? {
-          id: result.trip.id,
-          status: result.trip.status,
-          route_version_id: result.trip.route_version_id
-        },
+        trip: tripResponse(offer.canonical_trip) ?? tripResponse(result.trip),
         replayed: result.replayed,
         server_now: new Date(),
         request_id: req.requestId
