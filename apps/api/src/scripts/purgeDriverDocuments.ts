@@ -7,7 +7,7 @@ const settings = config.driverDocuments;
 if (!settings) {
   console.log("Driver documents are not enabled; nothing to purge.");
 } else {
-  const result = await purgeDecidedDriverDocuments(prisma, createDocumentStorage(settings.dir), {
+  const result = await purgeDecidedDriverDocuments(prisma, createDocumentStorage(prisma, { legacyDir: settings.legacyDir }), {
     retentionDays: settings.retentionDays
   });
   console.log(`Purged ${result.purged} driver document(s) older than ${settings.retentionDays} days after decision.`);

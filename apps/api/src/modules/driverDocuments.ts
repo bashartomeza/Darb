@@ -17,8 +17,10 @@ import {
   MAX_DOCUMENTS_PER_REVISION,
   MAX_DOCUMENT_BYTES,
   MERCHANT_DOCUMENT_KINDS,
+  DocumentIntegrityError,
   createDocumentStorage,
-  sniffDocumentMime
+  sniffDocumentMime,
+  type DocumentOwner
 } from "../services/driverDocumentStorage.js";
 
 const uploadQuerySchema = z.object({ kind: z.enum(DOCUMENT_KINDS) });
@@ -41,17 +43,17 @@ function isWriteConflict(error: unknown) {
 
 /**
  * Applicant document upload (pending-status session) and Admin download.
- * Disabled unless DRIVER_DOCUMENTS_ENABLED is set with a storage directory.
+ * Disabled unless DRIVER_DOCUMENTS_ENABLED is set. The bytes are stored in MySQL.
  */
 export function createDriverDocumentsRouter(appConfig: AppConfig) {
   const router = Router();
   const settings = appConfig.driverDocuments;
-  const storage = settings ? createDocumentStorage(settings.dir) : null;
+  const storage = settings ? createDocumentStorage(prisma, { legacyDir: settings.legacyDir }) : null;
   const available = (_req: unknown, _res: unknown, next: (error?: unknown) => void) =>
     next(storage ? undefined : new HttpError(404, "driver_documents_unavailable"));
   const applicant = requireOnboardingToken(appConfig, ["pending_status"]);
 
-  /** Hourly cap per applicant, so open signup cannot be used to churn the disk. */
+  /** Hourly cap per applicant, so open signup cannot be used to churn storage. */
   async function consumeUploadBucket(req: OnboardingAuthenticatedRequest, type: string, limit: number) {
     const onboarding = appConfig.onboarding;
     const userId = req.onboarding?.userId;
@@ -64,6 +66,16 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
       limit
     });
     if (!result.allowed) throw new HttpError(429, "rate_limited");
+  }
+
+  /** Missing bytes answer 404, as before; bytes that fail their digest are a server fault. */
+  async function readDocument(owner: DocumentOwner, document: { storage_key: string; sha256: string }) {
+    try {
+      return await storage!.read(owner, document);
+    } catch (error) {
+      if (error instanceof DocumentIntegrityError) throw new HttpError(500, "driver_document_integrity_failed");
+      throw new HttpError(404, "driver_document_not_found");
+    }
   }
 
   /** Once submitted, an applicant cannot delete the last file of a required kind. */
@@ -126,7 +138,6 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
     applicant,
     express.raw({ type: () => true, limit: MAX_DOCUMENT_BYTES }),
     async (req: OnboardingAuthenticatedRequest, res, next) => {
-      let savedKey: string | null = null;
       try {
         const { kind } = uploadQuerySchema.parse(req.query);
         const verification = await pendingVerificationFor(req);
@@ -136,8 +147,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
         const mime = sniffDocumentMime(bytes);
         if (!mime) throw new HttpError(415, "document_type_unsupported");
 
-        const saved = await storage!.save(bytes);
-        savedKey = saved.key;
+        const saved = storage!.prepare(bytes);
         const created = await prisma.$transaction(
           async (tx) => {
             const current = await tx.driverVerification.findUnique({ where: { id: verification.id } });
@@ -159,6 +169,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
                 storage_key: saved.key
               }
             });
+            await storage!.save(tx, { driverDocumentId: row.id }, { bytes, contentType: mime, sha256: saved.sha256 });
             await auditEvent(tx, {
               userId: req.onboarding!.userId,
               action: AuditAction.driver_verification,
@@ -170,11 +181,8 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
         );
-        savedKey = null;
         res.status(201).json({ document: serializeDocument(created), request_id: req.requestId });
       } catch (error) {
-        // The row never committed, so the file must not outlive the request.
-        if (savedKey) await storage!.remove(savedKey).catch(() => undefined);
         next(isWriteConflict(error) ? new HttpError(409, "driver_verification_state_conflict") : error);
       }
     }
@@ -200,7 +208,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           metadata: { action: "driver_document_deleted", kind: document.kind, request_id: req.requestId }
         });
       });
-      await storage!.remove(document.storage_key);
+      await storage!.removeLegacyCopy(document.storage_key);
       res.json({ deleted: true, request_id: req.requestId });
     } catch (error) {
       next(error);
@@ -220,12 +228,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           where: { id: documentId, verification: { user_id: userId } }
         });
         if (!document) throw new HttpError(404, "driver_document_not_found");
-        let bytes: Buffer;
-        try {
-          bytes = await storage!.read(document.storage_key);
-        } catch {
-          throw new HttpError(404, "driver_document_not_found");
-        }
+        const bytes = await readDocument({ driverDocumentId: document.id }, document);
         await auditEvent(prisma, {
           userId: req.user!.id,
           action: AuditAction.admin_action,
@@ -289,7 +292,6 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
     ...driverSession,
     express.raw({ type: () => true, limit: MAX_DOCUMENT_BYTES }),
     async (req: AuthenticatedRequest, res, next) => {
-      let savedKey: string | null = null;
       try {
         const { kind } = uploadQuerySchema.parse(req.query);
         const verification = await expiredVerificationFor(req.user!.id);
@@ -297,8 +299,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
         if (bytes.length === 0) throw new HttpError(400, "document_empty");
         const mime = sniffDocumentMime(bytes);
         if (!mime) throw new HttpError(415, "document_type_unsupported");
-        const saved = await storage!.save(bytes);
-        savedKey = saved.key;
+        const saved = storage!.prepare(bytes);
         const created = await prisma.$transaction(
           async (tx) => {
             const current = await tx.driverVerification.findUnique({ where: { id: verification.id } });
@@ -320,6 +321,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
                 storage_key: saved.key
               }
             });
+            await storage!.save(tx, { driverDocumentId: row.id }, { bytes, contentType: mime, sha256: saved.sha256 });
             await auditEvent(tx, {
               userId: req.user!.id,
               action: AuditAction.driver_verification,
@@ -331,10 +333,8 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
         );
-        savedKey = null;
         res.status(201).json({ document: serializeDocument(created), request_id: req.requestId });
       } catch (error) {
-        if (savedKey) await storage!.remove(savedKey).catch(() => undefined);
         next(isWriteConflict(error) ? new HttpError(409, "driver_verification_state_conflict") : error);
       }
     }
@@ -357,7 +357,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           metadata: { action: "driver_renewal_document_deleted", kind: document.kind, request_id: req.requestId }
         });
       });
-      await storage!.remove(document.storage_key);
+      await storage!.removeLegacyCopy(document.storage_key);
       res.json({ deleted: true, request_id: req.requestId });
     } catch (error) {
       next(error);
@@ -446,7 +446,6 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
     applicant,
     express.raw({ type: () => true, limit: MAX_DOCUMENT_BYTES }),
     async (req: OnboardingAuthenticatedRequest, res, next) => {
-      let savedKey: string | null = null;
       try {
         const { kind } = merchantUploadQuerySchema.parse(req.query);
         const userId = pendingMerchantId(req);
@@ -457,8 +456,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
         const mime = sniffDocumentMime(bytes);
         if (!mime) throw new HttpError(415, "document_type_unsupported");
 
-        const saved = await storage!.save(bytes);
-        savedKey = saved.key;
+        const saved = storage!.prepare(bytes);
         const created = await prisma.$transaction(
           async (tx) => {
             const user = await tx.user.findUnique({ where: { id: userId }, select: { account_status: true } });
@@ -477,6 +475,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
                 storage_key: saved.key
               }
             });
+            await storage!.save(tx, { merchantDocumentId: row.id }, { bytes, contentType: mime, sha256: saved.sha256 });
             await auditEvent(tx, {
               userId,
               action: AuditAction.account_status_changed,
@@ -488,10 +487,8 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
         );
-        savedKey = null;
         res.status(201).json({ document: serializeDocument(created), request_id: req.requestId });
       } catch (error) {
-        if (savedKey) await storage!.remove(savedKey).catch(() => undefined);
         next(isWriteConflict(error) ? new HttpError(409, "driver_verification_state_conflict") : error);
       }
     }
@@ -517,7 +514,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           metadata: { action: "merchant_document_deleted", kind: document.kind, request_id: req.requestId }
         });
       });
-      await storage!.remove(document.storage_key);
+      await storage!.removeLegacyCopy(document.storage_key);
       res.json({ deleted: true, request_id: req.requestId });
     } catch (error) {
       next(error);
@@ -615,12 +612,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           where: { id: routeParam(req.params.documentId), user_id: routeParam(req.params.userId) }
         });
         if (!document) throw new HttpError(404, "driver_document_not_found");
-        let bytes: Buffer;
-        try {
-          bytes = await storage!.read(document.storage_key);
-        } catch {
-          throw new HttpError(404, "driver_document_not_found");
-        }
+        const bytes = await readDocument({ merchantDocumentId: document.id }, document);
         await auditEvent(prisma, {
           userId: req.user!.id,
           action: AuditAction.admin_action,

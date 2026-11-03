@@ -70,7 +70,7 @@ Run it once per secret and paste the result straight into the secret store, not 
 
 | Variable | When |
 | --- | --- |
-| `DRIVER_DOCUMENTS_ENABLED=true`, `DRIVER_DOCUMENTS_DIR` | Driver and merchant document uploads. Directory must be absolute. |
+| `DRIVER_DOCUMENTS_ENABLED=true` | Driver and merchant document uploads. The bytes are stored in MySQL (`document_files`). `DRIVER_DOCUMENTS_DIR` is optional and only for documents uploaded to disk before that change (absolute path). |
 | `DRIVER_DOCUMENT_RETENTION_DAYS` | Retention for the purge job (default 90). |
 | `INVITATIONS_ENABLED=true` plus `INVITATION_CODE_PEPPER`, `PHONE_DIGEST_PEPPER`, `OTP_CODE_PEPPER`, `ONBOARDING_SESSION_PEPPER`, `IDEMPOTENCY_KEY_PEPPER`, `ABUSE_KEY_PEPPER` | Admin-issued invitations. Six distinct secrets, distinct from the core three. Each has a `*_KEY_VERSION` (default 1) for rotation. |
 | `ROUTE_MAPS_ENABLED=true`, `ROUTE_PROVIDER`, `ROUTE_PROVIDER_SECRET` | Only after a map provider is approved. Otherwise `ROUTE_PROVIDER=disabled`. |
@@ -163,15 +163,9 @@ Registration stays closed until a complete consent release is active. In the Adm
 
 ## 9. Document storage (driver and merchant documents)
 
-1. Create the directory on persistent storage outside any web root and outside the nginx `root`:
-
-   ```sh
-   install -d -m 0700 -o <api-user> -g <api-user> /var/lib/darb/driver-documents
-   ```
-
-   If the API runs in Docker, the container user is `node` (uid 1000): `chown 1000:1000` the directory and bind-mount it at the same absolute path.
-2. Set `DRIVER_DOCUMENTS_ENABLED=true` and `DRIVER_DOCUMENTS_DIR=/var/lib/darb/driver-documents`.
-3. Back it up together with the database and restore both at the same point in time. A database restored without the files leaves rows whose downloads return 404.
+1. Set `DRIVER_DOCUMENTS_ENABLED=true`. Document bytes are stored in MySQL (`document_files`, at most 5 MB each), so no directory or volume is needed and the database backup covers them.
+2. Only if this server stored documents on disk before: keep `DRIVER_DOCUMENTS_DIR` pointing at the old directory (mounted at the same absolute path), deploy, then run the one-time import `node apps/api/dist/scripts/importDocumentFiles.js` (or `npm run documents:import -w @darb/api`). It copies each file into the database after checking its SHA-256 and size, skips documents already imported, never deletes the source files and prints only counts. It is safe to repeat. When it reports 0 missing and 0 mismatched, remove `DRIVER_DOCUMENTS_DIR` and archive or delete the old directory.
+3. Restore documents together with the database: they are in the same backup.
 4. Schedule the daily jobs (each is safe to repeat). Run them from host cron with the same image and env file:
 
    | Job | Command (inside `/app`) | When |
@@ -269,7 +263,7 @@ Replace nothing with real credentials in this document; use the owner's admin ac
 - [ ] Admin sign-in with the bootstrap account works; sign-out works; a wrong password is rejected.
 - [ ] Demo endpoints are absent: the demo reset route returns 404.
 - [ ] Settings shows consent onboarding `READY` after the release is active.
-- [ ] A document upload (5 MB or less) from a test applicant succeeds and appears in the Admin review, and the file exists under `DRIVER_DOCUMENTS_DIR` with mode not world-readable. (Requires an applicant account; see G2.)
+- [ ] A document upload (5 MB or less) from a test applicant succeeds, appears in the Admin review, and the Admin download returns the same file. Nothing is written to the server's disk; the bytes are in the `document_files` table. (Requires an applicant account; see G2.)
 - [ ] Email code delivery: a registration email arrives within a minute with a six-digit code on its own line and the expiry in minutes (Arabic or English by the request locale). Repeat for password reset. A wrong `SMTP_PASSWORD` must make the request answer 503 and the code must not work.
 - [ ] The APK installs, shows Arabic UI, connects to `https://darb.aynur.ps`, and the signing certificate is the release key.
 - [ ] A backup was taken and a restore rehearsal passed within the last month.

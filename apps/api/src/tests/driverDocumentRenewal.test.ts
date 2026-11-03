@@ -13,7 +13,8 @@ const prismaMock = vi.hoisted(() => ({
   notification: { create: vi.fn() },
   driverVerification: { findUnique: vi.fn(), updateMany: vi.fn() },
   driverVerificationDecision: { create: vi.fn() },
-  driverVerificationDocument: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), create: vi.fn(), delete: vi.fn() }
+  driverVerificationDocument: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), create: vi.fn(), delete: vi.fn() },
+  documentFile: { create: vi.fn(), findUnique: vi.fn() }
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
 
@@ -102,7 +103,11 @@ describe("driver document renewal", () => {
     expect(prismaMock.driverVerificationDocument.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ verification_id: "ver_1", revision: 4 })
     });
-    expect(await readdir(dir)).toHaveLength(1);
+    // The bytes are stored in the database with the row; nothing lands on disk.
+    expect(prismaMock.documentFile.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ driver_document_id: "doc_1", content_type: "image/jpeg", size_bytes: JPEG.length })
+    });
+    expect(await readdir(dir)).toHaveLength(0);
 
     prismaMock.driverVerificationDocument.count.mockResolvedValue(1);
     await request(app).post("/api/v1/driver/document-renewal/submit").set(auth()).expect(200);

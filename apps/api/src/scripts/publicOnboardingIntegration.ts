@@ -256,6 +256,19 @@ async function selfServiceChecks(admin: string, legal: Array<{ id: string; type:
   const submitted = await submitApplication(statusToken);
   check(submitted.status === 200 && submitted.body.onboarding_status === "pending_review", "complete application is submitted");
   check((await submitApplication(statusToken)).status === 200, "submission is idempotent");
+  const storedDocuments = await prisma.driverVerificationDocument.findMany({
+    where: { verification: { user_id: driver.id } },
+    include: { file: true }
+  });
+  check(
+    storedDocuments.length === 5 &&
+      storedDocuments.every((document) => document.file !== null && document.file.sha256 === document.sha256 && Buffer.from(document.file.bytes).equals(JPEG)),
+    "uploaded document bytes are stored in the database next to their documents"
+  );
+  const downloaded = await request(app)
+    .get(`/api/v1/admin/driver-verifications/${driver.id}/documents/${storedDocuments[0].id}`)
+    .set("authorization", `Bearer ${admin}`);
+  check(downloaded.status === 200 && Buffer.from(downloaded.body).equals(JPEG), "an Admin downloads the same bytes from the database");
   const queued = await request(app).get("/api/v1/admin/driver-verifications?status=pending&limit=100").set("authorization", `Bearer ${admin}`);
   check(queued.body.verifications.some((entry: { candidate: { id: string } }) => entry.candidate.id === driver.id), "a submitted driver enters the review queue");
   const approved = await request(app)

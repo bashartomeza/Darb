@@ -1,4 +1,5 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import jwt from "jsonwebtoken";
@@ -9,6 +10,7 @@ import { createConfig } from "../config.js";
 const tx = vi.hoisted(() => ({
   driverVerification: { findUnique: vi.fn() },
   driverVerificationDocument: { count: vi.fn(), create: vi.fn(), delete: vi.fn() },
+  documentFile: { create: vi.fn() },
   auditEvent: { create: vi.fn() }
 }));
 
@@ -18,8 +20,12 @@ const prismaMock = vi.hoisted(() => ({
   auditEvent: { create: vi.fn() },
   driverVerification: { findUnique: vi.fn() },
   driverVerificationDocument: { findMany: vi.fn(), findFirst: vi.fn() },
+  documentFile: { findUnique: vi.fn() },
   $transaction: vi.fn()
 }));
+
+/** Stand-in for the `document_files` table, keyed by the owning document row. */
+const storedFiles = vi.hoisted(() => new Map<string, Record<string, unknown>>());
 
 // The applicant session itself is covered by the onboarding tests; here we only
 // need to decide who the caller is.
@@ -41,6 +47,7 @@ const { storageUnderTest } = await import("../services/driverDocumentStorage.js"
 
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from("fake jpeg body")]);
 const PDF = Buffer.from("%PDF-1.7 fake");
+const sha256 = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 
 const admin = { id: "admin_1", role: "admin", name: "A", phone: "+7", demo_account: true };
 function adminAuth() {
@@ -95,6 +102,14 @@ describe("driver documents", () => {
       created_at: new Date(),
       ...data
     }));
+    storedFiles.clear();
+    tx.documentFile.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+      storedFiles.set(String(data.driver_document_id), data);
+      return data;
+    });
+    prismaMock.documentFile.findUnique.mockImplementation(
+      async ({ where }: { where: { driver_document_id: string } }) => storedFiles.get(where.driver_document_id) ?? null
+    );
     prismaMock.user.findUnique.mockResolvedValue({ ...admin, account_status: "active", security_version: 1 });
     prismaMock.authSession.findUnique.mockResolvedValue({
       id: "session_admin_1",
@@ -113,15 +128,19 @@ describe("driver documents", () => {
     await request(disabledApp).get("/api/v1/onboarding/driver-documents").expect(404);
   });
 
-  it("stores a document on disk by its real type, not the declared one", async () => {
+  it("stores a document in the database by its real type, not the declared one", async () => {
     const response = await upload(JPEG, "driver_licence", "application/pdf").expect(201);
 
     expect(response.body.document).toMatchObject({ id: "doc_1", kind: "driver_licence", mime_type: "image/jpeg", size_bytes: JPEG.length });
     const data = tx.driverVerificationDocument.create.mock.calls[0][0].data;
-    expect(data).toMatchObject({ verification_id: "ver_1", revision: 2, mime_type: "image/jpeg" });
+    expect(data).toMatchObject({ verification_id: "ver_1", revision: 2, mime_type: "image/jpeg", sha256: sha256(JPEG) });
     expect(data.storage_key).toMatch(/^[a-f0-9]{48}$/);
-    expect(await readFile(join(dir, data.storage_key))).toEqual(JPEG);
-    // The file name on disk is random and reveals nothing about the applicant.
+    // The bytes go into document_files inside the same transaction as the row, never to disk.
+    const file = storedFiles.get("doc_1")!;
+    expect(file).toMatchObject({ driver_document_id: "doc_1", content_type: "image/jpeg", size_bytes: JPEG.length, sha256: sha256(JPEG) });
+    expect(Buffer.from(file.bytes as Uint8Array)).toEqual(JPEG);
+    expect(file).not.toHaveProperty("merchant_document_id");
+    expect(await readdir(dir)).toEqual([]);
     expect(JSON.stringify(response.body)).not.toContain(data.storage_key);
   });
 
@@ -147,7 +166,7 @@ describe("driver documents", () => {
     expect(await readdir(dir)).toEqual([]);
   });
 
-  it("removes the stored file again when the revision changed or the cap was reached", async () => {
+  it("stores no bytes when the revision changed or the cap was reached", async () => {
     tx.driverVerification.findUnique.mockResolvedValue({ ...pendingVerification, revision: 3 });
     await upload(PDF).expect(409);
     expect(await readdir(dir)).toEqual([]);
@@ -156,22 +175,28 @@ describe("driver documents", () => {
     tx.driverVerificationDocument.count.mockResolvedValue(storageUnderTest.MAX_DOCUMENTS_PER_REVISION);
     await upload(PDF).expect(409);
     expect(await readdir(dir)).toEqual([]);
+    expect(tx.documentFile.create).not.toHaveBeenCalled();
   });
 
   it("refuses bodies over the size limit", async () => {
     const big = Buffer.concat([JPEG, Buffer.alloc(storageUnderTest.MAX_DOCUMENT_BYTES)]);
     await upload(big).expect(413);
     expect(await readdir(dir)).toEqual([]);
+    expect(tx.documentFile.create).not.toHaveBeenCalled();
   });
 
-  it("lets the applicant delete their own document and removes the file", async () => {
+  it("lets the applicant delete their own document, its bytes and any older disk copy", async () => {
     await upload(JPEG).expect(201);
     const key = tx.driverVerificationDocument.create.mock.calls[0][0].data.storage_key;
     prismaMock.driverVerificationDocument.findFirst.mockResolvedValue({ id: "doc_1", kind: "driver_licence", storage_key: key });
+    // A copy left on disk from before the bytes moved into the database.
+    await writeFile(join(dir, key), JPEG);
 
     await request(app).delete("/api/v1/onboarding/driver-documents/doc_1").expect(200);
 
     expect(prismaMock.driverVerificationDocument.findFirst.mock.calls[0][0].where).toEqual({ id: "doc_1", verification_id: "ver_1", revision: 2 });
+    // Deleting the row removes its document_files row by ON DELETE CASCADE.
+    expect(tx.driverVerificationDocument.delete).toHaveBeenCalledWith({ where: { id: "doc_1" } });
     expect(await readdir(dir)).toEqual([]);
 
     prismaMock.driverVerificationDocument.findFirst.mockResolvedValue(null);
@@ -182,7 +207,7 @@ describe("driver documents", () => {
     await upload(PDF).expect(201);
     const key = tx.driverVerificationDocument.create.mock.calls[0][0].data.storage_key;
     prismaMock.driverVerificationDocument.findFirst.mockResolvedValue({
-      id: "doc_1", verification_id: "ver_1", kind: "driver_licence", mime_type: "application/pdf", storage_key: key
+      id: "doc_1", verification_id: "ver_1", kind: "driver_licence", mime_type: "application/pdf", storage_key: key, sha256: sha256(PDF)
     });
 
     await request(app).get("/api/v1/admin/driver-verifications/drv_user/documents/doc_1").expect(401);
@@ -191,9 +216,36 @@ describe("driver documents", () => {
     expect(response.headers["content-disposition"]).toBe('attachment; filename="doc_1.pdf"');
     expect(response.headers["x-content-type-options"]).toBe("nosniff");
     expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers["content-type"]).toBe("application/pdf");
+    expect(response.headers["content-length"]).toBe(String(PDF.length));
     expect(Buffer.from(response.body)).toEqual(PDF);
+    expect(prismaMock.documentFile.findUnique.mock.calls[0][0].where).toEqual({ driver_document_id: "doc_1" });
     expect(prismaMock.driverVerificationDocument.findFirst.mock.calls[0][0].where).toEqual({ id: "doc_1", verification: { user_id: "drv_user" } });
     expect(prismaMock.auditEvent.create.mock.calls.at(-1)?.[0].data.metadata).toMatchObject({ action: "driver_document_viewed", document_id: "doc_1" });
+  });
+
+  it("still serves a document uploaded before the move from the old directory", async () => {
+    const key = "c".repeat(48);
+    await writeFile(join(dir, key), PDF);
+    prismaMock.driverVerificationDocument.findFirst.mockResolvedValue({
+      id: "doc_old", verification_id: "ver_1", kind: "driver_licence", mime_type: "application/pdf", storage_key: key, sha256: sha256(PDF)
+    });
+
+    const response = await request(app).get("/api/v1/admin/driver-verifications/drv_user/documents/doc_old").set(adminAuth()).expect(200);
+    expect(Buffer.from(response.body)).toEqual(PDF);
+    expect(response.headers["content-disposition"]).toBe('attachment; filename="doc_old.pdf"');
+  });
+
+  it("refuses bytes that no longer match their digest and answers 404 when there are none", async () => {
+    storedFiles.set("doc_1", { bytes: new Uint8Array(PDF) });
+    prismaMock.driverVerificationDocument.findFirst.mockResolvedValue({
+      id: "doc_1", verification_id: "ver_1", kind: "driver_licence", mime_type: "application/pdf", storage_key: "d".repeat(48), sha256: sha256(JPEG)
+    });
+    await request(app).get("/api/v1/admin/driver-verifications/drv_user/documents/doc_1").set(adminAuth()).expect(500);
+
+    storedFiles.clear();
+    await request(app).get("/api/v1/admin/driver-verifications/drv_user/documents/doc_1").set(adminAuth()).expect(404);
+    expect(prismaMock.auditEvent.create.mock.calls.map(([call]) => call.data.metadata?.action)).not.toContain("driver_document_viewed");
   });
 });
 
@@ -207,36 +259,72 @@ describe("driver document storage", () => {
     expect(sniffDocumentMime(Buffer.from("<svg onload=alert(1)>"))).toBeNull();
   });
 
-  it("refuses keys that could escape the storage directory", async () => {
+  it("refuses keys that could escape the old storage directory", async () => {
+    const { createDocumentStorage, legacyDocumentPath } = await import("../services/driverDocumentStorage.js");
+    const db = { documentFile: { findUnique: vi.fn().mockResolvedValue(null) } };
+    const storage = createDocumentStorage(db as never, { legacyDir: tmpdir() });
+    expect(() => legacyDocumentPath(tmpdir(), "../secret")).toThrow("invalid_storage_key");
+    await expect(storage.read({ driverDocumentId: "d1" }, { storage_key: "../secret", sha256: "0".repeat(64) })).rejects.toThrow("invalid_storage_key");
+    await expect(storage.removeLegacyCopy("../secret")).rejects.toThrow("invalid_storage_key");
+  });
+
+  it("keeps everything in the database when no old directory is configured", async () => {
     const { createDocumentStorage } = await import("../services/driverDocumentStorage.js");
-    const storage = createDocumentStorage(tmpdir());
-    await expect(storage.read("../secret")).rejects.toThrow("invalid_storage_key");
-    await expect(storage.remove("../secret")).rejects.toThrow("invalid_storage_key");
+    const rows: Record<string, unknown>[] = [];
+    const db = {
+      documentFile: {
+        create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => void rows.push(data)),
+        findUnique: vi.fn(async ({ where }: { where: { merchant_document_id?: string } }) =>
+          rows.find((row) => row.merchant_document_id === where.merchant_document_id) ?? null
+        )
+      }
+    };
+    const storage = createDocumentStorage(db as never);
+    const saved = storage.prepare(JPEG);
+    expect(saved.sha256).toBe(sha256(JPEG));
+    await storage.save(db as never, { merchantDocumentId: "m1" }, { bytes: JPEG, contentType: "image/jpeg", sha256: saved.sha256 });
+    expect(rows[0]).toMatchObject({ merchant_document_id: "m1", content_type: "image/jpeg", size_bytes: JPEG.length, sha256: saved.sha256 });
+    expect(rows[0]).not.toHaveProperty("driver_document_id");
+
+    expect(await storage.read({ merchantDocumentId: "m1" }, { storage_key: saved.key, sha256: saved.sha256 })).toEqual(JPEG);
+    await expect(storage.read({ merchantDocumentId: "m2" }, { storage_key: saved.key, sha256: saved.sha256 })).rejects.toThrow("document_file_missing");
+    await expect(storage.removeLegacyCopy(saved.key)).resolves.toBeUndefined();
   });
 });
 
 describe("driver document retention", () => {
-  it("purges only documents of decided applications past the window, file first then row", async () => {
+  it("purges only documents of decided applications past the window, row and bytes in one transaction", async () => {
     const { purgeDecidedDriverDocuments } = await import("../services/driverDocumentRetention.js");
     const removed: string[] = [];
+    const steps: string[] = [];
     const db = {
       driverVerificationDocument: {
         findMany: vi.fn().mockResolvedValue([{ id: "d1", verification_id: "v1", kind: "national_id", storage_key: "a".repeat(48) }]),
-        delete: vi.fn()
+        delete: vi.fn(async () => void steps.push("delete d1"))
       },
       merchantApplicationDocument: {
         findMany: vi.fn().mockResolvedValue([{ id: "m1", user_id: "u1", kind: "shop_photo", storage_key: "b".repeat(48) }]),
-        delete: vi.fn()
+        delete: vi.fn(async () => void steps.push("delete m1"))
       },
       auditEvent: { create: vi.fn() },
       $transaction: vi.fn(async (callback: (client: unknown) => unknown) => callback(db))
     };
     const now = new Date("2026-12-01T00:00:00Z");
 
-    const result = await purgeDecidedDriverDocuments(db as never, { save: vi.fn(), read: vi.fn(), remove: async (key: string) => void removed.push(key) }, { retentionDays: 90, now });
+    const storage = {
+      removeLegacyCopy: async (key: string) => {
+        removed.push(key);
+        steps.push(`legacy ${key[0]}`);
+      }
+    };
+    const result = await purgeDecidedDriverDocuments(db as never, storage, { retentionDays: 90, now });
 
     expect(result).toEqual({ purged: 2 });
     expect(removed).toEqual(["a".repeat(48), "b".repeat(48)]);
+    // The row (and with it the document_files bytes) goes first, in a transaction with its audit event.
+    expect(steps).toEqual(["delete d1", "legacy a", "delete m1", "legacy b"]);
+    expect(db.$transaction).toHaveBeenCalledTimes(2);
+    expect(db.auditEvent.create).toHaveBeenCalledTimes(2);
     expect(db.merchantApplicationDocument.findMany.mock.calls[0][0].where).toEqual({
       user: { account_status: { not: "pending" }, status_updated_at: { lt: new Date("2026-09-02T00:00:00Z") } }
     });

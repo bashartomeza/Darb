@@ -64,11 +64,11 @@ server { listen 80; server_name darb.aynur.ps; return 301 https://$host$request_
 
 `X-Forwarded-For` is overwritten with `$remote_addr` so a client cannot spoof its address into the API's rate limits.
 
-## Driver documents on server storage
+## Driver documents
 
-1. Create a directory on persistent storage, outside the proxy's `root`, for example `/var/lib/darb/driver-documents`, owned by the API user with mode `0700`.
-2. Mount it into the API container at the same absolute path and set `DRIVER_DOCUMENTS_ENABLED=true` and `DRIVER_DOCUMENTS_DIR=/var/lib/darb/driver-documents`.
-3. Include the directory in the same backup job as the database; restore both together. A database restored without its files leaves rows that point at missing files (downloads return 404).
+1. Set `DRIVER_DOCUMENTS_ENABLED=true`. Document bytes are stored in MySQL (`document_files`), so no directory or volume is needed and the database backup covers them.
+2. Only if this server stored documents on disk before: keep the old directory mounted at the same absolute path with `DRIVER_DOCUMENTS_DIR` set, deploy, then run once `docker compose run --rm api node dist/scripts/importDocumentFiles.js`. It copies the files into the database after checking each SHA-256, skips documents already imported, never deletes the source files and prints only counts. It is safe to repeat. When it reports 0 missing and 0 mismatched, remove `DRIVER_DOCUMENTS_DIR` and the mount.
+3. Restore documents together with the database: they are in the same backup.
 4. Schedule the retention purge daily, for example from cron on the host: `docker compose run --rm api node dist/scripts/purgeDriverDocuments.js` (or the equivalent for the platform). It is safe to repeat.
 5. Schedule the document-expiry check daily (early UTC morning is fine), for example `docker compose run --rm api node dist/scripts/checkDriverDocumentExpiry.js`. It sends the 30 and 7 day reminders and restricts drivers whose recorded documents ran out. It is idempotent; if a day is missed the next run catches up. Without this job, expiry dates are recorded but nothing is enforced.
 

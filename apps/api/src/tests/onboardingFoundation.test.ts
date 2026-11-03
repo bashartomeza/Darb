@@ -198,10 +198,13 @@ describe("onboarding configuration isolation", () => {
       PUBLIC_ONBOARDING_ENABLED: "true",
       OTP_PROVIDER: "fake",
       DRIVER_DOCUMENTS_ENABLED: "true",
-      DRIVER_DOCUMENTS_DIR: process.cwd(),
       ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: "true",
       ...withoutInvitationPepper
     });
+    // Document bytes live in MySQL: no storage directory is needed.
+    expect(parsed.driverDocuments).toEqual({ legacyDir: undefined, retentionDays: 90 });
+    expect(localConfig({ DRIVER_DOCUMENTS_ENABLED: "true", DRIVER_DOCUMENTS_DIR: process.cwd() }).driverDocuments?.legacyDir).toBe(process.cwd());
+    expect(() => localConfig({ DRIVER_DOCUMENTS_ENABLED: "true", DRIVER_DOCUMENTS_DIR: "relative/dir" })).toThrow(/DRIVER_DOCUMENTS_DIR must be an absolute path/);
     expect(parsed.invitationsEnabled).toBe(false);
     expect(parsed.onboarding).toBeDefined();
     expect(parsed.publicRegistration).toEqual(expect.objectContaining({

@@ -17,6 +17,7 @@
     "admin:create": "node dist/scripts/createAdmin.js",
     "admin:list": "node dist/scripts/listAdmins.js",
     "documents:purge": "node dist/scripts/purgeDriverDocuments.js",
+    "documents:import": "node dist/scripts/importDocumentFiles.js",
     "parcels:purge-receivers": "node dist/scripts/purgePassengerParcelReceivers.js",
     "documents:expiry": "node dist/scripts/checkDriverDocumentExpiry.js",
     "trust:recompute": "node dist/scripts/recomputeDriverTrust.js",
