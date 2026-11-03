@@ -13,11 +13,36 @@ export const prohibitedPathRules = [
   ["build cache", /(^|\/)(?:node_modules|dist|build|\.dart_tool|\.gradle)(\/|$)/i]
 ];
 
+// Hard-coded passwords are only checked in shipped TypeScript sources. Tests,
+// fixtures, example files, translation tables (which hold the word "password"
+// as a label) and the disposable-database integration harnesses in
+// src/scripts/*Integration.ts legitimately carry synthetic values.
+const sourceTypeScript = /(^|\/)src\/.+\.(?:ts|tsx|mts|cts)$/i;
+const nonProductionSource = new RegExp([
+  String.raw`(^|\/)(?:tests?|__tests__|fixtures?|__fixtures__|__mocks__|i18n|locales?)\/`,
+  String.raw`\.(?:test|spec)\.[cm]?tsx?$`,
+  String.raw`\.example(?:\.|$)`,
+  String.raw`(^|\/)translations?\.[cm]?tsx?$`,
+  String.raw`(^|\/)src\/scripts\/\w+Integration(?:Safety)?\.ts$`
+].join("|"), "i");
+const outsideShippedSource = (path) => !sourceTypeScript.test(path) || nonProductionSource.test(path);
+
 const contentRules = [
   ["checkpoint partner credential", /\bar_partner_[A-Za-z0-9_]{20,}\b/],
   ["private key header", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],
   ["GitHub token", /\bgh[pousr]_[A-Za-z0-9_]{30,}\b/],
   ["AWS access key", /\bAKIA[0-9A-Z]{16}\b/],
+  ["Gemini API key", /\bAIza[0-9A-Za-z_-]{35}(?![0-9A-Za-z_-])/],
+  ["Groq API key", /\bgsk_[0-9A-Za-z]{20,}/],
+  // OpenAI issues no "sk-test-" keys, so that prefix is left for test doubles.
+  ["OpenAI API key", /\bsk-(?!test[-_])[A-Za-z0-9_-]{20,}/],
+  // A password-named key or variable assigned a non-empty string literal, such
+  // as PASSWORD = "..." or password: "...". Comparisons, arrow functions, env
+  // lookups, interpolated templates, <placeholder> values and names marked as
+  // dummy/fake/example values are not flagged.
+  ["hard-coded password",
+    /\b(?!(?:dummy|fake|example|placeholder|sample)_?)\w*password\s*(?::|=(?![=>]))\s*(["'`])(?!<[^"'`]*>\1)(?!\$\{)[^"'`\s]+\1/i,
+    outsideShippedSource],
   ["credentialed database URL", /mysql:\/\/[^<\s:"']+:[^<\s@"']+@/i,
     (path) => /(^|\/)(?:apps\/api\/src\/tests\/|apps\/api\/vitest\.config\.ts$|\.github\/workflows\/ci-backend\.yml$)/i.test(path)]
 ];
