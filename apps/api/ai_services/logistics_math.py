@@ -303,7 +303,7 @@ MINISTRY_BASE_FARES: dict[str, float] = {
     "jenin_to_ramallah": 40.0,
 }
 ROUTE_ALIASES: dict[str, str] = {
-    # canonical Masari corridor key -> tariff key
+    # canonical Darb corridor key -> tariff key
     "hebron_ppu_bab_al_zawiya_to_bethlehem": "hebron_to_bethlehem",
 }
 COMPENSATION_PER_MINUTE_MULTIPLIER = 0.50

@@ -1,5 +1,5 @@
 # Internal AI service (never exposed publicly; only the Node API calls it).
-# Build context: apps/api   ->   docker build -t masari-ai-services -f ai_services/Dockerfile .
+# Build context: apps/api   ->   docker build -t darb-ai-services -f ai_services/Dockerfile .
 FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /srv

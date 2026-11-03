@@ -897,8 +897,27 @@ void main() {
       );
     });
 
-    testWidgets('rating needs a star and is remembered', (tester) async {
-      await openSettings(tester);
+    testWidgets('rating needs a star and is saved on the server', (
+      tester,
+    ) async {
+      Map<String, dynamic>? sent;
+      SharedPreferences.setMockInitialValues({'passenger_app_rating': 2});
+      await openSettings(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/me/app-rating')) {
+            if (request.method == 'PUT') {
+              sent = jsonDecode(request.body) as Map<String, dynamic>;
+              return http.Response(
+                '{"rating":{"stars":4,"feedback":"Works well","updated_at":"2026-11-03T10:00:00.000Z"}}',
+                200,
+              );
+            }
+            return http.Response('{"rating":null}', 200);
+          }
+          return _passengerHandler(request);
+        },
+      );
       await tapRow(tester, 'settingsRate');
 
       FilledButton submit() => tester.widget<FilledButton>(
@@ -917,9 +936,38 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('ratingThanks')), findsOneWidget);
+      expect(sent, {'stars': 4, 'feedback': 'Works well'});
+      // Nothing about the rating stays on the phone.
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getInt('passenger_app_rating'), 4);
-      expect(prefs.getString('passenger_app_rating_feedback'), 'Works well');
+      expect(prefs.getInt('passenger_app_rating'), isNull);
+    });
+
+    testWidgets('rating sheet shows the saved rating and a failed save', (
+      tester,
+    ) async {
+      await openSettings(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/me/app-rating')) {
+            return request.method == 'PUT'
+                ? http.Response('{"error":"internal_error"}', 500)
+                : http.Response(
+                    '{"rating":{"stars":3,"feedback":"Okay","updated_at":"2026-11-03T10:00:00.000Z"}}',
+                    200,
+                  );
+          }
+          return _passengerHandler(request);
+        },
+      );
+      await tapRow(tester, 'settingsRate');
+
+      expect(find.byIcon(Icons.star_rounded), findsNWidgets(3));
+      expect(find.text('Okay'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('ratingSubmit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('ratingError')), findsOneWidget);
+      expect(find.byKey(const ValueKey('ratingThanks')), findsNothing);
     });
 
     testWidgets('help opens with questions and the assistant', (tester) async {

@@ -131,7 +131,7 @@ def http_post(url: str, headers: Mapping[str, str], body: bytes,
 
 
 def http_get(url: str, timeout: float = 8.0) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": "masari-ai-services/1"})
+    request = urllib.request.Request(url, headers={"User-Agent": "darb-ai-services/1"})
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
             return response.read()

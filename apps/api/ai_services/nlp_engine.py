@@ -245,7 +245,7 @@ def _sniff_audio(data: bytes) -> str | None:
 
 
 def _multipart(fields: dict[str, str], filename: str, content_type: str, data: bytes) -> tuple[bytes, str]:
-    boundary = f"----masari{uuid.uuid4().hex}"
+    boundary = f"----darb{uuid.uuid4().hex}"
     parts: list[bytes] = []
     for name, value in fields.items():
         parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode())

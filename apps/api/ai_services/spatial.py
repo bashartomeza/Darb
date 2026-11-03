@@ -173,7 +173,7 @@ class LandmarkProvider:
         self._refreshing = False
         self._fetch = fetch or http_get
         default = Path(os.environ.get("AI_SERVICES_LANDMARK_CACHE", "")) if os.environ.get(
-            "AI_SERVICES_LANDMARK_CACHE") else Path(os.environ.get("TMPDIR", "/tmp")) / "masari_landmarks.json"
+            "AI_SERVICES_LANDMARK_CACHE") else Path(os.environ.get("TMPDIR", "/tmp")) / "darb_landmarks.json"
         self._cache_path = Path(cache_path) if cache_path else default
         self._clock = clock
         self._lock = threading.Lock()

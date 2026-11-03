@@ -1,4 +1,4 @@
-# ai_services - Masari dispatch AI (Python)
+# ai_services - Darb dispatch AI (Python)
 
 Internal compute service. The Node API (`apps/api/src`) owns auth, the database,
 PII redaction and the place catalog; this package owns NLP, logistics math,

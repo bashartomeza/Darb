@@ -615,6 +615,40 @@ authRouter.patch("/me", requireAuth, async (req: AuthenticatedRequest, res, next
   }
 });
 
+// The app rating from Settings: one per account, replaced when the user rates again.
+const appRatingSchema = z.strictObject({
+  stars: z.number().int().min(1).max(5),
+  feedback: z.string().trim().max(500).nullable().optional()
+});
+
+function publicAppRating(rating: { stars: number; feedback: string | null; updated_at: Date } | null) {
+  return rating ? { stars: rating.stars, feedback: rating.feedback, updated_at: rating.updated_at.toISOString() } : null;
+}
+
+authRouter.get("/me/app-rating", requireAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const rating = await prisma.appRating.findUnique({ where: { user_id: req.user!.id } });
+    res.json({ rating: publicAppRating(rating) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.put("/me/app-rating", requireAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const input = appRatingSchema.parse(req.body);
+    const data = { stars: input.stars, feedback: input.feedback || null };
+    const rating = await prisma.appRating.upsert({
+      where: { user_id: req.user!.id },
+      create: { user_id: req.user!.id, ...data },
+      update: data
+    });
+    res.json({ rating: publicAppRating(rating) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 authRouter.get("/auth/sessions", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const sessions = await prisma.authSession.findMany({

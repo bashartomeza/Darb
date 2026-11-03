@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/locale_controller.dart';
 import '../../../../core/theme/passenger_theme.dart';
+import '../../../app_rating/data/app_rating_repository.dart';
 import '../../../auth/presentation/auth_completion_screen.dart' show authText;
 
-/// Where the rating is kept. The API has no endpoint for app ratings, so the
-/// passenger's last rating and note are stored on the device only.
-const ratingStorageKey = 'passenger_app_rating';
-const ratingFeedbackStorageKey = 'passenger_app_rating_feedback';
+/// Keys an earlier build used to keep the rating on the phone only. The rating
+/// now lives in the database; these are removed when the sheet opens.
+const retiredRatingStorageKeys = [
+  'passenger_app_rating',
+  'passenger_app_rating_feedback',
+];
 
 Future<void> showRateAppSheet(BuildContext context) =>
     showModalBottomSheet<void>(
@@ -31,6 +34,7 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
   int _rating = 0;
   bool _saving = false;
   bool _thanked = false;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -38,13 +42,27 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
     _restore();
   }
 
+  /// Shows the rating saved on the server, if any. A failed read just leaves
+  /// the form empty: the user can still rate.
   Future<void> _restore() async {
-    final prefs = await ref.read(sharedPreferencesProvider.future);
-    if (!mounted) return;
-    setState(() {
-      _rating = prefs.getInt(ratingStorageKey) ?? 0;
-      _feedback.text = prefs.getString(ratingFeedbackStorageKey) ?? '';
-    });
+    try {
+      final prefs = await ref.read(sharedPreferencesProvider.future);
+      for (final key in retiredRatingStorageKeys) {
+        await prefs.remove(key);
+      }
+    } catch (_) {
+      // Nothing to clean, or storage unavailable.
+    }
+    try {
+      final saved = await ref.read(appRatingRepositoryProvider).fetch();
+      if (!mounted || saved == null || _rating != 0) return;
+      setState(() {
+        _rating = saved.stars;
+        _feedback.text = saved.feedback ?? '';
+      });
+    } catch (_) {
+      // Leave the form empty.
+    }
   }
 
   @override
@@ -55,15 +73,19 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
 
   Future<void> _submit() async {
     if (_rating == 0 || _saving) return;
-    setState(() => _saving = true);
-    final prefs = await ref.read(sharedPreferencesProvider.future);
-    await prefs.setInt(ratingStorageKey, _rating);
-    await prefs.setString(ratingFeedbackStorageKey, _feedback.text.trim());
-    if (mounted) {
-      setState(() {
-        _saving = false;
-        _thanked = true;
-      });
+    setState(() {
+      _saving = true;
+      _failed = false;
+    });
+    try {
+      await ref
+          .read(appRatingRepositoryProvider)
+          .save(stars: _rating, feedback: _feedback.text.trim());
+      if (mounted) setState(() => _thanked = true);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -101,8 +123,8 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
         Text(
           authText(
             context,
-            'Your feedback helps us improve Masari.',
-            'ملاحظاتك تساعدنا على تحسين مسار.',
+            'Your feedback helps us improve Darb.',
+            'ملاحظاتك تساعدنا على تحسين درب.',
           ),
           textAlign: TextAlign.center,
           style: PassengerStyle.cardBody,
@@ -130,8 +152,8 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
         Text(
           authText(
             context,
-            'How is your experience with Masari?',
-            'كيف تجد تجربتك مع مسار؟',
+            'How is your experience with Darb?',
+            'كيف تجد تجربتك مع درب؟',
           ),
           textAlign: TextAlign.center,
           style: PassengerStyle.cardBody,
@@ -174,6 +196,18 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
             ),
           ),
         ),
+        if (_failed) ...[
+          Text(
+            authText(
+              context,
+              'Your rating could not be sent. Check your connection and try again.',
+              'تعذّر إرسال تقييمك. تحقّق من الاتصال وحاول مرة أخرى.',
+            ),
+            key: const ValueKey('ratingError'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
         const SizedBox(height: 8),
         FilledButton(
           key: const ValueKey('ratingSubmit'),

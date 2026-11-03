@@ -75,7 +75,7 @@ def handle_request(method: str, path: str, headers: Mapping[str, str], body: byt
 
 
 class handler(BaseHTTPRequestHandler):
-    server_version = "masari-ai/1"
+    server_version = "darb-ai/1"
 
     def _serve(self, method: str) -> None:
         declared = int(self.headers.get("Content-Length") or 0)
