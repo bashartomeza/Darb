@@ -1,6 +1,10 @@
 import { createConfig } from "../config.js";
 import { prisma } from "../lib/prisma.js";
 import { DEMO_ACCOUNTS, resetDemoData } from "../modules/demoReset.js";
+import {
+  releaseLegacyCapacity,
+  reserveLegacyCapacity,
+} from "../services/legacyCapacity.js";
 import { createLegacyDriverOnlineStateService } from "../services/legacyDriverOnlineState.js";
 
 const databaseName = new URL(process.env.DATABASE_URL!).pathname.slice(1);
@@ -127,6 +131,33 @@ try {
       },
     })) === 1,
     "one online audit transition",
+  );
+  const onlineRoute = await prisma.driverRoute.findUniqueOrThrow({
+    where: { id: routeId },
+    select: { seats_available: true, parcel_capacity_available: true },
+  });
+  check(
+    onlineRoute.seats_available === driverA.driver_profile!.seats_total &&
+      onlineRoute.parcel_capacity_available ===
+        driverA.driver_profile!.parcel_capacity &&
+      onlineRoute.parcel_capacity_available > 0,
+    "going online offers the vehicle's seats and parcel space",
+  );
+  await prisma.$transaction((tx) =>
+    reserveLegacyCapacity(tx, { driverRouteId: routeId, seats: 0, parcelUnits: 1 }),
+  );
+  check(
+    (
+      await prisma.driverRoute.findUniqueOrThrow({
+        where: { id: routeId },
+        select: { parcel_capacity_available: true },
+      })
+    ).parcel_capacity_available ===
+      onlineRoute.parcel_capacity_available - 1,
+    "a parcel can be reserved on a route opened by going online",
+  );
+  await prisma.$transaction((tx) =>
+    releaseLegacyCapacity(tx, { driverRouteId: routeId, seats: 0, parcelUnits: 1 }),
   );
   const onlineReplay = await service.setState(
     { online: true },
