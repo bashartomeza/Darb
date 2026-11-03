@@ -18,6 +18,7 @@ import '../../checkpoints/application/checkpoint_controller.dart';
 import '../../community_reports/application/community_reports_controller.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
 import '../application/passenger_trip_controller.dart';
+import 'driver_call_card.dart';
 import 'trip_rating_prompt.dart';
 
 class PassengerTripScreen extends ConsumerStatefulWidget {
@@ -551,6 +552,19 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                           value: data.trip.dropoffDetails!,
                         ),
                     ],
+                  ),
+                ],
+
+                // ==================================================
+                // DRIVER PHONE (only while the accepted trip runs)
+                // ==================================================
+                if (data.trip.driverPhone case final phone?) ...[
+                  const SizedBox(height: 10),
+                  DriverCallCard(
+                    phone: phone,
+                    accent: _orange,
+                    background: _background,
+                    border: _line,
                   ),
                 ],
 

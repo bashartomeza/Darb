@@ -425,10 +425,33 @@ describe("matching, batching, comparison", () => {
         licence_number: "LIC-5551234",
         trust_components: { completion_rate: 0.9 },
         trust_computed_at: new Date("2026-07-01T00:00:00.000Z"),
-        created_at: new Date("2026-01-01T00:00:00.000Z")
+        created_at: new Date("2026-01-01T00:00:00.000Z"),
+        // Even if a query ever loads the driver's numbers, an offer is not yet a ride.
+        user: { name: "Driver One", phone: "+970599000111", contact_phone: "0599222333" }
       }
     };
     const publicDriver = { name: "Driver One", vehicle_type: "sedan", verified: true, trust_score: 86 };
+    const driverPhones = /\+970599000111|0599222333/;
+
+    it("search results never carry the driver's phone", async () => {
+      const response = await request(createApp())
+        .post("/api/v1/matches/search")
+        .set(auth("passenger_1"))
+        .send({
+          pickup_label: "PPU Main Gate",
+          pickup_lat: 31.55,
+          pickup_lng: 35.1,
+          destination_label: "Bethlehem Center",
+          destination_lat: 31.7054,
+          destination_lng: 35.2024,
+          preferred_time: new Date(Date.now() + 3_600_000).toISOString(),
+          passenger_count: 1
+        })
+        .expect(200);
+
+      expect(response.body.results[0].driver).toEqual(publicDriver);
+      expect(JSON.stringify(response.body)).not.toMatch(driverPhones);
+    });
 
     beforeEach(() => {
       prismaMock.driverRoute.findMany.mockResolvedValue([profiledRoute]);
@@ -447,6 +470,7 @@ describe("matching, batching, comparison", () => {
 
       expect(response.body.match.driver_route.driver).toEqual(publicDriver);
       expect(JSON.stringify(response.body)).not.toMatch(/900000001|LIC-5551234|driver_user_1|trust_components|1-2345-67/);
+      expect(JSON.stringify(response.body)).not.toMatch(driverPhones);
     });
 
     it("gives the merchant only the public driver", async () => {
@@ -461,6 +485,7 @@ describe("matching, batching, comparison", () => {
 
       expect(response.body.match.driver_route.driver).toEqual(publicDriver);
       expect(JSON.stringify(response.body)).not.toMatch(/900000001|LIC-5551234|driver_user_1|trust_components|1-2345-67/);
+      expect(JSON.stringify(response.body)).not.toMatch(driverPhones);
     });
 
     it("still offers the match to the driver behind the public view", async () => {

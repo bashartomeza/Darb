@@ -5761,6 +5761,24 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مسار الطلب'**
   String get merchantOrderMapTitle;
+
+  /// No description provided for @driverPhoneLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'هاتف السائق'**
+  String get driverPhoneLabel;
+
+  /// No description provided for @callDriver.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتصل بالسائق'**
+  String get callDriver;
+
+  /// No description provided for @callDriverUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر.'**
+  String get callDriverUnavailable;
 }
 
 class _AppLocalizationsDelegate

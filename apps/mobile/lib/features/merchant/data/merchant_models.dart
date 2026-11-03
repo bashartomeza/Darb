@@ -490,6 +490,7 @@ class MerchantTrip {
     required this.route,
     required this.order,
     required this.batch,
+    this.driverPhone,
   });
 
   final String id;
@@ -498,6 +499,9 @@ class MerchantTrip {
   final MerchantRouteSummary route;
   final MerchantOrder order;
   final MerchantBatch? batch;
+
+  /// The driver's phone, sent only from the driver's acceptance until drop-off.
+  final String? driverPhone;
 
   bool get isActive =>
       status != 'completed' && status != 'cancelled' && status != 'failed';
@@ -524,6 +528,7 @@ class MerchantTrip {
       batch: batch is Map<String, dynamic>
           ? MerchantBatch.fromJson(batch)
           : null,
+      driverPhone: tripDriverPhone(json),
     );
   }
 }

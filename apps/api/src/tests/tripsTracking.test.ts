@@ -350,8 +350,8 @@ describe("trip acceptance, status, and tracking", () => {
 
   describe("driver data on a trip", () => {
     // The full DriverProfile row as the database returns it.
-    function profiledTrip() {
-      const trip = baseTrip();
+    function profiledTrip(status = "accepted", user: Record<string, string | null> = { name: "Driver 1" }) {
+      const trip = baseTrip(status);
       return {
         ...trip,
         driver_route: {
@@ -371,7 +371,7 @@ describe("trip acceptance, status, and tracking", () => {
             trust_components: { completion_rate: 0.9 },
             trust_computed_at: new Date("2026-07-01T00:00:00.000Z"),
             created_at: new Date("2026-01-01T00:00:00.000Z"),
-            user: { name: "Driver 1" }
+            user
           }
         }
       };
@@ -383,8 +383,82 @@ describe("trip acceptance, status, and tracking", () => {
       trust_score: 86,
       vehicle_make_model: "Kia Picanto",
       vehicle_color: "White",
-      plate_number: "1-2345-67"
+      plate_number: "1-2345-67",
+      phone: null
     };
+    const VERIFIED = "+970599000111";
+    const CONTACT = "0599222333";
+    const phones = { name: "Driver 1", phone: VERIFIED, contact_phone: CONTACT };
+    const riders = ["passenger_1", "merchant_1"] as const;
+
+    async function driverSeenBy(viewer: keyof typeof users, status: string, user: Record<string, string | null> = phones) {
+      prismaMock.trip.findUnique.mockResolvedValue(profiledTrip(status, user));
+      const response = await request(createApp()).get("/api/v1/trips/trip_1").set(auth(viewer)).expect(200);
+      return { driver: response.body.trip.driver_route.driver, body: JSON.stringify(response.body) };
+    }
+
+    describe("driver phone for the rider", () => {
+      it.each(riders.flatMap((viewer) => ["accepted", "pickup_started", "picked_up", "in_transit"].map((status) => [viewer, status])))(
+        "%s gets the verified phone while the trip is %s",
+        async (viewer, status) => {
+          const { driver, body } = await driverSeenBy(viewer as keyof typeof users, status);
+
+          expect(driver.phone).toBe(VERIFIED);
+          expect(body).not.toContain(CONTACT);
+        }
+      );
+
+      it.each(riders)("%s gets the contact number when the driver has no verified phone", async (viewer) => {
+        const { driver } = await driverSeenBy(viewer, "in_transit", { name: "Driver 1", phone: null, contact_phone: CONTACT });
+
+        expect(driver.phone).toBe(CONTACT);
+      });
+
+      it.each(riders)("%s gets null when the driver has no number at all", async (viewer) => {
+        const { driver } = await driverSeenBy(viewer, "accepted", { name: "Driver 1", phone: null, contact_phone: null });
+
+        expect(driver).toEqual(assignedDriver);
+      });
+
+      it.each(riders.flatMap((viewer) => ["created", "delivered", "completed", "cancelled", "failed"].map((status) => [viewer, status])))(
+        "%s gets no phone when the trip is %s",
+        async (viewer, status) => {
+          const { driver, body } = await driverSeenBy(viewer as keyof typeof users, status);
+
+          expect(driver).toEqual(assignedDriver);
+          expect(body).not.toMatch(/\+970599000111|0599222333/);
+        }
+      );
+
+      it("the passenger who sent a parcel on the trip gets the phone too", async () => {
+        const trip = profiledTrip("picked_up", phones);
+        prismaMock.trip.findUnique.mockResolvedValue({
+          ...trip,
+          passenger_request_id: null,
+          passenger_request: null,
+          merchant_order: { ...trip.merchant_order, merchant_id: "passenger_2" }
+        });
+
+        const response = await request(createApp()).get("/api/v1/trips/trip_1").set(auth("passenger_2")).expect(200);
+
+        expect(response.body.trip.driver_route.driver.phone).toBe(VERIFIED);
+      });
+
+      it.each(["passenger_2", "merchant_2", "driver_2"] as const)("%s, not on the trip, gets nothing", async (viewer) => {
+        prismaMock.trip.findUnique.mockResolvedValue(profiledTrip("in_transit", phones));
+
+        const response = await request(createApp()).get("/api/v1/trips/trip_1").set(auth(viewer)).expect(403);
+
+        expect(JSON.stringify(response.body)).not.toMatch(/\+970599000111|0599222333/);
+      });
+
+      it.each(["driver_1", "admin_1"] as const)("%s's view of the driver is unchanged", async (viewer) => {
+        const { driver } = await driverSeenBy(viewer, "in_transit");
+
+        expect(driver.user).toEqual({ name: "Driver 1" });
+        expect(driver).not.toHaveProperty("phone");
+      });
+    });
 
     it.each(["passenger_1", "merchant_1"] as const)("%s sees who drives and which car, nothing more", async (viewer) => {
       prismaMock.trip.findUnique.mockResolvedValue(profiledTrip());
