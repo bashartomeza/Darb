@@ -137,11 +137,7 @@ class ApiClient {
   ) async {
     try {
       final response = await send().timeout(timeout);
-      final decoded = _decodeObject(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return decoded;
-      }
-      throw _mapStatus(response.statusCode, decoded);
+      return decodeApiResponse(response);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -150,30 +146,62 @@ class ApiClient {
       throw const ApiException(ApiErrorType.network, 'network_unavailable');
     } on http.ClientException {
       throw const ApiException(ApiErrorType.network, 'network_unavailable');
-    } on FormatException {
+    }
+  }
+}
+
+/// Turns an HTTP response into the JSON object the API contract promises.
+///
+/// The status code is classified before the body is read, so an error page
+/// from a proxy or load balancer (an HTML 502, an empty 503) stays a server
+/// failure instead of looking like a malformed answer. Only a successful
+/// status with an unreadable body is `invalid_response`; an empty successful
+/// body (204 No Content) is an empty object.
+Map<String, dynamic> decodeApiResponse(http.Response response) {
+  final statusCode = response.statusCode;
+  if (statusCode >= 200 && statusCode < 300) {
+    if (response.body.trim().isEmpty) return <String, dynamic>{};
+    final decoded = _tryDecodeObject(response.body);
+    if (decoded == null) {
       throw const ApiException(ApiErrorType.validation, 'invalid_response');
     }
+    return decoded;
   }
+  throw apiExceptionForStatus(statusCode, _tryDecodeObject(response.body));
+}
 
-  Map<String, dynamic> _decodeObject(String body) {
+/// Maps a non-success status to an [ApiException], using the server's `error`
+/// code when the body carried one.
+ApiException apiExceptionForStatus(int statusCode, Map<String, dynamic>? body) {
+  final code = body?['error'];
+  final type = switch (statusCode) {
+    401 => ApiErrorType.unauthorized,
+    403 => ApiErrorType.forbidden,
+    408 => ApiErrorType.timeout,
+    // Rate limiting is transient, so it joins the retryable server failures.
+    429 => ApiErrorType.server,
+    >= 500 => ApiErrorType.server,
+    >= 400 => ApiErrorType.validation,
+    _ => ApiErrorType.unknown,
+  };
+  final fallback = switch (statusCode) {
+    408 => 'request_timeout',
+    429 => 'rate_limited',
+    _ => 'request_failed',
+  };
+  return ApiException(
+    type,
+    code is String && code.isNotEmpty ? code : fallback,
+    statusCode: statusCode,
+  );
+}
+
+Map<String, dynamic>? _tryDecodeObject(String body) {
+  if (body.trim().isEmpty) return null;
+  try {
     final decoded = jsonDecode(body);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-    throw const FormatException('Expected JSON object');
-  }
-
-  ApiException _mapStatus(int statusCode, Map<String, dynamic> body) {
-    final message = body['error'] is String
-        ? body['error'] as String
-        : 'request_failed';
-    final type = switch (statusCode) {
-      400 || 422 => ApiErrorType.validation,
-      401 => ApiErrorType.unauthorized,
-      403 => ApiErrorType.forbidden,
-      >= 500 => ApiErrorType.server,
-      _ => ApiErrorType.unknown,
-    };
-    return ApiException(type, message, statusCode: statusCode);
+    return decoded is Map<String, dynamic> ? decoded : null;
+  } on FormatException {
+    return null;
   }
 }

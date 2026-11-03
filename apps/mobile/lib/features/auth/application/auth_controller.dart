@@ -460,13 +460,13 @@ class AuthController extends AsyncNotifier<AuthState> {
       _bindAuthenticatedActor(user);
       return AuthState.authenticated(user);
     } on ApiException catch (error) {
-      if (error.type == ApiErrorType.network ||
-          error.type == ApiErrorType.timeout ||
-          error.type == ApiErrorType.server) {
-        return AuthState.restoreFailed(error);
-      }
       final reason = _coordinator.lastTerminationReason;
       if (reason != null) return AuthState.sessionEnded(reason);
+      // Outages, proxy error pages and malformed answers keep the saved
+      // session so the user can retry; only an auth rejection signs out.
+      if (!isDefiniteAuthRejection(error)) {
+        return AuthState.restoreFailed(error);
+      }
       await _coordinator.clearCredentials();
       _clearAuthenticatedActor();
       return const AuthState.unauthenticated();

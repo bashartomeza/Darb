@@ -353,10 +353,13 @@ class AuthSessionCoordinator {
     }
   }
 
+  /// Only the server's authentication verdict (401, or 403 for an unavailable
+  /// account) ends the session. Anything else, such as an outage, a proxy
+  /// error page or a captive portal, keeps the refresh token for a retry: if
+  /// the token was in fact spent, the retry is rejected as reuse and ends the
+  /// session then.
   bool _isRetryableRefreshFailure(ApiException error) {
-    return error.type == ApiErrorType.network ||
-        error.type == ApiErrorType.timeout ||
-        error.type == ApiErrorType.server;
+    return !isDefiniteAuthRejection(error);
   }
 
   Future<void> _terminate(SessionEndReason reason) {
@@ -431,6 +434,15 @@ const _authStateChanged = ApiException(
   ApiErrorType.unauthorized,
   'auth_state_changed',
 );
+
+/// Whether [error] is the server definitively refusing the credentials, as
+/// opposed to an outage, a proxy error page or a malformed answer. Only a
+/// definite rejection may discard stored credentials.
+bool isDefiniteAuthRejection(ApiException error) {
+  return error.type == ApiErrorType.unauthorized ||
+      (error.type == ApiErrorType.forbidden &&
+          error.message == 'account_unavailable');
+}
 
 const _terminalAccessCodes = {
   'invalid_token',
