@@ -212,7 +212,8 @@ describe("M7B route management APIs", () => {
       canonical_shared_assignment_status_available: false,
       maps_available: false,
       checkpoints_available: false,
-      live_tracking_available: false
+      // Local runs share live driver positions unless LIVE_TRACKING_ENABLED=false.
+      live_tracking_available: true
     });
 
     const disabled = app(serviceMock(), disabledConfig);
@@ -226,6 +227,13 @@ describe("M7B route management APIs", () => {
         canonical_multi_route_entry_available: false
       })
     );
+
+    const noTracking = app(serviceMock(), createConfig({ ...baseEnvironment, LIVE_TRACKING_ENABLED: "false" }));
+    const noTrackingResponse = await request(noTracking.server)
+      .get("/api/v1/capabilities")
+      .set(auth("passenger_1"))
+      .expect(200);
+    expect(noTrackingResponse.body.live_tracking_available).toBe(false);
   });
 
   it("sends mobile roles only the capability fields the installed app understands", async () => {

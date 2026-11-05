@@ -286,9 +286,10 @@ await check("E06", "the 11th unresolved report is refused", async () => {
   for (let i = 0; i < 11; i += 1) last = await http("/incidents", { method: "POST", token: tokens.passenger, body: { category: "other", description: `QA report ${i + 1}` } });
   must(last.status === 429, `11th gave ${last.status}`);
 });
-await check("F06", "the capability list does not claim live tracking", async () => {
+await check("F06", "the capability list reports live tracking as LIVE_TRACKING_ENABLED (on by default in demo)", async () => {
   const caps = await http("/capabilities", { token: tokens.passenger, expect: 200 });
-  must(caps.json.live_tracking_available === false, "live tracking claimed");
+  const expected = (env.LIVE_TRACKING_ENABLED ?? "true") === "true";
+  must(caps.json.live_tracking_available === expected, `live_tracking_available ${caps.json.live_tracking_available}`);
 });
 
 await runNewFeatureChecks({ tokens });

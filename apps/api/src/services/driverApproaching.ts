@@ -40,31 +40,59 @@ export function evaluateApproaching(
 }
 
 /**
+ * Whether the request's pickup coordinate is a place the passenger chose. A
+ * route request stores its origin city's centre there and the exact pickup as
+ * typed text (`pickup_details`), so its coordinate says nothing about where the
+ * passenger waits: a driver crossing the city centre is not "approaching" them.
+ */
+export function hasRealPickupCoordinate(request: { pickup_details?: string | null }) {
+  return !request.pickup_details?.trim();
+}
+
+/**
  * Called whenever a driver location or trip-progress update is recorded. Creates at most one
  * "driver approaching" inbox notification per trip for the passenger. The notification never
  * carries coordinates or distances, only the reason it fired. Best effort: never throws.
  * Returns true only when this call created the notification.
+ *
+ * - A request with a real pickup coordinate fires when the driver's position is within the
+ *   configured radius or ETA of it.
+ * - A route request (pickup typed as text) has no point to measure against, so it fires when the
+ *   driver marks the pickup as started (`pickup_started`), the driver's own "on my way to you".
+ *   Positions are ignored for it, whatever they are.
  */
 export async function maybeNotifyDriverApproaching(
   db: Db,
   tripId: string,
-  driverPoint: Point,
+  driverPoint: Point | null,
   thresholds: ApproachingThresholds = configuredApproachingThresholds()
 ): Promise<boolean> {
   try {
     const trip = await db.trip.findUnique({
       where: { id: tripId },
-      select: { id: true, status: true, passenger_request: { select: { passenger_id: true, pickup_lat: true, pickup_lng: true } } }
+      select: {
+        id: true,
+        status: true,
+        passenger_request: { select: { passenger_id: true, pickup_lat: true, pickup_lng: true, pickup_details: true } }
+      }
     });
     if (!trip?.passenger_request) return false;
     if (!(APPROACHING_ELIGIBLE_STATUSES as readonly string[]).includes(trip.status)) return false;
 
-    const decision = evaluateApproaching(
-      driverPoint,
-      { lat: toNumber(trip.passenger_request.pickup_lat), lng: toNumber(trip.passenger_request.pickup_lng) },
-      thresholds
-    );
-    if (!decision) return false;
+    let reason: ApproachingReason | "pickup_started";
+    if (hasRealPickupCoordinate(trip.passenger_request)) {
+      if (!driverPoint) return false;
+      const decision = evaluateApproaching(
+        driverPoint,
+        { lat: toNumber(trip.passenger_request.pickup_lat), lng: toNumber(trip.passenger_request.pickup_lng) },
+        thresholds
+      );
+      if (!decision) return false;
+      reason = decision.reason;
+    } else {
+      if (trip.status !== "pickup_started") return false;
+      reason = "pickup_started";
+    }
 
     const dedupeKey = `driver_approaching:${trip.id}`;
     const userId = trip.passenger_request.passenger_id;
@@ -77,7 +105,7 @@ export async function maybeNotifyDriverApproaching(
       entityType: "Trip",
       entityId: trip.id,
       dedupeKey,
-      params: { reason: decision.reason }
+      params: { reason }
     });
     return true;
   } catch {
@@ -85,12 +113,11 @@ export async function maybeNotifyDriverApproaching(
   }
 }
 
-/** Uses the most recent recorded driver position of the trip, if any. */
+/** After a status change: uses the most recent recorded driver position of the trip, if any. */
 export async function maybeNotifyDriverApproachingFromLatest(db: Db, tripId: string): Promise<boolean> {
   try {
     const latest = await db.locationEvent.findFirst({ where: { trip_id: tripId }, orderBy: { sequence: "desc" } });
-    if (!latest) return false;
-    return await maybeNotifyDriverApproaching(db, tripId, { lat: toNumber(latest.lat), lng: toNumber(latest.lng) });
+    return await maybeNotifyDriverApproaching(db, tripId, latest ? { lat: toNumber(latest.lat), lng: toNumber(latest.lng) } : null);
   } catch {
     return false;
   }

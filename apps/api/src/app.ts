@@ -17,6 +17,7 @@ import { matchingRouter } from "./modules/matching.js";
 import { batchingRouter } from "./modules/batching.js";
 import { comparisonRouter } from "./modules/comparison.js";
 import { trackingSimulationRouter, tripsRouter } from "./modules/trips.js";
+import { createLiveLocationRouter } from "./modules/liveLocation.js";
 import { createCors } from "./middleware/cors.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { config, type AppConfig } from "./config.js";
@@ -238,6 +239,7 @@ export function createApp(
   app.use("/api/v1", legacyCorridorRouter);
   app.use("/api/v1", parcelHandoverRouter);
   app.use("/api/v1", matchingRouter);
+  app.use("/api/v1", createLiveLocationRouter(appConfig));
   app.use("/api/v1", tripsRouter);
   app.use(
     "/api/v1",

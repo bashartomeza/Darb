@@ -158,6 +158,19 @@ describe("fail-closed application configuration", () => {
     }
   });
 
+  it("shares live driver positions by default only where data is disposable", () => {
+    // Demo and test also default on; they need demo credentials to build a config here.
+    expect(createConfig(environment({ APP_ENV: "local" })).liveTrackingEnabled).toBe(true);
+    for (const appEnv of ["staging", "production"]) {
+      expect(createConfig(environment({ APP_ENV: appEnv })).liveTrackingEnabled).toBe(false);
+      expect(createConfig(environment({ APP_ENV: appEnv, LIVE_TRACKING_ENABLED: "true" })).liveTrackingEnabled).toBe(true);
+    }
+    expect(createConfig(environment({ APP_ENV: "local", LIVE_TRACKING_ENABLED: "false" })).liveTrackingEnabled).toBe(false);
+    for (const value of ["TRUE", "1", "yes"]) {
+      expect(() => createConfig(environment({ LIVE_TRACKING_ENABLED: value }))).toThrow(/LIVE_TRACKING_ENABLED must be true or false/);
+    }
+  });
+
   it("requires an explicit safe trust-proxy topology in production-like environments", () => {
     expect(() => createConfig(environment({ TRUST_PROXY: undefined }))).toThrow(/TRUST_PROXY must be explicit/);
     expect(() => createConfig(environment({ TRUST_PROXY: "true" }))).toThrow(/trusted proxy hop count/);

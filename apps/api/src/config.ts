@@ -101,6 +101,7 @@ const rawSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
   TRUST_PROXY: z.string().optional(),
+  LIVE_TRACKING_ENABLED: z.string().optional(),
   APPROACH_ALERT_RADIUS_KM: z.coerce.number().min(0.05).max(25).default(1),
   APPROACH_ALERT_ETA_MINUTES: z.coerce.number().min(0).max(120).default(0),
   APPROACH_ALERT_ASSUMED_SPEED_KMH: z.coerce.number().min(5).max(120).default(30),
@@ -244,6 +245,13 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     raw.ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED
   );
   const limitedCheckpointDirectoryEnabled = parseBoolean("AWEENRAYEH_LIMITED_DIRECTORY_ENABLED", raw.AWEENRAYEH_LIMITED_DIRECTORY_ENABLED);
+  // Real driver GPS sharing during a trip. On by default where data is disposable
+  // (local, test, demo); staging and production collect driver positions only once
+  // the operator sets it to true, so a deploy never starts tracking unannounced.
+  const liveTrackingEnabled =
+    raw.LIVE_TRACKING_ENABLED === undefined || raw.LIVE_TRACKING_ENABLED === ""
+      ? !productionLike
+      : parseBoolean("LIVE_TRACKING_ENABLED", raw.LIVE_TRACKING_ENABLED);
   const problems: string[] = [];
   if (limitedCheckpointDirectoryEnabled && (!raw.AWEENRAYEH_PARTNER_API_KEY || isUnsafeRouteProviderSecret(raw.AWEENRAYEH_PARTNER_API_KEY))) {
     problems.push("AWEENRAYEH_PARTNER_API_KEY is required and must be securely configured");
@@ -683,6 +691,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           : raw.XAI_TIMEOUT_MS
     },
     mapsEnabled,
+    liveTrackingEnabled,
     checkpointsEnabled,
     limitedCheckpointDirectoryEnabled,
     partnerCheckpointMapEnabled,

@@ -72,7 +72,7 @@ function withViewerDriver<T extends { status: string; driver_route: { driver: Pu
   return { ...trip, driver_route: { ...trip.driver_route, driver: assignedDriverSummary(trip.driver_route.driver, trip.status) } };
 }
 
-async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
+export async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
   const trip = await prisma.trip.findUnique({
     where: { id },
     include: {
@@ -679,12 +679,4 @@ trackingSimulationRouter.post("/trips/:id/simulate/reset", requireAuth, async (r
   }
 });
 
-tripsRouter.get("/trips/:id/location", requireAuth, async (req: AuthenticatedRequest, res, next) => {
-  try {
-    const trip = await getVisibleTrip(routeParam(req.params.id), req);
-    const location = await prisma.locationEvent.findFirst({ where: { trip_id: trip.id }, orderBy: [{ sequence: "desc" }, { recorded_at: "desc" }, { id: "desc" }] });
-    res.json({ location });
-  } catch (error) {
-    next(error);
-  }
-});
+// GET and POST /trips/:id/location (latest point, driver GPS) live in liveLocation.ts.
