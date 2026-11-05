@@ -446,7 +446,11 @@ function runDarb(scenario: SimScenario, params: SimParams): RawMetrics {
             lead.kind === "passenger"
               ? { pickup_lat: lead.pickup.lat, pickup_lng: lead.pickup.lng, passenger_count: lead.passengers, preferred_time: new Date(0) }
               : null,
-          parcelCount: unit.parcels
+          // The simulated corridor's parcel demand is scored from its origin, as before.
+          pickupPoint: LOCKED_ORIGIN,
+          parcelCount: unit.parcels,
+          // Every simulated request travels forward along the corridor.
+          sameRoute: state.driver.direction === "forward"
         });
         return { state, route, breakdown };
       })

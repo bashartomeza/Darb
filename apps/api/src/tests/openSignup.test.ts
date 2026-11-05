@@ -31,6 +31,8 @@ vi.mock("../lib/otp.js", async () => ({
 }));
 
 const { createApp } = await import("../app.js");
+const { startInFlight } = await import("../modules/publicOnboarding.js");
+const { failIdempotency } = await import("../lib/idempotency.js");
 
 const secrets = {
   PHONE_DIGEST_PEPPER: "phone-test-secret-longer-than-thirty-two-characters",
@@ -110,6 +112,32 @@ describe("self-service driver / shop-owner registration config", () => {
   });
 });
 
+describe("startInFlight", () => {
+  const now = new Date("2026-11-05T10:00:00.000Z");
+  const attempt = (overrides: Record<string, unknown> = {}) => ({
+    status: "created",
+    created_at: new Date(now.getTime() - 5_000),
+    expires_at: new Date(now.getTime() + 600_000),
+    current_challenge_id: null,
+    otp_dispatch_started_at: null,
+    _count: { otp_challenges: 0 },
+    ...overrides
+  });
+
+  it("is true for a just-created attempt with no code yet and for a dispatch inside its lease", () => {
+    expect(startInFlight(attempt(), now)).toBe(true);
+    expect(startInFlight(attempt({ status: "otp_dispatching", otp_dispatch_started_at: new Date(now.getTime() - 1_000) }), now)).toBe(true);
+  });
+
+  it("is false once a code was sent, a delivery failed, the lease ran out or the attempt expired", () => {
+    expect(startInFlight(attempt({ status: "otp_sent", current_challenge_id: "c1", _count: { otp_challenges: 1 } }), now)).toBe(false);
+    expect(startInFlight(attempt({ _count: { otp_challenges: 1 } }), now)).toBe(false);
+    expect(startInFlight(attempt({ created_at: new Date(now.getTime() - 121_000) }), now)).toBe(false);
+    expect(startInFlight(attempt({ status: "otp_dispatching", otp_dispatch_started_at: new Date(now.getTime() - 121_000) }), now)).toBe(false);
+    expect(startInFlight(attempt({ expires_at: now }), now)).toBe(false);
+  });
+});
+
 describe("self-service registration start endpoint", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -185,6 +213,45 @@ describe("self-service registration start endpoint", () => {
     );
   });
 
+  it("locks the phone's attempts and runs the supersede step serializably", async () => {
+    await start(createApp(config())).expect(201);
+    const lockSql = prismaMock.$queryRaw.mock.calls.map((call: unknown[]) => String(call[0])).join(" ");
+    expect(lockSql).toMatch(/FROM onboarding_attempts WHERE phone_digest = .* FOR UPDATE/);
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });
+  });
+
+  it("does not cancel an attempt that another request is still starting, and answers a clear 409", async () => {
+    prismaMock.onboardingAttempt.findMany.mockResolvedValue([
+      {
+        id: "in_flight",
+        status: "created",
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 600_000),
+        current_challenge_id: null,
+        otp_dispatch_started_at: null,
+        _count: { otp_challenges: 0 }
+      }
+    ]);
+    const response = await start(createApp(config())).expect(409);
+    expect(response.body.error).toBe("verification_temporarily_unavailable");
+    // The same idempotency key can retry: the claim is released, not marked failed.
+    expect(failIdempotency).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ retryAfter: expect.any(Date) }));
+    expect(prismaMock.onboardingAttempt.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.onboardingAttempt.create).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("retries the start transaction when MySQL picks it as a deadlock victim", async () => {
+    let calls = 0;
+    prismaMock.$transaction.mockImplementation(async (callback: (client: typeof prismaMock) => unknown) => {
+      calls += 1;
+      if (calls === 1) throw Object.assign(new Error("deadlock"), { code: "P2034" });
+      return callback(prismaMock);
+    });
+    await start(createApp(config())).expect(201);
+    expect(prismaMock.onboardingAttempt.create).toHaveBeenCalledTimes(1);
+  });
+
   it("never opens passenger registration through this flow", async () => {
     await start(createApp(config()), { role: "passenger" }).expect(404);
     expect(prismaMock.onboardingAttempt.create).not.toHaveBeenCalled();
@@ -202,6 +269,16 @@ describe("self-service registration start endpoint", () => {
         expect.objectContaining({ bucketType: "open_start_global", limit: 7, windowSeconds: 3_600 })
       ])
     );
+  });
+
+  it("cancels its own half-started attempt when the code cannot be sent", async () => {
+    consume.mockImplementation(async (_db: unknown, bucket: { bucketType: string }) => ({ allowed: bucket.bucketType !== "otp_phone_day" }));
+    await start(createApp(config())).expect(429);
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(prismaMock.onboardingAttempt.updateMany).toHaveBeenCalledWith({
+      where: { id: "attempt_1", status: { in: ["created", "otp_dispatching"] }, current_challenge_id: null },
+      data: expect.objectContaining({ status: "cancelled" })
+    });
   });
 
   it("answers 429 and sends no code when a cap is exceeded", async () => {

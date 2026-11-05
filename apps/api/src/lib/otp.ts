@@ -53,7 +53,7 @@ export function generateOtpCode() {
   return randomInt(0, 1_000_000).toString().padStart(6, "0");
 }
 
-const OTP_DISPATCH_LEASE_SECONDS = 120;
+export const OTP_DISPATCH_LEASE_SECONDS = 120;
 
 class OtpStateUnavailableError extends Error {}
 

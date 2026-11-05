@@ -11,6 +11,10 @@ import { createOnboardingAttempt } from "../lib/onboardingAttempts.js";
 import { normalizePhoneToE164 } from "../lib/phone.js";
 import { prisma } from "../lib/prisma.js";
 import { DEMO_ACCOUNTS } from "../modules/demoReset.js";
+import { requireDisposableIntegrationDatabase } from "./disposableDatabase.js";
+
+// It creates and deletes users, invitations and onboarding rows: never against a real database.
+requireDisposableIntegrationDatabase(process.env, "Onboarding integration");
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);

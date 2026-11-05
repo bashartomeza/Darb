@@ -38,6 +38,7 @@ import { EmailAuthService, canonicalEmail, emailStartSchema, emailCompleteSchema
 import type { ConsentReleaseService } from "../services/consentReleases.js";
 import { createAuthenticatedAuthRateLimiter } from "../middleware/rateLimit.js";
 import { IdentityProfileService, googleLinkSchema, phoneStartSchema, phoneConfirmSchema, type PhoneVerificationProvider } from "../services/identityProfile.js";
+import { hasNoControlCharacters } from "../lib/validation.js";
 
 const emailField = canonicalEmail;
 const deviceNameField = z.string().trim().min(1).max(120).optional();
@@ -633,7 +634,8 @@ const profileUpdateSchema = z
   .strictObject({
     name: z.string().trim().min(1).max(120).optional(),
     city: z.string().trim().max(100).nullable().optional(),
-    contact_phone: z.string().trim().min(7).max(32).nullable().optional()
+    // A typed number only: a control character (newline, tab, NUL...) is refused, not stored.
+    contact_phone: z.string().trim().min(7).max(32).refine(hasNoControlCharacters).nullable().optional()
   })
   .refine((value) => Object.keys(value).length > 0, { message: "no_changes" });
 

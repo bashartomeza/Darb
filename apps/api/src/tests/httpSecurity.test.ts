@@ -440,3 +440,15 @@ describe("production HTTP security baseline", () => {
     expect(JSON.stringify(response.body)).not.toContain("parser-secret");
   });
 });
+
+describe("operational log route normalisation", () => {
+  it("keeps the fixed words of newer routes and masks ids and free text", async () => {
+    const { normalizedRoute } = await import("../middleware/operationalLog.js");
+    const path = (originalUrl: string) => normalizedRoute({ originalUrl });
+    expect(path("/api/v1/passenger/assistant/voice?locale=ar")).toBe("/api/v1/passenger/assistant/voice");
+    expect(path("/api/v1/parcel-orders/order_123/handover/regenerate")).toBe("/api/v1/parcel-orders/:id/handover/regenerate");
+    expect(path("/api/v1/admin/service-routes/route_9/fares")).toBe("/api/v1/admin/service-routes/:id/fares");
+    expect(path("/api/v1/notifications/n_1/read")).toBe("/api/v1/notifications/:id/read");
+    expect(path("/api/v1/users/+970590001234/status")).toBe("/api/v1/users/:id/status");
+  });
+});

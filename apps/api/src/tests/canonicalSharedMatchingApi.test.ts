@@ -143,6 +143,14 @@ describe("M7C3C1 shared canonical APIs and gate", () => {
       .expect(404);
   });
 
+  it("no longer serves the unused canonical-shared-match-offers alias", async () => {
+    const app = createApp(createConfig(environment), { canonicalSharedMatchingService: serviceMock() as never });
+    await request(app)
+      .get("/api/v1/driver/canonical-shared-match-offers")
+      .set(auth("driver_1", "driver"))
+      .expect(404);
+  });
+
   it("rejects dependency-gate and production enablement", () => {
     expect(() => createConfig({
       ...environment,

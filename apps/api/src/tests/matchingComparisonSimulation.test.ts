@@ -145,9 +145,8 @@ describe("matching comparison simulation", () => {
     const req = passengerRequest("r1");
     const scoreOf = (d: SimDriver) =>
       scoreDriverRoute({
+        sameRoute: d.direction === "forward",
         route: {
-          origin_label: d.direction === "forward" ? "Hebron / PPU / Bab Al-Zawiya" : "Bethlehem",
-          destination_label: d.direction === "forward" ? "Bethlehem" : "Hebron / PPU / Bab Al-Zawiya",
           origin_lat: d.origin.lat, origin_lng: d.origin.lng, seats_available: d.seats,
           parcel_capacity_available: d.parcelCapacity, driver: { trust_score: d.trustScore }
         },
