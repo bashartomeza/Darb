@@ -33,6 +33,7 @@ import { IncidentsPanel } from "./features/incidents/IncidentsPanel";
 import { UncertainAiRequests } from "./features/incidents/UncertainAiRequests";
 import { CommunityReportsPage } from "./features/communityReports/CommunityReportsPage";
 import { CheckpointPositionsPage } from "./features/checkpoints/CheckpointPositionsPage";
+import { CityPlacesPage } from "./features/cityPlaces/CityPlacesPage";
 import { MapPlacesPage } from "./features/places/MapPlacesPage";
 import { ProfilePanel } from "./features/profile/ProfilePanel";
 import {
@@ -497,6 +498,8 @@ export function App({
       case "checkpointPositions":
         return <CheckpointPositionsPage api={api} token={token} search={search} />;
 
+      case "cityPlaces":
+        return <CityPlacesPage api={api} token={token} search={search} />;
       case "mapPlaces":
         return <MapPlacesPage api={api} token={token} search={search} />;
 
@@ -558,6 +561,7 @@ export function App({
     trips: t("tripsDescription"),
     routes: t("operatingRoutesDescription"),
     checkpointPositions: t("checkpointPositionsDescription"),
+    cityPlaces: t("cityPlacesDescription"),
     mapPlaces: t("mapPlacesDescription"),
     users: t("usersDescription"),
     invitations: t("invitationsDescription"),

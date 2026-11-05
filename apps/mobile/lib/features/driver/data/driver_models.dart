@@ -1,3 +1,4 @@
+import '../../operating_routes/data/city_place_models.dart';
 import '../../../core/cancellation/cancellation.dart';
 import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
@@ -140,6 +141,10 @@ class DriverPassengerSummary {
     this.destination,
     this.pickupDetails,
     this.dropoffDetails,
+    this.pickupPlaceAr,
+    this.pickupPlaceEn,
+    this.dropoffPlaceAr,
+    this.dropoffPlaceEn,
   });
 
   final String id;
@@ -155,6 +160,30 @@ class DriverPassengerSummary {
   final String? pickupDetails;
   final String? dropoffDetails;
 
+  /// The village or town picked from the route's city list for each end
+  /// (names as saved when ordering); null for orders typed as free text.
+  final String? pickupPlaceAr;
+  final String? pickupPlaceEn;
+  final String? dropoffPlaceAr;
+  final String? dropoffPlaceEn;
+
+  /// The pickup as one line: the chosen place and the optional details, or
+  /// only the details of an older order; null when neither was saved.
+  String? pickupSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: pickupPlaceAr,
+    nameEn: pickupPlaceEn,
+    details: pickupDetails,
+  );
+
+  /// The drop-off as one line, like [pickupSummary].
+  String? dropoffSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: dropoffPlaceAr,
+    nameEn: dropoffPlaceEn,
+    details: dropoffDetails,
+  );
+
   factory DriverPassengerSummary.fromJson(Map<String, dynamic> json) {
     return DriverPassengerSummary(
       id: _string(json, 'id'),
@@ -166,6 +195,10 @@ class DriverPassengerSummary {
       destination: _point(json['destination_lat'], json['destination_lng']),
       pickupDetails: _text(json['pickup_details']),
       dropoffDetails: _text(json['dropoff_details']),
+      pickupPlaceAr: _text(json['pickup_place_name_ar']),
+      pickupPlaceEn: _text(json['pickup_place_name_en']),
+      dropoffPlaceAr: _text(json['dropoff_place_name_ar']),
+      dropoffPlaceEn: _text(json['dropoff_place_name_en']),
     );
   }
 }
@@ -174,6 +207,8 @@ class DriverPassengerSummary {
 class DriverParcelStop {
   const DriverParcelStop({
     this.dropoffDetails,
+    this.dropoffPlaceAr,
+    this.dropoffPlaceEn,
     this.destinationLabel,
     this.receiverName,
     this.receiverPhone,
@@ -183,6 +218,19 @@ class DriverParcelStop {
   /// Where exactly the parcel goes, as the merchant typed it; null for
   /// parcels created before routes existed.
   final String? dropoffDetails;
+
+  /// The village or town chosen as the drop-off; null for free-text parcels.
+  final String? dropoffPlaceAr;
+  final String? dropoffPlaceEn;
+
+  /// The drop-off place and its optional details, or only the details of an
+  /// older parcel; null when neither exists.
+  String? dropoffSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: dropoffPlaceAr,
+    nameEn: dropoffPlaceEn,
+    details: dropoffDetails,
+  );
   final String? destinationLabel;
   final String? receiverName;
   final String? receiverPhone;
@@ -191,6 +239,8 @@ class DriverParcelStop {
   factory DriverParcelStop.fromJson(Map<String, dynamic> json) =>
       DriverParcelStop(
         dropoffDetails: _text(json['dropoff_details']),
+        dropoffPlaceAr: _text(json['dropoff_place_name_ar']),
+        dropoffPlaceEn: _text(json['dropoff_place_name_en']),
         destinationLabel: _text(json['destination_label']),
         receiverName: _text(json['receiver_name']),
         receiverPhone: _text(json['receiver_phone']),
@@ -208,6 +258,8 @@ class DriverMerchantSummary {
     this.destination,
     this.destinationLabel,
     this.pickupDetails,
+    this.pickupPlaceAr,
+    this.pickupPlaceEn,
     this.parcels = const [],
     this.isPassengerParcel = false,
   });
@@ -223,6 +275,19 @@ class DriverMerchantSummary {
   /// Where the parcels are collected, as the merchant typed it; null for
   /// orders created before routes existed.
   final String? pickupDetails;
+
+  /// The village or town chosen as the pickup; null for free-text orders.
+  final String? pickupPlaceAr;
+  final String? pickupPlaceEn;
+
+  /// The pickup place and its optional details, or only the details of an
+  /// older order; null when neither exists.
+  String? pickupSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: pickupPlaceAr,
+    nameEn: pickupPlaceEn,
+    details: pickupDetails,
+  );
 
   /// The parcels, when the payload lists them.
   final List<DriverParcelStop> parcels;
@@ -263,6 +328,8 @@ class DriverMerchantSummary {
           ? parcels.length
           : 0,
       pickupDetails: _text(json['pickup_details']),
+      pickupPlaceAr: _text(json['pickup_place_name_ar']),
+      pickupPlaceEn: _text(json['pickup_place_name_en']),
       isPassengerParcel: json['is_passenger_parcel'] == true,
       parcels: parcels is List
           ? [
@@ -281,6 +348,8 @@ class DriverBatchOrder {
     required this.id,
     required this.pickupLabel,
     this.pickupDetails,
+    this.pickupPlaceAr,
+    this.pickupPlaceEn,
     this.parcels = const [],
   });
 
@@ -290,6 +359,8 @@ class DriverBatchOrder {
   /// Where the parcels are collected, as the merchant typed it; null for
   /// orders created before routes existed.
   final String? pickupDetails;
+  final String? pickupPlaceAr;
+  final String? pickupPlaceEn;
   final List<DriverParcelStop> parcels;
 
   /// The order as a merchant summary, for the screens that show one order.
@@ -299,6 +370,8 @@ class DriverBatchOrder {
     status: '',
     parcelCount: parcels.length,
     pickupDetails: pickupDetails,
+    pickupPlaceAr: pickupPlaceAr,
+    pickupPlaceEn: pickupPlaceEn,
     parcels: parcels,
   );
 
@@ -308,6 +381,8 @@ class DriverBatchOrder {
       id: _string(json, 'id'),
       pickupLabel: _text(json['pickup_label']) ?? '',
       pickupDetails: _text(json['pickup_details']),
+      pickupPlaceAr: _text(json['pickup_place_name_ar']),
+      pickupPlaceEn: _text(json['pickup_place_name_en']),
       parcels: parcels is List
           ? [
               for (final parcel in parcels)
@@ -491,6 +566,8 @@ class DriverTrip {
         id: order.id,
         pickupLabel: order.pickupLabel,
         pickupDetails: order.pickupDetails,
+        pickupPlaceAr: order.pickupPlaceAr,
+        pickupPlaceEn: order.pickupPlaceEn,
         parcels: order.parcels,
       ),
     ];

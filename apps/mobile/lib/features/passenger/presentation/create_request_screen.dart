@@ -16,14 +16,17 @@ import '../../canonical_routes/presentation/canonical_route_widgets.dart';
 import '../../matching/data/matching_repository.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../../operating_routes/presentation/operating_route_inputs.dart';
+import '../../operating_routes/presentation/route_place_picker.dart';
 import '../data/passenger_models.dart';
 import '../data/passenger_repository.dart';
 import '../application/legacy_passenger_request_mutation.dart';
 import '../application/passenger_controller.dart';
 import 'passenger_request_labels.dart';
 
-/// Books a ride: a predefined route, then the exact pickup and drop-off typed
-/// as free text, the departure time and the number of passengers.
+/// Books a ride: a predefined route first, then the pickup village or town of
+/// the route's origin city and the drop-off village or town of its destination
+/// city (each with optional extra details), the departure time and the number
+/// of passengers.
 class CreateRequestScreen extends ConsumerStatefulWidget {
   const CreateRequestScreen({super.key});
 
@@ -37,6 +40,11 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   final _pickupDetails = TextEditingController();
   final _dropoffDetails = TextEditingController();
   String? _routeId;
+
+  /// The chosen places; they belong to the chosen route's cities, so they are
+  /// cleared when the route changes.
+  String? _pickupPlaceId;
+  String? _dropoffPlaceId;
 
   /// Field errors are shown once the passenger tried to submit.
   bool _showErrors = false;
@@ -86,6 +94,8 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
     final routeId = payload['service_route_id'];
     if (routeId is String) {
       _routeId = routeId;
+      _pickupPlaceId = payload['pickup_place_id'] as String?;
+      _dropoffPlaceId = payload['dropoff_place_id'] as String?;
       _pickupDetails.text = payload['pickup_details'] as String? ?? '';
       _dropoffDetails.text = payload['dropoff_details'] as String? ?? '';
     } else {
@@ -217,9 +227,9 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
             ),
             const SizedBox(height: AppTokens.spaceLarge),
 
-            // The route, then the exact places on it as the passenger says
-            // them. There is no map picker: the route's cities place the
-            // request, the text tells the driver where exactly.
+            // The route first, then the village or town at each end (from the
+            // route's own cities), then optional details for the driver.
+            // There is no map picker.
             DarbCard(
               padding: const EdgeInsets.all(AppTokens.spaceMedium),
               child: Column(
@@ -248,37 +258,85 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
                           ? l10n.passengerRouteRequired
                           : null,
                       onChanged: (route) => setState(() {
+                        if (route.id != _routeId) {
+                          _pickupPlaceId = null;
+                          _dropoffPlaceId = null;
+                        }
                         _routeId = route.id;
                         _error = null;
                       }),
                     ),
                   const SizedBox(height: AppTokens.spaceMedium),
-                  RouteDetailsField(
-                    key: const ValueKey('pickupDetailsField'),
-                    controller: _pickupDetails,
-                    enabled: !busy,
-                    icon: Icons.trip_origin_rounded,
-                    label: l10n.passengerPickupDetailsLabel,
-                    hint: l10n.passengerPickupDetailsHint,
-                    helper: l10n.passengerDetailsHelper,
-                    errorText: _showErrors && !legacyPending
-                        ? routeDetailsError(l10n, _pickupDetails.text)
-                        : null,
-                    onChanged: (_) => setState(() => _error = null),
-                  ),
-                  const SizedBox(height: AppTokens.spaceSmall),
-                  RouteDetailsField(
-                    key: const ValueKey('dropoffDetailsField'),
-                    controller: _dropoffDetails,
-                    enabled: !busy,
-                    icon: Icons.location_on_outlined,
-                    label: l10n.passengerDropoffDetailsLabel,
-                    hint: l10n.passengerDropoffDetailsHint,
-                    errorText: _showErrors && !legacyPending
-                        ? routeDetailsError(l10n, _dropoffDetails.text)
-                        : null,
-                    onChanged: (_) => setState(() => _error = null),
-                  ),
+                  if (legacyPending) ...[
+                    RouteDetailsField(
+                      key: const ValueKey('pickupDetailsField'),
+                      controller: _pickupDetails,
+                      enabled: false,
+                      icon: Icons.trip_origin_rounded,
+                      label: l10n.passengerPickupDetailsLabel,
+                      hint: l10n.passengerPickupDetailsHint,
+                    ),
+                    const SizedBox(height: AppTokens.spaceSmall),
+                    RouteDetailsField(
+                      key: const ValueKey('dropoffDetailsField'),
+                      controller: _dropoffDetails,
+                      enabled: false,
+                      icon: Icons.location_on_outlined,
+                      label: l10n.passengerDropoffDetailsLabel,
+                      hint: l10n.passengerDropoffDetailsHint,
+                    ),
+                  ] else ...[
+                    RoutePlacePicker(
+                      key: const ValueKey('pickupPlacePicker'),
+                      routeId: _routeId,
+                      side: RoutePlaceSide.pickup,
+                      selectedId: _pickupPlaceId,
+                      enabled: !busy,
+                      errorText: _showErrors && _pickupPlaceId == null
+                          ? l10n.routePlaceRequired
+                          : null,
+                      onChanged: (place) => setState(() {
+                        _pickupPlaceId = place.id;
+                        _error = null;
+                      }),
+                    ),
+                    const SizedBox(height: AppTokens.spaceSmall),
+                    RouteDetailsField(
+                      key: const ValueKey('pickupDetailsField'),
+                      controller: _pickupDetails,
+                      enabled: !busy,
+                      icon: Icons.edit_location_alt_outlined,
+                      label: l10n.routePlaceMoreDetailsLabel,
+                      hint: l10n.routePlacePickupDetailsHint,
+                      helper: l10n.routePlaceDetailsHelper,
+                      onChanged: (_) => setState(() => _error = null),
+                    ),
+                    const SizedBox(height: AppTokens.spaceMedium),
+                    RoutePlacePicker(
+                      key: const ValueKey('dropoffPlacePicker'),
+                      routeId: _routeId,
+                      side: RoutePlaceSide.dropoff,
+                      selectedId: _dropoffPlaceId,
+                      enabled: !busy,
+                      errorText: _showErrors && _dropoffPlaceId == null
+                          ? l10n.routePlaceRequired
+                          : null,
+                      onChanged: (place) => setState(() {
+                        _dropoffPlaceId = place.id;
+                        _error = null;
+                      }),
+                    ),
+                    const SizedBox(height: AppTokens.spaceSmall),
+                    RouteDetailsField(
+                      key: const ValueKey('dropoffDetailsField'),
+                      controller: _dropoffDetails,
+                      enabled: !busy,
+                      icon: Icons.edit_location_alt_outlined,
+                      label: l10n.routePlaceMoreDetailsLabel,
+                      hint: l10n.routePlaceDropoffDetailsHint,
+                      onChanged: (_) => setState(() => _error = null),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -418,10 +476,10 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
   // SUBMIT
   // ----------------------------------------------------------------------
 
+  // The places are required; the details are optional (the field's own
+  // counter keeps them within 300 characters).
   bool get _formComplete =>
-      _routeId != null &&
-      routeDetailsValid(_pickupDetails.text) &&
-      routeDetailsValid(_dropoffDetails.text);
+      _routeId != null && _pickupPlaceId != null && _dropoffPlaceId != null;
 
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context);
@@ -453,6 +511,8 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen>
           _pendingPayload ??
           passengerRouteRequestBody(
             serviceRouteId: _routeId!,
+            pickupPlaceId: _pickupPlaceId!,
+            dropoffPlaceId: _dropoffPlaceId!,
             pickupDetails: _pickupDetails.text,
             dropoffDetails: _dropoffDetails.text,
             preferredTime: _preferredTime,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,12 +16,15 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_back_button.dart';
 import '../application/passenger_assistant_controller.dart';
 import '../data/speech_service.dart';
+import '../data/tts_service.dart';
+import '../data/voice_preferences.dart';
 import '../domain/assistant_route_match.dart';
 import '../domain/passenger_assistant_models.dart';
 import '../../passenger/application/passenger_controller.dart';
 import '../../operating_routes/data/operating_route_models.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../../operating_routes/presentation/operating_route_inputs.dart';
+import '../../operating_routes/presentation/route_place_picker.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../passenger/domain/trip_offer.dart';
 import '../../passenger/presentation/widgets/trip_offer_card.dart';
@@ -42,6 +46,13 @@ class _PassengerAssistantScreenState
   void initState() {
     super.initState();
     _inputController.addListener(_refreshComposer);
+    // Load the saved voice settings and warm the speech engine now, so the
+    // first spoken turn does not wait for either.
+    ref.listenManual(voicePreferencesProvider, (_, _) {});
+    _tts = ref.read(ttsServiceProvider);
+    _tts!.prepare(
+      WidgetsBinding.instance.platformDispatcher.locale.languageCode,
+    );
   }
 
   @override
@@ -51,12 +62,19 @@ class _PassengerAssistantScreenState
       ..dispose();
     _scrollController.dispose();
     if (_voice == _VoiceState.listening) _speech?.cancel();
+    _tts?.stop();
     super.dispose();
   }
 
   void _refreshComposer() => setState(() {});
 
   _VoiceState _voice = _VoiceState.idle;
+  TtsService? _tts;
+
+  /// True from the moment a spoken request is sent until its reply is read
+  /// out. Typed requests never set it, so typing never makes the app talk.
+  bool _replyByVoice = false;
+  bool _autoSent = false;
   SpeechFailure? _voiceFailure;
   SpeechAvailability? _voiceAvailability;
   String _voiceBase = '';
@@ -65,6 +83,9 @@ class _PassengerAssistantScreenState
   Future<void> _toggleVoice() async {
     final speech = ref.read(speechServiceProvider);
     _speech = speech;
+    // Barge-in: starting to talk silences the assistant straight away.
+    _tts = ref.read(ttsServiceProvider);
+    _tts!.stop();
     if (_voice == _VoiceState.listening) {
       await speech.stop();
       if (mounted) setState(() => _voice = _VoiceState.idle);
@@ -90,6 +111,9 @@ class _PassengerAssistantScreenState
     final localeId = pickSpeechLocale(languageCode, await speech.locales());
     if (!mounted) return;
     _voiceBase = _inputController.text.trim();
+    _autoSent = false;
+    // Warm the speech engine while the passenger is still talking.
+    _tts!.prepare(languageCode);
     setState(() => _voice = _VoiceState.listening);
     try {
       await speech.start(
@@ -103,6 +127,16 @@ class _PassengerAssistantScreenState
             text: value,
             selection: TextSelection.collapsed(offset: value.length),
           );
+          // The final text starts the request at once; no extra tap.
+          if (isFinal && !_autoSent) {
+            final autoSend =
+                ref.read(voicePreferencesProvider).value?.autoSend ??
+                VoicePreferences.defaultAutoSend;
+            if (autoSend) {
+              _autoSent = true;
+              _submit(null, true);
+            }
+          }
         },
         onFailure: (failure) {
           if (!mounted) return;
@@ -167,9 +201,11 @@ class _PassengerAssistantScreenState
     });
   }
 
-  Future<void> _submit([String? suggestion]) async {
+  Future<void> _submit([String? suggestion, bool byVoice = false]) async {
     final query = (suggestion ?? _inputController.text).trim();
     if (query.isEmpty) return;
+    _replyByVoice = byVoice;
+    if (!byVoice) _tts?.stop();
     _inputController.clear();
     if (_voice == _VoiceState.listening) {
       _speech?.cancel();
@@ -179,6 +215,35 @@ class _PassengerAssistantScreenState
     await ref
         .read(passengerAssistantControllerProvider.notifier)
         .submit(query, locale: Localizations.localeOf(context).languageCode);
+  }
+
+  /// Reads the newest assistant reply aloud, only for a request that was spoken.
+  void _speakReply(
+    PassengerAssistantState? before,
+    PassengerAssistantState? now,
+  ) {
+    if (!_replyByVoice || now == null || now.messages.isEmpty) return;
+    if (now.messages.length <= (before?.messages.length ?? 0)) return;
+    final last = now.messages.last;
+    if (last.role != PassengerAssistantMessageRole.assistant) return;
+    _replyByVoice = false;
+    final prefs =
+        ref.read(voicePreferencesProvider).value ?? const VoicePreferences();
+    if (!prefs.speakReplies) return;
+    _tts = ref.read(ttsServiceProvider);
+    _tts!.speak(
+      last.text,
+      languageCode: Localizations.localeOf(context).languageCode,
+      rate: prefs.speechRate,
+    );
+  }
+
+  Future<void> _openVoiceSettings() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => const _VoiceSettingsSheet(),
+    );
   }
 
   Future<void> _confirmAndSearch(PassengerAssistantTripDraft draft) async {
@@ -264,10 +329,10 @@ class _PassengerAssistantScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final assistant = ref.watch(passengerAssistantControllerProvider);
-    ref.listen(
-      passengerAssistantControllerProvider,
-      (_, _) => _scrollToLatest(),
-    );
+    ref.listen(passengerAssistantControllerProvider, (previous, next) {
+      _scrollToLatest();
+      _speakReply(previous?.value, next.value);
+    });
     final phase = assistant.value?.phase;
     final busy =
         phase == PassengerAssistantPhase.processing ||
@@ -340,6 +405,9 @@ class _PassengerAssistantScreenState
             voice: _voice,
             voiceMessage: _voiceMessage(l10n),
             onVoice: _toggleVoice,
+            onVoiceSettings: _openVoiceSettings,
+            speaking: ref.watch(ttsServiceProvider).speaking,
+            onStopSpeaking: () => ref.read(ttsServiceProvider).stop(),
             onOpenSettings: _voiceNeedsSettings
                 ? () => ref.read(speechServiceProvider).openSettings()
                 : null,
@@ -418,7 +486,8 @@ class _AssistantConversation extends StatelessWidget {
             onSelectTrip: onSelectTrip,
           ),
         ],
-        if (state.phase == PassengerAssistantPhase.clarification &&
+        if ((state.phase == PassengerAssistantPhase.clarification ||
+                state.phase == PassengerAssistantPhase.result) &&
             state.suggestions.isNotEmpty) ...[
           const SizedBox(height: AppTokens.spaceExtraSmall),
           Semantics(
@@ -661,6 +730,8 @@ class _TripReviewCard extends ConsumerStatefulWidget {
 
 class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
   late PassengerAssistantTripDraft _draft = widget.draft;
+  // The assistant's own wording of each place prefills the optional details;
+  // the passenger still picks the village or town from the route's cities.
   late final _pickupDetails = TextEditingController(
     text: _initialPickup(widget.draft),
   );
@@ -671,6 +742,8 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
   /// The route the passenger picked; until they do, the one the extracted
   /// places point to (or the route a restored draft already carries).
   String? _routeId;
+  late String? _pickupPlaceId = widget.draft.pickupPlaceId;
+  late String? _dropoffPlaceId = widget.draft.dropoffPlaceId;
   bool _routeTouched = false;
   bool _showErrors = false;
 
@@ -692,6 +765,8 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
         // A new reply from the assistant: start over from its places.
         _routeTouched = false;
         _routeId = null;
+        _pickupPlaceId = null;
+        _dropoffPlaceId = null;
         _showErrors = false;
         _pickupDetails.text = _initialPickup(widget.draft);
         _dropoffDetails.text = _initialDropoff(widget.draft);
@@ -723,9 +798,7 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
     final timeValid = _draft.preferredTime.isAfter(DateTime.now());
     final routeId = _selectedRoute(ref.watch(operatingRoutesProvider).value);
     final complete =
-        routeId != null &&
-        routeDetailsValid(_pickupDetails.text) &&
-        routeDetailsValid(_dropoffDetails.text);
+        routeId != null && _pickupPlaceId != null && _dropoffPlaceId != null;
 
     return DarbCard(
       key: const ValueKey('assistantExtractedData'),
@@ -763,34 +836,56 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
                 ? l10n.passengerRouteRequired
                 : null,
             onChanged: (route) => setState(() {
+              if (route.id != routeId) {
+                _pickupPlaceId = null;
+                _dropoffPlaceId = null;
+              }
               _routeTouched = true;
               _routeId = route.id;
             }),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
+          RoutePlacePicker(
+            key: const ValueKey('assistantPickupPlacePicker'),
+            routeId: routeId,
+            side: RoutePlaceSide.pickup,
+            selectedId: _pickupPlaceId,
+            enabled: !widget.searching,
+            errorText: _showErrors && _pickupPlaceId == null
+                ? l10n.routePlaceRequired
+                : null,
+            onChanged: (place) => setState(() => _pickupPlaceId = place.id),
+          ),
+          const SizedBox(height: AppTokens.spaceSmall),
           RouteDetailsField(
             key: const ValueKey('assistantPickupDetailsField'),
             controller: _pickupDetails,
             enabled: !widget.searching,
-            icon: Icons.trip_origin_rounded,
-            label: l10n.passengerPickupDetailsLabel,
-            hint: l10n.passengerPickupDetailsHint,
-            errorText: _showErrors
-                ? routeDetailsError(l10n, _pickupDetails.text)
-                : null,
+            icon: Icons.edit_location_alt_outlined,
+            label: l10n.routePlaceMoreDetailsLabel,
+            hint: l10n.routePlacePickupDetailsHint,
             onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: AppTokens.spaceMedium),
+          RoutePlacePicker(
+            key: const ValueKey('assistantDropoffPlacePicker'),
+            routeId: routeId,
+            side: RoutePlaceSide.dropoff,
+            selectedId: _dropoffPlaceId,
+            enabled: !widget.searching,
+            errorText: _showErrors && _dropoffPlaceId == null
+                ? l10n.routePlaceRequired
+                : null,
+            onChanged: (place) => setState(() => _dropoffPlaceId = place.id),
           ),
           const SizedBox(height: AppTokens.spaceSmall),
           RouteDetailsField(
             key: const ValueKey('assistantDropoffDetailsField'),
             controller: _dropoffDetails,
             enabled: !widget.searching,
-            icon: Icons.location_on_outlined,
-            label: l10n.passengerDropoffDetailsLabel,
-            hint: l10n.passengerDropoffDetailsHint,
-            errorText: _showErrors
-                ? routeDetailsError(l10n, _dropoffDetails.text)
-                : null,
+            icon: Icons.edit_location_alt_outlined,
+            label: l10n.routePlaceMoreDetailsLabel,
+            hint: l10n.routePlaceDropoffDetailsHint,
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: AppTokens.spaceSmall),
@@ -853,6 +948,8 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
                     widget.onConfirm(
                       _draft.copyWith(
                         serviceRouteId: routeId,
+                        pickupPlaceId: _pickupPlaceId,
+                        dropoffPlaceId: _dropoffPlaceId,
                         pickupDetails: _pickupDetails.text.trim(),
                         dropoffDetails: _dropoffDetails.text.trim(),
                       ),
@@ -1082,6 +1179,52 @@ class _AssistantLoadingView extends StatelessWidget {
 
 enum _VoiceState { idle, starting, listening, error }
 
+class _VoiceSettingsSheet extends ConsumerWidget {
+  const _VoiceSettingsSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final prefs =
+        ref.watch(voicePreferencesProvider).value ?? const VoicePreferences();
+    final controller = ref.read(voicePreferencesProvider.notifier);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              key: const ValueKey('assistantVoiceAutoSendSwitch'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.assistantVoiceAutoSend),
+              value: prefs.autoSend,
+              onChanged: controller.setAutoSend,
+            ),
+            SwitchListTile(
+              key: const ValueKey('assistantVoiceSpeakSwitch'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.assistantVoiceSpeakReplies),
+              value: prefs.speakReplies,
+              onChanged: controller.setSpeakReplies,
+            ),
+            Text(l10n.assistantVoiceSpeed),
+            Slider(
+              key: const ValueKey('assistantVoiceSpeedSlider'),
+              min: VoicePreferences.minSpeechRate,
+              max: VoicePreferences.maxSpeechRate,
+              divisions: 10,
+              value: prefs.speechRate,
+              onChanged: prefs.speakReplies ? controller.setSpeechRate : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AssistantComposer extends StatelessWidget {
   const _AssistantComposer({
     required this.controller,
@@ -1090,12 +1233,18 @@ class _AssistantComposer extends StatelessWidget {
     required this.onSubmit,
     required this.voice,
     required this.onVoice,
+    required this.onVoiceSettings,
+    required this.speaking,
+    required this.onStopSpeaking,
     this.voiceMessage,
     this.onOpenSettings,
   });
 
   final _VoiceState voice;
   final VoidCallback onVoice;
+  final VoidCallback onVoiceSettings;
+  final ValueListenable<bool> speaking;
+  final VoidCallback onStopSpeaking;
   final String? voiceMessage;
   final VoidCallback? onOpenSettings;
 
@@ -1204,6 +1353,23 @@ class _AssistantComposer extends StatelessWidget {
                                 : Icons.mic_rounded,
                           ),
                   ),
+                ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: speaking,
+                  builder: (context, isSpeaking, _) => isSpeaking
+                      ? IconButton(
+                          key: const ValueKey('assistantStopSpeaking'),
+                          tooltip: l10n.assistantVoiceStopSpeaking,
+                          onPressed: onStopSpeaking,
+                          icon: const Icon(Icons.volume_off_outlined),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                IconButton(
+                  key: const ValueKey('assistantVoiceTune'),
+                  tooltip: l10n.assistantVoiceSettings,
+                  onPressed: onVoiceSettings,
+                  icon: const Icon(Icons.tune),
                 ),
                 const SizedBox(width: AppTokens.spaceSmall),
                 Expanded(

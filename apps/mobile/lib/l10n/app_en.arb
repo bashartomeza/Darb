@@ -857,6 +857,11 @@
   "assistantInputHint": "Type your question",
   "assistantVoiceStart": "Speak your request",
   "assistantVoiceStop": "Stop listening",
+  "assistantVoiceSettings": "Voice settings",
+  "assistantVoiceSpeakReplies": "Read replies aloud when I speak",
+  "assistantVoiceAutoSend": "Send when I stop speaking",
+  "assistantVoiceSpeed": "Reading speed",
+  "assistantVoiceStopSpeaking": "Stop reading aloud",
   "assistantVoiceListening": "Listening…",
   "assistantVoicePermissionDenied": "Microphone access is needed for voice input. You can still type your request.",
   "assistantVoicePermissionPermanent": "Microphone or speech access is turned off. Open settings to allow it, or type your request.",
@@ -1565,6 +1570,60 @@
     }
   },
   "mapStraightLineNote": "Road route unavailable: showing a straight line",
+  "routeChangedClosed": "Route changed: checkpoint {names} is closed",
+  "@routeChangedClosed": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeChangedClosedExtra": "Route changed: checkpoint {names} is closed (about {minutes} min longer)",
+  "@routeChangedClosedExtra": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "routeChangedCongested": "Route changed to avoid congestion at {names}",
+  "@routeChangedCongested": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeAllClosed": "All known routes pass a closed checkpoint: {names}. Check before you go.",
+  "@routeAllClosed": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeCongestedWarning": "Your route passes a congested checkpoint: {names}. No reasonable alternative was found.",
+  "@routeCongestedWarning": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeCheckUnavailable": "Could not check this route against checkpoint status",
+  "routeStatusStale": "Checkpoint statuses are out of date, so the route was not changed",
+  "routePositionApproximate": "A checkpoint position on this route is approximate",
+  "routeCheckpointOnRoute": "On your route: {name}",
+  "@routeCheckpointOnRoute": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "mapCheckpointsUnavailable": "Checkpoint data unavailable",
   "mapCheckpointsLoadFailed": "Checkpoints could not be loaded",
   "checkpointOfficialUnknown": "Official status: not published",
@@ -1654,6 +1713,22 @@
   "driverPhoneLabel": "Driver's phone",
   "callDriver": "Call driver",
   "callDriverUnavailable": "This device can't place the call. Dial the number shown.",
+  "routePlacePickupLabel": "Pickup village or town",
+  "routePlaceDropoffLabel": "Drop-off village or town",
+  "routePlacePickupHint": "Choose where you are picked up",
+  "routePlaceDropoffHint": "Choose where you are dropped off",
+  "routePlaceChooseRouteFirst": "Choose a route first",
+  "routePlaceRequired": "Choose a place to continue.",
+  "routePlaceSearchHint": "Search villages and towns",
+  "routePlaceNoResults": "Nothing matches your search.",
+  "routePlacesLoading": "Loading places…",
+  "routePlacesLoadFailed": "Places could not be loaded.",
+  "routePlacesEmpty": "No places are listed for this city yet.",
+  "routePlaceMoreDetailsLabel": "More details (optional)",
+  "routePlacePickupDetailsHint": "e.g. In front of the main gate",
+  "routePlaceDropoffDetailsHint": "e.g. Next to the pharmacy",
+  "routePlaceDetailsHelper": "Optional: help the driver find the exact spot.",
+  "routePlaceSavedChoice": "Place chosen from the list",
   "placeCategoryCafe": "Cafe",
   "placeCategoryRestaurant": "Restaurant",
   "placeCategoryFuel": "Fuel station",

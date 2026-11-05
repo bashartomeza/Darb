@@ -17,6 +17,7 @@ import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../../operating_routes/presentation/operating_route_inputs.dart';
+import '../../operating_routes/presentation/route_place_picker.dart';
 import '../application/passenger_parcel_controller.dart';
 import '../data/passenger_parcel_draft.dart';
 import '../data/passenger_parcel_models.dart';
@@ -230,34 +231,57 @@ class _SendParcelScreenState extends ConsumerState<SendParcelScreen> {
                 errorText: _showErrors && _draft.serviceRouteId == null
                     ? l10n.passengerRouteRequired
                     : null,
-                onChanged: (route) => _update(
-                  (draft) => draft.copyWith(serviceRouteId: route.id),
-                ),
+                onChanged: (route) =>
+                    _update((draft) => draft.withRoute(route.id)),
               ),
               const SizedBox(height: AppTokens.spaceMedium),
+              RoutePlacePicker(
+                key: const ValueKey('parcelPickupPlace'),
+                routeId: _draft.serviceRouteId,
+                side: RoutePlaceSide.pickup,
+                selectedId: _draft.pickupPlaceId,
+                enabled: !_busy,
+                errorText: fieldError(
+                  ParcelFormIssue.pickup,
+                  l10n.routePlaceRequired,
+                ),
+                onChanged: (place) =>
+                    _update((draft) => draft.copyWith(pickupPlaceId: place.id)),
+              ),
+              const SizedBox(height: AppTokens.spaceSmall),
               RouteDetailsField(
                 key: const ValueKey('parcelPickupDetails'),
                 controller: _pickup,
                 enabled: !_busy,
-                icon: Icons.trip_origin_rounded,
-                label: l10n.passengerParcelPickupDetailsLabel,
+                icon: Icons.edit_location_alt_outlined,
+                label: l10n.routePlaceMoreDetailsLabel,
                 hint: l10n.passengerParcelPickupDetailsHint,
-                errorText: _showErrors
-                    ? routeDetailsError(l10n, _pickup.text)
-                    : null,
+                helper: l10n.routePlaceDetailsHelper,
                 onChanged: (_) => _textChanged(),
+              ),
+              const SizedBox(height: AppTokens.spaceMedium),
+              RoutePlacePicker(
+                key: const ValueKey('parcelDropoffPlace'),
+                routeId: _draft.serviceRouteId,
+                side: RoutePlaceSide.dropoff,
+                selectedId: _draft.dropoffPlaceId,
+                enabled: !_busy,
+                errorText: fieldError(
+                  ParcelFormIssue.dropoff,
+                  l10n.routePlaceRequired,
+                ),
+                onChanged: (place) => _update(
+                  (draft) => draft.copyWith(dropoffPlaceId: place.id),
+                ),
               ),
               const SizedBox(height: AppTokens.spaceSmall),
               RouteDetailsField(
                 key: const ValueKey('parcelDropoffDetails'),
                 controller: _dropoff,
                 enabled: !_busy,
-                icon: Icons.location_on_outlined,
-                label: l10n.passengerParcelDropoffDetailsLabel,
+                icon: Icons.edit_location_alt_outlined,
+                label: l10n.routePlaceMoreDetailsLabel,
                 hint: l10n.passengerParcelDropoffDetailsHint,
-                errorText: _showErrors
-                    ? routeDetailsError(l10n, _dropoff.text)
-                    : null,
                 onChanged: (_) => _textChanged(),
               ),
               ListTile(

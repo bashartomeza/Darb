@@ -21,6 +21,7 @@ import 'package:darb_mobile/features/auth/domain/auth_models.dart';
 import 'package:darb_mobile/features/canonical_routes/application/canonical_route_controller.dart';
 import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_storage.dart';
 import 'package:darb_mobile/features/matching/data/matching_models.dart';
+import 'package:darb_mobile/features/operating_routes/data/city_place_models.dart';
 import 'package:darb_mobile/features/operating_routes/data/operating_route_models.dart';
 import 'package:darb_mobile/features/operating_routes/data/operating_route_repository.dart';
 import 'package:darb_mobile/core/theme/passenger_theme.dart';
@@ -43,6 +44,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'support/auth_test_support.dart';
 import 'support/booking_recovery_test_support.dart';
 import 'support/operating_routes_fixture.dart';
+import 'support/route_places_fixture.dart';
 import 'test_app_config.dart';
 
 const _hebronToBethlehem = 'Hebron → Bethlehem';
@@ -206,18 +208,188 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('الخليل ← بيت لحم'), findsWidgets);
       expect(find.text('بيت لحم ← الخليل'), findsWidgets);
-      // The pickup hint guides the passenger towards an exact place.
+      // The pickup hint guides the passenger towards an exact spot.
       await tester.tap(find.text('الخليل ← بيت لحم').last);
       await tester.pumpAndSettle();
+      expect(find.text('مثال: أمام البوابة الرئيسية'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('asks for the route before the places', (tester) async {
+      await _pumpCreate(tester);
       expect(
-        find.text('مثال: أمام البوابة الرئيسية لجامعة بوليتكنك فلسطين'),
+        find.byKey(const ValueKey('pickupPlaceNeedsRoute')),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const ValueKey('dropoffPlaceNeedsRoute')),
+        findsOneWidget,
+      );
+      expect(find.text('Choose a route first'), findsNWidgets(2));
+      await _chooseRoute(tester);
+      expect(find.byKey(const ValueKey('pickupPlaceField')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dropoffPlaceField')), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
     testWidgets(
-      'needs a route and both places of at least 3 characters before sending',
+      'pickup offers only the origin city places and drop-off the destination ones',
+      (tester) async {
+        await _pumpCreate(tester);
+        await _chooseRoute(tester);
+
+        await tester.tap(find.byKey(const ValueKey('pickupPlaceField')));
+        await tester.pumpAndSettle();
+        expect(find.text('Halhul'), findsOneWidget);
+        expect(find.text('Yatta'), findsOneWidget);
+        expect(find.text('Beit Jala'), findsNothing);
+        // Searching narrows the list; both names are searched.
+        await tester.enterText(
+          find.byKey(const ValueKey('placeSearchField')),
+          'حلح',
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Halhul'), findsOneWidget);
+        expect(find.text('Yatta'), findsNothing);
+        await tester.enterText(
+          find.byKey(const ValueKey('placeSearchField')),
+          'zzz',
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('placeNoResults')), findsOneWidget);
+        await tester.enterText(
+          find.byKey(const ValueKey('placeSearchField')),
+          '',
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Yatta'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const ValueKey('dropoffPlaceField')));
+        await tester.pumpAndSettle();
+        expect(find.text('Beit Jala'), findsOneWidget);
+        expect(find.text('Beit Sahur'), findsOneWidget);
+        expect(find.text('Halhul'), findsNothing);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+
+    testWidgets('the reverse route offers the places the other way round', (
+      tester,
+    ) async {
+      await _pumpCreate(tester);
+      await tester.tap(find.byKey(const ValueKey('passengerRouteField')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bethlehem → Hebron').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('pickupPlaceField')));
+      await tester.pumpAndSettle();
+      expect(find.text('Beit Jala'), findsOneWidget);
+      expect(find.text('Halhul'), findsNothing);
+      await tester.tap(find.text('Beit Jala'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('dropoffPlaceField')));
+      await tester.pumpAndSettle();
+      expect(find.text('Halhul'), findsOneWidget);
+      expect(find.text('Beit Sahur'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('changing the route clears the chosen places', (tester) async {
+      await _pumpCreate(tester);
+      await _chooseRoute(tester);
+      await pickPlace(tester, 'Halhul');
+      await pickPlace(tester, 'Beit Jala', side: 'dropoff');
+      expect(find.text('Halhul'), findsOneWidget);
+      expect(find.text('Beit Jala'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('passengerRouteField')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bethlehem → Hebron').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Halhul'), findsNothing);
+      expect(find.text('Beit Jala'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('a failed places list can be retried', (tester) async {
+      var reads = 0;
+      await _pumpCreate(
+        tester,
+        places: (routeId) async {
+          reads++;
+          if (reads == 1) throw http.ClientException('offline');
+          return testRoutePlaces(routeId);
+        },
+      );
+      await _chooseRoute(tester);
+      expect(find.byKey(const ValueKey('pickupPlacesError')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dropoffPlacesError')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('pickupPlacesRetry')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('pickupPlaceField')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dropoffPlaceField')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('says so when a city has no places yet', (tester) async {
+      await _pumpCreate(
+        tester,
+        places: (routeId) async => RoutePlaces(
+          routeId: routeId,
+          pickup: const [],
+          dropoff: testRoutePlaces(routeId).dropoff,
+        ),
+      );
+      await _chooseRoute(tester);
+      expect(find.byKey(const ValueKey('pickupPlacesEmpty')), findsOneWidget);
+      expect(find.byKey(const ValueKey('dropoffPlaceField')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('sends only the places when no details are written', (
+      tester,
+    ) async {
+      final creates = <Map<String, dynamic>>[];
+      await _pumpCreate(
+        tester,
+        handler: (request) async {
+          if (request.url.path.endsWith('/passenger/requests')) {
+            creates.add(jsonDecode(request.body) as Map<String, dynamic>);
+            return http.Response(
+              jsonEncode({
+                'request': {'id': 'route-request'},
+              }),
+              201,
+            );
+          }
+          if (request.url.path.endsWith('/matches/run')) {
+            return http.Response(jsonEncode(_matchResponse()), 201);
+          }
+          return http.Response('{"matches":[]}', 200);
+        },
+      );
+      await _chooseRoute(tester);
+      await pickPlace(tester, 'Yatta');
+      await pickPlace(tester, 'Beit Sahur', side: 'dropoff');
+      await tester.tap(find.byKey(const ValueKey('submitPassengerRequest')));
+      await tester.pumpAndSettle();
+      expect(creates, hasLength(1));
+      expect(creates.single.keys.toSet(), {
+        'service_route_id',
+        'pickup_place_id',
+        'dropoff_place_id',
+        'preferred_time',
+        'passenger_count',
+      });
+      expect(creates.single['pickup_place_id'], 'place-heb-yatta');
+      expect(creates.single['dropoff_place_id'], 'place-bth-beitsahur');
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets(
+      'needs a route and both places before sending, and the details are optional',
       (tester) async {
         final creates = <Map<String, dynamic>>[];
         await _pumpCreate(
@@ -232,21 +404,19 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('submitPassengerRequest')));
         await tester.pumpAndSettle();
         expect(find.text('Choose a route to continue.'), findsOneWidget);
-        expect(find.text('Write at least 3 characters.'), findsNWidgets(2));
+        expect(find.text('Choose a place to continue.'), findsNWidgets(2));
 
         await _chooseRoute(tester);
+        // Details alone are not enough; both places are required.
         await tester.enterText(
           find.byKey(const ValueKey('pickupDetailsField')),
-          '  ab ',
+          'Near the PPU main gate',
         );
-        await tester.enterText(
-          find.byKey(const ValueKey('dropoffDetailsField')),
-          'Bethlehem bus station',
-        );
+        await pickPlace(tester, 'Halhul');
         await tester.tap(find.byKey(const ValueKey('submitPassengerRequest')));
         await tester.pumpAndSettle();
         expect(find.text('Choose a route to continue.'), findsNothing);
-        expect(find.text('Write at least 3 characters.'), findsOneWidget);
+        expect(find.text('Choose a place to continue.'), findsOneWidget);
         expect(creates, isEmpty);
 
         // The counter shows the 300-character limit.
@@ -282,6 +452,8 @@ void main() {
         },
       );
       await _chooseRoute(tester);
+      await pickPlace(tester, 'Halhul');
+      await pickPlace(tester, 'Beit Jala', side: 'dropoff');
       await tester.enterText(
         find.byKey(const ValueKey('pickupDetailsField')),
         '  Near the PPU main gate ',
@@ -299,12 +471,16 @@ void main() {
       final body = creates.single;
       expect(body.keys.toSet(), {
         'service_route_id',
+        'pickup_place_id',
+        'dropoff_place_id',
         'pickup_details',
         'dropoff_details',
         'preferred_time',
         'passenger_count',
       });
       expect(body['service_route_id'], 'route-heb-bth');
+      expect(body['pickup_place_id'], 'place-heb-halhul');
+      expect(body['dropoff_place_id'], 'place-bth-beitjala');
       expect(body['pickup_details'], 'Near the PPU main gate');
       expect(body['dropoff_details'], 'Bethlehem bus station');
       expect(body['passenger_count'], 2);
@@ -389,14 +565,8 @@ void main() {
         },
       );
       await _chooseRoute(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('pickupDetailsField')),
-        'Near the PPU main gate',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('dropoffDetailsField')),
-        'Bethlehem bus station',
-      );
+      await pickPlace(tester, 'Halhul');
+      await pickPlace(tester, 'Beit Jala', side: 'dropoff');
       await tester.tap(find.byKey(const ValueKey('submitPassengerRequest')));
       await tester.pumpAndSettle();
       expect(
@@ -419,6 +589,38 @@ void main() {
       expect(find.text('Near the PPU main gate'), findsOneWidget);
       expect(find.text('Drop-off point'), findsOneWidget);
       expect(find.text('Bethlehem bus station'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('shows the chosen places with the optional details', (
+      tester,
+    ) async {
+      await _pumpDetail(tester, {
+        ..._requestJson(withRoute: true),
+        'pickup_place_name_ar': 'حلحول',
+        'pickup_place_name_en': 'Halhul',
+        'dropoff_place_name_ar': 'بيت جالا',
+        'dropoff_place_name_en': 'Beit Jala',
+        'dropoff_details': null,
+      });
+      expect(find.text('Halhul · Near the PPU main gate'), findsOneWidget);
+      // Without details only the place is shown.
+      expect(find.text('Beit Jala'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('shows the chosen places in Arabic', (tester) async {
+      await _pumpDetail(tester, {
+        ..._requestJson(withRoute: true),
+        'pickup_place_name_ar': 'حلحول',
+        'pickup_place_name_en': 'Halhul',
+        'dropoff_place_name_ar': 'بيت جالا',
+        'dropoff_place_name_en': 'Beit Jala',
+        'pickup_details': null,
+        'dropoff_details': null,
+      }, locale: const Locale('ar'));
+      expect(find.text('حلحول'), findsOneWidget);
+      expect(find.text('بيت جالا'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
@@ -623,6 +825,7 @@ void main() {
               passengerAssistantControllerProvider.overrideWith(
                 () => controller,
               ),
+              routePlacesTestOverride(),
               operatingRoutesProvider.overrideWith(
                 (ref) async => testOperatingRoutes(),
               ),
@@ -643,6 +846,18 @@ void main() {
           find.byKey(const ValueKey('assistantPickupDetailsField')),
           'وسط الخليل، أمام البلدية',
         );
+        // The places are chosen from the route's cities (shown in Arabic).
+        await pickPlace(
+          tester,
+          'حلحول',
+          pickerKey: const ValueKey('assistantPickupPlacePicker'),
+        );
+        await pickPlace(
+          tester,
+          'بيت جالا',
+          side: 'dropoff',
+          pickerKey: const ValueKey('assistantDropoffPlacePicker'),
+        );
         await tester.ensureVisible(
           find.byKey(const ValueKey('assistantConfirmSearch')),
         );
@@ -651,6 +866,8 @@ void main() {
 
         final searched = controller.searched!;
         expect(searched.serviceRouteId, 'route-heb-bth');
+        expect(searched.pickupPlaceId, 'place-heb-halhul');
+        expect(searched.dropoffPlaceId, 'place-bth-beitjala');
         expect(searched.pickupDetails, 'وسط الخليل، أمام البلدية');
         expect(searched.dropoffDetails, 'وسط بيت لحم');
       },
@@ -680,6 +897,7 @@ void main() {
         ProviderScope(
           overrides: [
             passengerAssistantControllerProvider.overrideWith(() => controller),
+            routePlacesTestOverride(),
             operatingRoutesProvider.overrideWith(
               (ref) async => testOperatingRoutes(),
             ),
@@ -706,9 +924,34 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bethlehem → Hebron').last);
       await tester.pumpAndSettle();
+      // The route alone is not enough: both places are required too.
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('assistantConfirmSearch')),
+      );
+      await tester.tap(find.byKey(const ValueKey('assistantConfirmSearch')));
+      await tester.pumpAndSettle();
+      expect(controller.searched, isNull);
+      expect(find.text('Choose a place to continue.'), findsNWidgets(2));
+
+      await pickPlace(
+        tester,
+        'Beit Jala',
+        pickerKey: const ValueKey('assistantPickupPlacePicker'),
+      );
+      await pickPlace(
+        tester,
+        'Halhul',
+        side: 'dropoff',
+        pickerKey: const ValueKey('assistantDropoffPlacePicker'),
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('assistantConfirmSearch')),
+      );
       await tester.tap(find.byKey(const ValueKey('assistantConfirmSearch')));
       await tester.pumpAndSettle();
       expect(controller.searched?.serviceRouteId, 'route-bth-heb');
+      expect(controller.searched?.pickupPlaceId, 'place-bth-beitjala');
+      expect(controller.searched?.dropoffPlaceId, 'place-heb-halhul');
       expect(controller.searched?.pickupDetails, 'Somewhere');
     });
   });
@@ -727,6 +970,7 @@ void main() {
         ProviderScope(
           overrides: [
             authControllerProvider.overrideWith(_SignedIn.new),
+            routePlacesTestOverride(),
             operatingRoutesProvider.overrideWith(
               (ref) async => testOperatingRoutes(),
             ),
@@ -755,6 +999,18 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(_hebronToBethlehem).last);
       await tester.pumpAndSettle();
+      // The places are required; the details next to them are optional.
+      await pickPlace(
+        tester,
+        'Halhul',
+        pickerKey: const ValueKey('parcelPickupPlace'),
+      );
+      await pickPlace(
+        tester,
+        'Beit Jala',
+        side: 'dropoff',
+        pickerKey: const ValueKey('parcelDropoffPlace'),
+      );
       await tester.enterText(
         find.byKey(const ValueKey('parcelPickupDetails')),
         'The shop next to Ibn Rushd roundabout',
@@ -781,6 +1037,8 @@ void main() {
       final body = repository.payloads.single;
       expect(body.keys.toSet(), {
         'service_route_id',
+        'pickup_place_id',
+        'dropoff_place_id',
         'pickup_details',
         'dropoff_details',
         'preferred_time',
@@ -791,6 +1049,8 @@ void main() {
         'note',
       });
       expect(body['service_route_id'], 'route-heb-bth');
+      expect(body['pickup_place_id'], 'place-heb-halhul');
+      expect(body['dropoff_place_id'], 'place-bth-beitjala');
       expect(body['pickup_details'], 'The shop next to Ibn Rushd roundabout');
       expect(
         body['dropoff_details'],
@@ -1064,6 +1324,7 @@ Future<void> _pumpSendParcel(
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(_SignedIn.new),
+        routePlacesTestOverride(),
         operatingRoutesProvider.overrideWith(
           (ref) async => testOperatingRoutes(),
         ),
@@ -1102,6 +1363,17 @@ Future<void> _fillParcel(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text(_hebronToBethlehem).last);
   await tester.pumpAndSettle();
+  await pickPlace(
+    tester,
+    'Halhul',
+    pickerKey: const ValueKey('parcelPickupPlace'),
+  );
+  await pickPlace(
+    tester,
+    'Beit Jala',
+    side: 'dropoff',
+    pickerKey: const ValueKey('parcelDropoffPlace'),
+  );
   await tester.enterText(
     find.byKey(const ValueKey('parcelPickupDetails')),
     _parcelPickup,
@@ -1131,6 +1403,7 @@ Future<void> _pumpCreate(
   Future<List<OperatingRoute>> Function(Ref ref)? routes,
   Future<http.Response> Function(http.Request request)? handler,
   bool preserveStorage = false,
+  Future<RoutePlaces> Function(String routeId)? places,
   Locale locale = const Locale('en'),
   // Loading-state tests keep the route list pending; settling would wait on
   // its spinner forever.
@@ -1172,6 +1445,10 @@ Future<void> _pumpCreate(
           PassengerRepository(apiClient: client.client),
         ),
         authenticatedApiClientProvider.overrideWithValue(client.client),
+        routePlacesProvider.overrideWith(
+          (ref, key) =>
+              (places ?? (id) async => testRoutePlaces(id))(key.routeId),
+        ),
         operatingRoutesProvider.overrideWith(
           routes ?? (ref) async => testOperatingRoutes(),
         ),
@@ -1258,7 +1535,10 @@ Future<void> _pumpWelcome(
   await tester.pumpWidget(
     ProviderScope(
       retry: (_, _) => null,
-      overrides: [operatingRoutesProvider.overrideWith(routes)],
+      overrides: [
+        routePlacesTestOverride(),
+        operatingRoutesProvider.overrideWith(routes),
+      ],
       child: MaterialApp(
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,

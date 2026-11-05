@@ -17,6 +17,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/booking_recovery_test_support.dart';
 import 'support/operating_routes_fixture.dart';
+import 'support/route_places_fixture.dart';
 
 const _route = 'Hebron → Bethlehem';
 
@@ -141,6 +142,7 @@ Future<void> _pump(
         operatingRoutesProvider.overrideWith(
           (ref) async => testOperatingRoutes(),
         ),
+        routePlacesTestOverride(),
         passengerParcelRepositoryProvider.overrideWithValue(parcels),
         deliveryHandoverRepositoryProvider.overrideWithValue(handover),
         passengerParcelMutationRunnerProvider.overrideWithValue(
@@ -163,6 +165,17 @@ Future<void> _fillAndSend(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text(_route).last);
   await tester.pumpAndSettle();
+  await pickPlace(
+    tester,
+    'Halhul',
+    pickerKey: const ValueKey('parcelPickupPlace'),
+  );
+  await pickPlace(
+    tester,
+    'Beit Jala',
+    side: 'dropoff',
+    pickerKey: const ValueKey('parcelDropoffPlace'),
+  );
   await tester.enterText(
     find.byKey(const ValueKey('parcelPickupDetails')),
     'The shop next to Ibn Rushd roundabout',

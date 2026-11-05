@@ -13,7 +13,8 @@ import {
   serializePassengerParcel,
   type PassengerParcelService
 } from "../services/passengerParcels.js";
-import { detailsSchema, serviceRouteIdSchema } from "../services/operatingRoutes.js";
+import { serviceRouteIdSchema } from "../services/operatingRoutes.js";
+import { optionalDetailsSchema, placeIdSchema } from "../services/cityPlaces.js";
 import { createBestMatch, type MatchActor, type MatchInput } from "./matching.js";
 
 const idempotencyKeySchema = z.string().min(8).max(128).regex(/^[A-Za-z0-9._:-]+$/);
@@ -23,8 +24,10 @@ const noControlCharacters = (value: string) => !/[\u0000-\u001f\u007f]/.test(val
 /** The route-based body; available whenever the API is up. */
 const routeCreateSchema = z.strictObject({
   service_route_id: serviceRouteIdSchema,
-  pickup_details: detailsSchema,
-  dropoff_details: detailsSchema,
+  pickup_place_id: placeIdSchema.optional(),
+  dropoff_place_id: placeIdSchema.optional(),
+  pickup_details: optionalDetailsSchema,
+  dropoff_details: optionalDetailsSchema,
   preferred_time: dateTime,
   size: z.enum(PASSENGER_PARCEL_LIMITS.allowedSizes),
   note: z.string().trim().max(PASSENGER_PARCEL_LIMITS.noteMaxLength).refine(noControlCharacters).optional(),
@@ -99,6 +102,8 @@ export function createPassengerParcelRouter(
         const result = await service.createForRoute(
           {
             serviceRouteId: input.service_route_id,
+            pickupPlaceId: input.pickup_place_id,
+            dropoffPlaceId: input.dropoff_place_id,
             pickupDetails: input.pickup_details,
             dropoffDetails: input.dropoff_details,
             preferredTime: input.preferred_time,

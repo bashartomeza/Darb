@@ -106,8 +106,10 @@ class PassengerRepository {
   /// through [createPayload] so a lost response can be replayed safely.
   Future<PassengerRequest> createRequest({
     required String serviceRouteId,
-    required String pickupDetails,
-    required String dropoffDetails,
+    String? pickupPlaceId,
+    String? dropoffPlaceId,
+    String pickupDetails = '',
+    String dropoffDetails = '',
     required DateTime preferredTime,
     required int passengerCount,
   }) async {
@@ -115,6 +117,8 @@ class PassengerRepository {
       '/passenger/requests',
       body: passengerRouteRequestBody(
         serviceRouteId: serviceRouteId,
+        pickupPlaceId: pickupPlaceId,
+        dropoffPlaceId: dropoffPlaceId,
         pickupDetails: pickupDetails,
         dropoffDetails: dropoffDetails,
         preferredTime: preferredTime,

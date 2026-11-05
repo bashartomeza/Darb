@@ -100,6 +100,8 @@ const tripBatchInclude = {
             pickup_lat: true,
             pickup_lng: true,
             pickup_details: true,
+            pickup_place_name_ar: true,
+            pickup_place_name_en: true,
             route_version: routeSummarySelect,
             parcels: {
               orderBy: { id: "asc" as const },
@@ -109,6 +111,8 @@ const tripBatchInclude = {
                 destination_lat: true,
                 destination_lng: true,
                 dropoff_details: true,
+                dropoff_place_name_ar: true,
+                dropoff_place_name_en: true,
                 size: true,
                 priority: true,
                 status: true,

@@ -156,11 +156,12 @@ String merchantOrderRouteLabel(BuildContext context, MerchantOrder order) {
 /// Where the parcels are collected: the merchant's own words, or the old
 /// corridor place.
 String merchantPickupText(BuildContext context, MerchantOrder order) =>
-    order.pickupDetails ?? localizedCorridorPlace(context, order.pickupLabel);
+    order.pickupSummary(arabic: _arabic(context)) ??
+    localizedCorridorPlace(context, order.pickupLabel);
 
 /// Where one parcel goes: the merchant's own words, or the old corridor place.
 String merchantParcelDropoffText(BuildContext context, MerchantParcel parcel) =>
-    parcel.dropoffDetails ??
+    parcel.dropoffSummary(arabic: _arabic(context)) ??
     merchantDestinationLabel(context, parcel.destinationLabel);
 
 String merchantDestinationLabel(BuildContext context, String value) {

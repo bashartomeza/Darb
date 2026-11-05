@@ -2592,6 +2592,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get assistantVoiceStop => 'إيقاف الاستماع';
 
   @override
+  String get assistantVoiceSettings => 'إعدادات الصوت';
+
+  @override
+  String get assistantVoiceSpeakReplies => 'قراءة الردود بصوت عالٍ عند التحدث';
+
+  @override
+  String get assistantVoiceAutoSend => 'إرسال الطلب عند التوقف عن الكلام';
+
+  @override
+  String get assistantVoiceSpeed => 'سرعة القراءة';
+
+  @override
+  String get assistantVoiceStopSpeaking => 'إيقاف القراءة';
+
+  @override
   String get assistantVoiceListening => 'جارٍ الاستماع…';
 
   @override
@@ -4161,6 +4176,46 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mapStraightLineNote => 'تعذر حساب الطريق: يظهر خط مستقيم';
 
   @override
+  String routeChangedClosed(String names) {
+    return 'تم تغيير المسار: حاجز $names مغلق';
+  }
+
+  @override
+  String routeChangedClosedExtra(String names, int minutes) {
+    return 'تم تغيير المسار: حاجز $names مغلق (أطول بحوالي $minutes دقيقة)';
+  }
+
+  @override
+  String routeChangedCongested(String names) {
+    return 'تم تغيير المسار لتجنب الازدحام عند $names';
+  }
+
+  @override
+  String routeAllClosed(String names) {
+    return 'كل المسارات المعروفة تمر بحاجز مغلق: $names. تأكد قبل الانطلاق.';
+  }
+
+  @override
+  String routeCongestedWarning(String names) {
+    return 'مسارك يمر بحاجز مزدحم: $names. لم يتوفر بديل معقول.';
+  }
+
+  @override
+  String get routeCheckUnavailable => 'تعذّر فحص هذا المسار مقابل حالة الحواجز';
+
+  @override
+  String get routeStatusStale => 'حالة الحواجز قديمة، لذلك لم يتم تغيير المسار';
+
+  @override
+  String get routePositionApproximate =>
+      'موقع أحد الحواجز على هذا المسار تقريبي';
+
+  @override
+  String routeCheckpointOnRoute(String name) {
+    return 'على مسارك: $name';
+  }
+
+  @override
   String get mapCheckpointsUnavailable => 'بيانات الحواجز غير متوفرة';
 
   @override
@@ -4387,6 +4442,55 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get callDriverUnavailable =>
       'لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر.';
+
+  @override
+  String get routePlacePickupLabel => 'قرية أو بلدة الالتقاط';
+
+  @override
+  String get routePlaceDropoffLabel => 'قرية أو بلدة التسليم';
+
+  @override
+  String get routePlacePickupHint => 'اختر مكان الالتقاط';
+
+  @override
+  String get routePlaceDropoffHint => 'اختر مكان التسليم';
+
+  @override
+  String get routePlaceChooseRouteFirst => 'اختر المسار أولاً';
+
+  @override
+  String get routePlaceRequired => 'اختر مكاناً للمتابعة.';
+
+  @override
+  String get routePlaceSearchHint => 'ابحث عن قرية أو بلدة';
+
+  @override
+  String get routePlaceNoResults => 'لا توجد نتائج مطابقة.';
+
+  @override
+  String get routePlacesLoading => 'جارٍ تحميل الأماكن…';
+
+  @override
+  String get routePlacesLoadFailed => 'تعذر تحميل الأماكن.';
+
+  @override
+  String get routePlacesEmpty => 'لا توجد أماكن لهذه المدينة بعد.';
+
+  @override
+  String get routePlaceMoreDetailsLabel => 'تفاصيل إضافية (اختياري)';
+
+  @override
+  String get routePlacePickupDetailsHint => 'مثال: أمام البوابة الرئيسية';
+
+  @override
+  String get routePlaceDropoffDetailsHint => 'مثال: بجانب الصيدلية';
+
+  @override
+  String get routePlaceDetailsHelper =>
+      'اختياري: ساعد السائق على إيجاد المكان بدقة.';
+
+  @override
+  String get routePlaceSavedChoice => 'مكان مختار من القائمة';
 
   @override
   String get placeCategoryCafe => 'مقهى';

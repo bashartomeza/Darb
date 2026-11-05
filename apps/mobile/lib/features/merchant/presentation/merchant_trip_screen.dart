@@ -43,12 +43,24 @@ final _trackingRouteProvider = FutureProvider.autoDispose
 final _routeGeometryProvider = FutureProvider.autoDispose
     .family<OsrmRouteResult?, _RouteEndpoints>((ref, points) async {
       try {
-        return await ref
-            .read(osrmRouteServiceProvider)
-            .getRoute(
-              start: LatLng(points.lat1, points.lng1),
-              end: LatLng(points.lat2, points.lng2),
-            );
+        // Checkpoint-aware when the server has a checkpoint source, the plain
+        // road route otherwise (the shared road route decides).
+        final road = await ref.watch(
+          roadRouteProvider(
+            RoadRouteRequest([
+              GeoPoint(points.lat1, points.lng1),
+              GeoPoint(points.lat2, points.lng2),
+            ]),
+          ).future,
+        );
+        if (!road.routed) return null;
+        return OsrmRouteResult(
+          points: [
+            for (final p in road.points) LatLng(p.latitude, p.longitude),
+          ],
+          durationSeconds: road.durationSeconds ?? 0,
+          distanceMeters: road.distanceMeters ?? 0,
+        );
       } catch (_) {
         return null;
       }

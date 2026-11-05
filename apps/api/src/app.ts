@@ -51,6 +51,10 @@ import { createAdminRouteFaresRouter } from "./modules/adminRouteFares.js";
 import type { CanonicalDemandService } from "./services/canonicalDemand.js";
 import { createCapabilitiesRouter } from "./modules/capabilities.js";
 import { createCheckpointRouter } from "./modules/checkpoints.js";
+import { createRoutePlansRouter } from "./modules/routePlans.js";
+import { DEFAULT_PLANNER_CONFIG, OsrmEngine, RoutePlanner, type RoutingEngine } from "./services/routePlanner.js";
+import { createCheckpointService } from "./services/checkpoints.js";
+import type { CheckpointFeed } from "./services/checkpointRouting.js";
 import type { CheckpointService } from "./services/checkpoints.js";
 import { CheckpointDirectoryService } from "./services/checkpointDirectory.js";
 import { LimitedCheckpointDirectoryService } from "./services/limitedCheckpointDirectory.js";
@@ -108,6 +112,7 @@ type AppDependencies = {
   canonicalMatchingService?: CanonicalMatchingService;
   canonicalSharedMatchingService?: CanonicalSharedMatchingService;
   checkpointService?: CheckpointService;
+  routingEngine?: RoutingEngine;
   checkpointDirectoryService?: CheckpointDirectoryService;
   limitedCheckpointDirectoryService?: LimitedCheckpointDirectoryService;
   partnerCheckpointMapService?: PartnerCheckpointMapService;
@@ -182,7 +187,40 @@ export function createApp(
   const partnerCheckpointMap = appConfig.partnerCheckpointMapEnabled && limitedDirectory
     ? dependencies.partnerCheckpointMapService ?? new PartnerCheckpointMapService(limitedDirectory)
     : undefined;
-  app.use("/api/v1", createCheckpointRouter(appConfig, dependencies.checkpointService, partnerCheckpointMap));
+  const coordinateCheckpoints = appConfig.checkpointsEnabled && appConfig.checkpoints
+    ? dependencies.checkpointService ?? createCheckpointService(appConfig.checkpoints)
+    : undefined;
+  app.use("/api/v1", createCheckpointRouter(appConfig, coordinateCheckpoints, partnerCheckpointMap));
+  // Checkpoint-aware routes use the same feed as the map, so the line and the pins agree.
+  const routingFeed: (() => Promise<CheckpointFeed>) | undefined = coordinateCheckpoints
+    ? async () => coordinateCheckpoints.list()
+    : partnerCheckpointMap
+      ? async () => {
+          const result = await partnerCheckpointMap.list();
+          return {
+            fetched_at: result.fetched_at,
+            stale: result.stale,
+            checkpoints: result.checkpoints.map((row) => ({
+              id: row.id,
+              name_ar: row.name_ar,
+              name_en: row.name_en,
+              city: row.city,
+              latitude: row.latitude,
+              longitude: row.longitude,
+              status: row.status,
+              position_approximate: row.position_source === "darb_research" && row.position_approximate
+            }))
+          };
+        }
+      : undefined;
+  const routePlanner = routingFeed
+    ? new RoutePlanner(
+        dependencies.routingEngine ?? new OsrmEngine(appConfig.checkpointRouting.osrmBaseUrl, appConfig.checkpointRouting.timeoutMs),
+        routingFeed,
+        { ...DEFAULT_PLANNER_CONFIG, ...appConfig.checkpointRouting }
+      )
+    : undefined;
+  app.use("/api/v1", createRoutePlansRouter(appConfig, routePlanner, coordinateCheckpoints ? "any" : ["passenger", "driver"]));
   if (appConfig.demoFeaturesEnabled) app.use("/api/v1", createDemoRouter(appConfig));
   app.use(
     "/api/v1",

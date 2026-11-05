@@ -13,6 +13,7 @@ import {
   routeSummarySelect
 } from "./operatingRoutes.js";
 import { routeFareService } from "./routeFares.js";
+import { placeColumns, resolveOrderPlace } from "./cityPlaces.js";
 
 export const MERCHANT_CREATE_OPERATION = "legacy_merchant_order_create_v1";
 const MERCHANT_CREATE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -32,12 +33,20 @@ export type CoordinateOrderInput = {
   }>;
 };
 
-/** Route-based order: a predefined route, the pickup as text, each drop-off as text. */
+/**
+ * Route-based order: a predefined route, the pickup and each drop-off as a
+ * city place (ids from the places list) plus optional extra text. Free text
+ * without a place id is the older-build / bulk-file shape.
+ */
 export type RouteOrderInput = {
   service_route_id: string;
-  pickup_details: string;
+  pickup_place_id?: string | null;
+  pickup_details?: string | null;
+  /** The bulk CSV carries text only; it stays valid even when ROUTE_PLACES_REQUIRED is on. */
+  free_text_only?: boolean;
   parcels: Array<{
-    dropoff_details: string;
+    dropoff_place_id?: string | null;
+    dropoff_details?: string | null;
     size: "S" | "M" | "L";
     priority: "low" | "normal" | "high";
     receiver_name?: string | null;
@@ -94,9 +103,11 @@ export async function createLegacyMerchantOrder(
   const normalized = isRouteOrderInput(input)
     ? {
         service_route_id: input.service_route_id,
-        pickup_details: input.pickup_details,
+        ...(input.pickup_place_id ? { pickup_place_id: input.pickup_place_id } : {}),
+        pickup_details: input.pickup_details ?? undefined,
         parcels: input.parcels.map((parcel) => ({
-          dropoff_details: parcel.dropoff_details,
+          ...(parcel.dropoff_place_id ? { dropoff_place_id: parcel.dropoff_place_id } : {}),
+          dropoff_details: parcel.dropoff_details ?? undefined,
           size: parcel.size,
           priority: parcel.priority,
           receiver_name: parcel.receiver_name ?? null,
@@ -151,21 +162,35 @@ export async function createLegacyMerchantOrder(
     const route = isRouteOrderInput(input)
       ? await resolveOperatingRoute(tx, input.service_route_id)
       : await resolveOperatingRouteByKey(tx, LEGACY_DEFAULT_ROUTE_KEY);
+    // Chosen places must belong to the route's cities: pickup in the origin
+    // city, every drop-off in the destination city.
+    const free = isRouteOrderInput(input) && input.free_text_only === true;
+    const pickupPlace = isRouteOrderInput(input)
+      ? await resolveOrderPlace(tx, "pickup", route.origin.stopKey, { placeId: input.pickup_place_id, details: input.pickup_details }, free)
+      : null;
+    const dropoffPlaces = isRouteOrderInput(input)
+      ? await Promise.all(
+          input.parcels.map((parcel) =>
+            resolveOrderPlace(tx, "dropoff", route.destination.stopKey, { placeId: parcel.dropoff_place_id, details: parcel.dropoff_details }, free)
+          )
+        )
+      : [];
     const pickup = isRouteOrderInput(input)
       ? {
-          // Stored labels stay English city names; the exact place is the sender's text.
+          // Stored labels stay English city names; coordinates are the chosen
+          // place's, or the city centre for free-text orders.
           pickup_label: route.origin.nameEn,
-          pickup_lat: route.origin.latitude,
-          pickup_lng: route.origin.longitude,
-          pickup_details: input.pickup_details
+          pickup_lat: pickupPlace!.place?.latitude ?? route.origin.latitude,
+          pickup_lng: pickupPlace!.place?.longitude ?? route.origin.longitude,
+          ...placeColumns("pickup", pickupPlace!)
         }
       : { pickup_label: input.pickup_label, pickup_lat: input.pickup_lat.toFixed(6), pickup_lng: input.pickup_lng.toFixed(6) };
     const parcels = isRouteOrderInput(input)
-      ? input.parcels.map((parcel) => ({
+      ? input.parcels.map((parcel, index) => ({
           destination_label: route.destination.nameEn,
-          destination_lat: route.destination.latitude,
-          destination_lng: route.destination.longitude,
-          dropoff_details: parcel.dropoff_details,
+          destination_lat: dropoffPlaces[index]!.place?.latitude ?? route.destination.latitude,
+          destination_lng: dropoffPlaces[index]!.place?.longitude ?? route.destination.longitude,
+          ...placeColumns("dropoff", dropoffPlaces[index]!),
           size: parcel.size,
           priority: parcel.priority,
           receiver_name: parcel.receiver_name ?? null,

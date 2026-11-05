@@ -123,9 +123,8 @@ class _MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final routeName = match.route.routeName(
-      arabic: Localizations.localeOf(context).languageCode == 'ar',
-    );
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    final routeName = match.route.routeName(arabic: arabic);
     final passenger = match.passengerRequest;
     final order = match.merchantOrder;
 
@@ -137,22 +136,22 @@ class _MatchCard extends StatelessWidget {
     final details = <({String label, String value, IconData icon})>[
       if (routeName != null)
         (label: l10n.orderRouteLabel, value: routeName, icon: Icons.route),
-      if (passenger?.pickupDetails != null)
+      if (passenger?.pickupSummary(arabic: arabic) != null)
         (
           label: l10n.driverPickupDetailsLabel,
-          value: passenger!.pickupDetails!,
+          value: passenger!.pickupSummary(arabic: arabic)!,
           icon: Icons.person_pin_circle_outlined,
         ),
-      if (passenger?.dropoffDetails != null)
+      if (passenger?.dropoffSummary(arabic: arabic) != null)
         (
           label: l10n.driverDropoffDetailsLabel,
-          value: passenger!.dropoffDetails!,
+          value: passenger!.dropoffSummary(arabic: arabic)!,
           icon: Icons.flag_outlined,
         ),
-      if (order?.pickupDetails != null)
+      if (order?.pickupSummary(arabic: arabic) != null)
         (
           label: l10n.driverMerchantPickupLabel,
-          value: order!.pickupDetails!,
+          value: order!.pickupSummary(arabic: arabic)!,
           icon: Icons.storefront_outlined,
         ),
       if (match.passengerRequest != null)

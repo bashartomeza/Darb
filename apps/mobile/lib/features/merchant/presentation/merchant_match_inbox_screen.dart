@@ -121,10 +121,10 @@ class _MerchantMatchCard extends StatelessWidget {
       score: match.score,
       scoreLabel: l10n.matchScore,
       from:
-          order.pickupDetails ??
+          order.pickupSummary(arabic: arabic) ??
           localizedCorridorPlace(context, order.pickupLabel),
-      to: order.dropoffs.isNotEmpty
-          ? order.dropoffs.join(' · ')
+      to: order.dropoffTexts(arabic: arabic).isNotEmpty
+          ? order.dropoffTexts(arabic: arabic).join(' · ')
           : localizedCorridorPlace(context, match.route.destinationLabel),
       details: [
         if (routeName != null)

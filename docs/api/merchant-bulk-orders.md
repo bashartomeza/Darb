@@ -51,7 +51,7 @@ Header row required. Columns: `pickup_label, pickup_lat, pickup_lng, destination
 
 ### Route-based CSV format
 
-A header containing `route_key` selects the route-based format (`docs/routes/route-based-orders.md`): columns `route_key, pickup_details, dropoff_details, size, priority` and optional `receiver_name, receiver_phone`. Rows sharing a `route_key` and `pickup_details` become one order on that route. Details are 3-300 characters; receiver phones are normalised to E.164. Rows naming an unknown, retired or turned-off route are reported as `route_unavailable` on the `route_key` field and handled like any other invalid row. Preview orders add `route_key`, `service_route_id`, `route_name_ar`, `route_name_en` and `pickup_details`. The coordinate format above is still accepted; its orders ride `hebron-to-bethlehem`.
+A header containing `route_key` selects the route-based format (`docs/routes/route-based-orders.md`): columns `route_key, pickup_details, dropoff_details, size, priority` and optional `receiver_name, receiver_phone`. Rows sharing a `route_key` and `pickup_details` become one order on that route. Details are 3-300 characters (the CSV stays free text: it has no place columns and is exempt from `ROUTE_PLACES_REQUIRED`, see `docs/routes/city-places.md`); receiver phones are normalised to E.164. Rows naming an unknown, retired or turned-off route are reported as `route_unavailable` on the `route_key` field and handled like any other invalid row. Preview orders add `route_key`, `service_route_id`, `route_name_ar`, `route_name_en` and `pickup_details`. The coordinate format above is still accepted; its orders ride `hebron-to-bethlehem`.
 
 ### Row errors
 

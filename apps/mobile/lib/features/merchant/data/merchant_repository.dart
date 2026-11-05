@@ -33,27 +33,31 @@ class MerchantRepository {
     return MerchantOrder.fromJson(json['order'] as Map<String, dynamic>);
   }
 
-  /// An order on one predefined route. The pickup and every drop-off are the
-  /// merchant's own words; the server fills the city labels and coordinates
-  /// from the route.
+  /// An order on one predefined route. The pickup and every drop-off are
+  /// villages or towns chosen from the route's cities, each with optional
+  /// details; the server fills the city labels and the coordinates.
   static Map<String, dynamic> createOrderBody({
     required String serviceRouteId,
-    required String pickupDetails,
+    String? pickupPlaceId,
+    String pickupDetails = '',
     required List<ParcelDraft> parcels,
   }) => {
     'service_route_id': serviceRouteId,
-    'pickup_details': pickupDetails.trim(),
+    'pickup_place_id': ?pickupPlaceId,
+    if (pickupDetails.trim().isNotEmpty) 'pickup_details': pickupDetails.trim(),
     'parcels': parcels.map((parcel) => parcel.toJson()).toList(),
   };
 
   Future<MerchantOrder> createOrder({
     required String serviceRouteId,
-    required String pickupDetails,
+    String? pickupPlaceId,
+    String pickupDetails = '',
     required List<ParcelDraft> parcels,
     String? idempotencyKey,
   }) => createOrderPayload(
     createOrderBody(
       serviceRouteId: serviceRouteId,
+      pickupPlaceId: pickupPlaceId,
       pickupDetails: pickupDetails,
       parcels: parcels,
     ),

@@ -2607,6 +2607,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantVoiceStop => 'Stop listening';
 
   @override
+  String get assistantVoiceSettings => 'Voice settings';
+
+  @override
+  String get assistantVoiceSpeakReplies => 'Read replies aloud when I speak';
+
+  @override
+  String get assistantVoiceAutoSend => 'Send when I stop speaking';
+
+  @override
+  String get assistantVoiceSpeed => 'Reading speed';
+
+  @override
+  String get assistantVoiceStopSpeaking => 'Stop reading aloud';
+
+  @override
   String get assistantVoiceListening => 'Listening…';
 
   @override
@@ -4188,6 +4203,48 @@ class AppLocalizationsEn extends AppLocalizations {
       'Road route unavailable: showing a straight line';
 
   @override
+  String routeChangedClosed(String names) {
+    return 'Route changed: checkpoint $names is closed';
+  }
+
+  @override
+  String routeChangedClosedExtra(String names, int minutes) {
+    return 'Route changed: checkpoint $names is closed (about $minutes min longer)';
+  }
+
+  @override
+  String routeChangedCongested(String names) {
+    return 'Route changed to avoid congestion at $names';
+  }
+
+  @override
+  String routeAllClosed(String names) {
+    return 'All known routes pass a closed checkpoint: $names. Check before you go.';
+  }
+
+  @override
+  String routeCongestedWarning(String names) {
+    return 'Your route passes a congested checkpoint: $names. No reasonable alternative was found.';
+  }
+
+  @override
+  String get routeCheckUnavailable =>
+      'Could not check this route against checkpoint status';
+
+  @override
+  String get routeStatusStale =>
+      'Checkpoint statuses are out of date, so the route was not changed';
+
+  @override
+  String get routePositionApproximate =>
+      'A checkpoint position on this route is approximate';
+
+  @override
+  String routeCheckpointOnRoute(String name) {
+    return 'On your route: $name';
+  }
+
+  @override
   String get mapCheckpointsUnavailable => 'Checkpoint data unavailable';
 
   @override
@@ -4423,6 +4480,55 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get callDriverUnavailable =>
       'This device can\'t place the call. Dial the number shown.';
+
+  @override
+  String get routePlacePickupLabel => 'Pickup village or town';
+
+  @override
+  String get routePlaceDropoffLabel => 'Drop-off village or town';
+
+  @override
+  String get routePlacePickupHint => 'Choose where you are picked up';
+
+  @override
+  String get routePlaceDropoffHint => 'Choose where you are dropped off';
+
+  @override
+  String get routePlaceChooseRouteFirst => 'Choose a route first';
+
+  @override
+  String get routePlaceRequired => 'Choose a place to continue.';
+
+  @override
+  String get routePlaceSearchHint => 'Search villages and towns';
+
+  @override
+  String get routePlaceNoResults => 'Nothing matches your search.';
+
+  @override
+  String get routePlacesLoading => 'Loading places…';
+
+  @override
+  String get routePlacesLoadFailed => 'Places could not be loaded.';
+
+  @override
+  String get routePlacesEmpty => 'No places are listed for this city yet.';
+
+  @override
+  String get routePlaceMoreDetailsLabel => 'More details (optional)';
+
+  @override
+  String get routePlacePickupDetailsHint => 'e.g. In front of the main gate';
+
+  @override
+  String get routePlaceDropoffDetailsHint => 'e.g. Next to the pharmacy';
+
+  @override
+  String get routePlaceDetailsHelper =>
+      'Optional: help the driver find the exact spot.';
+
+  @override
+  String get routePlaceSavedChoice => 'Place chosen from the list';
 
   @override
   String get placeCategoryCafe => 'Cafe';

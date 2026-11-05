@@ -61,6 +61,6 @@ decision (and stops the next import from bringing it back, because the row stays
 
 ## Tables
 
-Migration `20261114120000_map_places`: `map_places` (category, name_ar, name_en, latitude, longitude, phone,
+Migration `20261115120000_map_places`: `map_places` (category, name_ar, name_en, latitude, longitude, phone,
 opening_hours, city, source, osm_id unique, active, admin_edited) and `map_place_reports`. `category` is free text
 validated against the shared category file, so a new category needs no migration.

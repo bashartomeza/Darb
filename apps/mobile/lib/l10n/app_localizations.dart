@@ -4832,6 +4832,36 @@ abstract class AppLocalizations {
   /// **'إيقاف الاستماع'**
   String get assistantVoiceStop;
 
+  /// No description provided for @assistantVoiceSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات الصوت'**
+  String get assistantVoiceSettings;
+
+  /// No description provided for @assistantVoiceSpeakReplies.
+  ///
+  /// In ar, this message translates to:
+  /// **'قراءة الردود بصوت عالٍ عند التحدث'**
+  String get assistantVoiceSpeakReplies;
+
+  /// No description provided for @assistantVoiceAutoSend.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الطلب عند التوقف عن الكلام'**
+  String get assistantVoiceAutoSend;
+
+  /// No description provided for @assistantVoiceSpeed.
+  ///
+  /// In ar, this message translates to:
+  /// **'سرعة القراءة'**
+  String get assistantVoiceSpeed;
+
+  /// No description provided for @assistantVoiceStopSpeaking.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف القراءة'**
+  String get assistantVoiceStopSpeaking;
+
   /// No description provided for @assistantVoiceListening.
   ///
   /// In ar, this message translates to:
@@ -7502,6 +7532,60 @@ abstract class AppLocalizations {
   /// **'تعذر حساب الطريق: يظهر خط مستقيم'**
   String get mapStraightLineNote;
 
+  /// No description provided for @routeChangedClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير المسار: حاجز {names} مغلق'**
+  String routeChangedClosed(String names);
+
+  /// No description provided for @routeChangedClosedExtra.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير المسار: حاجز {names} مغلق (أطول بحوالي {minutes} دقيقة)'**
+  String routeChangedClosedExtra(String names, int minutes);
+
+  /// No description provided for @routeChangedCongested.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير المسار لتجنب الازدحام عند {names}'**
+  String routeChangedCongested(String names);
+
+  /// No description provided for @routeAllClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل المسارات المعروفة تمر بحاجز مغلق: {names}. تأكد قبل الانطلاق.'**
+  String routeAllClosed(String names);
+
+  /// No description provided for @routeCongestedWarning.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسارك يمر بحاجز مزدحم: {names}. لم يتوفر بديل معقول.'**
+  String routeCongestedWarning(String names);
+
+  /// No description provided for @routeCheckUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فحص هذا المسار مقابل حالة الحواجز'**
+  String get routeCheckUnavailable;
+
+  /// No description provided for @routeStatusStale.
+  ///
+  /// In ar, this message translates to:
+  /// **'حالة الحواجز قديمة، لذلك لم يتم تغيير المسار'**
+  String get routeStatusStale;
+
+  /// No description provided for @routePositionApproximate.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقع أحد الحواجز على هذا المسار تقريبي'**
+  String get routePositionApproximate;
+
+  /// No description provided for @routeCheckpointOnRoute.
+  ///
+  /// In ar, this message translates to:
+  /// **'على مسارك: {name}'**
+  String routeCheckpointOnRoute(String name);
+
   /// No description provided for @mapCheckpointsUnavailable.
   ///
   /// In ar, this message translates to:
@@ -7909,6 +7993,102 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر.'**
   String get callDriverUnavailable;
+
+  /// No description provided for @routePlacePickupLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'قرية أو بلدة الالتقاط'**
+  String get routePlacePickupLabel;
+
+  /// No description provided for @routePlaceDropoffLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'قرية أو بلدة التسليم'**
+  String get routePlaceDropoffLabel;
+
+  /// No description provided for @routePlacePickupHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر مكان الالتقاط'**
+  String get routePlacePickupHint;
+
+  /// No description provided for @routePlaceDropoffHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر مكان التسليم'**
+  String get routePlaceDropoffHint;
+
+  /// No description provided for @routePlaceChooseRouteFirst.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المسار أولاً'**
+  String get routePlaceChooseRouteFirst;
+
+  /// No description provided for @routePlaceRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر مكاناً للمتابعة.'**
+  String get routePlaceRequired;
+
+  /// No description provided for @routePlaceSearchHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن قرية أو بلدة'**
+  String get routePlaceSearchHint;
+
+  /// No description provided for @routePlaceNoResults.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد نتائج مطابقة.'**
+  String get routePlaceNoResults;
+
+  /// No description provided for @routePlacesLoading.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحميل الأماكن…'**
+  String get routePlacesLoading;
+
+  /// No description provided for @routePlacesLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل الأماكن.'**
+  String get routePlacesLoadFailed;
+
+  /// No description provided for @routePlacesEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد أماكن لهذه المدينة بعد.'**
+  String get routePlacesEmpty;
+
+  /// No description provided for @routePlaceMoreDetailsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل إضافية (اختياري)'**
+  String get routePlaceMoreDetailsLabel;
+
+  /// No description provided for @routePlacePickupDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: أمام البوابة الرئيسية'**
+  String get routePlacePickupDetailsHint;
+
+  /// No description provided for @routePlaceDropoffDetailsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مثال: بجانب الصيدلية'**
+  String get routePlaceDropoffDetailsHint;
+
+  /// No description provided for @routePlaceDetailsHelper.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختياري: ساعد السائق على إيجاد المكان بدقة.'**
+  String get routePlaceDetailsHelper;
+
+  /// No description provided for @routePlaceSavedChoice.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكان مختار من القائمة'**
+  String get routePlaceSavedChoice;
 
   /// No description provided for @placeCategoryCafe.
   ///

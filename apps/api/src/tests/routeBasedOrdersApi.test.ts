@@ -181,14 +181,23 @@ describe("passenger trips on a route", () => {
   });
 
   it.each([
-    ["a pickup shorter than 3 characters", { pickup_details: "  ab  " }],
     ["a drop-off longer than 300 characters", { dropoff_details: "x".repeat(301) }],
-    ["a missing drop-off", { dropoff_details: undefined }],
     ["control characters", { pickup_details: "gate\u0000 1" }]
   ])("rejects %s", async (_label, change) => {
     const response = await request(createApp()).post("/api/v1/passenger/requests").set(auth("p1", "passenger"))
       .send({ ...routeBody(), ...change }).expect(400);
     expect(response.body.error).toBe("validation_error");
+    expect(prismaMock.passengerRequest.create).not.toHaveBeenCalled();
+  });
+
+  // Older builds send text only; without a place it must still be a real description.
+  it.each([
+    ["a pickup shorter than 3 characters", { pickup_details: "  ab  " }, "pickup_details_required"],
+    ["a missing drop-off", { dropoff_details: undefined }, "dropoff_details_required"]
+  ])("rejects free text with %s", async (_label, change, code) => {
+    const response = await request(createApp()).post("/api/v1/passenger/requests").set(auth("p1", "passenger"))
+      .send({ ...routeBody(), ...change }).expect(400);
+    expect(response.body.error).toBe(code);
     expect(prismaMock.passengerRequest.create).not.toHaveBeenCalled();
   });
 

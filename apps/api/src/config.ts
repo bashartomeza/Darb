@@ -67,6 +67,7 @@ const rawSchema = z.object({
   APP_RELEASE: z.string().min(1).optional(),
   ENABLE_DEMO_FEATURES: z.string().optional(),
   ROUTE_MANAGEMENT_ENABLED: z.string().optional(),
+  ROUTE_PLACES_REQUIRED: z.string().optional(),
   MULTI_ROUTE_ENTRY_ENABLED: z.string().optional(),
   MULTI_ROUTE_MATCHING_ENABLED: z.string().optional(),
   CANONICAL_TRIP_CREATION_ENABLED: z.string().optional(),
@@ -84,6 +85,14 @@ const rawSchema = z.object({
   CHECKPOINTS_API_KEY: z.string().min(20).optional(),
   CHECKPOINTS_TIMEOUT_MS: z.coerce.number().int().min(500).max(15_000).default(6_000),
   CHECKPOINTS_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(3_600).default(60),
+  CHECKPOINT_ROUTING_THRESHOLD_METERS: z.coerce.number().int().min(30).max(1_000).default(150),
+  CHECKPOINT_ROUTING_APPROX_THRESHOLD_METERS: z.coerce.number().int().min(30).max(3_000).default(500),
+  CHECKPOINT_ROUTING_STATUS_TTL_SECONDS: z.coerce.number().int().min(15).max(86_400).default(300),
+  CHECKPOINT_ROUTING_CONGESTION_MAX_EXTRA_SECONDS: z.coerce.number().int().min(0).max(7_200).default(600),
+  CHECKPOINT_ROUTING_CONGESTION_MAX_EXTRA_METERS: z.coerce.number().int().min(0).max(100_000).default(8_000),
+  CHECKPOINT_ROUTING_OSRM_URL: z.string().url().default("https://router.project-osrm.org"),
+  CHECKPOINT_ROUTING_TIMEOUT_MS: z.coerce.number().int().min(500).max(20_000).default(6_000),
+  CHECKPOINT_ROUTING_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(60),
   ROUTE_MAPS_ENABLED: z.string().optional(),
   ROUTE_PROVIDER: z.enum(ROUTE_PROVIDERS).default("disabled"),
   ROUTE_PROVIDER_SECRET: z.string().trim().min(8).optional(),
@@ -243,6 +252,8 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   const explicitlyEnabled = parseBoolean("ENABLE_DEMO_FEATURES", raw.ENABLE_DEMO_FEATURES);
   const demoFeaturesEnabled = isDemo || isTest || (isLocal && explicitlyEnabled);
   const routeManagementEnabled = parseBoolean("ROUTE_MANAGEMENT_ENABLED", raw.ROUTE_MANAGEMENT_ENABLED);
+  // On: route-based orders must name a pickup / drop-off place from the city list, and builds that only send free text are refused.
+  const routePlacesRequired = parseBoolean("ROUTE_PLACES_REQUIRED", raw.ROUTE_PLACES_REQUIRED);
   const multiRouteEntryEnabled = parseBoolean("MULTI_ROUTE_ENTRY_ENABLED", raw.MULTI_ROUTE_ENTRY_ENABLED);
   const multiRouteMatchingEnabled = parseBoolean("MULTI_ROUTE_MATCHING_ENABLED", raw.MULTI_ROUTE_MATCHING_ENABLED);
   const canonicalTripCreationEnabled = parseBoolean(
@@ -718,6 +729,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     demoFeaturesEnabled,
     demoResetAllowedDatabases,
     routeManagementEnabled,
+    routePlacesRequired,
     multiRouteEntryEnabled,
     multiRouteMatchingEnabled,
     canonicalTripCreationEnabled,
@@ -766,6 +778,17 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           cacheTtlSeconds: raw.CHECKPOINTS_CACHE_TTL_SECONDS
         }
       : undefined,
+    // Checkpoint-aware route planning (POST /route-plans). Tunable without a release.
+    checkpointRouting: {
+      thresholdMeters: raw.CHECKPOINT_ROUTING_THRESHOLD_METERS,
+      approximateThresholdMeters: Math.max(raw.CHECKPOINT_ROUTING_APPROX_THRESHOLD_METERS, raw.CHECKPOINT_ROUTING_THRESHOLD_METERS),
+      statusTtlSeconds: raw.CHECKPOINT_ROUTING_STATUS_TTL_SECONDS,
+      congestionMaxExtraSeconds: raw.CHECKPOINT_ROUTING_CONGESTION_MAX_EXTRA_SECONDS,
+      congestionMaxExtraMeters: raw.CHECKPOINT_ROUTING_CONGESTION_MAX_EXTRA_METERS,
+      osrmBaseUrl: raw.CHECKPOINT_ROUTING_OSRM_URL,
+      timeoutMs: raw.CHECKPOINT_ROUTING_TIMEOUT_MS,
+      rateLimitPerMinute: raw.CHECKPOINT_ROUTING_RATE_LIMIT_PER_MINUTE
+    },
     routeMaps: {
       enabled: routeMapsEnabled,
       provider: raw.ROUTE_PROVIDER,
