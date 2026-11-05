@@ -14,8 +14,8 @@ cd "$APP_ROOT"
 # shellcheck disable=SC1090
 source "$HOME/nodevenv/darb-app/$NODE_VERSION/bin/activate"
 
-grep -q '^DB_PASSWORD=""' .env && { echo "DB_PASSWORD is empty in $APP_ROOT/.env: fill it in first."; exit 1; }
-grep -q '^SMTP_PASSWORD=""' .env && { echo "SMTP_PASSWORD is empty in $APP_ROOT/.env: fill it in first."; exit 1; }
+# DB_PASSWORD and SMTP_PASSWORD come from cPanel > Setup Node.js App > Environment variables (or .env).
+node ops/run.mjs node -e 'for (const k of ["DB_PASSWORD","SMTP_PASSWORD"]) if (!process.env[k]) { console.error(k + " is not set: add it in cPanel > Setup Node.js App > Environment variables."); process.exit(1) }'
 
 release="$(cat release.txt)"
 sed -i "s/^APP_RELEASE=.*/APP_RELEASE=\"$release\"/" .env

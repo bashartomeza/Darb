@@ -37,7 +37,7 @@ DB_HOST="localhost"
 DB_PORT="3306"
 DB_NAME="aynurzzx_Darb"
 DB_USER="aynurzzx_Darb_User"
-DB_PASSWORD=""   # FILL IN: the database user's password, exactly as set in cPanel
+DB_PASSWORD=""   # leave empty: set it in cPanel > Setup Node.js App > Environment variables
 
 # Email (Gmail SMTP with an App Password, from basharto30@gmail.com)
 EMAIL_DELIVERY="smtp"
@@ -45,7 +45,7 @@ SMTP_HOST="smtp.gmail.com"
 SMTP_PORT="587"
 SMTP_SECURE="starttls"
 SMTP_USER="basharto30@gmail.com"
-SMTP_PASSWORD=""   # FILL IN: the 16-character Gmail App Password (not the Gmail login password)
+SMTP_PASSWORD=""   # leave empty: set it in cPanel > Setup Node.js App > Environment variables
 EMAIL_FROM_ADDRESS="basharto30@gmail.com"
 EMAIL_FROM_NAME="Darb"
 OTP_PROVIDER="email"
