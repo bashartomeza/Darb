@@ -523,7 +523,7 @@ async function main() {
   );
 
   const driverPassword = "driver secure pass 2026";
-  const driver = await onboard("driver", "+970599111115", "سائق مساري", driverPassword);
+  const driver = await onboard("driver", "+970599111115", "سائق درب", driverPassword);
   check(driver.completed.status === 201 && driver.completed.body.account_status === "pending", "driver is pending");
   check(driver.completed.body.next_action === "upload_documents", "driver is told to upload documents before review");
   check(!driver.completed.body.token && !driver.completed.body.refresh_token, "completion issues no operational session");
@@ -609,7 +609,7 @@ async function main() {
     "suspension revokes pending status token"
   );
 
-  const merchant = await onboard("merchant", "+970599111116", "تاجر مساري", "merchant secure pass 2026");
+  const merchant = await onboard("merchant", "+970599111116", "تاجر درب", "merchant secure pass 2026");
   check(merchant.completed.status === 201 && merchant.completed.body.account_status === "pending", "merchant is pending");
   check(!merchant.completed.body.token && Boolean(merchant.completed.body.onboarding_status_token), "merchant receives status token only");
   const merchantCompletionReplay = await complete(

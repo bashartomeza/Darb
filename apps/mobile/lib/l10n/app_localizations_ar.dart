@@ -3554,6 +3554,21 @@ class AppLocalizationsAr extends AppLocalizations {
       'انطلق سائقك إلى نقطة الانطلاق. يرجى الاستعداد.';
 
   @override
+  String get pushSettingTitle => 'الإشعارات الفورية';
+
+  @override
+  String get pushSettingSubtitle =>
+      'تنبيهات على هذا الهاتف للعروض والرحلات وتحديثات الحساب.';
+
+  @override
+  String get pushSettingBlocked =>
+      'الإشعارات متوقفة لتطبيق درب في إعدادات الهاتف.';
+
+  @override
+  String get pushSettingFailed =>
+      'تعذّر حفظ إعداد الإشعارات. يرجى المحاولة مرة أخرى.';
+
+  @override
   String get ratingPromptTitle => 'كيف كانت رحلتك؟';
 
   @override

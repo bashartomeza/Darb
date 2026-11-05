@@ -1,5 +1,6 @@
 import { isAbsolute } from "node:path";
 import { z } from "zod";
+import { parsePushConfig } from "./lib/pushConfig.js";
 
 export const APP_ENVIRONMENTS = ["local", "test", "demo", "staging", "production"] as const;
 export type AppEnvironment = (typeof APP_ENVIRONMENTS)[number];
@@ -170,7 +171,11 @@ const rawSchema = z.object({
   ONBOARDING_REGISTRATION_GRANT_TTL_SECONDS: z.coerce.number().int().min(300).max(1_800).default(900),
   ONBOARDING_CONTINUATION_TTL_SECONDS: z.coerce.number().int().min(300).max(3_600).default(1_800),
   ONBOARDING_PENDING_STATUS_TTL_DAYS: z.coerce.number().int().min(1).max(7).default(7),
-  ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: z.string().optional()
+  ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED: z.string().optional(),
+  PUSH_NOTIFICATIONS_ENABLED: z.string().optional(),
+  FCM_SERVICE_ACCOUNT_JSON: z.string().max(20_000).optional(),
+  FCM_SERVICE_ACCOUNT_FILE: z.string().max(1_024).optional(),
+  FCM_PROJECT_ID: z.string().max(100).optional()
 });
 
 export type AppConfig = ReturnType<typeof createConfig>;
@@ -632,6 +637,10 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     problems.push("READINESS_TIMEOUT_MS is too low for staging or production");
   }
 
+  // Push notifications through Firebase Cloud Messaging: off unless enabled, and then the
+  // service-account credentials are required. Problems name variables only, never values.
+  const push = parsePushConfig(raw, problems, parseBoolean);
+
   if (problems.length > 0) throw new ConfigurationError(problems);
 
   return {
@@ -782,6 +791,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
       login: { windowMs: raw.RATE_LIMIT_LOGIN_WINDOW_MS, max: loginRateLimitMax }
     },
     emailCodeLimits: { resendCooldownSeconds: raw.EMAIL_CODE_RESEND_COOLDOWN_SECONDS, maxPerDay: raw.EMAIL_CODE_MAX_PER_EMAIL_PER_DAY },
+    push,
     demo: demoFeaturesEnabled
       ? {
           resetKey: demoValues.resetKey!,

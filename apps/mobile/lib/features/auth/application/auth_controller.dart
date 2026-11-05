@@ -16,6 +16,7 @@ import '../../onboarding/domain/onboarding_models.dart';
 import '../../passenger/application/passenger_controller.dart';
 import '../../passenger/application/passenger_history_controller.dart';
 import '../../passenger/application/passenger_map_controller.dart';
+import '../../push/application/push_controller.dart';
 import '../../security/data/session_repository.dart';
 import '../../shared_trips/application/shared_trip_controller.dart';
 import '../../trips/application/passenger_trip_controller.dart';
@@ -430,6 +431,7 @@ class AuthController extends AsyncNotifier<AuthState> {
   Future<void> logout() async {
     _authAttempt++;
     _registrationGrant = null;
+    await ref.read(pushRegistrationProvider).unregisterBeforeSignOut();
     try {
       await _sessionRepository.logout();
     } catch (_) {
@@ -442,6 +444,7 @@ class AuthController extends AsyncNotifier<AuthState> {
   Future<void> logoutAll() async {
     _authAttempt++;
     _registrationGrant = null;
+    await ref.read(pushRegistrationProvider).unregisterBeforeSignOut();
     await _sessionRepository.logoutAll();
     await _clearLocalSession();
   }

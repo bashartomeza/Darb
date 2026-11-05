@@ -3585,6 +3585,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your driver has set off to your pickup point. Please get ready.';
 
   @override
+  String get pushSettingTitle => 'Push notifications';
+
+  @override
+  String get pushSettingSubtitle =>
+      'Alerts on this phone for offers, trips and account updates.';
+
+  @override
+  String get pushSettingBlocked =>
+      'Notifications are turned off for Darb in your phone settings.';
+
+  @override
+  String get pushSettingFailed =>
+      'Could not save the notification setting. Please try again.';
+
+  @override
   String get ratingPromptTitle => 'How was your trip?';
 
   @override
