@@ -19,6 +19,7 @@ import {
 } from "../lib/keyedDigest.js";
 import {
   FakeOtpProvider,
+  OTP_DISPATCH_LEASE_SECONDS,
   dispatchOtpChallenge,
   verifyOtpChallenge,
   type OtpProvider
@@ -348,6 +349,51 @@ function startResponse(
   };
 }
 
+/**
+ * True while another request is still starting this attempt: it was just created and no code has
+ * been dispatched yet, or a dispatch is running inside its lease. A start that crashed stops
+ * counting once the lease runs out, so it cannot block the phone for longer than that.
+ */
+export function startInFlight(
+  attempt: {
+    status: string;
+    created_at: Date;
+    expires_at: Date;
+    current_challenge_id: string | null;
+    otp_dispatch_started_at: Date | null;
+    _count?: { otp_challenges: number };
+  },
+  now: Date
+) {
+  if (attempt.expires_at <= now) return false;
+  const leaseStart = now.getTime() - OTP_DISPATCH_LEASE_SECONDS * 1_000;
+  if (attempt.status === "otp_dispatching") {
+    return Boolean(attempt.otp_dispatch_started_at && attempt.otp_dispatch_started_at.getTime() > leaseStart);
+  }
+  return (
+    attempt.status === "created" &&
+    attempt.current_challenge_id === null &&
+    (attempt._count?.otp_challenges ?? 0) === 0 &&
+    attempt.created_at.getTime() > leaseStart
+  );
+}
+
+function isWriteConflict(error: unknown) {
+  return Boolean(error && typeof error === "object" && "code" in error && error.code === "P2034");
+}
+
+/** Runs the start transaction, retrying the loser of a lock conflict a few times. */
+async function serializableStart<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (!isWriteConflict(error)) throw error;
+      if (attempt === 3) throw new HttpError(409, "verification_temporarily_unavailable");
+    }
+  }
+}
+
 /** Conflict answers per source IP per hour; beyond this the endpoint answers 429 instead of confirming a conflict. */
 const REGISTRATION_CONFLICT_IP_HOURLY_LIMIT = 5;
 
@@ -454,7 +500,8 @@ export function createPublicOnboardingRouter(
    * and an Admin invitation for it always outranks it. The start response never says whether
    * the number already has an account (an existing number just fails at completion with
    * registration_conflict, which is capped per IP so it cannot be used to enumerate numbers).
-   * One live open attempt per phone: starting again supersedes the older one.
+   * One live open attempt per phone: starting again supersedes the older one, unless the older
+   * one is still being started by another request (see startInFlight).
    */
   async function startOpenAttempt(
     req: Request,
@@ -484,11 +531,28 @@ export function createPublicOnboardingRouter(
         return;
       }
     }
-    const attempt = await prisma.$transaction(async (tx) => {
+    const attempt = await serializableStart(async (tx) => {
+      // Lock every attempt row (and the index gap) for this phone, so two concurrent starts cannot
+      // both see "no live attempt" and both create one: the second waits, or loses a deadlock and is
+      // retried, and then sees the first one's attempt.
+      await tx.$queryRaw`SELECT id FROM onboarding_attempts WHERE phone_digest = ${digest} FOR UPDATE`;
       const older = await tx.onboardingAttempt.findMany({
         where: { invitation_id: null, phone_digest: digest, completed_user_id: null, status: { in: [...live] } },
-        select: { id: true }
+        select: {
+          id: true,
+          status: true,
+          created_at: true,
+          expires_at: true,
+          current_challenge_id: true,
+          otp_dispatch_started_at: true,
+          _count: { select: { otp_challenges: true } }
+        }
       });
+      // Never cancel an attempt whose own start request is still running: that request would then
+      // fail half-way (its code is already on the way). The newer request is told to retry shortly.
+      if (older.some((entry) => startInFlight(entry, now))) {
+        throw new HttpError(409, "verification_temporarily_unavailable");
+      }
       if (older.length > 0) {
         const ids = older.map((entry) => entry.id);
         await tx.onboardingAttempt.updateMany({ where: { id: { in: ids } }, data: { status: "cancelled", expires_at: now } });
@@ -519,20 +583,36 @@ export function createPublicOnboardingRouter(
       });
       return created;
     });
-    const rotated = await rotateContinuation(appConfig, attempt.id);
-    await consumeBuckets(req, appConfig, [
-      ...otpDayBuckets(appConfig, phone, input.email, requestIp(req))
-    ]);
-    const delivery = await dispatchOtpChallenge(prisma, provider, {
-      attemptId: attempt.id,
-      key: onboarding.keys.otpCode,
-      ttlSeconds: onboarding.otpTtlSeconds,
-      maxAttempts: onboarding.otpMaxAttempts,
-      maxResends: onboarding.otpMaxResends,
-      resendCooldownSeconds: onboarding.otpResendCooldownSeconds,
-      locale: input.locale,
-      requestId: req.requestId
-    });
+    let rotated: Awaited<ReturnType<typeof rotateContinuation>>;
+    let delivery: Awaited<ReturnType<typeof dispatchOtpChallenge>>;
+    try {
+      rotated = await rotateContinuation(appConfig, attempt.id);
+      await consumeBuckets(req, appConfig, [
+        ...otpDayBuckets(appConfig, phone, input.email, requestIp(req))
+      ]);
+      delivery = await dispatchOtpChallenge(prisma, provider, {
+        attemptId: attempt.id,
+        key: onboarding.keys.otpCode,
+        ttlSeconds: onboarding.otpTtlSeconds,
+        maxAttempts: onboarding.otpMaxAttempts,
+        maxResends: onboarding.otpMaxResends,
+        resendCooldownSeconds: onboarding.otpResendCooldownSeconds,
+        locale: input.locale,
+        requestId: req.requestId
+      });
+    } catch (error) {
+      // The caller gets an error and no usable continuation, so the half-started attempt must not
+      // count as "still being started" and hold off the next start for this phone.
+      try {
+        await prisma.onboardingAttempt.updateMany({
+          where: { id: attempt.id, status: { in: ["created", "otp_dispatching"] }, current_challenge_id: null },
+          data: { status: "cancelled", expires_at: new Date() }
+        });
+      } catch {
+        // Best effort: the attempt also expires on its own.
+      }
+      throw error;
+    }
     if (claim.kind === "claimed") {
       await completeIdempotency(prisma, {
         recordId: claim.record.id,
