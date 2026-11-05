@@ -118,6 +118,8 @@ const rawSchema = z.object({
   EMAIL_VERIFICATION_DISABLED: z.string().optional(),
   PHONE_VERIFICATION_DISABLED: z.string().optional(),
   ALLOW_UNVERIFIED_EMAIL_SIGNUP: z.string().optional(),
+  ONBOARDING_CODE_DISABLED: z.string().optional(),
+  ALLOW_UNVERIFIED_ONBOARDING: z.string().optional(),
   OPEN_SIGNUP_MAX_STARTS_PER_HOUR: z.coerce.number().int().min(1).max(10_000).default(200),
   DRIVER_DOCUMENTS_ENABLED: z.string().optional(),
   DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
@@ -249,6 +251,9 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   const invitationsEnabled = parseBoolean("INVITATIONS_ENABLED", raw.INVITATIONS_ENABLED);
   const driverDocumentsEnabled = parseBoolean("DRIVER_DOCUMENTS_ENABLED", raw.DRIVER_DOCUMENTS_ENABLED);
   const publicOnboardingEnabled = parseBoolean("PUBLIC_ONBOARDING_ENABLED", raw.PUBLIC_ONBOARDING_ENABLED);
+  // Driver and shop-owner sign-up without any emailed or texted code (the contact stays unverified).
+  const onboardingCodeDisabled = parseBoolean("ONBOARDING_CODE_DISABLED", raw.ONBOARDING_CODE_DISABLED);
+  const allowUnverifiedOnboarding = parseBoolean("ALLOW_UNVERIFIED_ONBOARDING", raw.ALLOW_UNVERIFIED_ONBOARDING);
   const testLegalFixturesEnabled = parseBoolean(
     "ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED",
     raw.ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED
@@ -358,8 +363,8 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (raw.CHECKPOINTS_API_KEY && isUnsafeSecret(raw.CHECKPOINTS_API_KEY)) {
     problems.push("CHECKPOINTS_API_KEY uses a known placeholder or default value");
   }
-  if (publicOnboardingEnabled && productionLike && raw.OTP_PROVIDER !== "email") {
-    problems.push("PUBLIC_ONBOARDING_ENABLED in staging or production requires OTP_PROVIDER=email");
+  if (publicOnboardingEnabled && productionLike && raw.OTP_PROVIDER !== "email" && !onboardingCodeDisabled) {
+    problems.push("PUBLIC_ONBOARDING_ENABLED in staging or production requires OTP_PROVIDER=email (or ONBOARDING_CODE_DISABLED=true with ALLOW_UNVERIFIED_ONBOARDING=true)");
   }
   if (raw.OTP_PROVIDER === "email" && raw.EMAIL_DELIVERY !== "smtp") {
     problems.push("OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp (and the SMTP_* settings)");
@@ -369,7 +374,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (publicOnboardingEnabled && !driverDocumentsEnabled) {
     problems.push("PUBLIC_ONBOARDING_ENABLED requires DRIVER_DOCUMENTS_ENABLED so applicants can upload their documents");
   }
-  if (publicOnboardingEnabled && raw.OTP_PROVIDER !== "fake" && raw.OTP_PROVIDER !== "email") {
+  if (publicOnboardingEnabled && !onboardingCodeDisabled && raw.OTP_PROVIDER !== "fake" && raw.OTP_PROVIDER !== "email") {
     problems.push("PUBLIC_ONBOARDING_ENABLED requires OTP_PROVIDER=email (or fake in local, test, or demo)");
   }
   if (productionLike && testLegalFixturesEnabled) {
@@ -452,6 +457,15 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     problems.push("EMAIL_VERIFICATION_DISABLED is only allowed outside staging and production");
   }
   if (allowUnverifiedEmailSignup && !emailVerificationDisabled) problems.push("ALLOW_UNVERIFIED_EMAIL_SIGNUP only makes sense together with EMAIL_VERIFICATION_DISABLED=true");
+  // Skipping the onboarding code means an applicant's email and phone are never proven. In staging and production that
+  // needs a second, deliberately named switch. Approved applicants sign in with their (unverified) email, so email
+  // sign-in must tolerate unverified addresses too.
+  if (productionLike && onboardingCodeDisabled && !allowUnverifiedOnboarding) {
+    problems.push("ONBOARDING_CODE_DISABLED in staging or production also needs ALLOW_UNVERIFIED_ONBOARDING=true");
+  }
+  if (allowUnverifiedOnboarding && !onboardingCodeDisabled) problems.push("ALLOW_UNVERIFIED_ONBOARDING only makes sense together with ONBOARDING_CODE_DISABLED=true");
+  if (onboardingCodeDisabled && !publicOnboardingEnabled) problems.push("ONBOARDING_CODE_DISABLED requires PUBLIC_ONBOARDING_ENABLED=true");
+  if (onboardingCodeDisabled && !emailVerificationDisabled) problems.push("ONBOARDING_CODE_DISABLED requires EMAIL_VERIFICATION_DISABLED=true so approved applicants can sign in");
   // Local development only: adding a phone to the profile needs no code. The number is stored unverified.
   const phoneVerificationDisabled = parseBoolean("PHONE_VERIFICATION_DISABLED", raw.PHONE_VERIFICATION_DISABLED);
   if (productionLike && phoneVerificationDisabled) problems.push("PHONE_VERIFICATION_DISABLED is only allowed outside staging and production");
@@ -746,6 +760,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     invitationsEnabled,
     otpProvider: raw.OTP_PROVIDER,
     publicOnboardingEnabled,
+    onboardingCodeDisabled,
     emailVerificationDisabled,
     phoneVerificationDisabled,
     openSignupMaxStartsPerHour: raw.OPEN_SIGNUP_MAX_STARTS_PER_HOUR,

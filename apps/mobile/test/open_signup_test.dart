@@ -32,6 +32,80 @@ void main() {
     });
   });
 
+  group('direct sign-up without a code', () {
+    test('config reads code_required, defaulting to a required code', () {
+      Map<String, dynamic> json(String extra) =>
+          jsonDecode(
+                '{"enabled":true,"registration_roles":["driver","merchant"],$_policy$extra}',
+              )
+              as Map<String, dynamic>;
+      expect(OnboardingConfig.fromJson(json('')).codeRequired, isTrue);
+      expect(
+        OnboardingConfig.fromJson(json(',"code_required":false')).codeRequired,
+        isFalse,
+      );
+    });
+
+    test('start answer carries the grant and no resend time', () {
+      final result = StartAttemptResult.fromJson(
+        jsonDecode(_codeFreeStartBody) as Map<String, dynamic>,
+      );
+      expect(result.nextAction, 'complete_registration');
+      expect(result.registrationGrant, 'g' * 43);
+      expect(result.resendAvailableAt, isNull);
+    });
+
+    test(
+      'start skips the code screen, keeps the grant and is resumable',
+      () async {
+        final fake = _FakeRepository()..codeFree = true;
+        final storage = _MemoryStorage();
+        final container = _container(fake, storage);
+        addTearDown(container.dispose);
+        await container.read(onboardingControllerProvider.future);
+        final controller = container.read(onboardingControllerProvider.notifier)
+          ..chooseRole(OnboardingRole.driver);
+
+        await controller.start(
+          phone: '+970590000001',
+          email: 'driver@example.com',
+          locale: 'ar',
+        );
+
+        final state = container.read(onboardingControllerProvider).value!;
+        expect(state.stage, OnboardingStage.enteringAccountDetails);
+        expect(state.attemptId, 'attempt_1');
+        expect(storage.bundle?.registrationGrant, 'g' * 43);
+        expect(
+          storage.bundle?.safeStage,
+          OnboardingStage.enteringAccountDetails,
+        );
+      },
+    );
+
+    test('a start answer without a grant is refused', () async {
+      final fake = _FakeRepository()
+        ..codeFree = true
+        ..omitGrant = true;
+      final container = _container(fake, _MemoryStorage());
+      addTearDown(container.dispose);
+      await container.read(onboardingControllerProvider.future);
+      final controller = container.read(onboardingControllerProvider.notifier)
+        ..chooseRole(OnboardingRole.driver);
+
+      await controller.start(
+        phone: '+970590000001',
+        email: 'driver@example.com',
+        locale: 'ar',
+      );
+
+      expect(
+        container.read(onboardingControllerProvider).value?.stage,
+        isNot(OnboardingStage.enteringAccountDetails),
+      );
+    });
+  });
+
   group('repository', () {
     test('start sends the email and never an invitation code', () async {
       final repository = _repository((request) async {
@@ -322,6 +396,9 @@ void main() {
   });
 }
 
+const _codeFreeStartBody =
+    '{"attempt":{"id":"attempt_1","status":"phone_verified","phone":"+970*****01","expires_at":"2026-07-20T10:00:00.000Z"},"onboarding_token":"continuation","onboarding_token_expires_at":"2026-07-20T09:30:00.000Z","registration_grant":"ggggggggggggggggggggggggggggggggggggggggggg","registration_grant_expires_at":"2026-07-20T09:15:00.000Z","next_action":"complete_registration","request_id":"req"}';
+
 const _startBody =
     '{"attempt":{"id":"attempt_1","status":"otp_sent","phone":"+970*****01","expires_at":"2026-07-20T10:00:00.000Z","resend_available_at":"2026-07-20T09:01:00.000Z"},"onboarding_token":"continuation","onboarding_token_expires_at":"2026-07-20T09:30:00.000Z","next_action":"verify_otp","request_id":"req"}';
 
@@ -359,6 +436,8 @@ class _FakeRepository extends OnboardingRepository {
       );
 
   final List<String> startEmails = [];
+  bool codeFree = false;
+  bool omitGrant = false;
   PendingStatusResult? statusResult;
   ApiException? submitError;
   int submitted = 0;
@@ -370,7 +449,11 @@ class _FakeRepository extends OnboardingRepository {
     supportedLocales: const ['ar', 'en'],
     otpDigits: 6,
     resendCooldownSeconds: 60,
+    codeRequired: !codeFree,
   );
+
+  @override
+  Future<List<ConsentDocument>> consents(String locale) async => const [];
 
   @override
   Future<StartAttemptResult> start({
@@ -381,6 +464,23 @@ class _FakeRepository extends OnboardingRepository {
     required String idempotencyKey,
   }) async {
     startEmails.add(email);
+    if (codeFree) {
+      return StartAttemptResult(
+        attemptId: 'attempt_1',
+        status: 'phone_verified',
+        maskedPhone: '+970*****01',
+        expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+        onboardingToken: 'continuation-token',
+        onboardingTokenExpiresAt: DateTime.now().toUtc().add(
+          const Duration(hours: 1),
+        ),
+        nextAction: 'complete_registration',
+        registrationGrant: omitGrant ? null : 'g' * 43,
+        registrationGrantExpiresAt: DateTime.now().toUtc().add(
+          const Duration(minutes: 15),
+        ),
+      );
+    }
     return StartAttemptResult(
       attemptId: 'attempt_1',
       status: 'otp_sent',

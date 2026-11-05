@@ -2618,6 +2618,12 @@ abstract class AppLocalizations {
   /// **'البريد الإلكتروني (نرسل الرمز إليه)'**
   String get emailForCode;
 
+  /// No description provided for @onboardingNoCodeNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا نرسل رمز تحقق. أدخل بريدك الإلكتروني ورقم جوالك الحقيقيين: يراجع فريق درب مستنداتك ويوافق على حسابك قبل أن تتمكن من تسجيل الدخول.'**
+  String get onboardingNoCodeNote;
+
   /// No description provided for @codeSentToEmail.
   ///
   /// In ar, this message translates to:

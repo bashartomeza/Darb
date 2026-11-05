@@ -313,6 +313,64 @@ async function selfServiceChecks(admin: string, legal: Array<{ id: string; type:
     "the superseded attempt's token no longer works"
   );
   await emailDeliveryChecks(legal);
+  await codeFreeChecks(admin, legal);
+}
+
+/** ONBOARDING_CODE_DISABLED behaviour: no code step, the contact stays unverified, every other guard still applies. */
+async function codeFreeChecks(admin: string, legal: Array<{ id: string; type: string; content_hash: string }>) {
+  const codeFreeApp = createApp(
+    { ...config, onboardingCodeDisabled: true, emailVerificationDisabled: true } as typeof config,
+    { otpProvider: provider }
+  );
+  const begin = (role: string, phone: string, email: string, idempotency = key("cf-start")) =>
+    request(codeFreeApp).post("/api/v1/onboarding/attempts").set("idempotency-key", idempotency)
+      .send({ role, phone, email, region: "PS", locale: "ar" });
+  provider.outbox.clear();
+  await clearStartCaps();
+  const cfg = await request(codeFreeApp).get("/api/v1/onboarding/config");
+  check(cfg.body.code_required === false, "config tells the app that no code is required");
+
+  const phone = "+970599444401";
+  const email = "code.free.driver@example.com";
+  const idem = key("cf-start-same");
+  const started = await begin("driver", phone, email, idem);
+  check(started.status === 201 && started.body.next_action === "complete_registration" && started.body.attempt.status === "phone_verified", "code-free start skips the code step");
+  check(typeof started.body.registration_grant === "string" && provider.outbox.size === 0, "code-free start issues a grant and sends nothing");
+  const replay = await begin("driver", phone, email, idem);
+  check(replay.status === 200 && replay.body.registration_grant && replay.body.attempt.id === started.body.attempt.id, "an equivalent retry resumes the same attempt with a fresh grant");
+  const token = `Onboarding ${replay.body.onboarding_token}`;
+  check(
+    (await request(codeFreeApp).post(`/api/v1/onboarding/attempts/${started.body.attempt.id}/verify`).set("authorization", token).set("idempotency-key", key("cf-verify")).send({ otp: "123456" })).status === 404,
+    "the code endpoints are closed in this mode"
+  );
+  const done = await request(codeFreeApp).post(`/api/v1/onboarding/attempts/${started.body.attempt.id}/complete`)
+    .set("authorization", token).set("idempotency-key", key("cf-complete"))
+    .send({ registration_grant: replay.body.registration_grant, display_name: "Code Free Driver", password: "code free driver pass 2026", locale: "ar", consents: legal, adult_self_attestation: true });
+  check(done.status === 201 && done.body.next_action === "upload_documents", "code-free sign-up completes and still needs documents");
+  const user = await prisma.user.findUniqueOrThrow({ where: { phone } });
+  check(user.email === email && user.email_verified_at === null && user.phone_verified_at === null, "the contact is stored unverified");
+  check(user.account_status === "pending" && user.review_submitted_at === null, "the account is pending and not yet in review");
+  const detail = await request(codeFreeApp).get(`/api/v1/admin/users/${user.id}`).set("authorization", `Bearer ${admin}`);
+  check(detail.status === 200 && detail.body.user.role_context.contact_unverified === true, "admin user detail flags the unverified contact");
+  const queued = await request(codeFreeApp).get("/api/v1/admin/users?role=driver&limit=100").set("authorization", `Bearer ${admin}`);
+  check(queued.body.users.some((entry: { id: string; role_context: { contact_unverified?: boolean } }) => entry.id === user.id && entry.role_context.contact_unverified === true), "admin user list flags the unverified contact");
+
+  // An email that already belongs to an account is refused at completion.
+  const clash = await begin("driver", "+970599444402", email);
+  const clashDone = await request(codeFreeApp).post(`/api/v1/onboarding/attempts/${clash.body.attempt.id}/complete`)
+    .set("authorization", `Onboarding ${clash.body.onboarding_token}`).set("idempotency-key", key("cf-clash"))
+    .send({ registration_grant: clash.body.registration_grant, display_name: "Clash Driver", password: "code free driver pass 2026", locale: "ar", consents: legal, adult_self_attestation: true });
+  check(clashDone.status === 409, "a taken email cannot be registered without a code");
+
+  // The abuse caps still apply: the per-source start cap stops an eleventh start within the hour.
+  await clearStartCaps();
+  let limited = 0;
+  for (let index = 0; index < 12; index += 1) {
+    const response = await begin("merchant", `+97059955${String(5000 + index)}`, `cf.shop.${index}@example.com`);
+    if (response.status === 429) limited += 1;
+  }
+  check(limited >= 1, "per-IP start rate limit still applies in code-free mode");
+  await clearStartCaps();
 }
 
 /** OTP_PROVIDER=email behaviour: the code travels by email only, and an unproven phone is not a sign-in identity. */

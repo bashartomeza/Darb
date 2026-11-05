@@ -31,6 +31,7 @@ class OnboardingConfig {
     required this.supportedLocales,
     required this.otpDigits,
     required this.resendCooldownSeconds,
+    this.codeRequired = true,
     this.requestId,
   });
 
@@ -40,6 +41,10 @@ class OnboardingConfig {
   final List<String> supportedLocales;
   final int otpDigits;
   final int resendCooldownSeconds;
+
+  /// False when the server sends no one-time code: the app skips the code
+  /// screen and the contact stays unverified until Admin reviews it.
+  final bool codeRequired;
   final String? requestId;
 
   factory OnboardingConfig.fromJson(Map<String, dynamic> json) {
@@ -85,6 +90,7 @@ class OnboardingConfig {
       supportedLocales: rawLocales,
       otpDigits: otpDigits,
       resendCooldownSeconds: cooldown,
+      codeRequired: json['code_required'] != false,
       requestId: _optionalString(json, 'request_id'),
     );
   }
@@ -142,10 +148,12 @@ class StartAttemptResult {
     required this.status,
     required this.maskedPhone,
     required this.expiresAt,
-    required this.resendAvailableAt,
     required this.onboardingToken,
     required this.onboardingTokenExpiresAt,
     required this.nextAction,
+    this.resendAvailableAt,
+    this.registrationGrant,
+    this.registrationGrantExpiresAt,
     this.requestId,
   });
 
@@ -153,7 +161,14 @@ class StartAttemptResult {
   final String status;
   final String maskedPhone;
   final DateTime expiresAt;
-  final DateTime resendAvailableAt;
+
+  /// Absent when no code is sent.
+  final DateTime? resendAvailableAt;
+
+  /// Present when the server skipped the code step: the registration grant
+  /// is issued straight away.
+  final String? registrationGrant;
+  final DateTime? registrationGrantExpiresAt;
   final String onboardingToken;
   final DateTime onboardingTokenExpiresAt;
   final String nextAction;
@@ -169,7 +184,12 @@ class StartAttemptResult {
       status: _requiredString(attempt, 'status'),
       maskedPhone: _requiredString(attempt, 'phone'),
       expiresAt: _requiredDate(attempt, 'expires_at'),
-      resendAvailableAt: _requiredDate(attempt, 'resend_available_at'),
+      resendAvailableAt: _optionalDate(attempt, 'resend_available_at'),
+      registrationGrant: _optionalString(json, 'registration_grant'),
+      registrationGrantExpiresAt: _optionalDate(
+        json,
+        'registration_grant_expires_at',
+      ),
       onboardingToken: _requiredString(json, 'onboarding_token'),
       onboardingTokenExpiresAt: _requiredDate(
         json,

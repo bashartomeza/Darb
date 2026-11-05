@@ -79,6 +79,16 @@ describe("User Management view", () => {
     expect(markup).not.toContain("Reject merchant");
   });
 
+  it("marks an applicant whose contact was never verified, in both languages", () => {
+    const direct: UserListItem = { ...pendingMerchant, id: "merchant_direct", role_context: { kind: "merchant", merchant_approval_connected: true, application_submitted: true, contact_unverified: true } };
+    const en = render("en", <UsersDirectoryView {...props({ data: { ...page, users: [direct] }, onMerchantDecision: vi.fn() })} />);
+    expect(en).toContain("Contact not verified");
+    expect(en).toContain("Approve merchant");
+    const ar = render("ar", <UsersDirectoryView {...props({ data: { ...page, users: [direct] }, onMerchantDecision: vi.fn() })} />);
+    expect(ar).toContain("جهة الاتصال غير موثّقة");
+    expect(render("en", <UsersDirectoryView {...props({ onMerchantDecision: vi.fn() })} />)).not.toContain("Contact not verified");
+  });
+
   it("hides merchant decisions while the console cannot act", () => {
     const markup = render("en", <UsersDirectoryView {...props({ onMerchantDecision: vi.fn(), canAct: false })} />);
     expect(markup).not.toContain("Approve merchant");

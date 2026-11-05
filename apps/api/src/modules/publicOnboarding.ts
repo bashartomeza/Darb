@@ -350,6 +350,25 @@ function startResponse(
   };
 }
 
+/** Start answer when no code is sent: the attempt is already past the code step and carries its registration grant. */
+function codeFreeStartResponse(
+  attempt: { id: string; phone_e164: string; expires_at: Date },
+  token: string,
+  tokenExpiresAt: Date,
+  grant: { token: string; expiresAt: Date },
+  requestId: string
+) {
+  return {
+    attempt: { id: attempt.id, status: "phone_verified", phone: maskPhone(attempt.phone_e164), expires_at: attempt.expires_at },
+    onboarding_token: token,
+    onboarding_token_expires_at: tokenExpiresAt,
+    registration_grant: grant.token,
+    registration_grant_expires_at: grant.expiresAt,
+    next_action: "complete_registration",
+    request_id: requestId
+  };
+}
+
 /**
  * True while another request is still starting this attempt: it was just created and no code has
  * been dispatched yet, or a dispatch is running inside its lease. A start that crashed stops
@@ -448,7 +467,10 @@ export function createPublicOnboardingRouter(
                 requires_digit: true
               },
               otp_digits: 6,
-              resend_cooldown_seconds: appConfig.onboarding!.otpResendCooldownSeconds
+              resend_cooldown_seconds: appConfig.onboarding!.otpResendCooldownSeconds,
+              // True when the server issues no one-time code: the app goes straight to the account details and the
+              // applicant's contact stays unverified until Admin reviews the application.
+              code_required: !appConfig.onboardingCodeDisabled
             }
           : {}),
         request_id: req.requestId
@@ -524,6 +546,11 @@ export function createPublicOnboardingRouter(
       });
       if (existing) {
         const rotated = await rotateContinuation(appConfig, existing.id);
+        if (appConfig.onboardingCodeDisabled && existing.status === "phone_verified" && existing.current_challenge_id === null) {
+          const grant = await issueRegistrationGrant(appConfig, existing.id);
+          res.json(codeFreeStartResponse(existing, rotated.token, rotated.session.expires_at, grant, req.requestId));
+          return;
+        }
         res.json(startResponse(existing, rotated.token, rotated.session.expires_at, appConfig, req.requestId, existing.status === "created"));
         return;
       }
@@ -561,6 +588,8 @@ export function createPublicOnboardingRouter(
       const created = await tx.onboardingAttempt.create({
         data: {
           intended_role: input.role as OnboardingRole,
+          // Without a code the attempt skips the code step; the contact is recorded as unproven at completion.
+          ...(appConfig.onboardingCodeDisabled ? { status: "phone_verified" as const } : {}),
           phone_e164: phone,
           phone_digest: digest,
           phone_digest_version: onboarding.keys.phoneDigest.version,
@@ -581,6 +610,33 @@ export function createPublicOnboardingRouter(
       return created;
     });
     let rotated: Awaited<ReturnType<typeof rotateContinuation>>;
+    if (appConfig.onboardingCodeDisabled) {
+      try {
+        rotated = await rotateContinuation(appConfig, attempt.id);
+        const grant = await issueRegistrationGrant(appConfig, attempt.id);
+        if (claim.kind === "claimed") {
+          await completeIdempotency(prisma, {
+            recordId: claim.record.id,
+            claimVersion: claim.record.claim_version,
+            resourceType: "OnboardingAttempt",
+            resourceId: attempt.id,
+            responseStatus: 201
+          });
+        }
+        res.status(201).json(codeFreeStartResponse(attempt, rotated.token, rotated.session.expires_at, grant, req.requestId));
+      } catch (error) {
+        try {
+          await prisma.onboardingAttempt.updateMany({
+            where: { id: attempt.id, completed_user_id: null },
+            data: { status: "cancelled", expires_at: new Date() }
+          });
+        } catch {
+          // Best effort: the attempt also expires on its own.
+        }
+        throw error;
+      }
+      return;
+    }
     let delivery: Awaited<ReturnType<typeof dispatchOtpChallenge>>;
     try {
       rotated = await rotateContinuation(appConfig, attempt.id);
@@ -667,6 +723,7 @@ export function createPublicOnboardingRouter(
     try {
       const attemptId = String(req.params.id);
       if (req.onboarding!.attemptId !== attemptId) throw new HttpError(401, "onboarding_unavailable");
+      if (appConfig.onboardingCodeDisabled) throw new HttpError(404, "onboarding_unavailable");
       const attempt = await prisma.onboardingAttempt.findUniqueOrThrow({ where: { id: attemptId } });
       claim = await claimPublicOperation(req, appConfig, {
         operation: "onboarding_resend",
@@ -748,6 +805,7 @@ export function createPublicOnboardingRouter(
     try {
       const attemptId = String(req.params.id);
       if (req.onboarding!.attemptId !== attemptId) throw new HttpError(401, "onboarding_unavailable");
+      if (appConfig.onboardingCodeDisabled) throw new HttpError(404, "onboarding_unavailable");
       const input = verifySchema.parse(req.body);
       await consumeBuckets(req, appConfig, [
         { type: "otp_verify_attempt", subject: attemptId, seconds: 3_600, limit: onboarding.otpMaxAttempts + 2 },
@@ -887,8 +945,14 @@ export function createPublicOnboardingRouter(
         const pending = attempt.intended_role === "driver" || attempt.intended_role === "merchant";
         // Email-delivered code: it proves the mailbox, not the phone. The mailbox becomes the verified sign-in
         // identity; the phone counts as verified only when the provider itself proves the phone.
-        const emailProven = provider.provesPhone === false && attempt.delivery_email !== null;
-        const phoneVouched = provider.provesPhone !== false;
+        // An attempt that never had a code (direct sign-up) proves neither: both stay unverified and the Admin review
+        // shows "contact not verified".
+        const codeSkipped = attempt.current_challenge_id === null;
+        const emailProven = !codeSkipped && provider.provesPhone === false && attempt.delivery_email !== null;
+        const phoneVouched = !codeSkipped && provider.provesPhone !== false;
+        if (codeSkipped && attempt.delivery_email !== null && (await tx.user.findUnique({ where: { email: attempt.delivery_email }, select: { id: true } }))) {
+          throw new HttpError(409, "registration_conflict");
+        }
         if (emailProven && (await tx.user.findUnique({ where: { email: attempt.delivery_email! }, select: { id: true } }))) {
           throw new HttpError(409, "registration_conflict");
         }
@@ -897,6 +961,7 @@ export function createPublicOnboardingRouter(
             name: displayName,
             phone: attempt.phone_e164,
             ...(emailProven ? { email: attempt.delivery_email, email_verified_at: now } : {}),
+            ...(codeSkipped && attempt.delivery_email !== null ? { email: attempt.delivery_email, email_verified_at: null } : {}),
             // A provider that proves the phone: trusted. Sign-up by emailed code: phone unverified.
             phone_verified_at: phoneVouched ? now : null,
             profile_state: "complete",

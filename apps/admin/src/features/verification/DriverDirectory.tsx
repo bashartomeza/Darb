@@ -151,6 +151,7 @@ export function DriverReviewPanel({ verification, busy, action, reason, profile,
       <div className="stack stack--tight">
         <ReviewField label={t("profileName")}>{candidate.name}</ReviewField>
         <ReviewField label={t("phoneNumber")}><TechnicalValue>{candidate.phone}</TechnicalValue></ReviewField>
+        {verification.contact_unverified ? <ReviewField label={t("contactNotVerified")}><StatusBadge tone="warning">{t("contactNotVerified")}</StatusBadge></ReviewField> : null}
         <ReviewField label={t("columnAccountStatus")}><StatusBadge tone={accountTone(candidate.account_status)}>{t(`accountStatus_${candidate.account_status}`)}</StatusBadge></ReviewField>
         <ReviewField label={t("accountStatusUpdatedAt")}>{dateTime(candidate.status_updated_at)}</ReviewField>
       </div>

@@ -34,6 +34,8 @@ const safeUserSelect = {
   last_login_at: true,
   demo_account: true,
   review_submitted_at: true,
+  email_verified_at: true,
+  phone_verified_at: true,
   created_at: true
 } as const;
 
@@ -115,8 +117,13 @@ function serializeUserDirectoryListRecord(user: UserDirectoryListRecord) {
   };
 }
 
+/** True when neither the email nor the phone was proven by a one-time code (direct sign-up without a code). */
+function contactUnverified(user: { email_verified_at?: Date | null; phone_verified_at?: Date | null }) {
+  return !user.email_verified_at && !user.phone_verified_at;
+}
+
 function createUserRoleContext(
-  user: { role: string; review_submitted_at?: Date | null; driver_profile: { verified: boolean } | null; driver_verification: { status: string } | null }
+  user: { role: string; review_submitted_at?: Date | null; email_verified_at?: Date | null; phone_verified_at?: Date | null; driver_profile: { verified: boolean } | null; driver_verification: { status: string } | null }
 ) {
   if (user.role === "driver") {
     return {
@@ -124,11 +131,12 @@ function createUserRoleContext(
       driver_profile_exists: Boolean(user.driver_profile),
       driver_profile_verified: user.driver_profile?.verified ?? false,
       driver_verification_status: user.driver_verification?.status ?? "none",
-      application_submitted: user.review_submitted_at !== null
+      application_submitted: user.review_submitted_at !== null,
+      contact_unverified: contactUnverified(user)
     };
   }
   if (user.role === "merchant") {
-    return { kind: "merchant", merchant_approval_connected: true, application_submitted: user.review_submitted_at !== null };
+    return { kind: "merchant", merchant_approval_connected: true, application_submitted: user.review_submitted_at !== null, contact_unverified: contactUnverified(user) };
   }
   if (user.role === "admin") return { kind: "admin" };
   return { kind: "passenger" };
@@ -259,6 +267,7 @@ function serializeDriverVerification(verification: DriverVerificationRecord) {
     id: verification.id,
     revision: verification.revision,
     application_submitted: verification.user.review_submitted_at !== null,
+    contact_unverified: contactUnverified(verification.user),
     status: verification.status,
     expiry: serializeExpiry(verification),
     documents_expired_at: verification.documents_expired_at ?? null,

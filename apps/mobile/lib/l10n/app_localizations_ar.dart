@@ -1359,6 +1359,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get emailForCode => 'البريد الإلكتروني (نرسل الرمز إليه)';
 
   @override
+  String get onboardingNoCodeNote =>
+      'لا نرسل رمز تحقق. أدخل بريدك الإلكتروني ورقم جوالك الحقيقيين: يراجع فريق درب مستنداتك ويوافق على حسابك قبل أن تتمكن من تسجيل الدخول.';
+
+  @override
   String get codeSentToEmail =>
       'أرسلنا رمزاً من ستة أرقام إلى بريدك الإلكتروني. تحقق من بريدك، بما في ذلك مجلد الرسائل غير المرغوبة.';
 
