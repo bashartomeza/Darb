@@ -9,6 +9,45 @@ permissions:
   contents: read
 
 jobs:
+  backend-mariadb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: darb_mariadb_ci
+          MARIADB_USER: darb_ci
+          MARIADB_PASSWORD: ci-only-password
+          MARIADB_ROOT_PASSWORD: ci-only-root-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DATABASE_URL: mysql://darb_ci:ci-only-password@127.0.0.1:3306/darb_mariadb_ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Translate migrations and deploy to MariaDB
+        run: node scripts/mariadb/migrate-deploy.mjs deploy
+      - name: Confirm MariaDB migration deploy is idempotent
+        run: node scripts/mariadb/migrate-deploy.mjs deploy
+      - name: Confirm MariaDB migration status
+        run: node scripts/mariadb/migrate-deploy.mjs status
+      - name: Verify every migration was applied
+        run: |
+          count="$(mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=darb_ci --password=ci-only-password --batch --skip-column-names darb_mariadb_ci --execute='SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL')"
+          expected="$(find apps/api/prisma/migrations -mindepth 1 -maxdepth 1 -type d | wc -l)"
+          test "$count" -eq "$expected"
+
   backend-mysql:
     runs-on: ubuntu-latest
     timeout-minutes: 20

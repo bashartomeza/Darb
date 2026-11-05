@@ -1,7 +1,8 @@
 # Deploying Darb to cPanel (darb.aynur.ps)
 
-Darb runs on the Injazat cPanel account (CloudLinux, cPanel "Setup Node.js App" with Passenger, MySQL 8 on
-`localhost:3306`). One Node.js app serves both the API (`/api/v1`) and the Admin site, so the Admin cookie
+Darb runs on the Injazat cPanel account (CloudLinux, cPanel "Setup Node.js App" with Passenger, MySQL-compatible
+database on `localhost:3306`; MySQL 8 uses the original migrations, while MariaDB 11.4 uses the checked-in
+translation wrapper). One Node.js app serves both the API (`/api/v1`) and the Admin site, so the Admin cookie
 session (ADR-023) works on one origin. Other projects on the same account are never touched: Darb lives in
 `~/darb-app`, its backups in `~/darb-backups`, and its cron lines are tagged `# darb-app`.
 
