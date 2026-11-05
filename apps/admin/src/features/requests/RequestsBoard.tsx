@@ -1,47 +1,68 @@
-import { useMemo } from "react";
-import type { MerchantOrder, PassengerRequest } from "../../api";
+import type { ReactNode } from "react";
+import type { ApiClient, MerchantOrder, PassengerRequest } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
-import { BentoGrid, Card, CardHeader, Column, DataTable, EmptyState, RouteChip, StatusBadge, TechnicalValue } from "../../ui";
-import { matchesSearch } from "../search";
+import { BentoGrid, Button, Card, CardHeader, Column, DataTable, EmptyState, RouteChip, Skeleton, StatusBadge, TechnicalValue } from "../../ui";
 import { OrderRouteDetails, orderRouteSearchValues } from "../operatingRoutes/OrderRouteDetails";
+import { Pager } from "../shared/Pager";
+import { useDebouncedValue, usePagedList, type PagedPhase } from "../shared/usePagedList";
 
-/** Passenger requests and merchant orders, both from the production admin API. */
-export function RequestsBoard({
-  requests,
-  orders,
-  search
+export const DELIVERIES_PAGE_SIZE = 25;
+
+export type RequestsBoardApi = Pick<ApiClient, "requests" | "orders">;
+
+function ListBody({
+  phase,
+  loaded,
+  onRetry,
+  children
 }: {
-  requests: PassengerRequest[];
-  orders: MerchantOrder[];
-  search: string;
+  phase: PagedPhase;
+  loaded: boolean;
+  onRetry: () => void;
+  children: ReactNode;
 }) {
+  const { t } = useLocale();
+  if (!loaded && phase === "loading") {
+    return <div className="overview-resource-state" role="status" aria-label={t("metricLoading")}><Skeleton lines={4} /></div>;
+  }
+  if (!loaded && phase === "error") {
+    return (
+      <EmptyState
+        compact
+        icon="report"
+        title={t("resourceLoadError")}
+        description={t("resourceLoadErrorDescription")}
+        action={<Button size="sm" variant="secondary" icon="refresh" onClick={onRetry}>{t("retry")}</Button>}
+      />
+    );
+  }
+  return (
+    <>
+      {phase === "loading" && <p className="overview-resource-note" role="status">{t("metricRefreshing")}</p>}
+      {phase === "error" && <p className="overview-resource-note overview-resource-note--error" role="alert">{t("metricRefreshError")}</p>}
+      {children}
+    </>
+  );
+}
+
+/**
+ * Passenger requests and merchant orders, each loaded page by page with its
+ * own loading, error and refresh state. The search box is sent to the API so
+ * it covers every page, not just the one on screen.
+ */
+export function RequestsBoard({ api, token, search }: { api: RequestsBoardApi; token: string; search: string }) {
   const { t, status, number } = useLocale();
+  const query = useDebouncedValue(search.trim());
 
-  const visibleRequests = useMemo(
-    () =>
-      requests.filter((request) =>
-        matchesSearch([request.id, request.status, request.pickup_label, request.destination_label, request.passenger?.name, ...orderRouteSearchValues(request)], search)
-      ),
-    [requests, search]
-  );
+  const requests = usePagedList<PassengerRequest>(async (page) => {
+    const result = await api.requests(token, { page, limit: DELIVERIES_PAGE_SIZE, search: query });
+    return { items: result.requests, total: result.total ?? result.requests.length };
+  }, [token, query]);
 
-  const visibleOrders = useMemo(
-    () =>
-      orders.filter((order) =>
-        matchesSearch(
-          [
-            order.id,
-            order.status,
-            order.pickup_label,
-            order.merchant?.name,
-            ...orderRouteSearchValues(order),
-            ...(order.parcels ?? []).map((parcel) => parcel.dropoff_details ?? undefined)
-          ],
-          search
-        )
-      ),
-    [orders, search]
-  );
+  const orders = usePagedList<MerchantOrder>(async (page) => {
+    const result = await api.orders(token, { page, limit: DELIVERIES_PAGE_SIZE, search: query });
+    return { items: result.orders, total: result.total ?? result.orders.length };
+  }, [token, query]);
 
   const requestColumns: Column<PassengerRequest>[] = [
     {
@@ -70,7 +91,7 @@ export function RequestsBoard({
       header: t("columnStatus"),
       cell: (request) => <StatusBadge status={request.status}>{status(request.status)}</StatusBadge>
     },
-    { key: "id", header: t("columnTrip"), align: "end", cell: (request) => <TechnicalValue>{request.id}</TechnicalValue> }
+    { key: "id", header: t("columnReference"), align: "end", cell: (request) => <TechnicalValue>{request.id}</TechnicalValue> }
   ];
 
   const orderColumns: Column<MerchantOrder>[] = [
@@ -101,7 +122,7 @@ export function RequestsBoard({
       header: t("columnStatus"),
       cell: (order) => <StatusBadge status={order.status}>{status(order.status)}</StatusBadge>
     },
-    { key: "id", header: t("columnTrip"), align: "end", cell: (order) => <TechnicalValue>{order.id}</TechnicalValue> }
+    { key: "id", header: t("columnReference"), align: "end", cell: (order) => <TechnicalValue>{order.id}</TechnicalValue> }
   ];
 
   return (
@@ -109,27 +130,35 @@ export function RequestsBoard({
       <Card span={12} padded={false}>
         <CardHeader
           title={t("passengerRequests")}
-          badge={<StatusBadge tone="warning">{number(visibleRequests.length)}</StatusBadge>}
+          badge={requests.loaded ? <StatusBadge tone="warning">{number(requests.total)}</StatusBadge> : undefined}
+          action={<Button variant="ghost" size="sm" icon="refresh" disabled={requests.phase === "loading"} onClick={() => void requests.reload()}>{t("refreshData")}</Button>}
         />
-        <DataTable
-          columns={requestColumns}
-          rows={visibleRequests}
-          rowKey={(request) => request.id}
-          empty={<EmptyState compact icon="person_pin_circle" title={search ? t("searchNoResults") : t("noData")} />}
-        />
+        <ListBody phase={requests.phase} loaded={requests.loaded} onRetry={() => void requests.reload()}>
+          <DataTable
+            columns={requestColumns}
+            rows={requests.items}
+            rowKey={(request) => request.id}
+            empty={<EmptyState compact icon="person_pin_circle" title={query ? t("searchNoResults") : t("noRequests")} />}
+          />
+          <Pager page={requests.page} total={requests.total} limit={DELIVERIES_PAGE_SIZE} disabled={requests.phase === "loading"} onPage={requests.setPage} />
+        </ListBody>
       </Card>
 
       <Card span={12} padded={false}>
         <CardHeader
           title={t("merchantOrders")}
-          badge={<StatusBadge tone="info">{number(visibleOrders.length)}</StatusBadge>}
+          badge={orders.loaded ? <StatusBadge tone="info">{number(orders.total)}</StatusBadge> : undefined}
+          action={<Button variant="ghost" size="sm" icon="refresh" disabled={orders.phase === "loading"} onClick={() => void orders.reload()}>{t("refreshData")}</Button>}
         />
-        <DataTable
-          columns={orderColumns}
-          rows={visibleOrders}
-          rowKey={(order) => order.id}
-          empty={<EmptyState compact icon="inventory_2" title={search ? t("searchNoResults") : t("noData")} />}
-        />
+        <ListBody phase={orders.phase} loaded={orders.loaded} onRetry={() => void orders.reload()}>
+          <DataTable
+            columns={orderColumns}
+            rows={orders.items}
+            rowKey={(order) => order.id}
+            empty={<EmptyState compact icon="inventory_2" title={query ? t("searchNoResults") : t("noOrders")} />}
+          />
+          <Pager page={orders.page} total={orders.total} limit={DELIVERIES_PAGE_SIZE} disabled={orders.phase === "loading"} onPage={orders.setPage} />
+        </ListBody>
       </Card>
     </BentoGrid>
   );

@@ -1,12 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import type {
-  DashboardResponse,
-  DriverProfile,
-  DriverRoute,
-  MerchantOrder,
-  PassengerRequest,
-  Trip
-} from "../../api";
+import type { DashboardResponse, DriverRoute, Trip } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
 import type { TranslationKey } from "../../i18n/translations";
 import {
@@ -20,7 +13,6 @@ import {
   Column,
   DataTable,
   EmptyState,
-  IconButton,
   KpiCard,
   MeterBar,
   RouteChip,
@@ -34,30 +26,30 @@ import { matchesSearch } from "../search";
 import { activeTrips as selectActiveTrips, isActiveTripStatus } from "./overviewMetrics";
 import type { OverviewResourceState, OverviewResourceStates } from "./overviewState";
 
-const AWAITING_MATCH_STATUSES = new Set(["draft", "pending"]);
-const UNBATCHED_ORDER_STATUSES = new Set(["draft", "submitted"]);
 const TRIP_FLOW = ["created", "accepted", "pickup_started", "picked_up", "in_transit", "delivered", "completed", "cancelled"];
 
 export type OverviewData = {
   dashboard: DashboardResponse | null;
-  drivers: DriverProfile[];
   routes: DriverRoute[];
-  requests: PassengerRequest[];
-  orders: MerchantOrder[];
   trips: Trip[];
   resources: OverviewResourceStates;
 };
 
 type OperationRow = { trip: Trip; route: DriverRoute | undefined };
 
-/** Alerts are derived only from statuses and flags present in current API contracts. */
-export function deriveAlerts(data: Pick<OverviewData, "requests" | "routes" | "orders">) {
-  const unmatchedRequests = data.requests.filter((request) => AWAITING_MATCH_STATUSES.has(request.status)).length;
-  const unverifiedDriverRoutes = data.routes.filter(
-    (route) => route.status === "active" && route.driver && route.driver.verified === false
-  ).length;
-  const unbatchedOrders = data.orders.filter((order) => UNBATCHED_ORDER_STATUSES.has(order.status)).length;
-  return { unmatchedRequests, unverifiedDriverRoutes, unbatchedOrders };
+/**
+ * Alert counts as the API computed them over every row (requests awaiting a
+ * driver, active routes of unverified drivers, merchant orders not batched).
+ * Null when the dashboard did not load or an older API build sent none.
+ */
+export function deriveAlerts(dashboard: DashboardResponse | null) {
+  const alerts = dashboard?.alerts;
+  if (!alerts) return null;
+  return {
+    unmatchedRequests: alerts.unmatched_requests,
+    unverifiedDriverRoutes: alerts.unverified_driver_routes,
+    unbatchedOrders: alerts.unbatched_orders
+  };
 }
 
 function ResourceBoundary({
@@ -163,7 +155,9 @@ export function OverviewDashboard({
   onRefresh: () => void;
 }) {
   const { t, status, number } = useLocale();
-  const alerts = useMemo(() => deriveAlerts(data), [data.requests, data.routes, data.orders]);
+  const alerts = useMemo(() => deriveAlerts(data.dashboard), [data.dashboard]);
+  const recentRequests = data.dashboard?.recent?.passenger_requests ?? [];
+  const recentOrders = data.dashboard?.recent?.merchant_orders ?? [];
 
   const activeRoutes = data.routes.filter((route) => route.status === "active");
   const activeTrips = selectActiveTrips(data.trips);
@@ -218,21 +212,13 @@ export function OverviewDashboard({
       header: t("columnStatus"),
       cell: ({ trip }) => <StatusBadge status={trip.status} icon={trip.status === "in_transit" ? "near_me" : undefined}>{status(trip.status)}</StatusBadge>
     },
-    { key: "trip", header: t("columnTrip"), cell: ({ trip }) => <TechnicalValue>{trip.id}</TechnicalValue> },
-    {
-      key: "actions",
-      header: t("columnActions"),
-      align: "end",
-      cell: ({ trip }) => <IconButton icon="more_vert" label={`${t("rowActionsLabel")} ${trip.id}`} disabled />
-    }
+    { key: "trip", header: t("columnTrip"), align: "end", cell: ({ trip }) => <TechnicalValue>{trip.id}</TechnicalValue> }
   ];
 
-  const alertStates = [data.resources.requests, data.resources.routes, data.resources.orders];
-  const alertsHaveData = alertStates.some((state) => state.hasData);
-  const alertsComplete = alertStates.every((state) => state.hasData);
-  const alertsLoading = !alertsHaveData && alertStates.some((state) => state.phase === "idle" || state.phase === "loading");
-  const alertsFailed = !alertsHaveData && alertStates.every((state) => state.phase === "error");
-  const alertCount = alerts.unmatchedRequests + alerts.unverifiedDriverRoutes + alerts.unbatchedOrders;
+  const alertState = data.resources.dashboard;
+  const alertsLoading = !alertState.hasData && (alertState.phase === "idle" || alertState.phase === "loading");
+  const alertsFailed = !alertState.hasData && alertState.phase === "error";
+  const alertCount = alerts ? alerts.unmatchedRequests + alerts.unverifiedDriverRoutes + alerts.unbatchedOrders : 0;
 
   return (
     <>
@@ -268,11 +254,11 @@ export function OverviewDashboard({
           {alertsFailed && <EmptyState compact icon="report" title={t("resourceLoadError")} description={t("alertsUnavailableDescription")} action={<Button size="sm" variant="secondary" icon="refresh" onClick={onRefresh}>{t("retry")}</Button>} />}
           {!alertsLoading && !alertsFailed && (
             <div className="stack stack--tight">
-              {alertStates.map((state, index) => <ResourceNote key={index} state={state} />)}
-              {alerts.unmatchedRequests > 0 && <AlertItem tone="danger" title={t("alertUnmatchedRequestsTitle")} description={t("alertUnmatchedRequestsDescription", { count: number(alerts.unmatchedRequests) })} />}
-              {alerts.unverifiedDriverRoutes > 0 && <AlertItem tone="warning" icon="verified_user" title={t("alertUnverifiedDriversTitle")} description={t("alertUnverifiedDriversDescription", { count: number(alerts.unverifiedDriverRoutes) })} />}
-              {alerts.unbatchedOrders > 0 && <AlertItem tone="info" icon="inventory_2" title={t("alertPendingOrdersTitle")} description={t("alertPendingOrdersDescription", { count: number(alerts.unbatchedOrders) })} />}
-              {alertCount === 0 && alertsComplete && <EmptyState icon="check" compact title={t("noAlertsTitle")} description={t("noAlertsDescription")} />}
+              <ResourceNote state={alertState} />
+              {alerts && alerts.unmatchedRequests > 0 && <AlertItem tone="danger" title={t("alertUnmatchedRequestsTitle")} description={t("alertUnmatchedRequestsDescription", { count: number(alerts.unmatchedRequests) })} />}
+              {alerts && alerts.unverifiedDriverRoutes > 0 && <AlertItem tone="warning" icon="verified_user" title={t("alertUnverifiedDriversTitle")} description={t("alertUnverifiedDriversDescription", { count: number(alerts.unverifiedDriverRoutes) })} />}
+              {alerts && alerts.unbatchedOrders > 0 && <AlertItem tone="info" icon="inventory_2" title={t("alertPendingOrdersTitle")} description={t("alertPendingOrdersDescription", { count: number(alerts.unbatchedOrders) })} />}
+              {alerts && alertCount === 0 && <EmptyState icon="check" compact title={t("noAlertsTitle")} description={t("noAlertsDescription")} />}
             </div>
           )}
         </Card>
@@ -295,11 +281,11 @@ export function OverviewDashboard({
         </Card>
 
         <Card span={6} padded={false}>
-          <CardHeader title={t("passengerRequests")} badge={data.resources.requests.hasData ? <StatusBadge tone="warning">{number(data.requests.length)}</StatusBadge> : undefined} />
-          <ResourceBoundary state={data.resources.requests} onRetry={onRefresh}>
+          <CardHeader title={t("recentPassengerRequests")} badge={data.dashboard ? <StatusBadge tone="warning">{number(data.dashboard.counts.passenger_requests)}</StatusBadge> : undefined} />
+          <ResourceBoundary state={data.resources.dashboard} onRetry={onRefresh}>
             <div className="card__list">
-              {data.requests.length === 0 && <EmptyState compact icon="person_pin_circle" title={t("noRequests")} />}
-              {data.requests.slice(0, 5).map((request) => (
+              {recentRequests.length === 0 && <EmptyState compact icon="person_pin_circle" title={t("noRequests")} />}
+              {recentRequests.map((request) => (
                 <div className="card__row" key={request.id}>
                   <div><p className="card__row-title">{request.passenger?.name ?? t("noData")}</p><p className="card__row-detail"><RouteChip from={request.pickup_label} to={request.destination_label} /></p></div>
                   <StatusBadge status={request.status}>{status(request.status)}</StatusBadge>
@@ -310,11 +296,11 @@ export function OverviewDashboard({
         </Card>
 
         <Card span={6} padded={false}>
-          <CardHeader title={t("merchantOrders")} badge={data.resources.orders.hasData ? <StatusBadge tone="info">{number(data.orders.length)}</StatusBadge> : undefined} />
-          <ResourceBoundary state={data.resources.orders} onRetry={onRefresh}>
+          <CardHeader title={t("recentMerchantOrders")} badge={data.dashboard ? <StatusBadge tone="info">{number(data.dashboard.counts.merchant_orders)}</StatusBadge> : undefined} />
+          <ResourceBoundary state={data.resources.dashboard} onRetry={onRefresh}>
             <div className="card__list">
-              {data.orders.length === 0 && <EmptyState compact icon="inventory_2" title={t("noOrders")} />}
-              {data.orders.slice(0, 5).map((order) => (
+              {recentOrders.length === 0 && <EmptyState compact icon="inventory_2" title={t("noOrders")} />}
+              {recentOrders.map((order) => (
                 <div className="card__row" key={order.id}>
                   <div><p className="card__row-title">{order.merchant?.name ?? order.pickup_label}</p><p className="card__row-detail">{order.pickup_label} · {number(order.parcels?.length ?? 0)} {t("parcels")}</p></div>
                   <StatusBadge status={order.status}>{status(order.status)}</StatusBadge>

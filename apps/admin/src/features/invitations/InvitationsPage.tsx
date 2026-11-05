@@ -3,6 +3,9 @@ import type { ApiClient, ApiError, InvitationRecord, InvitationRole } from "../.
 import { useLocale } from "../../i18n/LocaleContext";
 import { BentoGrid, Button, Card, CardHeader, DataTable, EmptyState, Notice, StatusBadge, TechnicalValue, type Column, type Tone } from "../../ui";
 import { normalizeContactEmail, normalizeInvitationPhone } from "./validation";
+import { Pager } from "../shared/Pager";
+
+export const INVITATIONS_PAGE_SIZE = 50;
 
 const ROLES: InvitationRole[] = ["passenger", "driver", "merchant"];
 const statusTone: Record<InvitationRecord["status"], Tone> = { unused: "info", used: "success", expired: "danger", revoked: "neutral" };
@@ -33,6 +36,8 @@ export function InvitationsPage({
   const { t, role, locale } = useLocale();
   const [disabled, setDisabled] = useState(initialDisabled);
   const [items, setItems] = useState<InvitationRecord[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(!initialDisabled);
   const [roleValue, setRoleValue] = useState<InvitationRole>("passenger");
   const [phone, setPhone] = useState("");
@@ -44,10 +49,12 @@ export function InvitationsPage({
   const [code, setCode] = useState<string | null>(initialCode);
   const [copied, setCopied] = useState(false);
 
-  async function load() {
+  async function load(target = page) {
     try {
-      const response = await api.adminInvitations(token, { page: 1, limit: 50 });
+      const response = await api.adminInvitations(token, { page: target, limit: INVITATIONS_PAGE_SIZE });
       setItems(response.invitations);
+      setTotal(response.total);
+      setPage(target);
     } catch (error) {
       if (classifyInvitationError(error) === "disabled") setDisabled(true);
       else setNotice({ kind: "error", message: t("invitationsLoadFailed") });
@@ -88,7 +95,7 @@ export function InvitationsPage({
       setCopied(false);
       setPhone("");
       setEmail("");
-      await load();
+      await load(1);
     } catch (error) {
       fail(error);
     } finally {
@@ -190,7 +197,10 @@ export function InvitationsPage({
       <Card span={12}>
         <CardHeader title={t("invitationsListTitle")} action={<Button size="sm" variant="outline" onClick={() => void load()} disabled={busy}>{t("refreshData")}</Button>} />
         {loading ? <p className="muted">{t("invitationsLoading")}</p> : (
-          <DataTable columns={columns} rows={items} rowKey={(row) => row.id} empty={<EmptyState icon="history" title={t("invitationsEmpty")} />} />
+          <>
+            <DataTable columns={columns} rows={items} rowKey={(row) => row.id} empty={<EmptyState icon="history" title={t("invitationsEmpty")} />} />
+            <Pager page={page} total={total} limit={INVITATIONS_PAGE_SIZE} disabled={busy} onPage={(next) => void load(next)} />
+          </>
         )}
       </Card>
     </BentoGrid>

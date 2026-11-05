@@ -22,6 +22,7 @@ import { RouteFares } from "./RouteFares";
 import { RouteWorkspace } from "./RouteWorkspace";
 import {
   initialRouteUiState,
+  loadAllCanonicalStops,
   moveRouteStop,
   normalizeRouteVersionDraft,
   routeUiReducer,
@@ -161,7 +162,7 @@ export function lifecycleActions(version: ServiceRouteVersion | null) {
 const copy = {
   ar: {
     title: "إدارة المسارات",
-    subtitle: "كتالوج المسارات المعتمد وإصداراته الثابتة — من دون خرائط في هذه المرحلة.",
+    subtitle: "كتالوج المسارات المعتمد وإصداراته الثابتة.",
     routes: "المسارات",
     stops: "المحطات",
     createRoute: "إنشاء مسار",
@@ -215,7 +216,7 @@ const copy = {
     latitude: "خط العرض",
     longitude: "خط الطول",
     createStop: "إنشاء محطة",
-    stopHelp: "أدخل الإحداثيات الرقمية المعتمدة. لا يوجد بحث أو معاينة خريطة في M7B.",
+    stopHelp: "أدخل الإحداثيات الرقمية المعتمدة. لا تتوفر هنا معاينة على الخريطة.",
     status: "الحالة",
     current: "الحالي",
     chooseRoute: "اختر مساراً لعرض إصداراته.",
@@ -233,7 +234,7 @@ const copy = {
   },
   en: {
     title: "Route management",
-    subtitle: "The approved route catalog and immutable versions — maps are intentionally absent in this milestone.",
+    subtitle: "The approved route catalog and its immutable versions.",
     routes: "Routes",
     stops: "Stops",
     createRoute: "Create route",
@@ -287,7 +288,7 @@ const copy = {
     latitude: "Latitude",
     longitude: "Longitude",
     createStop: "Create stop",
-    stopHelp: "Enter approved numeric coordinates. M7B has no map lookup or preview.",
+    stopHelp: "Enter approved numeric coordinates. There is no map preview here.",
     status: "Status",
     current: "Current",
     chooseRoute: "Choose a route to inspect its versions.",
@@ -596,10 +597,10 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
       });
       const [routePage, stopPage] = await Promise.all([
         api.serviceRoutes(token, `?${query}`),
-        api.canonicalStops(token, "?limit=50")
+        loadAllCanonicalStops((query) => api.canonicalStops(token, query))
       ]);
       setRoutes(routePage.routes);
-      setStops(stopPage.stops);
+      setStops(stopPage);
       setTotal(routePage.total);
       setPage(nextPage);
       setView(routePage.routes.length ? "ready" : "empty");
@@ -615,8 +616,8 @@ export function RouteManagement({ api, token, locale }: { api: Api; token: strin
 
   async function loadStops(surfaceFailure = true) {
     try {
-      const stopPage = await api.canonicalStops(token, "?limit=50");
-      setStops(stopPage.stops);
+      const stopPage = await loadAllCanonicalStops((query) => api.canonicalStops(token, query));
+      setStops(stopPage);
       return true;
     } catch (error) {
       if (surfaceFailure) showError(error);

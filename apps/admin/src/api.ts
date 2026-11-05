@@ -84,6 +84,10 @@ export function createApiClient(apiBaseUrl: string, clientOptions: ApiClientOpti
     return text ? `?${text}` : "";
   }
 
+  function operationalQuery(query: OperationalListQuery) {
+    return { page: query.page, limit: query.limit, search: query.search?.trim() || undefined };
+  }
+
   function withQuery(path: string, values: Record<string, string | number | undefined>) {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(values)) {
@@ -166,7 +170,9 @@ return {
     return apiRequest<UserPage>(`/admin/users?${query.toString()}`, { token });
   },
   user: (token: string, id: string) => apiRequest<{ user: UserDetail }>(`/admin/users/${encodeURIComponent(id)}`, { token }),
-  drivers: (token: string) => apiRequest<{ drivers: DriverProfile[] }>("/admin/drivers", { token }),
+  /** Without a page or limit the API returns every driver (the overview's view); with one, a page plus `total`. */
+  drivers: (token: string, query: OperationalListQuery = {}) =>
+    apiRequest<{ drivers: DriverProfile[] } & Partial<PageMeta>>(withQuery("/admin/drivers", operationalQuery(query)), { token }),
   driverVerifications: (token: string, status: DriverVerificationStatus = "pending", page = 1, limit = 50) =>
     apiRequest<DriverVerificationPage>(
       `/admin/driver-verifications?status=${encodeURIComponent(status)}&page=${page}&limit=${limit}`,
@@ -278,10 +284,41 @@ return {
       body: { status, ...(reason ? { reason } : {}), expected_status: expectedStatus }
     });
   },
-  requests: (token: string) => apiRequest<{ requests: PassengerRequest[] }>("/admin/requests", { token }),
-  orders: (token: string) => apiRequest<{ orders: MerchantOrder[] }>("/admin/orders", { token }),
+  requests: (token: string, query: OperationalListQuery = {}) =>
+    apiRequest<{ requests: PassengerRequest[] } & Partial<PageMeta>>(withQuery("/admin/requests", operationalQuery(query)), { token }),
+  /** Merchant orders only: passenger parcels have their own list. */
+  orders: (token: string, query: OperationalListQuery = {}) =>
+    apiRequest<{ orders: MerchantOrder[] } & Partial<PageMeta>>(withQuery("/admin/orders", operationalQuery(query)), { token }),
   passengerParcels: (token: string) => apiRequest<{ parcels: PassengerParcelRow[] }>("/admin/passenger-parcels", { token }),
-  routes: (token: string) => apiRequest<{ routes: DriverRoute[] }>("/admin/routes", { token }),
+  routes: (token: string, query: OperationalListQuery = {}) =>
+    apiRequest<{ routes: DriverRoute[] } & Partial<PageMeta>>(withQuery("/admin/routes", operationalQuery(query)), { token }),
+  updateDriverExpiry: (token: string, userId: string, expectedRevision: number, expiry: DriverExpiryInput) =>
+    apiRequest<{ verification: DriverVerification }>(
+      `/admin/driver-verifications/${encodeURIComponent(userId)}/expiry`,
+      { method: "POST", token, body: { expected_revision: expectedRevision, expiry } }
+    ),
+  communityReports: (token: string, query: CommunityReportQuery = {}) =>
+    apiRequest<CommunityReportPage>(withQuery("/admin/community-reports", {
+      pending: query.pending === undefined ? undefined : String(query.pending),
+      category: query.category,
+      hidden: query.hidden === undefined ? undefined : String(query.hidden),
+      page: query.page,
+      limit: query.limit
+    }), { token }),
+  moderateCommunityReport: (token: string, id: string, action: CommunityReportAction) =>
+    apiRequest<{ report: CommunityReport }>(`/admin/community-reports/${encodeURIComponent(id)}`, { method: "PATCH", token, body: { action } }),
+  appRatings: (token: string, query: AppRatingQuery = {}) =>
+    apiRequest<AppRatingPage>(withQuery("/admin/app-ratings", query), { token }),
+  checkpointPositions: (token: string, query: { search?: string; page?: number; limit?: number } = {}) =>
+    apiRequest<CheckpointPositionPage>(withQuery("/admin/checkpoint-positions", { ...query, search: query.search || undefined }), { token }),
+  createCheckpointPosition: (token: string, body: CheckpointPositionDraft) =>
+    apiRequest<{ position: CheckpointPosition }>("/admin/checkpoint-positions", { method: "POST", token, body }),
+  updateCheckpointPosition: (token: string, id: string, body: CheckpointPositionUpdate) =>
+    apiRequest<{ position: CheckpointPosition }>(`/admin/checkpoint-positions/${encodeURIComponent(id)}`, { method: "PATCH", token, body }),
+  deleteCheckpointPosition: (token: string, id: string) =>
+    apiRequest<{ deleted: true }>(`/admin/checkpoint-positions/${encodeURIComponent(id)}`, { method: "DELETE", token }),
+  unplacedCheckpoints: (token: string) =>
+    apiRequest<UnplacedCheckpointsResponse>("/admin/checkpoint-positions/unplaced", { token }),
   /** Every predefined route, active and turned off, with how many orders use it. */
   operatingRoutes: (token: string) => apiRequest<{ routes: AdminOperatingRoute[] }>("/admin/operating-routes", { token }),
   createOperatingRoute: (token: string, body: OperatingRouteDraft) =>
@@ -314,8 +351,6 @@ return {
       body: { status, expected_status: expectedStatus },
     }),
   trips: (token: string) => apiRequest<{ trips: Trip[] }>("/trips", { token }),
-  trip: (token: string, id: string) => apiRequest<{ trip: Trip }>(`/trips/${id}`, { token }),
-  latestLocation: (token: string, id: string) => apiRequest<{ location: LocationEvent | null }>(`/trips/${id}/location`, { token }),
   serviceRoutes: (token: string, query = "") => apiRequest<RoutePage>(`/admin/service-routes${query}`, { token }),
   serviceRoute: (token: string, id: string) => apiRequest<{ route: ServiceRoute }>(`/admin/service-routes/${id}`, { token }),
   createServiceRoute: (token: string, body: RouteIdentityDraft, key: string) => apiRequest<{ route: ServiceRoute }>("/admin/service-routes", { method: "POST", token, body, idempotencyKey: key }),
@@ -368,17 +403,13 @@ export function createDemoApiClient(apiBaseUrl: string, clientOptions: ApiClient
     reset: (token: string | undefined, resetKey: string) => apiRequest<{ ok: boolean; seed: unknown }>("/demo/reset", { method: "POST", token, resetKey, body: {} }),
     runMatch: (token: string, passengerRequestId?: string, merchantOrderId?: string) =>
       apiRequest<MatchRunResponse>("/matches/run", { method: "POST", token, body: { passengerRequestId, merchantOrderId } }),
-    getMatch: (token: string, id: string) => apiRequest<{ match: Match; scoringBreakdown: Record<string, number> }>(`/matches/${id}`, { token }),
     batchOrder: (token: string, orderId: string) => apiRequest<BatchResponse>(`/merchant/orders/${orderId}/batch`, { method: "POST", token, body: {} }),
     runComparison: (token: string, passengerRequestId?: string, merchantOrderId?: string) =>
       apiRequest<{ comparison: Comparison }>("/compare/run", { method: "POST", token, body: { scenarioKey: "darb_batch_wins", passengerRequestId, merchantOrderId } }),
-    getComparison: (token: string, id: string) => apiRequest<{ comparison: Comparison }>(`/compare/runs/${id}`, { token }),
     acceptMatch: (token: string, id: string) => apiRequest<{ trip: Trip; matchId: string }>(`/matches/${id}/accept`, { method: "POST", token, body: {} }),
-    rejectMatch: (token: string, id: string) => apiRequest<{ match: Match }>(`/matches/${id}/reject`, { method: "POST", token, body: {} }),
     updateTripStatus: (token: string, id: string, status: string) =>
       apiRequest<{ trip: Trip }>(`/trips/${id}/status`, { method: "POST", token, body: { status } }),
-    simulateStep: (token: string, id: string) => apiRequest<{ location: LocationEvent }>(`/trips/${id}/simulate/step`, { method: "POST", token, body: {} }),
-    resetSimulation: (token: string, id: string) => apiRequest<{ ok: boolean }>(`/trips/${id}/simulate/reset`, { method: "POST", token, body: {} })
+    simulateStep: (token: string, id: string) => apiRequest<{ location: LocationEvent }>(`/trips/${id}/simulate/step`, { method: "POST", token, body: {} })
   };
 }
 
@@ -585,12 +616,117 @@ export type DashboardResponse = {
     drivers: number;
     routes: number;
     passenger_requests: number;
+    /** Merchant orders only; passenger parcels are counted in `passenger_parcels`. */
     merchant_orders: number;
+    passenger_parcels?: number;
     parcels: number;
     active_drivers: number;
     pending_driver_approvals: number;
     open_incidents: number;
   };
+  /** Absent from older API builds. */
+  alerts?: {
+    unmatched_requests: number;
+    unbatched_orders: number;
+    unverified_driver_routes: number;
+  };
+  /** The five newest of each, newest first. */
+  recent?: {
+    passenger_requests: PassengerRequest[];
+    merchant_orders: MerchantOrder[];
+    routes: DriverRoute[];
+  };
+};
+
+export type PageMeta = { page: number; limit: number; total: number };
+export type OperationalListQuery = { page?: number; limit?: number; search?: string };
+
+export const COMMUNITY_REPORT_CATEGORIES = [
+  "road_closure",
+  "road_reopened",
+  "road_congestion",
+  "checkpoint_open_marked_closed",
+  "checkpoint_closed_marked_open",
+  "checkpoint_outdated",
+  "safety_alert",
+  "driver_report",
+  "incorrect_map_info",
+  "other"
+] as const;
+export type CommunityReportCategory = (typeof COMMUNITY_REPORT_CATEGORIES)[number];
+export type CommunityReportAction = "reviewed" | "hide" | "restore";
+export type CommunityReport = {
+  id: string;
+  category: CommunityReportCategory;
+  description: string;
+  location_name: string;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+  upvotes: number;
+  downvotes: number;
+  awaiting_admin_review: boolean;
+  has_trip: boolean;
+  author_id: string;
+  trip_id: string | null;
+  hidden_at: string | null;
+  admin_reviewed_at?: string | null;
+  flag_count?: number;
+};
+export type CommunityReportQuery = {
+  pending?: boolean;
+  category?: CommunityReportCategory;
+  hidden?: boolean;
+  page?: number;
+  limit?: number;
+};
+export type CommunityReportPage = { reports: CommunityReport[] } & PageMeta;
+
+export type AppRating = {
+  user: { id: string; name: string; role: string };
+  stars: number;
+  feedback: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type AppRatingQuery = { stars?: number; from?: string; to?: string; page?: number; limit?: number };
+export type AppRatingSummary = {
+  count: number;
+  average: number | null;
+  distribution: Record<"1" | "2" | "3" | "4" | "5", number>;
+};
+export type AppRatingPage = { ratings: AppRating[]; summary: AppRatingSummary } & PageMeta;
+
+export const CHECKPOINT_CONFIDENCES = ["high", "medium", "low", "unverified"] as const;
+export type CheckpointConfidence = (typeof CHECKPOINT_CONFIDENCES)[number];
+export type CheckpointPosition = {
+  id: string;
+  city_ar: string;
+  name_ar: string;
+  latitude: number;
+  longitude: number;
+  confidence: CheckpointConfidence;
+  source: string;
+  dataset_name: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type CheckpointPositionDraft = {
+  city_ar: string;
+  name_ar: string;
+  latitude: number;
+  longitude: number;
+  confidence: CheckpointConfidence;
+  source: string;
+  note?: string | null;
+};
+export type CheckpointPositionUpdate = Partial<Pick<CheckpointPosition, "latitude" | "longitude" | "confidence" | "note">>;
+export type CheckpointPositionPage = { positions: CheckpointPosition[] } & PageMeta;
+export type UnplacedCheckpointsResponse = {
+  available: boolean;
+  fetched_at?: string;
+  unplaced: Array<{ id: string; city_ar: string; name_ar: string; reason: "no_name_match" | "ambiguous" | "outside_city" }>;
 };
 
 export type DriverRoute = {

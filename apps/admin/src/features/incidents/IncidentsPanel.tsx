@@ -4,6 +4,9 @@ import { useLocale } from "../../i18n/LocaleContext";
 import type { TranslationKey } from "../../i18n/translations";
 import { BentoGrid, Button, Card, CardHeader, EmptyState, Skeleton, StatusBadge, TechnicalValue } from "../../ui";
 import type { Tone } from "../../ui/StatusBadge";
+import { Pager } from "../shared/Pager";
+
+export const INCIDENTS_PAGE_SIZE = 50;
 
 type IncidentsApi = {
   incidents: (token: string, query: { status?: IncidentStatus; page?: number; limit?: number }) => Promise<IncidentPage>;
@@ -46,6 +49,7 @@ export function IncidentsPanel({ api, token }: { api: IncidentsApi; token: strin
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "error" | "ok"; key: TranslationKey } | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
   const latest = useRef(0);
 
   const load = useCallback(async () => {
@@ -53,14 +57,14 @@ export function IncidentsPanel({ api, token }: { api: IncidentsApi; token: strin
     setLoading(true);
     setFailed(false);
     try {
-      const result = await api.incidents(token, { status: filter === "all" ? undefined : filter, limit: 50 });
+      const result = await api.incidents(token, { status: filter === "all" ? undefined : filter, page: pageNumber, limit: INCIDENTS_PAGE_SIZE });
       if (request === latest.current) setPage(result);
     } catch {
       if (request === latest.current) setFailed(true);
     } finally {
       if (request === latest.current) setLoading(false);
     }
-  }, [api, token, filter]);
+  }, [api, token, filter, pageNumber]);
 
   useEffect(() => {
     void load();
@@ -98,7 +102,7 @@ export function IncidentsPanel({ api, token }: { api: IncidentsApi; token: strin
               size="sm"
               variant={filter === value ? "secondary" : "ghost"}
               aria-pressed={filter === value}
-              onClick={() => { setFilter(value); setSelectedId(null); }}
+              onClick={() => { setFilter(value); setPageNumber(1); setSelectedId(null); }}
             >
               {value === "all" ? t("incidentsFilterAll") : t(STATUS_LABEL[value])}
             </Button>
@@ -139,6 +143,7 @@ export function IncidentsPanel({ api, token }: { api: IncidentsApi; token: strin
             ))}
           </div>
         )}
+        {page && <Pager page={pageNumber} total={page.total} limit={INCIDENTS_PAGE_SIZE} disabled={loading} onPage={(next) => { setPageNumber(next); setSelectedId(null); }} />}
       </Card>
 
       {selected && (

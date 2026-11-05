@@ -4,7 +4,6 @@ import {
   NAV_GROUPS,
   NAV_ITEMS,
   hashForModule,
-  isModuleAvailable,
   moduleFromHash,
   navItemForModule,
   resolveActiveModule,
@@ -25,10 +24,13 @@ describe("admin navigation", () => {
       "invitations",
       "trips",
       "routes",
+      "checkpointPositions",
       "deliveries",
       "matchingBatching",
       "incidentsSafety",
+      "communityReports",
       "reports",
+      "appRatings",
       "settings"
     ]);
   });
@@ -49,10 +51,13 @@ describe("admin navigation", () => {
       ["invitations", "people"],
       ["trips", "operations"],
       ["routes", "operations"],
+      ["checkpointPositions", "operations"],
       ["deliveries", "operations"],
       ["matchingBatching", "operations"],
       ["incidentsSafety", "safety"],
+      ["communityReports", "safety"],
       ["reports", "insights"],
+      ["appRatings", "insights"],
       ["settings", "system"]
     ]);
   });
@@ -64,31 +69,16 @@ describe("admin navigation", () => {
     }
   });
 
-  it("keeps the full structure visible when build flags are off", () => {
+  it("keeps the full structure visible whatever the build flags", () => {
     expect(visibleNavItems(allOff)).toEqual(NAV_ITEMS);
-    expect(visibleNavItems(allOff).map((item) => item.id)).toContain("routes");
-    expect(visibleNavItems(allOff).map((item) => item.id)).toContain("matchingBatching");
-  });
-
-  it("uses honest unavailable states for gated and unimplemented modules", () => {
-    // The simple Routes page is API-backed and no longer behind VITE_ROUTE_MANAGEMENT_ENABLED.
-    expect(isModuleAvailable("routes", allOn)).toBe(true);
-    expect(isModuleAvailable("routes", allOff)).toBe(true);
-    expect(isModuleAvailable("matchingBatching", allOn)).toBe(true);
-    expect(isModuleAvailable("matchingBatching", allOff)).toBe(true);
-    expect(isModuleAvailable("incidentsSafety", allOn)).toBe(true);
-    expect(isModuleAvailable("reports", allOn)).toBe(true);
-  });
-
-  it("keeps API-backed people modules available", () => {
-    expect(isModuleAvailable("users", allOff)).toBe(true);
-    expect(isModuleAvailable("drivers", allOff)).toBe(true);
-    expect(NAV_ITEMS.find((item) => item.id === "matchingBatching")?.backing).toBe("api");
-    expect(isModuleAvailable("matchingBatching", allOff)).toBe(true);
+    expect(visibleNavItems(allOn)).toEqual(NAV_ITEMS);
   });
 
   it("provides stable deep links and resolves compatibility aliases", () => {
     for (const id of MODULE_IDS) expect(moduleFromHash(hashForModule(id))).toBe(id);
+    expect(hashForModule("communityReports")).toBe("#/community-reports");
+    expect(hashForModule("appRatings")).toBe("#/app-ratings");
+    expect(hashForModule("checkpointPositions")).toBe("#/checkpoint-positions");
     expect(hashForModule("profile")).toBe("#/profile");
     expect(moduleFromHash("#/profile")).toBe("profile");
     expect(NAV_ITEMS.map((item) => item.id)).not.toContain("profile");
@@ -104,6 +94,7 @@ describe("admin navigation", () => {
   it("keeps a valid destination active regardless of feature availability", () => {
     expect(resolveActiveModule("routes", allOff)).toBe("routes");
     expect(resolveActiveModule("matchingBatching", allOff)).toBe("matchingBatching");
+    expect(resolveActiveModule("communityReports", allOff)).toBe("communityReports");
   });
 
   it("keeps the old route workspace out of the sidebar and behind the route-management flag", () => {

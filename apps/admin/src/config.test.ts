@@ -29,13 +29,12 @@ describe("admin build isolation", () => {
     }
   });
 
-  it("strips tracking simulation controls from non-demo bundles", () => {
+  it("strips demo controls from non-demo bundles", () => {
     for (const locale of [translations.ar, translations.en]) {
-      expect(locale.trackingSimulation).toBe("");
-      expect(locale.simulateStep).toBe("");
-      expect(locale.readLatest).toBe("");
-      expect(locale.resetSimulation).toBe("");
-      expect(locale.simulateEmpty).toBe("");
+      expect(locale.demoControl).toBe("");
+      expect(locale.runFullDemo).toBe("");
+      expect(locale.resetKey).toBe("");
+      expect(locale.resetDemo).toBe("");
     }
   });
 

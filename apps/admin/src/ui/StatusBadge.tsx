@@ -29,6 +29,7 @@ const statusTones: Record<string, Tone> = {
   paused: "warning",
   created: "warning",
   cancelled: "danger",
+  failed: "danger",
   rejected: "danger",
   expired: "danger",
   inactive: "danger",

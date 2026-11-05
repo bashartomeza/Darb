@@ -124,7 +124,7 @@ function blankDraft(): ConsentReleaseDraft {
 function editableDraft(release: ConsentRelease): ConsentReleaseDraft {
   return {
     version: release.version,
-    intended_effective_at: release.intended_effective_at.slice(0, 16),
+    intended_effective_at: toLocalDateTimeInput(release.intended_effective_at),
     documents: identities.map((identity) => ({
       ...identity,
       content: release.documents.find((document) => document.type === identity.type && document.locale === identity.locale)?.content ?? ""
@@ -132,8 +132,25 @@ function editableDraft(release: ConsentRelease): ConsentReleaseDraft {
   };
 }
 
-function iso(value: string) {
-  const parsed = new Date(value);
+const pad = (value: number) => String(value).padStart(2, "0");
+
+/**
+ * A stored UTC instant as a `datetime-local` value in the admin's own time
+ * zone (Palestine: UTC+2, or UTC+3 in summer). The input has no zone, so it
+ * must show local wall-clock time, not the UTC digits.
+ */
+export function toLocalDateTimeInput(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** The inverse: a `datetime-local` value, read as local time, as a UTC ISO instant. */
+export function fromLocalDateTimeInput(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (!match) throw new Error("invalid_effective_time");
+  const [, year, month, day, hours, minutes, seconds] = match;
+  const parsed = new Date(Number(year), Number(month) - 1, Number(day), Number(hours), Number(minutes), Number(seconds ?? 0));
   if (Number.isNaN(parsed.valueOf())) throw new Error("invalid_effective_time");
   return parsed.toISOString();
 }
@@ -214,7 +231,7 @@ export function ConsentManagement({
 
   function submitDraft(event: FormEvent) {
     event.preventDefault();
-    const payload = { ...draft, intended_effective_at: iso(draft.intended_effective_at) };
+    const payload = { ...draft, intended_effective_at: fromLocalDateTimeInput(draft.intended_effective_at) };
     if (editing === "new") {
       void perform(() => api.createConsentRelease(token, payload), text.saved);
     } else if (editing && selectedRevision !== null) {

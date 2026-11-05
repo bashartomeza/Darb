@@ -1,13 +1,12 @@
-import type {
-  DashboardResponse,
-  DriverProfile,
-  DriverRoute,
-  MerchantOrder,
-  PassengerRequest,
-  Trip
-} from "../../api";
+import type { DashboardResponse, DriverRoute, Trip } from "../../api";
 
-export const OVERVIEW_RESOURCE_KEYS = ["dashboard", "drivers", "routes", "requests", "orders", "trips"] as const;
+/**
+ * What the overview loads. Counts, alerts and the newest requests and orders
+ * all come from the dashboard endpoint; routes and trips feed the active
+ * operations table and the capacity chart. The full people and order lists are
+ * loaded, page by page, by their own pages.
+ */
+export const OVERVIEW_RESOURCE_KEYS = ["dashboard", "routes", "trips"] as const;
 
 export type OverviewResourceKey = (typeof OVERVIEW_RESOURCE_KEYS)[number];
 export type OverviewResourcePhase = "idle" | "loading" | "ready" | "error";
@@ -16,10 +15,7 @@ export type OverviewResourceStates = Record<OverviewResourceKey, OverviewResourc
 
 export type OverviewPayloads = {
   dashboard: DashboardResponse;
-  drivers: { drivers: DriverProfile[] };
   routes: { routes: DriverRoute[] };
-  requests: { requests: PassengerRequest[] };
-  orders: { orders: MerchantOrder[] };
   trips: { trips: Trip[] };
 };
 
@@ -40,19 +36,16 @@ export function beginOverviewRefresh(states: OverviewResourceStates): OverviewRe
 }
 
 /**
- * Loads every resource independently. Promise.allSettled is intentional: an
- * orders outage must not erase valid driver, trip, or request data.
+ * Loads every resource independently. Promise.allSettled is intentional: a
+ * trips outage must not erase valid dashboard or route data.
  */
 export async function loadOverviewResources(loaders: OverviewLoaders): Promise<OverviewResults> {
-  const [dashboard, drivers, routes, requests, orders, trips] = await Promise.allSettled([
+  const [dashboard, routes, trips] = await Promise.allSettled([
     loaders.dashboard(),
-    loaders.drivers(),
     loaders.routes(),
-    loaders.requests(),
-    loaders.orders(),
     loaders.trips()
   ]);
-  return { dashboard, drivers, routes, requests, orders, trips };
+  return { dashboard, routes, trips };
 }
 
 export function completeOverviewRefresh(
