@@ -63,3 +63,36 @@ Setup Node.js App > darb-app > Environment variables set both `EMAIL_VERIFICATIO
 with name, email, mobile number and password, accepts the legal texts and is signed in, with no code. Consequences:
 accounts can use any address; password reset and email codes need a working mailbox (`darb@aynur.ps` on
 `mail.aynur.ps:465`, see `ops/setup.sh`); driver and shop-owner sign-up still sends an email code.
+
+## Test drivers
+
+For trying rider requests on the live app there are 20 TEST drivers, `driver1@darb.ps` ... `driver20@darb.ps`
+("Test Driver N", contact mobile `0599000001` ... `0599000020`, plate `TEST-NN`). Driver k is approved, has 4 seats / 5 parcel
+slots and ONE online route: the k-th predefined route (pairs in the order of `PREDEFINED_ROUTE_PAIRS`, outbound then inbound):
+1 hebron-to-bethlehem, 2 bethlehem-to-hebron, 3 hebron-to-ramallah, 4 ramallah-to-hebron, 5 bethlehem-to-ramallah,
+6 ramallah-to-bethlehem, 7 ramallah-to-nablus, 8 nablus-to-ramallah, 9 nablus-to-jenin, 10 jenin-to-nablus,
+11 nablus-to-tulkarm, 12 tulkarm-to-nablus, 13 nablus-to-qalqilya, 14 qalqilya-to-nablus, 15 ramallah-to-jericho,
+16 jericho-to-ramallah, 17 nablus-to-salfit, 18 salfit-to-nablus, 19 nablus-to-tubas, 20 tubas-to-nablus.
+
+The accounts are not demo accounts (so the admin CLI and demo reset behave as before). The routes have no departure time or
+window end, like a route opened by the app's go-online switch, so they do not expire. Running the command again is safe: it
+repairs anything that changed (offline route, suspended account, ...) and keeps existing passwords.
+
+```
+cd ~/darb-app && source ~/nodevenv/darb-app/22/bin/activate
+umask 077 && mkdir -p ~/darb-secrets
+node ops/run.mjs node dist/scripts/seedTestDrivers.js --confirm-test-accounts --dry-run
+node ops/run.mjs node dist/scripts/seedTestDrivers.js --confirm-test-accounts --credentials-file ~/darb-secrets/test-drivers.txt
+```
+
+- `--confirm-test-accounts` is required for every mode. Output is counts only; passwords are never printed.
+- The credentials file (`driverN@darb.ps | password | route key`, mode 0600) is created on the server and refuses to overwrite
+  an existing file unless `--force`. Only new accounts (or all, with `--reset-passwords`) get a password; a re-run that changes
+  no password writes no file.
+- Fetch it over scp from your PC, then delete it on the server: `scp <user>@<host>:darb-secrets/test-drivers.txt .` and
+  `rm ~/darb-secrets/test-drivers.txt`. Never paste it into chat, tickets or the repo.
+- New passwords: run again with `--reset-passwords --force --credentials-file ...`.
+- Remove: `node ops/run.mjs node dist/scripts/seedTestDrivers.js --confirm-test-accounts --remove` deletes only accounts that
+  have both a `driverN@darb.ps` address and the creation audit record written by this script. A driver with trip or match
+  history cannot be deleted; it is taken offline and suspended instead (reported as `suspended=`). Creation, updates and
+  removal are written to the audit log.
