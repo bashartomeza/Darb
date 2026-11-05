@@ -391,7 +391,7 @@ describe("push dispatcher", () => {
     for (const type of [
       "match_offered", "match_accepted", "match_rejected", "trip_status", "driver_approaching",
       "driver_verification_approved", "driver_verification_rejected", "driver_documents_expiring",
-      "driver_documents_expired", "driver_documents_renewal_submitted", "incident_updated", "something_new"
+      "driver_documents_expired", "driver_documents_renewal_submitted", "incident_updated", "merchant_order_expired", "match_withdrawn", "something_new"
     ]) {
       for (const locale of ["ar", "en-US", null]) {
         expect(pushText(type, {}, locale).title.length).toBeGreaterThan(0);
