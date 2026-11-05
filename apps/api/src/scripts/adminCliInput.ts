@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 export type CliArgs = { flags: Set<string>; values: Map<string, string> };
 
-const VALUE_FLAGS = new Set(["email", "name", "password-file"]);
+const VALUE_FLAGS = new Set(["email", "name", "password-file", "credentials-file"]);
 
 export function parseCliArgs(argv: string[]): CliArgs {
   const flags = new Set<string>();

@@ -47,6 +47,27 @@ jobs:
           count="$(mysql --protocol=tcp --host=127.0.0.1 --port=3306 --user=darb_ci --password=ci-only-password --batch --skip-column-names darb_mariadb_ci --execute='SELECT COUNT(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL')"
           expected="$(find apps/api/prisma/migrations -mindepth 1 -maxdepth 1 -type d | wc -l)"
           test "$count" -eq "$expected"
+      - run: npm run prisma:generate
+      - run: npm run build:api
+      - name: Real MariaDB test drivers seed, login and rider matching
+        env:
+          APP_ENV: demo
+          ENABLE_DEMO_FEATURES: "true"
+          JWT_SECRET: ci-only-jwt-secret-at-least-thirty-two-characters
+          REFRESH_TOKEN_PEPPER: ci-only-refresh-token-pepper-at-least-thirty-two-characters
+          DEMO_RESET_KEY: ci-only-reset-key
+          DEMO_RESET_ALLOWED_DATABASES: darb_mariadb_ci
+          DEMO_PASSENGER_PASSWORD: ci-only-passenger-password
+          DEMO_DRIVER_PASSWORD: ci-only-driver-password
+          DEMO_MERCHANT_PASSWORD: ci-only-merchant-password
+          DEMO_ADMIN_PASSWORD: ci-only-admin-password
+          CORS_ORIGINS: http://localhost:5173
+          TRUST_PROXY: none
+          LOG_LEVEL: silent
+          PHONE_DIGEST_PEPPER: ci-only-phone-digest-pepper-at-least-thirty-two-characters
+          IDEMPOTENCY_KEY_PEPPER: ci-only-idempotency-pepper-at-least-thirty-two-characters
+          ABUSE_KEY_PEPPER: ci-only-abuse-pepper-at-least-thirty-two-characters
+        run: npm run test:integration:test-drivers
 
   backend-mysql:
     runs-on: ubuntu-latest
@@ -180,6 +201,8 @@ jobs:
         run: npm run test:integration:legacy-online
       - name: Real MySQL passenger request and Trip association
         run: npm run test:integration:passenger-trip-association
+      - name: Real MySQL test drivers seed, login and rider matching
+        run: npm run test:integration:test-drivers
       - name: Real MySQL canonical single-demand integration
         env:
           MYSQL_PWD: ci-only-root-password
