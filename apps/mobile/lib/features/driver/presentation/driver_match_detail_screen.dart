@@ -55,9 +55,11 @@ class _DriverMatchDetailScreenState
             error: (error, _) => ErrorStateView(
               title: driverErrorLabel(l10n, error),
               retryLabel: l10n.retry,
-              onRetry: () => ref
-                  .read(driverMatchDetailProvider(widget.matchId).notifier)
-                  .refresh(),
+              onRetry: () => quietRefresh(
+                ref
+                    .read(driverMatchDetailProvider(widget.matchId).notifier)
+                    .refresh,
+              ),
             ),
             data: (match) => _content(l10n, match),
           ),
@@ -143,6 +145,7 @@ class _DriverMatchDetailScreenState
           DriverStopDetailsCard(
             passenger: match.passengerRequest,
             merchantOrder: match.merchantOrder,
+            batchOrders: match.parcelBatch?.orders ?? const [],
           ),
           const SizedBox(height: AppTokens.spaceLarge),
         ],
@@ -268,9 +271,11 @@ class _DriverMatchDetailScreenState
   }
 
   Future<void> _recover(Object error, AppLocalizations l10n) async {
-    if (mounted) setState(() => _error = driverErrorLabel(l10n, error));
-    await ref
-        .read(driverMatchDetailProvider(widget.matchId).notifier)
-        .refresh();
+    if (!mounted) return;
+    setState(() => _error = driverErrorLabel(l10n, error));
+    // The action's error is shown; a failing re-read must not escape.
+    await quietRefresh(
+      ref.read(driverMatchDetailProvider(widget.matchId).notifier).refresh,
+    );
   }
 }

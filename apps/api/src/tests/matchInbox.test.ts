@@ -213,7 +213,7 @@ describe("role-filtered match inbox", () => {
     expect(summary.passenger_request).toEqual(
       expect.objectContaining({ id: "request_1", pickup_label: "PPU Main Gate", passenger_count: 1 })
     );
-    expect(summary.merchant_order).toEqual(expect.objectContaining({ id: "order_1", parcel_count: 5 }));
+    expect(summary.merchant_order).toEqual(expect.objectContaining({ id: "order_1", parcel_count: 5, is_passenger_parcel: false }));
     expect(summary.parcel_batch).toEqual(expect.objectContaining({ id: "batch_1", status: "created" }));
     expect(serialized).not.toContain("password_hash");
     expect(serialized).not.toContain("jwt");
@@ -222,6 +222,16 @@ describe("role-filtered match inbox", () => {
     expect(serialized).not.toContain("passenger_id");
     expect(serialized).not.toContain("merchant_id");
     expect(serialized).not.toContain("user_id");
+  });
+
+  it("marks a passenger's parcel so the driver does not see it as a shop order", async () => {
+    const record = matchRecord("match_1", "2026-07-02T10:00:00.000Z");
+    prismaMock.match.findMany.mockResolvedValue([{ ...record, merchant_order: { ...record.merchant_order, passenger_parcel: { id: "ppd_1" } } }]);
+
+    const response = await request(createApp()).get("/api/v1/matches").set(auth("admin_1")).expect(200);
+
+    expect(response.body.matches[0].merchant_order.is_passenger_parcel).toBe(true);
+    expect(JSON.stringify(response.body.matches[0])).not.toContain("ppd_1");
   });
 
   it("applies a valid status filter", async () => {

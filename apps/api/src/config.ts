@@ -120,6 +120,8 @@ const rawSchema = z.object({
   DRIVER_DOCUMENTS_ENABLED: z.string().optional(),
   DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
   DRIVER_DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  // Unmatched legacy merchant orders without their own departure window expire after this many hours.
+  MERCHANT_ORDER_MAX_AGE_HOURS: z.coerce.number().int().min(1).max(720).default(72),
   OTP_PROVIDER: z.enum(["disabled", "fake", "email"]).default("disabled"),
   EMAIL_DELIVERY: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.enum(["disabled", "smtp"]).default("disabled")),
   SMTP_HOST: optionalText(255),
@@ -776,6 +778,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
       etaMinutes: raw.APPROACH_ALERT_ETA_MINUTES,
       assumedSpeedKmh: raw.APPROACH_ALERT_ASSUMED_SPEED_KMH
     },
+    merchantOrderMaxAgeHours: raw.MERCHANT_ORDER_MAX_AGE_HOURS,
     readinessTimeoutMs: raw.READINESS_TIMEOUT_MS,
     rateLimits: {
       global: { windowMs: raw.RATE_LIMIT_GLOBAL_WINDOW_MS, max: globalRateLimitMax },

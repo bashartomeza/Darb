@@ -509,6 +509,30 @@
   "featureUnavailable": "هذه الخدمة غير متاحة في هذه البيئة.",
   "routeCatalogUnavailable": "المسارات غير متاحة مؤقتاً. حدّثها قبل الإرسال.",
   "orderRouteLabel": "المسار",
+  "merchantCancelOrderTitle": "إلغاء هذا الطلب؟",
+  "merchantCancelOrderBody": "سيُلغى الطلب {reference} مع {count, plural, =1{طرد واحد} =2{طردين} few{{count} طرود} other{{count} طرداً}}. لا يمكن التراجع عن ذلك.",
+  "@merchantCancelOrderBody": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantCancelBatchNote": "هذا الطلب مجمّع مع {count, plural, =1{طلب آخر} =2{طلبين آخرين} few{{count} طلبات أخرى} other{{count} طلباً آخر}} لسائق واحد. يُلغى هذا الطلب فقط، وتبقى الطلبات الأخرى مجمّعة بانتظار سائق.",
+  "@merchantCancelBatchNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantCancelOfferNote": "يُسحب عرض السائق للمجموعة، وتحتاج الطلبات الأخرى إلى مطابقة سائق جديدة.",
+  "merchantCancelConfirm": "إلغاء الطلب",
+  "merchantCancelKeep": "الإبقاء على الطلب",
+  "merchantTripOrdersTitle": "طلباتك في هذا التوصيل",
   "orderRouteChoose": "اختر المسار",
   "orderRoutesLoadFailed": "تعذّر تحميل المسارات. تحقّق من الاتصال وحاول مرة أخرى.",
   "orderRoutesEmpty": "لا توجد مسارات تعمل حالياً. حاول لاحقاً.",
@@ -543,6 +567,32 @@
   },
   "driverReceiverLabel": "المستلم",
   "driverWhereToFindTitle": "أماكن الاستلام والتسليم",
+  "driverBatchOrderTitle": "الطلب {number} من {total}",
+  "@driverBatchOrderTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "passengerParcelAssignment": "طرد راكب",
+  "handoverStopIntro": "أدخل الرمز الذي يعطيك إياه المستلم في المحطة التي وصلت إليها. تبقى المحطات التي لم تصلها بعد مفتوحة.",
+  "handoverStopLabel": "المحطة {number} · {place}",
+  "@handoverStopLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "handoverStopCodeRequired": "أدخل رمز محطة واحدة على الأقل.",
+  "handoverUnavailableStop": "مستلم أي محطة غير متوفر؟",
   "noPublishedRoutes": "لا توجد مسارات منشورة ومؤهلة حالياً.",
   "selectRoute": "اختر المسار",
   "routeDirection": "الاتجاه",
@@ -1222,6 +1272,19 @@
   "notifIncidentUpdatedTitle": "تحديث على بلاغك",
   "notifIncidentReviewingBody": "بلاغك قيد المراجعة.",
   "notifIncidentResolvedBody": "تمت معالجة بلاغك.",
+  "notifOrderExpiredTitle": "انتهت صلاحية الطلب",
+  "notifOrderExpiredMaxAgeBody": "لم يأخذ أي سائق هذا الطلب خلال {hours} ساعة، فانتهت صلاحيته ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله.",
+  "@notifOrderExpiredMaxAgeBody": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "notifOrderExpiredWindowBody": "لم يُعثر على سائق قبل انتهاء وقت الاستلام الذي اخترته، فانتهت صلاحية الطلب ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله.",
+  "notifOfferWithdrawnTitle": "تم سحب العرض",
+  "notifOfferWithdrawnCancelledBody": "ألغى المرسل طلباً في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.",
+  "notifOfferWithdrawnExpiredBody": "انتهت صلاحية طلب في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.",
   "verificationDocuments": "مستندات التوثيق",
   "verificationDocumentsHint": "للحصول على الموافقة، ارفع صوراً واضحة أو ملفات PDF لرخصة القيادة وتسجيل المركبة والهوية الوطنية. تُحفظ الملفات على خادمنا ولا يفتحها إلا فريق المراجعة.",
   "documentKind": "نوع المستند",
@@ -1481,6 +1544,16 @@
   "renewalStateConflict": "تغيّرت حالة التجديد. اسحب للتحديث وحاول مرة أخرى.",
   "renewalLoadError": "تعذّر تحميل حالة التجديد.",
   "renewalNothingToRenew": "مستنداتك محدّثة. لا يوجد ما يتطلب التجديد.",
+  "renewalRejectedTitle": "لم تتم الموافقة على التجديد",
+  "renewalRejectedBody": "لم يوافق فريق المراجعة على مستنداتك المجددة. صحّح ما طلبوه وأرسلها مرة أخرى.",
+  "renewalRejectedReason": "السبب: {reason}",
+  "@renewalRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "passengerNavHome": "الرئيسية",
   "passengerNavTrips": "رحلاتي",
   "passengerNavMaps": "الخرائط",

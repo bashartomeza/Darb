@@ -36,6 +36,8 @@ Tokens are write-only: no endpoint returns them. An account keeps at most 10 liv
 | `driver_documents_renewal_submitted` | The driver | They sent renewed documents to Admin re-review. |
 | `incident_updated` (`params.status`) | The reporter | An Admin moves their incident report forward. |
 | `driver_approaching` (`params.reason`: `radius` or `eta`) | Passenger on the trip | The matched driver comes within the configured radius or ETA of the pickup (see below). |
+| `merchant_order_expired` (`params.policy`: `max_age` with `max_age_hours`, or `departure_window`) | The order's sender (merchant, or passenger for a parcel) | The dispatch worker expires an order no driver took: older than `MERCHANT_ORDER_MAX_AGE_HOURS`, or past the parcel's own departure window. App text — EN "Order expired" / "No driver took this order within {hours} hours, so it expired and nothing will be collected. Create it again if you still want to send it."; AR "انتهت صلاحية الطلب" / "لم يأخذ أي سائق هذا الطلب خلال {hours} ساعة، فانتهت صلاحيته ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله." |
+| `match_withdrawn` (`params.reason`: `cancelled` or `expired`) | Driver of a pending offer | An order in the offer was cancelled by its sender or expired, so the offer is withdrawn and its held capacity released. App text — EN "Offer withdrawn"; AR "تم سحب العرض", with a body naming the reason. |
 
 ## Guarantees
 

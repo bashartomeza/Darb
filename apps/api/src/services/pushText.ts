@@ -140,6 +140,36 @@ export function pushText(type: string, params: unknown, locale: string | null | 
             : undefined;
       return { title: lang === "en" ? "Update on your report" : "تحديث على بلاغك", body: body?.[lang] };
     }
+    case "merchant_order_expired": {
+      const raw = params && typeof params === "object" ? (params as Record<string, unknown>).max_age_hours : undefined;
+      const hours = typeof raw === "number" ? raw : undefined;
+      const body =
+        param(params, "policy") === "departure_window"
+          ? {
+              en: "No driver was found before the pickup time you chose ended, so the order expired and nothing will be collected.",
+              ar: "لم يُعثر على سائق قبل انتهاء وقت الاستلام الذي اخترته، فانتهت صلاحية الطلب ولن يُستلم شيء."
+            }
+          : hours !== undefined
+            ? {
+                en: `No driver took this order within ${hours} hours, so it expired and nothing will be collected.`,
+                ar: `لم يأخذ أي سائق هذا الطلب خلال ${hours} ساعة، فانتهت صلاحيته ولن يُستلم شيء.`
+              }
+            : undefined;
+      return { title: lang === "en" ? "Order expired" : "انتهت صلاحية الطلب", body: body?.[lang] };
+    }
+    case "match_withdrawn": {
+      const body =
+        param(params, "reason") === "expired"
+          ? {
+              en: "An order in this parcel offer expired, so it is no longer waiting for you.",
+              ar: "انتهت صلاحية طلب في عرض الطرود هذا، لذلك لم يعد بانتظارك."
+            }
+          : {
+              en: "The sender cancelled an order in this parcel offer, so it is no longer waiting for you.",
+              ar: "ألغى المرسل طلباً في عرض الطرود هذا، لذلك لم يعد بانتظارك."
+            };
+      return { title: lang === "en" ? "Offer withdrawn" : "تم سحب العرض", body: body[lang] };
+    }
     default:
       return { title: lang === "en" ? "New notification" : "إشعار جديد" };
   }

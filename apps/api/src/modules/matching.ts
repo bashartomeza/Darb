@@ -145,7 +145,9 @@ const matchSummarySelect = {
       created_at: true,
       route_version: routeSummarySelect,
       parcels: { select: matchParcelSelect, orderBy: { id: "asc" as const } },
-      _count: { select: { parcels: true } }
+      _count: { select: { parcels: true } },
+      // A passenger parcel is an order whose sender is a passenger, not a shop.
+      passenger_parcel: { select: { id: true } }
     }
   },
   parcel_batch: {
@@ -238,6 +240,7 @@ function toMatchSummary(match: MatchSummaryRecord) {
           ...routeFields(match.merchant_order.route_version),
           pickup_details: match.merchant_order.pickup_details ?? null,
           parcels: match.merchant_order.parcels ?? [],
+          is_passenger_parcel: Boolean(match.merchant_order.passenger_parcel),
           fare: orderFareResponse(match.merchant_order.parcels)
         }
       : null,

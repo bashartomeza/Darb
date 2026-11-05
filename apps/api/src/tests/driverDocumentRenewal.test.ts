@@ -12,7 +12,7 @@ const prismaMock = vi.hoisted(() => ({
   auditEvent: { create: vi.fn() },
   notification: { create: vi.fn() },
   driverVerification: { findUnique: vi.fn(), updateMany: vi.fn() },
-  driverVerificationDecision: { create: vi.fn() },
+  driverVerificationDecision: { create: vi.fn(), findFirst: vi.fn() },
   driverVerificationDocument: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), create: vi.fn(), delete: vi.fn() },
   documentFile: { create: vi.fn(), findUnique: vi.fn() }
 }));
@@ -86,6 +86,7 @@ describe("driver document renewal", () => {
     prismaMock.auditEvent.create.mockResolvedValue({});
     prismaMock.notification.create.mockResolvedValue({});
     prismaMock.driverVerificationDecision.create.mockResolvedValue({});
+    prismaMock.driverVerificationDecision.findFirst.mockResolvedValue(null);
   });
 
   it("requires a driver session", async () => {
@@ -139,5 +140,64 @@ describe("driver document renewal", () => {
   it("reports the renewal state to the driver", async () => {
     const response = await request(app).get("/api/v1/driver/document-renewal").set(auth()).expect(200);
     expect(response.body).toEqual(expect.objectContaining({ status: "documents_expired", can_upload: true, submitted: false }));
+  });
+
+  describe("after the review team rejects a renewal", () => {
+    // The rejection moved the verification to the next revision.
+    const rejectedRenewal = { ...expired, status: "rejected", revision: 5, documents_expired_at: null, rejection_reason: "The insurance photo is blurry" };
+
+    beforeEach(() => {
+      prismaMock.driverVerification.findUnique.mockResolvedValue(rejectedRenewal);
+      prismaMock.driverVerificationDecision.findFirst.mockImplementation(({ where }: { where: { revision: number; decision: string } }) =>
+        Promise.resolve(where.revision === 4 && where.decision === "renewal_submitted" ? { id: "dec_1" } : null)
+      );
+    });
+
+    it("tells the driver why and lets them renew again", async () => {
+      const response = await request(app).get("/api/v1/driver/document-renewal").set(auth()).expect(200);
+      expect(response.body).toEqual(expect.objectContaining({
+        status: "rejected",
+        can_upload: true,
+        submitted: false,
+        renewal_rejected: true,
+        rejection_reason: "The insurance photo is blurry"
+      }));
+      expect(prismaMock.driverVerificationDecision.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+        where: { verification_id: "ver_1", revision: 4, decision: "renewal_submitted" }
+      }));
+    });
+
+    it("accepts corrected documents for the new revision and sends them for review", async () => {
+      await request(app)
+        .post("/api/v1/driver/document-renewal/documents?kind=insurance")
+        .set(auth())
+        .set("Content-Type", "application/octet-stream")
+        .send(JPEG)
+        .expect(201);
+      expect(prismaMock.driverVerificationDocument.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ verification_id: "ver_1", revision: 5 })
+      });
+
+      prismaMock.driverVerificationDocument.count.mockResolvedValue(1);
+      await request(app).post("/api/v1/driver/document-renewal/submit").set(auth()).expect(200);
+      expect(prismaMock.driverVerification.updateMany).toHaveBeenCalledWith({
+        where: { id: "ver_1", status: "rejected", revision: 5 },
+        data: expect.objectContaining({ status: "pending", renewal_submitted_at: expect.any(Date), rejection_reason: null })
+      });
+    });
+
+    it("a rejected first application is not a renewal: nothing to upload and no reason here", async () => {
+      prismaMock.driverVerificationDecision.findFirst.mockResolvedValue(null);
+      const response = await request(app).get("/api/v1/driver/document-renewal").set(auth()).expect(200);
+      expect(response.body).toEqual(expect.objectContaining({ can_upload: false, renewal_rejected: false, rejection_reason: null }));
+      await request(app)
+        .post("/api/v1/driver/document-renewal/documents?kind=insurance")
+        .set(auth())
+        .set("Content-Type", "application/octet-stream")
+        .send(JPEG)
+        .expect(409);
+      await request(app).post("/api/v1/driver/document-renewal/submit").set(auth()).expect(409);
+      expect(prismaMock.driverVerification.updateMany).not.toHaveBeenCalled();
+    });
   });
 });

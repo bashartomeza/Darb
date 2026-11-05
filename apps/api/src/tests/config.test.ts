@@ -53,6 +53,14 @@ describe("fail-closed application configuration", () => {
     );
   });
 
+  it("expires unmatched merchant orders after 72 hours unless configured within 1-720 hours", () => {
+    expect(createConfig(environment()).merchantOrderMaxAgeHours).toBe(72);
+    expect(createConfig(environment({ MERCHANT_ORDER_MAX_AGE_HOURS: "24" })).merchantOrderMaxAgeHours).toBe(24);
+    for (const invalid of ["0", "721", "1.5", "three days"]) {
+      expect(() => createConfig(environment({ MERCHANT_ORDER_MAX_AGE_HOURS: invalid }))).toThrow(/MERCHANT_ORDER_MAX_AGE_HOURS/);
+    }
+  });
+
   it("rejects staging without DATABASE_URL", () => {
     expect(() => createConfig(environment({ APP_ENV: "staging", DATABASE_URL: undefined }))).toThrow(ConfigurationError);
   });

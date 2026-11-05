@@ -530,6 +530,98 @@ describe("trip acceptance, status, and tracking", () => {
     await request(createApp()).get("/api/v1/trips/trip_1").set(auth("passenger_2")).expect(403);
   });
 
+  describe("batched trips list every order", () => {
+    function member(id: string, merchantId: string, receiver: string) {
+      return {
+        merchant_order: {
+          id,
+          merchant_id: merchantId,
+          status: "assigned",
+          pickup_label: "Hebron",
+          pickup_lat: "31.5",
+          pickup_lng: "35.1",
+          pickup_details: `Shop for ${id}`,
+          route_version: { service_route_id: "route_hb", name_ar: "الخليل ← بيت لحم", name_en: "Hebron → Bethlehem" },
+          parcels: [{
+            id: `parcel_${id}`,
+            destination_label: "Bethlehem",
+            destination_lat: "31.7",
+            destination_lng: "35.2",
+            dropoff_details: `Door of ${receiver}`,
+            size: "S",
+            priority: "normal",
+            status: "assigned",
+            receiver_name: receiver,
+            receiver_phone: "+970599000111"
+          }]
+        }
+      };
+    }
+    function batchedTrip() {
+      return {
+        ...baseTrip("in_transit"),
+        passenger_request_id: null,
+        passenger_request: null,
+        parcel_batch: {
+          id: "batch_1",
+          status: "in_transit",
+          members: [member("order_1", "merchant_1", "Rana"), member("order_2", "merchant_1", "Sami"), member("order_3", "merchant_2", "Omar")]
+        }
+      };
+    }
+
+    it("gives the driver every order with its pickup, drop-offs and receivers", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(batchedTrip());
+
+      const response = await request(createApp()).get("/api/v1/trips/trip_1").set(auth("driver_1")).expect(200);
+
+      const batch = response.body.trip.parcel_batch;
+      expect(batch.order_count).toBe(3);
+      expect(batch.parcel_count).toBe(3);
+      expect(batch.members).toBeUndefined();
+      expect(batch.orders.map((order: { id: string }) => order.id)).toEqual(["order_1", "order_2", "order_3"]);
+      expect(batch.orders[1]).toMatchObject({
+        pickup_details: "Shop for order_2",
+        route_name_en: "Hebron → Bethlehem",
+        parcels: [{ dropoff_details: "Door of Sami", receiver_name: "Sami", receiver_phone: "+970599000111" }]
+      });
+    });
+
+    it("shows a merchant only their own orders of the batch", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(batchedTrip());
+
+      const response = await request(createApp()).get("/api/v1/trips/trip_1").set(auth("merchant_1")).expect(200);
+
+      const batch = response.body.trip.parcel_batch;
+      expect(batch.orders.map((order: { id: string }) => order.id)).toEqual(["order_1", "order_2"]);
+      expect(JSON.stringify(batch)).not.toContain("Omar");
+    });
+
+    it("keeps someone else's receiver phone from a passenger sharing the trip", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue({
+        ...baseTrip(),
+        merchant_order: { id: "order_1", merchant_id: "merchant_1", parcels: [{ id: "parcel_1", receiver_name: "Rana", receiver_phone: "+970599000111" }] },
+        parcel_batch: { id: "batch_1", members: [member("order_1", "merchant_1", "Rana")] }
+      });
+
+      const response = await request(createApp()).get("/api/v1/trips/trip_1").set(auth("passenger_1")).expect(200);
+
+      expect(response.body.trip.merchant_order.parcels[0].receiver_phone).toBeUndefined();
+      expect(response.body.trip.parcel_batch.orders).toEqual([]);
+    });
+
+    it("lists the batch's order ids in the trip list so each order finds its trip", async () => {
+      prismaMock.trip.findMany.mockResolvedValue([{
+        ...baseTrip(),
+        parcel_batch: { id: "batch_1", members: [{ merchant_order_id: "order_1" }, { merchant_order_id: "order_2" }] }
+      }]);
+
+      const response = await request(createApp()).get("/api/v1/trips").set(auth("merchant_1")).expect(200);
+
+      expect(response.body.trips[0].parcel_batch).toEqual({ id: "batch_1", order_ids: ["order_1", "order_2"] });
+    });
+  });
+
   it("preserves exact passenger request provenance for same-owner Trip lists regardless of ordering", async () => {
     const tripA = {
       ...baseTrip(),
@@ -619,6 +711,31 @@ describe("trip acceptance, status, and tracking", () => {
       expect(response.body.delivered).toBe(true);
       expect(prismaMock.deliveryHandover.updateMany).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ confirmation_method: "receiver_code", confirmed_by_id: "driver_1", code_digest: null })
+      }));
+    });
+
+    it("a batched trip is confirmed stop by stop: one stop's code leaves the others pending", async () => {
+      prismaMock.trip.findUnique.mockResolvedValue(baseTrip("in_transit"));
+      prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }, { merchant_order_id: "order_2" }]);
+      prismaMock.deliveryHandover.findUnique.mockResolvedValue(await handoverRow());
+      prismaMock.deliveryHandover.findMany.mockResolvedValueOnce([]).mockResolvedValue([{ merchant_order_id: "order_1" }]);
+      const first = await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_code", codes: [{ order_id: "order_1", code: "123456" }] }).expect(200);
+      expect(first.body.delivered).toBe(false);
+      expect(prismaMock.trip.updateMany).not.toHaveBeenCalled();
+
+      // The second stop's receiver is unavailable: only that order is closed, and the trip is delivered.
+      prismaMock.deliveryHandover.findMany.mockReset();
+      prismaMock.deliveryHandover.findMany.mockResolvedValueOnce([{ merchant_order_id: "order_1" }])
+        .mockResolvedValue([{ merchant_order_id: "order_1" }, { merchant_order_id: "order_2" }]);
+      const second = await request(createApp())
+        .post("/api/v1/trips/trip_1/delivery-confirmation").set(auth("driver_1"))
+        .send({ method: "receiver_unavailable", reason: "Nobody answered the door or the phone", order_ids: ["order_2"] }).expect(200);
+      expect(second.body.delivered).toBe(true);
+      expect(prismaMock.deliveryHandover.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({
+        where: { merchant_order_id: "order_2", confirmed_at: null },
+        data: expect.objectContaining({ confirmation_method: "receiver_unavailable" })
       }));
     });
 
