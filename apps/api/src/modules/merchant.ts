@@ -5,7 +5,7 @@ import { auditEvent } from "../lib/audit.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
-import { releaseLegacyCapacity } from "../services/legacyCapacity.js";
+import { closeOpenLegacyOrder, OPEN_LEGACY_ORDER_STATUSES, type OpenLegacyOrderStatus } from "../services/legacyOrderClosure.js";
 import { describeHandover } from "../services/deliveryHandover.js";
 import {
   createdOrderInclude,
@@ -283,7 +283,18 @@ const merchantOrderInclude = {
             take: 1
           },
           members: {
-            select: { merchant_order_id: true },
+            select: {
+              merchant_order: {
+                select: {
+                  id: true,
+                  merchant_id: true,
+                  pickup_label: true,
+                  status: true,
+                  created_at: true,
+                  _count: { select: { parcels: true } }
+                }
+              }
+            },
             orderBy: { created_at: "asc" as const }
           }
         }
@@ -347,101 +358,49 @@ merchantRouter.post("/merchant/orders", async (req: AuthenticatedRequest, res, n
   }
 });
 
+// Cancels this one order. An order that shares a batch leaves it; the other
+// orders of the batch are not cancelled (see closeOpenLegacyOrder).
 merchantRouter.patch("/merchant/orders/:id/cancel", async (req: AuthenticatedRequest, res, next) => {
   try {
     const orderId = routeParam(req.params.id);
     const result = await prisma.$transaction(async (tx) => {
       const order = await tx.merchantOrder.findFirst({
         where: { id: orderId, merchant_id: req.user!.id, canonical_entry_version: null },
-        include: {
-          parcels: true,
-          parcel_batches: { select: { id: true, driver_route_id: true, status: true }, orderBy: { created_at: "desc" }, take: 1 },
-          batch_members: {
-            where: { active: true },
-            select: { parcel_batch_id: true, parcel_batch: { select: { id: true, driver_route_id: true, status: true } } },
-            take: 1
-          }
-        }
+        select: { id: true, status: true }
       });
       if (!order) throw new HttpError(404, "order_not_found");
-      if (!["submitted", "batched", "matched"].includes(order.status)) {
+      if (!(OPEN_LEGACY_ORDER_STATUSES as readonly string[]).includes(order.status)) {
         throw new HttpError(409, "order_cannot_be_cancelled");
       }
-      const batch = order.parcel_batches[0] ?? order.batch_members[0]?.parcel_batch ?? null;
-      if (batch) {
-        const members = await tx.parcelBatchOrder.findMany({ where: { parcel_batch_id: batch.id }, select: { merchant_order_id: true } });
-        const ids = [...new Set([order.id, ...members.map((member) => member.merchant_order_id)])];
-        // A current write claim serializes cancellation with matching/acceptance,
-        // including cancellation through a secondary order in the same batch.
-        const claimed = await tx.merchantOrder.updateMany({
-          where: { id: { in: ids }, merchant_id: req.user!.id, canonical_entry_version: null, status: order.status },
-          data: { status: "cancelled" }
-        });
-        if (claimed.count !== ids.length) throw new HttpError(409, "order_cannot_be_cancelled");
-        const activeMatches = await tx.match.findMany({
-          where: { parcel_batch_id: batch.id, operational_mode: "legacy", status: { in: ["proposed", "sent_to_driver"] } },
-          select: { id: true, driver_route_id: true, legacy_capacity_held: true }
-        });
-        const reservedParcelUnits = await tx.parcel.count({
-          where: { batch_id: batch.id, status: { notIn: ["cancelled", "failed", "expired"] } }
-        });
-        if (reservedParcelUnits > 0) {
-          const routeIds = new Set(activeMatches.filter((match) => match.legacy_capacity_held).map((match) => match.driver_route_id));
-          for (const routeId of routeIds) {
-            await releaseLegacyCapacity(tx, {
-              driverRouteId: routeId,
-              seats: 0,
-              parcelUnits: reservedParcelUnits
-            });
-          }
-        }
-        await tx.match.updateMany({
-          where: { id: { in: activeMatches.map((match) => match.id) } },
-          data: { status: "invalidated", legacy_demand_key: null, legacy_capacity_held: false }
-        });
-        await tx.parcelBatch.update({ where: { id: batch.id }, data: { status: "cancelled", driver_route_id: null } });
-        await tx.parcelBatchOrder.updateMany({ where: { parcel_batch_id: batch.id }, data: { active: false, active_membership_key: null } });
-        await tx.parcel.updateMany({ where: { batch_id: batch.id }, data: { status: "cancelled" } });
-      } else {
-        const claimed = await tx.merchantOrder.updateMany({
-          where: { id: order.id, merchant_id: req.user!.id, canonical_entry_version: null, status: order.status },
-          data: { status: "cancelled" }
-        });
-        if (claimed.count !== 1) throw new HttpError(409, "order_cannot_be_cancelled");
-        const activeMatches = await tx.match.findMany({
-          where: { merchant_order_id: order.id, operational_mode: "legacy", status: { in: ["proposed", "sent_to_driver"] } },
-          select: { id: true, driver_route_id: true, legacy_capacity_held: true }
-        });
-        const reservedParcelUnits = await tx.parcel.count({
-          where: { order_id: order.id, status: { notIn: ["cancelled", "failed", "expired"] } }
-        });
-        if (reservedParcelUnits > 0) {
-          const routeIds = new Set(activeMatches.filter((match) => match.legacy_capacity_held).map((match) => match.driver_route_id));
-          for (const routeId of routeIds) {
-            await releaseLegacyCapacity(tx, {
-              driverRouteId: routeId,
-              seats: 0,
-              parcelUnits: reservedParcelUnits
-            });
-          }
-        }
-        await tx.match.updateMany({
-          where: { id: { in: activeMatches.map((match) => match.id) } },
-          data: { status: "invalidated", legacy_demand_key: null, legacy_capacity_held: false }
-        });
-        await tx.parcel.updateMany({ where: { order_id: order.id }, data: { status: "cancelled" } });
-        await tx.merchantOrder.update({ where: { id: order.id }, data: { status: "cancelled" } });
-      }
+      const closed = await closeOpenLegacyOrder(tx, {
+        orderId: order.id,
+        expectedStatus: order.status as OpenLegacyOrderStatus,
+        outcome: "cancelled",
+        merchantId: req.user!.id
+      });
+      // Another write (matching, acceptance) changed the order since it was read.
+      if (!closed) throw new HttpError(409, "order_cannot_be_cancelled");
       await auditEvent(tx, {
         userId: req.user!.id,
         action: AuditAction.admin_action,
         entityType: "MerchantOrder",
         entityId: order.id,
-        metadata: { action: "merchant_order_cancelled" }
+        metadata: {
+          action: "merchant_order_cancelled",
+          ...(closed.batchId
+            ? { parcel_batch_id: closed.batchId, batch_orders_remaining: closed.remainingOrderIds.length }
+            : {}),
+          ...(closed.withdrawnMatchIds.length ? { withdrawn_match_ids: closed.withdrawnMatchIds } : {})
+        }
       });
-      return tx.merchantOrder.findUniqueOrThrow({ where: { id: order.id }, include: merchantOrderInclude });
+      const updated = await tx.merchantOrder.findUniqueOrThrow({ where: { id: order.id }, include: merchantOrderInclude });
+      return { updated, closed };
     }, { isolationLevel: "ReadCommitted" });
-    res.json({ order: serializeLegacyMerchantOrder(result as unknown as Record<string, unknown>) });
+    res.json({
+      order: serializeLegacyMerchantOrder(result.updated as unknown as Record<string, unknown>),
+      // The other orders of its batch: they stay batched and were not cancelled.
+      batch_orders_remaining: result.closed.remainingOrderIds
+    });
   } catch (error) {
     next(error);
   }

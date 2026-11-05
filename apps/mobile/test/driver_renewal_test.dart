@@ -194,6 +194,49 @@ void main() {
       await _pump(tester, repository, const DriverRenewalScreen());
       expect(find.byKey(const ValueKey('renewalSubmitted')), findsOneWidget);
     });
+
+    testWidgets('after a rejected renewal shows why and lets the driver send '
+        'corrected documents again', (tester) async {
+      final repository = _FakeRenewalRepository()
+        ..rejectedReason = 'The insurance photo is blurry';
+      await _pump(
+        tester,
+        repository,
+        const DriverRenewalScreen(pickFile: _pickJpeg),
+      );
+
+      expect(find.byKey(const ValueKey('renewalRejected')), findsOneWidget);
+      expect(find.text('Renewal not approved'), findsOneWidget);
+      expect(
+        find.text('Reason: The insurance photo is blurry'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Your documents are up to date. Nothing to renew.'),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('renewalAdd')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('renewalSubmit')));
+      await tester.pumpAndSettle();
+      expect(repository.submitCalls, 1);
+      expect(find.byKey(const ValueKey('renewalSubmitted')), findsOneWidget);
+    });
+  });
+
+  test('parses a rejected renewal with its reason', () {
+    final state = DriverRenewalState.fromJson({
+      ..._stateJson(status: 'rejected'),
+      'renewal_rejected': true,
+      'rejection_reason': '  Licence photo is cut off  ',
+    });
+    expect(state.renewalRejected, isTrue);
+    expect(state.rejectionReason, 'Licence photo is cut off');
+    expect(state.needsAttention, isTrue);
+    final plain = DriverRenewalState.fromJson(_stateJson());
+    expect(plain.renewalRejected, isFalse);
+    expect(plain.rejectionReason, isNull);
   });
 
   group('banner', () {
@@ -202,6 +245,20 @@ void main() {
       await _pump(tester, repository, const DriverRenewalBanner());
       expect(find.byKey(const ValueKey('driverRenewalBanner')), findsOneWidget);
       expect(find.text('Your documents have expired'), findsOneWidget);
+    });
+
+    testWidgets('stays after a rejected renewal and gives the reason', (
+      tester,
+    ) async {
+      final repository = _FakeRenewalRepository()
+        ..rejectedReason = 'The insurance photo is blurry';
+      await _pump(tester, repository, const DriverRenewalBanner());
+      expect(find.byKey(const ValueKey('driverRenewalBanner')), findsOneWidget);
+      expect(find.text('Renewal not approved'), findsOneWidget);
+      expect(
+        find.text('Reason: The insurance photo is blurry'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows the review state after submitting', (tester) async {
@@ -290,6 +347,10 @@ class _FakeRenewalRepository implements DriverRenewalRepository {
   Object? submitError;
   Object? stateError;
 
+  /// Set when the review team rejected the last renewal (the API's reason).
+  String? rejectedReason;
+  bool get _rejected => rejectedReason != null && !submitted;
+
   @override
   AuthenticatedApiClient get apiClient => throw UnimplementedError();
 
@@ -302,6 +363,8 @@ class _FakeRenewalRepository implements DriverRenewalRepository {
               ? 'approved'
               : submitted
               ? 'pending'
+              : _rejected
+              ? 'rejected'
               : 'documents_expired',
           canUpload: !approved && !submitted,
           submitted: submitted,
@@ -310,6 +373,8 @@ class _FakeRenewalRepository implements DriverRenewalRepository {
               {'id': doc.id, 'kind': doc.kind, 'size_bytes': 2048},
           ],
         )
+        ..['renewal_rejected'] = _rejected
+        ..['rejection_reason'] = _rejected ? rejectedReason : null
         ..['limits'] = {
           'max_documents': 6,
           'max_bytes': maxBytes,

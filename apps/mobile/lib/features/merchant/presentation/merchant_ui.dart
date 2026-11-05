@@ -6,6 +6,7 @@ import '../../../core/presentation/localized_labels.dart';
 import '../../../core/widgets/discard_saved_request_button.dart';
 import '../data/merchant_models.dart';
 import '../data/merchant_order_operation_storage.dart';
+import 'widgets/merchant_design.dart';
 
 String merchantStatusLabel(AppLocalizations l10n, String status) =>
     switch (status) {
@@ -58,6 +59,64 @@ String merchantErrorLabel(AppLocalizations l10n, Object error) {
 
 bool _arabic(BuildContext context) =>
     Localizations.localeOf(context).languageCode == 'ar';
+
+/// Asks before cancelling [order], naming exactly what is cancelled: this
+/// order and its parcels only. When it is grouped with other orders for one
+/// driver, it says those stay grouped (and that a pending driver offer for
+/// the group is withdrawn). True when the merchant confirms.
+Future<bool> showMerchantCancelOrderDialog(
+  BuildContext context,
+  MerchantOrder order,
+) async {
+  final l10n = AppLocalizations.of(context);
+  final batch = order.latestBatch;
+  final others = batch != null && batch.isOpen ? batch.orderCount - 1 : 0;
+  final reference = merchantReference(order.id);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      key: const ValueKey('merchantCancelOrderDialog'),
+      title: Text(l10n.merchantCancelOrderTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.merchantCancelOrderBody(reference, order.parcels.length),
+            key: const ValueKey('merchantCancelOrderBody'),
+          ),
+          if (others > 0) ...[
+            const SizedBox(height: 12),
+            Text(
+              l10n.merchantCancelBatchNote(others),
+              key: const ValueKey('merchantCancelBatchNote'),
+            ),
+          ],
+          if (others > 0 && order.status == 'matched') ...[
+            const SizedBox(height: 12),
+            Text(
+              l10n.merchantCancelOfferNote,
+              key: const ValueKey('merchantCancelOfferNote'),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          key: const ValueKey('merchantCancelOrderKeep'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.merchantCancelKeep),
+        ),
+        FilledButton(
+          key: const ValueKey('merchantCancelOrderConfirm'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(l10n.merchantCancelConfirm),
+        ),
+      ],
+    ),
+  );
+  return confirmed ?? false;
+}
 
 /// The order's route ("Hebron → Bethlehem"), or for orders created before
 /// routes existed, the old pickup place and parcel destination(s).

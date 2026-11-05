@@ -1003,6 +1003,48 @@ class AppLocalizationsAr extends AppLocalizations {
   String get orderRouteLabel => 'المسار';
 
   @override
+  String get merchantCancelOrderTitle => 'إلغاء هذا الطلب؟';
+
+  @override
+  String merchantCancelOrderBody(String reference, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count طرداً',
+      few: '$count طرود',
+      two: 'طردين',
+      one: 'طرد واحد',
+    );
+    return 'سيُلغى الطلب $reference مع $_temp0. لا يمكن التراجع عن ذلك.';
+  }
+
+  @override
+  String merchantCancelBatchNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count طلباً آخر',
+      few: '$count طلبات أخرى',
+      two: 'طلبين آخرين',
+      one: 'طلب آخر',
+    );
+    return 'هذا الطلب مجمّع مع $_temp0 لسائق واحد. يُلغى هذا الطلب فقط، وتبقى الطلبات الأخرى مجمّعة بانتظار سائق.';
+  }
+
+  @override
+  String get merchantCancelOfferNote =>
+      'يُسحب عرض السائق للمجموعة، وتحتاج الطلبات الأخرى إلى مطابقة سائق جديدة.';
+
+  @override
+  String get merchantCancelConfirm => 'إلغاء الطلب';
+
+  @override
+  String get merchantCancelKeep => 'الإبقاء على الطلب';
+
+  @override
+  String get merchantTripOrdersTitle => 'طلباتك في هذا التوصيل';
+
+  @override
   String get orderRouteChoose => 'اختر المسار';
 
   @override
@@ -1089,6 +1131,29 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get driverWhereToFindTitle => 'أماكن الاستلام والتسليم';
+
+  @override
+  String driverBatchOrderTitle(int number, int total) {
+    return 'الطلب $number من $total';
+  }
+
+  @override
+  String get passengerParcelAssignment => 'طرد راكب';
+
+  @override
+  String get handoverStopIntro =>
+      'أدخل الرمز الذي يعطيك إياه المستلم في المحطة التي وصلت إليها. تبقى المحطات التي لم تصلها بعد مفتوحة.';
+
+  @override
+  String handoverStopLabel(int number, String place) {
+    return 'المحطة $number · $place';
+  }
+
+  @override
+  String get handoverStopCodeRequired => 'أدخل رمز محطة واحدة على الأقل.';
+
+  @override
+  String get handoverUnavailableStop => 'مستلم أي محطة غير متوفر؟';
 
   @override
   String get noPublishedRoutes => 'لا توجد مسارات منشورة ومؤهلة حالياً.';
@@ -2851,6 +2916,18 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get renewalNothingToRenew =>
       'مستنداتك محدّثة. لا يوجد ما يتطلب التجديد.';
+
+  @override
+  String get renewalRejectedTitle => 'لم تتم الموافقة على التجديد';
+
+  @override
+  String get renewalRejectedBody =>
+      'لم يوافق فريق المراجعة على مستنداتك المجددة. صحّح ما طلبوه وأرسلها مرة أخرى.';
+
+  @override
+  String renewalRejectedReason(String reason) {
+    return 'السبب: $reason';
+  }
 
   @override
   String get passengerNavHome => 'الرئيسية';

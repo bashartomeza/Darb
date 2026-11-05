@@ -214,7 +214,8 @@ class _MerchantShipmentsScreenState
 
   String? _activeTripId(MerchantDashboardState state, String orderId) {
     for (final trip in state.trips) {
-      if (trip.order.id == orderId && trip.isActive) return trip.id;
+      // A batched order rides on the trip of its batch, not only the lead.
+      if (trip.isActive && trip.carriesOrder(orderId)) return trip.id;
     }
     return null;
   }

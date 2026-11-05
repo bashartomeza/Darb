@@ -213,11 +213,18 @@ class _MerchantOrderDetailScreenState
     );
   }
 
-  Future<void> _cancelOrder() => _action(() async {
-    await ref
-        .read(merchantOrderProvider(widget.orderId).notifier)
-        .cancelOrder();
-  });
+  /// Says exactly what will be cancelled, and cancels only after a yes.
+  Future<void> _cancelOrder() async {
+    final order = ref.read(merchantOrderProvider(widget.orderId)).value?.order;
+    if (order == null) return;
+    final confirmed = await showMerchantCancelOrderDialog(context, order);
+    if (!confirmed || !mounted) return;
+    await _action(() async {
+      await ref
+          .read(merchantOrderProvider(widget.orderId).notifier)
+          .cancelOrder();
+    });
+  }
 
   Future<void> _createBatch() => _action(() async {
     await ref

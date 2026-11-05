@@ -10,8 +10,8 @@ const prismaMock = vi.hoisted(() => ({
   auditEvent: { create: vi.fn() },
   passengerRequest: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
   match: { findMany: vi.fn(), updateMany: vi.fn() },
-  parcelBatch: { findUnique: vi.fn(), update: vi.fn() },
-  parcelBatchOrder: { findMany: vi.fn(), updateMany: vi.fn() },
+  parcelBatch: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+  parcelBatchOrder: { findMany: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   merchantOrder: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), count: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
   trip: { findFirst: vi.fn() },
@@ -109,6 +109,9 @@ describe("manual role APIs", () => {
     prismaMock.parcel.count.mockResolvedValue(0);
     prismaMock.parcelBatch.findUnique.mockResolvedValue(null);
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([]);
+    prismaMock.parcelBatchOrder.findFirst.mockResolvedValue(null);
+    prismaMock.parcelBatchOrder.deleteMany.mockResolvedValue({ count: 1 });
+    prismaMock.parcelBatch.findFirst.mockResolvedValue(null);
     prismaMock.merchantOrder.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.merchantOrder.findUniqueOrThrow.mockImplementation(({ where }: { where: { id: string } }) => ({ id: where.id, merchant_id: "merchant_1", status: "cancelled", parcels: [], parcel_batches: [], batch_members: [] }));
     prismaMock.$transaction.mockImplementation((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
@@ -257,17 +260,9 @@ describe("manual role APIs", () => {
     }));
   });
 
-  it("merchant can cancel a matched batched order and releases reserved parcel capacity", async () => {
-    prismaMock.merchantOrder.updateMany.mockResolvedValue({ count: 2 });
-    prismaMock.merchantOrder.findFirst.mockResolvedValue({
-      id: "order_1",
-      merchant_id: "merchant_1",
-      status: "matched",
-      canonical_entry_version: null,
-      parcels: [{ id: "parcel_1", status: "batched" }],
-      parcel_batches: [{ id: "batch_1", driver_route_id: "route_1", status: "proposed" }],
-      batch_members: []
-    });
+  it("merchant cancels one order of a matched batch: only that order leaves, the rest stay batched", async () => {
+    prismaMock.merchantOrder.findFirst.mockResolvedValue({ id: "order_1", status: "matched" });
+    prismaMock.parcelBatchOrder.findFirst.mockResolvedValue({ parcel_batch: { id: "batch_1", merchant_order_id: "order_1" } });
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }, { merchant_order_id: "order_2" }]);
     prismaMock.match.findMany.mockResolvedValue([{ id: "match_1", driver_route_id: "route_1", legacy_capacity_held: true }]);
     prismaMock.parcel.count.mockResolvedValue(3);
@@ -278,6 +273,18 @@ describe("manual role APIs", () => {
       .expect(200);
 
     expect(response.body.order.status).toBe("cancelled");
+    expect(response.body.batch_orders_remaining).toEqual(["order_2"]);
+    // Only this order is claimed and cancelled, never its batch siblings.
+    expect(prismaMock.merchantOrder.updateMany).toHaveBeenCalledWith({
+      where: { id: "order_1", status: "matched", canonical_entry_version: null, merchant_id: "merchant_1" },
+      data: { status: "cancelled" }
+    });
+    expect(prismaMock.merchantOrder.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: { in: expect.arrayContaining(["order_2"]) } }),
+      data: { status: "cancelled" }
+    }));
+    // The driver offer was for the old load: it is withdrawn and its hold released once.
+    expect(prismaMock.driverRoute.update).toHaveBeenCalledTimes(1);
     expect(prismaMock.driverRoute.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "route_1" },
       data: expect.objectContaining({ parcel_capacity_available: { increment: 3 } })
@@ -285,9 +292,49 @@ describe("manual role APIs", () => {
     expect(prismaMock.match.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: { status: "invalidated", legacy_demand_key: null, legacy_capacity_held: false }
     }));
-    expect(prismaMock.parcelBatchOrder.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+    expect(prismaMock.parcelBatchOrder.deleteMany).toHaveBeenCalledWith({ where: { parcel_batch_id: "batch_1", merchant_order_id: "order_1" } });
+    expect(prismaMock.parcel.updateMany).toHaveBeenCalledWith({ where: { order_id: "order_1" }, data: { status: "cancelled", batch_id: null } });
+    expect(prismaMock.merchantOrder.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["order_2"] }, status: "matched" },
+      data: { status: "batched" }
+    });
+    // The batch stays open under its remaining order, ready to be offered again.
+    expect(prismaMock.parcelBatch.update).toHaveBeenCalledWith({
+      where: { id: "batch_1" },
+      data: { status: "created", driver_route_id: null, merchant_order_id: "order_2" }
+    });
+    expect(prismaMock.auditEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      metadata: expect.objectContaining({ action: "merchant_order_cancelled", parcel_batch_id: "batch_1", batch_orders_remaining: 1 })
+    }) });
+  });
+
+  it("cancelling the last order of a batch cancels the batch", async () => {
+    prismaMock.merchantOrder.findFirst.mockResolvedValue({ id: "order_1", status: "batched" });
+    prismaMock.parcelBatchOrder.findFirst.mockResolvedValue({ parcel_batch: { id: "batch_1", merchant_order_id: "order_1" } });
+    prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }]);
+
+    const response = await request(createApp())
+      .patch("/api/v1/merchant/orders/order_1/cancel")
+      .set(auth("merchant_1"))
+      .expect(200);
+
+    expect(response.body.batch_orders_remaining).toEqual([]);
+    expect(prismaMock.parcelBatch.update).toHaveBeenCalledWith({ where: { id: "batch_1" }, data: { status: "cancelled", driver_route_id: null } });
+    expect(prismaMock.parcelBatchOrder.updateMany).toHaveBeenCalledWith({
+      where: { parcel_batch_id: "batch_1" },
       data: { active: false, active_membership_key: null }
-    }));
+    });
+    expect(prismaMock.parcel.updateMany).toHaveBeenCalledWith({ where: { batch_id: "batch_1" }, data: { status: "cancelled" } });
+    expect(prismaMock.parcelBatchOrder.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("cancellation loses to a concurrent state change", async () => {
+    prismaMock.merchantOrder.findFirst.mockResolvedValue({ id: "order_1", status: "matched" });
+    prismaMock.merchantOrder.updateMany.mockResolvedValue({ count: 0 });
+
+    await request(createApp()).patch("/api/v1/merchant/orders/order_1/cancel").set(auth("merchant_1")).expect(409);
+    expect(prismaMock.match.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.parcel.updateMany).not.toHaveBeenCalled();
   });
 
   it("invalid cancel state is rejected", async () => {

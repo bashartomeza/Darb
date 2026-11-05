@@ -244,6 +244,24 @@ try {
   check((await match(cancelled.id)).status === 409, "cancelled order cannot match");
   await available(); const noDriver = await demand(); await prisma.driverRoute.update({where:{id:routeId},data:{status:"inactive"}});
   check((await match(noDriver.id)).status === 404, "no compatible driver is explicit"); await cancel(noDriver.id);
+  // Cancelling one order of a batch cancels only that order; the rest stay batched and can be offered again.
+  await available(); const partial = await demand(true); const partialOffer = await match(partial.id); assert.equal(partialOffer.status, 201);
+  check((await prisma.driverRoute.findUniqueOrThrow({ where: { id: routeId } })).parcel_capacity_available === 17, "partial: batch offer holds all three parcels");
+  const partialCancel = await call("merchant", "PATCH", `/merchant/orders/${partial.id}/cancel`, {});
+  check(partialCancel.status === 200 && partialCancel.body.order.status === "cancelled", "partial: the chosen order is cancelled");
+  check(JSON.stringify(partialCancel.body.batch_orders_remaining) === JSON.stringify([partial.secondId]), "partial: response names the orders that stay");
+  check((await prisma.merchantOrder.findUniqueOrThrow({ where: { id: partial.secondId } })).status === "batched", "partial: the other order stays batched");
+  const reopened = await prisma.parcelBatch.findUniqueOrThrow({ where: { id: partial.batchId } });
+  check(reopened.status === "created" && reopened.driver_route_id === null && reopened.merchant_order_id === partial.secondId, "partial: batch reopens under its remaining order");
+  check(await prisma.parcelBatchOrder.count({ where: { parcel_batch_id: partial.batchId } }) === 1, "partial: the cancelled order left the batch");
+  check(await prisma.parcel.count({ where: { order_id: partial.id, status: "cancelled", batch_id: null } }) === 1, "partial: only the cancelled order's parcel is cancelled");
+  check((await prisma.match.findUniqueOrThrow({ where: { id: partialOffer.body.match.id } })).status === "invalidated", "partial: offer for the old load is withdrawn");
+  check((await prisma.driverRoute.findUniqueOrThrow({ where: { id: routeId } })).parcel_capacity_available === 20, "partial: withdrawn offer releases its hold once");
+  check((await match(partial.secondId)).status === 201, "partial: the remaining order can be offered again");
+  check((await prisma.driverRoute.findUniqueOrThrow({ where: { id: routeId } })).parcel_capacity_available === 18, "partial: new offer holds only the remaining two parcels");
+  await cancel(partial.secondId);
+  check((await prisma.parcelBatch.findUniqueOrThrow({ where: { id: partial.batchId } })).status === "cancelled", "partial: the last order closes the batch");
+  check((await prisma.driverRoute.findUniqueOrThrow({ where: { id: routeId } })).parcel_capacity_available === 20, "partial: closing the last order releases the new hold");
   // A supported older client can match an order before creating its batch.
   // Accepting a competing batched delivery must not strand that eligible cargo.
   const recoveryRoute = await prisma.driverRoute.create({ data: {

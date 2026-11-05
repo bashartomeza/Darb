@@ -21,6 +21,7 @@ import '../data/merchant_models.dart';
 import 'merchant_order_route_map.dart';
 import 'merchant_ui.dart';
 import 'widgets/merchant_design.dart';
+import 'widgets/merchant_trip_orders_card.dart';
 
 typedef _RouteEndpoints = ({
   double lat1,
@@ -357,7 +358,16 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
             ],
           ),
         ),
-        if (state.trip.isActive && state.trip.status != 'delivered') ...[
+        // A batch carries several of the merchant's orders: each has its own
+        // drop-offs, receivers and hand-over code.
+        if (state.trip.batchOrders.length > 1) ...[
+          const SizedBox(height: 16),
+          MerchantTripOrdersCard(
+            orders: state.trip.batchOrders,
+            showHandover:
+                state.trip.isActive && state.trip.status != 'delivered',
+          ),
+        ] else if (state.trip.isActive && state.trip.status != 'delivered') ...[
           const SizedBox(height: 16),
           HandoverCodeCard(orderId: state.order.id),
         ],

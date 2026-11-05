@@ -325,6 +325,30 @@
   "featureUnavailable": "This service is not available in this environment.",
   "routeCatalogUnavailable": "Routes are temporarily unavailable. Refresh before submitting.",
   "orderRouteLabel": "Route",
+  "merchantCancelOrderTitle": "Cancel this order?",
+  "merchantCancelOrderBody": "Order {reference} with {count, plural, =1{1 parcel} other{{count} parcels}} will be cancelled. This cannot be undone.",
+  "@merchantCancelOrderBody": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantCancelBatchNote": "It is grouped with {count, plural, =1{1 other order} other{{count} other orders}} for one driver. Only this order is cancelled; the others stay grouped and keep waiting for a driver.",
+  "@merchantCancelBatchNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "merchantCancelOfferNote": "The driver offer for the group is withdrawn; the other orders need a new driver match.",
+  "merchantCancelConfirm": "Cancel order",
+  "merchantCancelKeep": "Keep order",
+  "merchantTripOrdersTitle": "Your orders on this delivery",
   "orderRouteChoose": "Choose a route",
   "orderRoutesLoadFailed": "Couldn't load the routes. Check your connection and try again.",
   "orderRoutesEmpty": "No routes are running right now. Try again later.",
@@ -359,6 +383,32 @@
   },
   "driverReceiverLabel": "Receiver",
   "driverWhereToFindTitle": "Where to pick up and drop off",
+  "driverBatchOrderTitle": "Order {number} of {total}",
+  "@driverBatchOrderTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "passengerParcelAssignment": "Passenger parcel",
+  "handoverStopIntro": "Enter the code the receiver gives you at the stop you are at. Stops you have not reached yet stay open.",
+  "handoverStopLabel": "Stop {number} · {place}",
+  "@handoverStopLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "handoverStopCodeRequired": "Enter the code for at least one stop.",
+  "handoverUnavailableStop": "Which stop's receiver is unavailable?",
   "noPublishedRoutes": "No eligible published routes are available.",
   "selectRoute": "Select route",
   "routeDirection": "Direction",
@@ -1028,6 +1078,16 @@
   "renewalStateConflict": "Your renewal status changed. Pull to refresh and try again.",
   "renewalLoadError": "Could not load your renewal status.",
   "renewalNothingToRenew": "Your documents are up to date. Nothing to renew.",
+  "renewalRejectedTitle": "Renewal not approved",
+  "renewalRejectedBody": "The review team did not approve your renewed documents. Fix what they asked for and send them again.",
+  "renewalRejectedReason": "Reason: {reason}",
+  "@renewalRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "passengerNavHome": "Home",
   "passengerNavTrips": "My Trips",
   "passengerNavMaps": "Maps",

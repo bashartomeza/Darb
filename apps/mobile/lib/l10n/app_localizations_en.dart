@@ -1006,6 +1006,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderRouteLabel => 'Route';
 
   @override
+  String get merchantCancelOrderTitle => 'Cancel this order?';
+
+  @override
+  String merchantCancelOrderBody(String reference, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count parcels',
+      one: '1 parcel',
+    );
+    return 'Order $reference with $_temp0 will be cancelled. This cannot be undone.';
+  }
+
+  @override
+  String merchantCancelBatchNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count other orders',
+      one: '1 other order',
+    );
+    return 'It is grouped with $_temp0 for one driver. Only this order is cancelled; the others stay grouped and keep waiting for a driver.';
+  }
+
+  @override
+  String get merchantCancelOfferNote =>
+      'The driver offer for the group is withdrawn; the other orders need a new driver match.';
+
+  @override
+  String get merchantCancelConfirm => 'Cancel order';
+
+  @override
+  String get merchantCancelKeep => 'Keep order';
+
+  @override
+  String get merchantTripOrdersTitle => 'Your orders on this delivery';
+
+  @override
   String get orderRouteChoose => 'Choose a route';
 
   @override
@@ -1094,6 +1132,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driverWhereToFindTitle => 'Where to pick up and drop off';
+
+  @override
+  String driverBatchOrderTitle(int number, int total) {
+    return 'Order $number of $total';
+  }
+
+  @override
+  String get passengerParcelAssignment => 'Passenger parcel';
+
+  @override
+  String get handoverStopIntro =>
+      'Enter the code the receiver gives you at the stop you are at. Stops you have not reached yet stay open.';
+
+  @override
+  String handoverStopLabel(int number, String place) {
+    return 'Stop $number · $place';
+  }
+
+  @override
+  String get handoverStopCodeRequired =>
+      'Enter the code for at least one stop.';
+
+  @override
+  String get handoverUnavailableStop =>
+      'Which stop\'s receiver is unavailable?';
 
   @override
   String get noPublishedRoutes => 'No eligible published routes are available.';
@@ -2878,6 +2941,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get renewalNothingToRenew =>
       'Your documents are up to date. Nothing to renew.';
+
+  @override
+  String get renewalRejectedTitle => 'Renewal not approved';
+
+  @override
+  String get renewalRejectedBody =>
+      'The review team did not approve your renewed documents. Fix what they asked for and send them again.';
+
+  @override
+  String renewalRejectedReason(String reason) {
+    return 'Reason: $reason';
+  }
 
   @override
   String get passengerNavHome => 'Home';

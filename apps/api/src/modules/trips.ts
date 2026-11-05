@@ -72,6 +72,89 @@ function withViewerDriver<T extends { status: string; driver_route: { driver: Pu
   return { ...trip, driver_route: { ...trip.driver_route, driver: assignedDriverSummary(trip.driver_route.driver, trip.status) } };
 }
 
+/** Every order of a trip's batch, in the order they joined it, with its parcels. */
+const tripBatchInclude = {
+  include: {
+    members: {
+      orderBy: { created_at: "asc" as const },
+      select: {
+        merchant_order: {
+          select: {
+            id: true,
+            merchant_id: true,
+            status: true,
+            pickup_label: true,
+            pickup_lat: true,
+            pickup_lng: true,
+            pickup_details: true,
+            route_version: routeSummarySelect,
+            parcels: {
+              orderBy: { id: "asc" as const },
+              select: {
+                id: true,
+                destination_label: true,
+                destination_lat: true,
+                destination_lng: true,
+                dropoff_details: true,
+                size: true,
+                priority: true,
+                status: true,
+                receiver_name: true,
+                receiver_phone: true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+type TripBatchMember = {
+  merchant_order: {
+    id: string;
+    merchant_id: string;
+    route_version?: RouteSummary;
+    parcels: Array<Record<string, unknown> & { receiver_phone?: string | null }>;
+  } & Record<string, unknown>;
+};
+
+/** The driver and admins see every party; anyone else only what is theirs. */
+function seesAllParcelDetails(req: AuthenticatedRequest) {
+  return req.user!.role === "admin" || req.user!.role === "driver";
+}
+
+/**
+ * The trip's batch with the orders on it (`orders`): each order's typed pickup,
+ * its parcels' typed drop-offs and receivers. The driver and admins get every
+ * order; a merchant or passenger sender only their own orders of the batch.
+ */
+function serializeTripBatch(batch: (Record<string, unknown> & { members?: TripBatchMember[] }) | null, req: AuthenticatedRequest) {
+  if (!batch) return null;
+  const { members, ...columns } = batch;
+  const all = members ?? [];
+  const visible = seesAllParcelDetails(req) ? all : all.filter((member) => member.merchant_order.merchant_id === req.user!.id);
+  return {
+    ...columns,
+    order_count: all.length,
+    parcel_count: all.reduce((count, member) => count + member.merchant_order.parcels.length, 0),
+    orders: visible.map((member) => withRouteFields(member.merchant_order))
+  };
+}
+
+/** Receiver phones of someone else's parcels stay with the driver and admins. */
+function withViewerOrder<T extends { merchant_order: ({ merchant_id: string; parcels?: Array<Record<string, unknown>> } & Record<string, unknown>) | null }>(
+  trip: T,
+  req: AuthenticatedRequest
+) {
+  const order = trip.merchant_order;
+  if (!order || seesAllParcelDetails(req) || order.merchant_id === req.user!.id || !Array.isArray(order.parcels)) return trip;
+  return {
+    ...trip,
+    merchant_order: { ...order, parcels: order.parcels.map(({ receiver_phone: _phone, ...parcel }) => parcel) }
+  };
+}
+
 async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
   const trip = await prisma.trip.findUnique({
     where: { id },
@@ -79,7 +162,7 @@ async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
       driver_route: { include: { driver: { include: { user: { select: assignedDriverUserSelect } } }, route_version: routeSummarySelect } },
       passenger_request: { include: { route_version: routeSummarySelect } },
       merchant_order: { include: { parcels: true, route_version: routeSummarySelect } },
-      parcel_batch: true
+      parcel_batch: tripBatchInclude
     }
   });
   if (!trip) throw new HttpError(404, "trip_not_found");
@@ -438,11 +521,20 @@ tripsRouter.get("/trips", requireAuth, async (req: AuthenticatedRequest, res, ne
         driver_route: { include: { route_version: routeSummarySelect } },
         passenger_request: { include: { route_version: routeSummarySelect } },
         merchant_order: { include: { route_version: routeSummarySelect } },
-        parcel_batch: true
+        parcel_batch: { include: { members: { select: { merchant_order_id: true }, orderBy: { created_at: "asc" } } } }
       },
       orderBy: { created_at: "desc" }
     });
-    res.json({ trips: trips.map(serializeTrip) });
+    res.json({
+      trips: trips.map((trip) => {
+        const { members, ...batch } = trip.parcel_batch ?? { members: [] };
+        // Which orders ride on the trip, so every order of a batch finds it, not only the lead.
+        return {
+          ...serializeTrip(trip),
+          parcel_batch: trip.parcel_batch ? { ...batch, order_ids: (members ?? []).map((member) => member.merchant_order_id) } : null
+        };
+      })
+    });
   } catch (error) {
     next(error);
   }
@@ -451,7 +543,11 @@ tripsRouter.get("/trips", requireAuth, async (req: AuthenticatedRequest, res, ne
 tripsRouter.get("/trips/:id", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const trip = await getVisibleTrip(routeParam(req.params.id), req);
-    res.json({ trip: serializeTrip(withViewerDriver(trip, req)), delivery_confirmation: await tripDeliverySummary(prisma, trip) });
+    const visible = withViewerOrder(withViewerDriver(trip, req), req);
+    res.json({
+      trip: { ...serializeTrip(visible), parcel_batch: serializeTripBatch(trip.parcel_batch, req) },
+      delivery_confirmation: await tripDeliverySummary(prisma, trip)
+    });
   } catch (error) {
     next(error);
   }

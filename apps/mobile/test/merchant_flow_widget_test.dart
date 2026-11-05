@@ -589,6 +589,121 @@ void main() {
     expect(find.byKey(const ValueKey('callDriverButton')), findsNothing);
   });
 
+  testWidgets('a batched delivery lists each of the merchant orders on it', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(withTrip: true, initiallyBatched: true)
+      ..batchTrip = true;
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/trip/trip_1');
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('merchantTripOrders')),
+    );
+    expect(
+      find.byKey(const ValueKey('merchantTripOrder-order_1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('merchantTripOrder-order_2')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey('merchantTripParcel-parcel_9')),
+          )
+          .data,
+      'University gate · Sami',
+    );
+  });
+
+  testWidgets(
+    'match inbox shows the route and the typed pickup and drop-offs',
+    (tester) async {
+      final handler = _MerchantHandler()..routeMatch = true;
+      await _pumpMerchant(tester, handler);
+      GoRouter.of(
+        tester.element(find.byKey(const ValueKey('merchantHome'))),
+      ).go('/merchant/matches');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Al Amal shop, Ein Sara Street'), findsOneWidget);
+      expect(
+        find.text('Manger Street, blue gate · University gate'),
+        findsOneWidget,
+      );
+      expect(find.text('الخليل ← بيت لحم'), findsOneWidget);
+    },
+  );
+
+  testWidgets('profile parcels show the typed drop-off and the route name', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler()
+      ..createBody = {
+        'service_route_id': 'route-heb-bth',
+        'pickup_details': 'Al Amal shop',
+        'parcels': [
+          {
+            'dropoff_details': 'Manger Street, blue gate',
+            'size': 'S',
+            'priority': 'normal',
+          },
+        ],
+      };
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/account');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('merchantProducts')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey('merchantProfileParcel-parcel_0')),
+          )
+          .data,
+      'Manger Street, blue gate',
+    );
+    expect(find.textContaining('الخليل ← بيت لحم'), findsOneWidget);
+  });
+
+  testWidgets('cancelling an order asks first and sends nothing on "keep"', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(initiallyBatched: true);
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/order_1');
+    await tester.pumpAndSettle();
+
+    final cancel = find.byKey(const ValueKey('cancelMerchantOrderButton'));
+    await tester.ensureVisible(cancel);
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('merchantCancelOrderDialog')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('merchantCancelOrderKeep')));
+    await tester.pumpAndSettle();
+    expect(handler.cancelCalls, 0);
+
+    await tester.ensureVisible(cancel);
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('merchantCancelOrderConfirm')));
+    await tester.pumpAndSettle();
+    expect(handler.cancelCalls, 1);
+  });
+
   testWidgets('merchant tracking offers to call the driver when sent', (
     tester,
   ) async {
@@ -804,6 +919,13 @@ class _MerchantHandler {
 
   /// The driver's phone the trip detail carries; none when null.
   String? driverPhone;
+
+  /// Serve a route-based match (route name, typed pickup and drop-offs).
+  bool routeMatch = false;
+
+  /// Serve a trip that carries two of the merchant's orders in one batch.
+  bool batchTrip = false;
+  int cancelCalls = 0;
   final lookupKeys = <String?>[];
   final paths = <String>[];
 
@@ -957,6 +1079,19 @@ class _MerchantHandler {
         200,
       );
     }
+    if (path.endsWith('/merchant/orders/order_1/cancel')) {
+      cancelCalls += 1;
+      return http.Response(
+        '{"order":${_orderJson(batched).replaceFirst(RegExp('"status":"(batched|submitted)"'), '"status":"cancelled"')},"batch_orders_remaining":[]}',
+        200,
+      );
+    }
+    if (routeMatch && path.endsWith('/matches')) {
+      return _utf8('{"matches":[$_routeMatchJson]}', 200);
+    }
+    if (batchTrip && path.endsWith('/trips/trip_1')) {
+      return _utf8('{"trip":$_batchTripJson}', 200);
+    }
     if (path.endsWith('/matches/run')) {
       matchCalls += 1;
       matched = true;
@@ -1024,3 +1159,9 @@ const _tripJson =
     '{"id":"trip_1","status":"in_transit","created_at":"2026-07-13T08:20:00.000Z","driver_route":$_routeJson,"merchant_order":{"id":"order_1","pickup_label":"Hebron Merchant Pickup","status":"in_transit","created_at":"2026-07-13T08:00:00.000Z","parcels":$_parcelsJson},"parcel_batch":null}';
 const _locationJson =
     '{"lat":"31.650000","lng":"35.150000","source":"simulated","sequence":2,"recorded_at":"2026-07-13T08:21:00.000Z"}';
+const _routeNames =
+    '"service_route_id":"route-heb-bth","route_name_ar":"الخليل ← بيت لحم","route_name_en":"Hebron → Bethlehem"';
+const _routeMatchJson =
+    '{"id":"match_1","status":"proposed","score":"0.9317","method":"darb_route_score","explanation":"Safe explanation","scoring_breakdown":$_scoringJson,"created_at":"2026-07-13T08:10:00.000Z","driver_route":$_routeJson,"merchant_order":{"id":"order_1","pickup_label":"Hebron",$_routeNames,"pickup_details":"Al Amal shop, Ein Sara Street","status":"matched","parcel_count":2,"created_at":"2026-07-13T08:00:00.000Z","parcels":[{"id":"p1","destination_label":"Bethlehem","dropoff_details":"Manger Street, blue gate"},{"id":"p2","destination_label":"Bethlehem","dropoff_details":"University gate"}]},"parcel_batch":null}';
+const _batchTripJson =
+    '{"id":"trip_1","status":"in_transit","created_at":"2026-07-13T08:20:00.000Z","driver_route":$_routeJson,"merchant_order":{"id":"order_1","pickup_label":"Hebron Merchant Pickup","status":"in_transit","created_at":"2026-07-13T08:00:00.000Z","parcels":$_parcelsJson},"parcel_batch":{"id":"batch_1","status":"in_transit","estimated_distance_saved":"43.06","explanation":"Two orders share one route.","order_count":2,"parcel_count":4,"orders":[{"id":"order_1","pickup_label":"Hebron Merchant Pickup","status":"in_transit","parcels":$_parcelsJson},{"id":"order_2","pickup_label":"Hebron","pickup_details":"Al Amal shop, back door","status":"in_transit","parcels":[{"id":"parcel_9","destination_label":"Bethlehem","dropoff_details":"University gate","receiver_name":"Sami","size":"S","priority":"normal","status":"in_transit"}]}]}}';
