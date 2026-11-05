@@ -7,9 +7,11 @@ known MySQL-only syntax. It never edits the source migrations.
 
 Run migrations against a MariaDB 11.4 database with:
 
+Set `DATABASE_URL` through your runtime environment, then run:
+
 ```sh
-DATABASE_URL='mysql://user:password@host:3306/database' node scripts/mariadb/migrate-deploy.mjs deploy
-DATABASE_URL='mysql://user:password@host:3306/database' node scripts/mariadb/migrate-deploy.mjs status
+node scripts/mariadb/migrate-deploy.mjs deploy
+node scripts/mariadb/migrate-deploy.mjs status
 ```
 
 The wrapper uses a unique temporary Prisma project and removes only that directory after Prisma exits. On

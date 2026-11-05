@@ -12,7 +12,9 @@ const scriptRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const releaseLayout = resolve(scriptRoot, "prisma");
 const repoLayout = resolve(scriptRoot, "apps/api/prisma");
 const prismaDir = existsSync(releaseLayout) ? releaseLayout : repoLayout;
-const config = resolve(scriptRoot, "prisma.config.ts");
+const releaseConfig = resolve(scriptRoot, "prisma.config.ts");
+const repoConfig = resolve(scriptRoot, "apps/api/prisma.config.ts");
+const config = existsSync(releaseConfig) ? releaseConfig : repoConfig;
 const command = process.argv[2] ?? "deploy";
 if (!["deploy", "status"].includes(command)) {
   console.error("Usage: migrate-deploy.mjs [deploy|status]");
