@@ -39,7 +39,8 @@ Copy-Item -Recurse apps/api/dist (Join-Path $stage "dist")
 Copy-Item -Recurse apps/api/prisma (Join-Path $stage "prisma")
 Copy-Item apps/api/prisma.config.ts $stage
 Copy-Item -Recurse apps/admin/dist (Join-Path $stage "admin")
-Copy-Item deploy/cpanel/app.js $stage
+Copy-Item deploy/cpanel/app.cjs, deploy/cpanel/app-main.mjs $stage
+Copy-Item -Recurse apps/api/data (Join-Path $stage "data")
 Copy-Item -Recurse deploy/cpanel/ops (Join-Path $stage "ops")
 New-Item -ItemType Directory (Join-Path $stage "ops\mariadb") | Out-Null
 Copy-Item scripts/mariadb/*.mjs (Join-Path $stage "ops\mariadb")
@@ -62,7 +63,7 @@ Write-Output ("Release package: {0:N1} MB" -f ((Get-Item $tarball).Length / 1MB)
 # 3. Upload and unpack. Only the release-owned paths are replaced; .env, logs, tmp, node_modules stay.
 scp @scpArgs $tarball "${sshTarget}:darb-release.tgz" | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Upload failed" }
-$unpack = 'set -e; mkdir -p ~/darb-app && cd ~/darb-app && rm -rf dist admin prisma ops app.js prisma.config.ts release.txt && tar -xzf ~/darb-release.tgz && rm -f ~/darb-release.tgz && chmod +x ops/*.sh'
+$unpack = 'set -e; mkdir -p ~/darb-app && cd ~/darb-app && rm -rf dist admin prisma ops data app.js app.cjs app-main.mjs prisma.config.ts release.txt && tar -xzf ~/darb-release.tgz && rm -f ~/darb-release.tgz && chmod +x ops/*.sh'
 ssh @sshArgs $sshTarget $unpack
 if ($LASTEXITCODE -ne 0) { throw "Unpacking on the server failed" }
 
