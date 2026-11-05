@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { pagedWhere, listPageOrderBy, listPageResult, parseListPage } from "../lib/pagination.js";
 import { auditEvent } from "../lib/audit.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
@@ -449,12 +450,18 @@ merchantRouter.patch("/merchant/orders/:id/cancel", async (req: AuthenticatedReq
 
 merchantRouter.get("/merchant/orders", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const orders = await prisma.merchantOrder.findMany({
-      where: { merchant_id: req.user!.id, canonical_entry_version: null },
+    const page = parseListPage(req.query);
+    const rows = await prisma.merchantOrder.findMany({
+      where: pagedWhere({ merchant_id: req.user!.id, canonical_entry_version: null }, page),
       include: merchantOrderInclude,
-      orderBy: { created_at: "desc" }
+      orderBy: listPageOrderBy,
+      take: page.limit + 1
     });
-    res.json({ orders: orders.map((order) => serializeLegacyMerchantOrder(order as unknown as Record<string, unknown>)) });
+    const { items: orders, nextCursor } = listPageResult(rows, page);
+    res.json({
+      orders: orders.map((order) => serializeLegacyMerchantOrder(order as unknown as Record<string, unknown>)),
+      next_cursor: nextCursor
+    });
   } catch (error) {
     next(error);
   }

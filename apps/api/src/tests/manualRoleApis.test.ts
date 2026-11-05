@@ -411,6 +411,43 @@ describe("manual role APIs", () => {
     );
   });
 
+  it("passenger requests and merchant orders page newest first with a generous default", async () => {
+    const row = (id: string, at: string) => ({ id, created_at: new Date(at) });
+    prismaMock.passengerRequest.findMany.mockResolvedValue([]);
+    prismaMock.merchantOrder.findMany.mockResolvedValue([]);
+
+    const passenger = await request(createApp()).get("/api/v1/passenger/requests").set(auth("passenger_1")).expect(200);
+    expect(passenger.body.next_cursor).toBeNull();
+    expect(prismaMock.passengerRequest.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { passenger_id: "passenger_1", canonical_entry_version: null },
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: 201
+    }));
+
+    prismaMock.merchantOrder.findMany.mockResolvedValue([
+      row("order_3", "2026-07-02T10:00:00.000Z"),
+      row("order_2", "2026-07-02T09:00:00.000Z"),
+      row("order_1", "2026-07-02T08:00:00.000Z")
+    ]);
+    const merchant = await request(createApp()).get("/api/v1/merchant/orders?limit=2").set(auth("merchant_1")).expect(200);
+    expect(merchant.body.orders.map((order: { id: string }) => order.id)).toEqual(["order_3", "order_2"]);
+    expect(merchant.body.next_cursor).toEqual(expect.any(String));
+    await request(createApp()).get(`/api/v1/merchant/orders?limit=2&cursor=${merchant.body.next_cursor}`).set(auth("merchant_1")).expect(200);
+    expect(prismaMock.merchantOrder.findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: {
+        AND: [
+          { merchant_id: "merchant_1", canonical_entry_version: null },
+          { OR: [
+            { created_at: { lt: new Date("2026-07-02T09:00:00.000Z") } },
+            { created_at: new Date("2026-07-02T09:00:00.000Z"), id: { lt: "order_2" } }
+          ] }
+        ]
+      },
+      take: 3
+    }));
+    await request(createApp()).get("/api/v1/passenger/requests?limit=abc").set(auth("passenger_1")).expect(400);
+  });
+
   it("legacy serializers do not expose canonical routing internals", async () => {
     const internal = {
       route_version_id: "version_private",
