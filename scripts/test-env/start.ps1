@@ -75,8 +75,9 @@ if ($RealMail -and (Test-MailPassword)) {
 }
 $env:DRIVER_DOCUMENTS_ENABLED = "true"
 $env:DRIVER_DOCUMENTS_DIR = Join-Path $state "driver-docs"
-# Local test environment only: route catalogue, route fares and passenger parcels need the canonical route entry
-# switches (matching and trip creation stay off, so the main story keeps using the classic flow).
+# Local test environment only: the canonical route catalogue (Admin route editor, route maps; MAPS_ENABLED below
+# also requires it) and the canonical route-version request bodies. Route fares, route-based orders and passenger
+# parcels work without these switches. Matching and trip creation stay off, so the main story keeps the classic flow.
 $env:ROUTE_MANAGEMENT_ENABLED = "true"
 $env:MULTI_ROUTE_ENTRY_ENABLED = "true"
 $env:CORS_ORIGINS = "http://localhost:$AdminPort,http://127.0.0.1:$AdminPort"

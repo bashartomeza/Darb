@@ -16,7 +16,7 @@ foreach ($key in $values.Keys) { if ($key -ne "DATABASE_URL") { Set-Item -Path "
 $env:APP_ENV = "demo"
 # The shared settings validator requires document uploads whenever public onboarding is on (same as start.ps1).
 $env:DRIVER_DOCUMENTS_ENABLED = "true"
-$env:DRIVER_DOCUMENTS_DIR = Join-Path $root ".staging-data	est-env\driver-docs"
+$env:DRIVER_DOCUMENTS_DIR = Join-Path $root ".staging-data\test-env\driver-docs"
 
 # Test sign-ups are real accounts until marked; the protected reset only removes demo data.
 node scripts/test-env/mark-test-users.mjs

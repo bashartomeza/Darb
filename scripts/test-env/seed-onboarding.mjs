@@ -1,17 +1,27 @@
 // Prepares sign-up testing on the disposable demo database: installs clearly
 // labelled placeholder legal text, which is what makes driver and shop-owner
 // registration available. Registration needs no invitation. Safe to repeat.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+//
+// It acts over HTTP on whatever API answers at TEST_API_BASE_URL (default :3000),
+// which may be the permanent `darb` API rather than the one reset-data.ps1 just
+// pointed at darb_demo. So besides checking the local DATABASE_URL it asks the
+// API itself and refuses unless that API reports a disposable, reset-safe database
+// (demo_reset_available, which the API only reports for an allow-listed database
+// other than `darb`). Nothing is written before both checks pass.
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "../..");
-const env = Object.fromEntries(
-  readFileSync(resolve(root, "apps/api/.env"), "utf8")
-    .split(/\r?\n/)
-    .map((line) => line.match(/^([A-Z0-9_]+)=(.*)$/))
-    .filter(Boolean)
-    .map((match) => [match[1], match[2].replace(/^"|"$/g, "")])
-);
+const envFile = resolve(root, "apps/api/.env");
+const env = existsSync(envFile)
+  ? Object.fromEntries(
+      readFileSync(envFile, "utf8")
+        .split(/\r?\n/)
+        .map((line) => line.match(/^([A-Z0-9_]+)=(.*)$/))
+        .filter(Boolean)
+        .map((match) => [match[1], match[2].replace(/^"|"$/g, "")])
+    )
+  : {};
 const base = `${process.env.TEST_API_BASE_URL ?? "http://localhost:3000"}/api/v1`;
 
 const databaseName = new URL(process.env.DATABASE_URL ?? "mysql://invalid/").pathname.slice(1);
@@ -31,7 +41,17 @@ async function call(path, { method = "GET", token, body, expected = 200 } = {}) 
   return text ? JSON.parse(text) : null;
 }
 
-const admin = (await call("/auth/login", { method: "POST", body: { email: "demo.admin@darb.app", password: env.DEMO_ADMIN_PASSWORD } })).token;
+const admin = (await call("/auth/login", {
+  method: "POST",
+  body: { email: "demo.admin@darb.app", password: process.env.DEMO_ADMIN_PASSWORD ?? env.DEMO_ADMIN_PASSWORD }
+})).token;
+
+const capabilities = await call("/capabilities", { token: admin });
+if (capabilities?.demo_reset_available !== true) {
+  throw new Error(
+    `Refusing: the API at ${base} does not report a disposable database. Start it with scripts/test-env/start.ps1 -Disposable.`
+  );
+}
 
 const current = await call("/admin/consent-releases/current", { token: admin });
 if (!current.ready) {
