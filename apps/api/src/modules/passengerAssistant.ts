@@ -217,7 +217,7 @@ export function createPassengerAssistantRouter(
       assistantText: reply.message.slice(0, 2_000),
       assistantPayload: JSON.parse(JSON.stringify({
         status: reply.status,
-        suggestions: reply.status === "clarification" ? reply.suggestions : [],
+        suggestions: reply.status === "request_review" ? [] : reply.suggestions,
         extracted
       }))
     });
@@ -228,7 +228,7 @@ export function createPassengerAssistantRouter(
     if (reply.status === "clarification") {
       return { status: "clarification" as const, question: reply.message, suggestions: reply.suggestions, intent, conversation_id: conversationId };
     }
-    return { status: "result" as const, answer: reply.message, suggestions: [], intent, conversation_id: conversationId };
+    return { status: "result" as const, answer: reply.message, suggestions: reply.suggestions, intent, conversation_id: conversationId };
   }
 
   router.post("/passenger/assistant/messages", async (req: AuthenticatedRequest, res, next) => {

@@ -2607,6 +2607,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantVoiceStop => 'Stop listening';
 
   @override
+  String get assistantVoiceSettings => 'Voice settings';
+
+  @override
+  String get assistantVoiceSpeakReplies => 'Read replies aloud when I speak';
+
+  @override
+  String get assistantVoiceAutoSend => 'Send when I stop speaking';
+
+  @override
+  String get assistantVoiceSpeed => 'Reading speed';
+
+  @override
+  String get assistantVoiceStopSpeaking => 'Stop reading aloud';
+
+  @override
   String get assistantVoiceListening => 'Listening…';
 
   @override

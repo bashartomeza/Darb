@@ -4832,6 +4832,36 @@ abstract class AppLocalizations {
   /// **'إيقاف الاستماع'**
   String get assistantVoiceStop;
 
+  /// No description provided for @assistantVoiceSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات الصوت'**
+  String get assistantVoiceSettings;
+
+  /// No description provided for @assistantVoiceSpeakReplies.
+  ///
+  /// In ar, this message translates to:
+  /// **'قراءة الردود بصوت عالٍ عند التحدث'**
+  String get assistantVoiceSpeakReplies;
+
+  /// No description provided for @assistantVoiceAutoSend.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الطلب عند التوقف عن الكلام'**
+  String get assistantVoiceAutoSend;
+
+  /// No description provided for @assistantVoiceSpeed.
+  ///
+  /// In ar, this message translates to:
+  /// **'سرعة القراءة'**
+  String get assistantVoiceSpeed;
+
+  /// No description provided for @assistantVoiceStopSpeaking.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف القراءة'**
+  String get assistantVoiceStopSpeaking;
+
   /// No description provided for @assistantVoiceListening.
   ///
   /// In ar, this message translates to:
