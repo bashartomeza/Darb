@@ -47,4 +47,18 @@ describe("route details on orders", () => {
     expect(render("en", <OrderRouteDetails order={{ pickup_details: "   " }} />)).toBe("");
   });
 
+  it("shows the chosen village in the UI language, with the optional details next to it", () => {
+    const placed = { ...routed, pickup_place_name_ar: "حلحول", pickup_place_name_en: "Halhul", dropoff_place_name_ar: "بيرزيت", dropoff_place_name_en: "Bir Zeit", dropoff_details: null };
+    const english = render("en", <OrderRouteDetails order={placed} />);
+    expect(english).toContain("Pickup place");
+    expect(english).toContain("Halhul");
+    expect(english).toContain("Bir Zeit");
+    expect(english).toContain("near the PPU main gate");
+    expect(english).not.toContain("Drop-off details");
+    const arabic = render("ar", <OrderRouteDetails order={placed} />);
+    expect(arabic).toContain("حلحول");
+    expect(arabic).toContain("بيرزيت");
+    expect(render("en", <OrderRouteDetails order={{ dropoff_place_name_en: "Bir Zeit" }} />)).toContain("Bir Zeit");
+  });
+
 });

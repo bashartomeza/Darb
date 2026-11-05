@@ -88,11 +88,13 @@ class MerchantOrderSubmission {
   });
   Future<MerchantOrder> submit({
     required String serviceRouteId,
-    required String pickupDetails,
+    String? pickupPlaceId,
+    String pickupDetails = '',
     required List<ParcelDraft> parcels,
   }) => _run((actor) async {
     final payload = MerchantRepository.createOrderBody(
       serviceRouteId: serviceRouteId,
+      pickupPlaceId: pickupPlaceId,
       pickupDetails: pickupDetails,
       parcels: parcels,
     );
@@ -242,6 +244,16 @@ class MerchantOrderSubmission {
             .map((p) => '${p[placeKey]}|${p['size']}|${p['priority']}')
             .toList()
           ..sort();
+    // A place the merchant chose must come back as the same place.
+    final expectedPlaces = routeShape
+        ? ((payload['parcels'] as List)
+              .map((p) => '${p['dropoff_place_id']}')
+              .toList()
+            ..sort())
+        : const <String>[];
+    final actualPlaces = routeShape
+        ? (order.parcels.map((p) => '${p.dropoffPlaceId}').toList()..sort())
+        : const <String>[];
     final actual =
         order.parcels
             .map(
@@ -253,6 +265,7 @@ class MerchantOrderSubmission {
           ..sort();
     final samePickup = routeShape
         ? order.pickupDetails == payload['pickup_details'] &&
+              order.pickupPlaceId == payload['pickup_place_id'] &&
               (order.serviceRouteId == null ||
                   order.serviceRouteId == payload['service_route_id'])
         : order.pickupLabel == payload['pickup_label'];
@@ -260,7 +273,8 @@ class MerchantOrderSubmission {
         !samePickup ||
         order.parcels.any((p) => p.id.isEmpty) ||
         order.parcels.map((p) => p.id).toSet().length != order.parcels.length ||
-        jsonEncode(expected) != jsonEncode(actual)) {
+        jsonEncode(expected) != jsonEncode(actual) ||
+        jsonEncode(expectedPlaces) != jsonEncode(actualPlaces)) {
       throw const MerchantOrderRecoveryException(
         'merchant_order_recovery_unreadable',
       );

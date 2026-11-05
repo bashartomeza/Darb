@@ -105,7 +105,7 @@ class MerchantMatchDetailScreen extends ConsumerWidget {
                     '${match.route.originLabel} → ${match.route.destinationLabel}',
                 icon: Icons.route_outlined,
               ),
-              if (match.order.pickupDetails case final pickup?)
+              if (match.order.pickupSummary(arabic: arabic) case final pickup?)
                 DetailRow(
                   label: l10n.pickup,
                   value: pickup,

@@ -95,7 +95,7 @@ export const operatingRouteInclude = {
 } satisfies Prisma.ServiceRouteInclude;
 
 type OperatingRouteRow = Prisma.ServiceRouteGetPayload<{ include: typeof operatingRouteInclude }>;
-type StopRow = { id: string; name_ar: string; name_en: string; latitude: unknown; longitude: unknown };
+type StopRow = { id: string; stop_key: string; name_ar: string; name_en: string; latitude: unknown; longitude: unknown };
 
 function coordinate(value: unknown) {
   return typeof value === "number" ? value : Number(String(value));
@@ -155,8 +155,8 @@ export type ResolvedOperatingRoute = {
   routeKey: string;
   nameAr: string;
   nameEn: string;
-  origin: { id: string; nameEn: string; latitude: string; longitude: string };
-  destination: { id: string; nameEn: string; latitude: string; longitude: string };
+  origin: { id: string; stopKey: string; nameEn: string; latitude: string; longitude: string };
+  destination: { id: string; stopKey: string; nameEn: string; latitude: string; longitude: string };
 };
 
 function resolved(route: OperatingRouteRow | null): ResolvedOperatingRoute {
@@ -164,6 +164,7 @@ function resolved(route: OperatingRouteRow | null): ResolvedOperatingRoute {
   const version = route.current_version!;
   const place = (stop: StopRow) => ({
     id: stop.id,
+    stopKey: stop.stop_key,
     nameEn: stop.name_en,
     latitude: coordinate(stop.latitude).toFixed(6),
     longitude: coordinate(stop.longitude).toFixed(6)

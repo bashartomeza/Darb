@@ -112,12 +112,34 @@ bool _validRoutePayload(Map<String, dynamic> value) {
       text is String &&
       text.trim().length >= 3 &&
       text.trim().length <= routeDetailsMaxLength;
+  // A chosen place; the details next to it are optional.
+  bool end(Map<String, dynamic> map, String placeKey, String detailsKey) {
+    final place = map[placeKey];
+    final hasPlace = place is String && place.isNotEmpty && place.length <= 191;
+    if (map.containsKey(placeKey) && !hasPlace) return false;
+    if (hasPlace) {
+      return !map.containsKey(detailsKey) ||
+          (map[detailsKey] is String &&
+              (map[detailsKey] as String).trim().isNotEmpty &&
+              (map[detailsKey] as String).trim().length <=
+                  routeDetailsMaxLength);
+    }
+    return details(map[detailsKey]);
+  }
+
   bool optionalText(Map<String, dynamic> map, String key, int max) =>
       !map.containsKey(key) ||
       (map[key] is String &&
           (map[key] as String).isNotEmpty &&
           (map[key] as String).length <= max);
+  const orderKeys = {
+    'service_route_id',
+    'pickup_place_id',
+    'pickup_details',
+    'parcels',
+  };
   const parcelKeys = {
+    'dropoff_place_id',
     'dropoff_details',
     'size',
     'priority',
@@ -126,11 +148,11 @@ bool _validRoutePayload(Map<String, dynamic> value) {
   };
   final route = value['service_route_id'];
   final parcels = value['parcels'];
-  return value.length == 3 &&
+  return orderKeys.containsAll(value.keys) &&
       route is String &&
       route.isNotEmpty &&
       route.length <= 191 &&
-      details(value['pickup_details']) &&
+      end(value, 'pickup_place_id', 'pickup_details') &&
       parcels is List &&
       parcels.isNotEmpty &&
       parcels.length <= 10 &&
@@ -138,7 +160,7 @@ bool _validRoutePayload(Map<String, dynamic> value) {
         (p) =>
             p is Map<String, dynamic> &&
             parcelKeys.containsAll(p.keys) &&
-            details(p['dropoff_details']) &&
+            end(p, 'dropoff_place_id', 'dropoff_details') &&
             const {'S', 'M', 'L'}.contains(p['size']) &&
             const {'low', 'normal', 'high'}.contains(p['priority']) &&
             optionalText(p, 'receiver_name', 100) &&

@@ -1,3 +1,4 @@
+import '../../operating_routes/data/city_place_models.dart';
 import '../../../core/fares/fare.dart';
 
 class MatchResult {
@@ -15,6 +16,10 @@ class MatchResult {
     this.routeNameEn,
     this.pickupDetails,
     this.dropoffDetails,
+    this.pickupPlaceAr,
+    this.pickupPlaceEn,
+    this.dropoffPlaceAr,
+    this.dropoffPlaceEn,
     this.fare,
     this.passengerCount,
   });
@@ -35,6 +40,30 @@ class MatchResult {
   final String? routeNameEn;
   final String? pickupDetails;
   final String? dropoffDetails;
+
+  /// The village or town picked from the route's city list for each end
+  /// (names as saved when ordering); null for orders typed as free text.
+  final String? pickupPlaceAr;
+  final String? pickupPlaceEn;
+  final String? dropoffPlaceAr;
+  final String? dropoffPlaceEn;
+
+  /// The pickup as one line: the chosen place and the optional details, or
+  /// only the details of an older order; null when neither was saved.
+  String? pickupSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: pickupPlaceAr,
+    nameEn: pickupPlaceEn,
+    details: pickupDetails,
+  );
+
+  /// The drop-off as one line, like [pickupSummary].
+  String? dropoffSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: dropoffPlaceAr,
+    nameEn: dropoffPlaceEn,
+    details: dropoffDetails,
+  );
 
   /// The request's saved fare: this driver's price (their own inside the
   /// route's range, else the route default). Null when the route has none.
@@ -77,6 +106,16 @@ class MatchResult {
       routeNameEn: named('route_name_en'),
       pickupDetails: _optionalString(passengerRequest, 'pickup_details'),
       dropoffDetails: _optionalString(passengerRequest, 'dropoff_details'),
+      pickupPlaceAr: _optionalString(passengerRequest, 'pickup_place_name_ar'),
+      pickupPlaceEn: _optionalString(passengerRequest, 'pickup_place_name_en'),
+      dropoffPlaceAr: _optionalString(
+        passengerRequest,
+        'dropoff_place_name_ar',
+      ),
+      dropoffPlaceEn: _optionalString(
+        passengerRequest,
+        'dropoff_place_name_en',
+      ),
       fare: FareSnapshot.tryParse(passengerRequest['fare']),
       passengerCount: passengerRequest['passenger_count'] is int
           ? passengerRequest['passenger_count'] as int

@@ -71,6 +71,7 @@ function orderInput(order: ResolvedBulkOrder): LegacyOrderInput {
   return {
     service_route_id: order.route!.serviceRouteId,
     pickup_details: order.input.pickup_details,
+    free_text_only: true,
     parcels: order.input.parcels
   };
 }

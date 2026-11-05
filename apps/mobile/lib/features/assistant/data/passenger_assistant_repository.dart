@@ -396,15 +396,26 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
     );
   }
 
-  /// A draft is searchable once the passenger confirmed a route and typed
-  /// both places (3–300 characters, as the API checks).
+  /// A draft is searchable once the passenger confirmed a route and chose
+  /// both places. A draft an older build left pending carries typed details
+  /// instead (3–300 characters) and is still replayed as it was.
   void _validateDraft(PassengerAssistantTripDraft draft) {
     final routeId = draft.serviceRouteId;
     if (routeId == null || routeId.isEmpty) {
       throw const FormatException('Missing route');
     }
-    if (!_detailsValid(draft.pickupDetails) ||
-        !_detailsValid(draft.dropoffDetails)) {
+    final chosenPlaces =
+        draft.pickupPlaceId != null && draft.dropoffPlaceId != null;
+    final typedPlaces =
+        _detailsValid(draft.pickupDetails) &&
+        _detailsValid(draft.dropoffDetails);
+    if (!chosenPlaces && !typedPlaces) {
+      throw const FormatException('Invalid pickup or drop-off');
+    }
+    if (chosenPlaces &&
+        ((draft.pickupDetails?.trim().length ?? 0) > routeDetailsMaxLength ||
+            (draft.dropoffDetails?.trim().length ?? 0) >
+                routeDetailsMaxLength)) {
       throw const FormatException('Invalid pickup or drop-off details');
     }
     if (draft.passengerCount < 1 || draft.passengerCount > 4) {
@@ -441,8 +452,10 @@ class ApiPassengerAssistantRepository implements PassengerAssistantRepository {
     }
     return passengerRouteRequestBody(
       serviceRouteId: routeId,
-      pickupDetails: draft.pickupDetails!,
-      dropoffDetails: draft.dropoffDetails!,
+      pickupPlaceId: draft.pickupPlaceId,
+      dropoffPlaceId: draft.dropoffPlaceId,
+      pickupDetails: draft.pickupDetails ?? '',
+      dropoffDetails: draft.dropoffDetails ?? '',
       preferredTime: draft.preferredTime,
       passengerCount: draft.passengerCount,
     );

@@ -1,3 +1,4 @@
+import '../../operating_routes/data/city_place_models.dart';
 import '../../../core/cancellation/cancellation.dart';
 import '../../../core/fares/fare.dart';
 
@@ -72,6 +73,10 @@ class PassengerParcel {
     this.routeNameEn,
     this.pickupDetails,
     this.dropoffDetails,
+    this.pickupPlaceAr,
+    this.pickupPlaceEn,
+    this.dropoffPlaceAr,
+    this.dropoffPlaceEn,
     this.preferredTime,
     this.fare,
     this.cancellation,
@@ -109,6 +114,30 @@ class PassengerParcel {
   final String? routeNameEn;
   final String? pickupDetails;
   final String? dropoffDetails;
+
+  /// The village or town picked from the route's city list for each end
+  /// (names as saved when ordering); null for orders typed as free text.
+  final String? pickupPlaceAr;
+  final String? pickupPlaceEn;
+  final String? dropoffPlaceAr;
+  final String? dropoffPlaceEn;
+
+  /// The pickup as one line: the chosen place and the optional details, or
+  /// only the details of an older order; null when neither was saved.
+  String? pickupSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: pickupPlaceAr,
+    nameEn: pickupPlaceEn,
+    details: pickupDetails,
+  );
+
+  /// The drop-off as one line, like [pickupSummary].
+  String? dropoffSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: dropoffPlaceAr,
+    nameEn: dropoffPlaceEn,
+    details: dropoffDetails,
+  );
   final DateTime? preferredTime;
 
   /// The route's fare for this parcel size, frozen when it was sent; null
@@ -171,6 +200,10 @@ class PassengerParcel {
       routeNameEn: optionalString('route_name_en'),
       pickupDetails: pickupDetails,
       dropoffDetails: optionalString('dropoff_details'),
+      pickupPlaceAr: optionalString('pickup_place_name_ar'),
+      pickupPlaceEn: optionalString('pickup_place_name_en'),
+      dropoffPlaceAr: optionalString('dropoff_place_name_ar'),
+      dropoffPlaceEn: optionalString('dropoff_place_name_en'),
       preferredTime: optionalDate('preferred_time'),
       fare: FareSnapshot.tryParse(json['fare']),
       cancellation: CancellationInfo.tryParse(json['cancellation']),

@@ -217,7 +217,9 @@ class OrderTimelineRow extends StatelessWidget {
     final tone = statusToneFor(order.status);
     // The route by name, with the merchant's own pickup words when the order
     // has them; older orders keep their corridor places.
-    final pickupDetails = order.pickupDetails;
+    final pickupDetails = order.pickupSummary(
+      arabic: Localizations.localeOf(context).languageCode == 'ar',
+    );
     final routeLine = merchantOrderRouteLabel(context, order);
 
     return IntrinsicHeight(

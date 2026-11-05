@@ -1,8 +1,10 @@
 # Route-based orders
 
 Every order in Darb names one **predefined route** ("Hebron → Bethlehem") and
-adds the exact pickup and drop-off as **free text** typed by the user. There is
-no map picker in the order flows. Drivers choose the route they drive, and
+adds a pickup and drop-off. **Since city places** (`docs/routes/city-places.md`)
+the user picks each end from the villages and towns of the route's own cities
+and the free-text fields below are an optional "more details"; builds that
+still send only text keep working. There is no map picker in the order flows. Drivers choose the route they drive, and
 matching pairs only a demand and a driver route on the **same route**.
 
 This replaces the single locked corridor (`LOCKED_CORRIDOR_KEY`) that the

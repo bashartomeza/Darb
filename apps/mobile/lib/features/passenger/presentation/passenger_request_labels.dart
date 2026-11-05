@@ -19,13 +19,22 @@ extension PassengerRequestLabels on PassengerRequest {
         localizedCorridorPlace(context, destinationLabel),
       );
 
-  /// The exact pickup the passenger typed, or the old pickup label.
-  String pickupText(BuildContext context) =>
-      pickupDetails ?? localizedCorridorPlace(context, pickupLabel);
+  /// Whether the request names its own pickup (a chosen place and/or typed
+  /// details) rather than only the old place label.
+  bool get hasOwnPickup => pickupSummary(arabic: true) != null;
 
-  /// The exact drop-off the passenger typed, or the old destination label.
+  /// Whether the request names its own drop-off.
+  bool get hasOwnDropoff => dropoffSummary(arabic: true) != null;
+
+  /// The chosen pickup place and its optional details, or the old label.
+  String pickupText(BuildContext context) =>
+      pickupSummary(arabic: _arabic(context)) ??
+      localizedCorridorPlace(context, pickupLabel);
+
+  /// The chosen drop-off place and its optional details, or the old label.
   String dropoffText(BuildContext context) =>
-      dropoffDetails ?? localizedCorridorPlace(context, destinationLabel);
+      dropoffSummary(arabic: _arabic(context)) ??
+      localizedCorridorPlace(context, destinationLabel);
 }
 
 /// "from → to" in the reading direction. Each name is bidi-isolated so a

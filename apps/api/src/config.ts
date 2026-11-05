@@ -67,6 +67,7 @@ const rawSchema = z.object({
   APP_RELEASE: z.string().min(1).optional(),
   ENABLE_DEMO_FEATURES: z.string().optional(),
   ROUTE_MANAGEMENT_ENABLED: z.string().optional(),
+  ROUTE_PLACES_REQUIRED: z.string().optional(),
   MULTI_ROUTE_ENTRY_ENABLED: z.string().optional(),
   MULTI_ROUTE_MATCHING_ENABLED: z.string().optional(),
   CANONICAL_TRIP_CREATION_ENABLED: z.string().optional(),
@@ -251,6 +252,8 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   const explicitlyEnabled = parseBoolean("ENABLE_DEMO_FEATURES", raw.ENABLE_DEMO_FEATURES);
   const demoFeaturesEnabled = isDemo || isTest || (isLocal && explicitlyEnabled);
   const routeManagementEnabled = parseBoolean("ROUTE_MANAGEMENT_ENABLED", raw.ROUTE_MANAGEMENT_ENABLED);
+  // On: route-based orders must name a pickup / drop-off place from the city list, and builds that only send free text are refused.
+  const routePlacesRequired = parseBoolean("ROUTE_PLACES_REQUIRED", raw.ROUTE_PLACES_REQUIRED);
   const multiRouteEntryEnabled = parseBoolean("MULTI_ROUTE_ENTRY_ENABLED", raw.MULTI_ROUTE_ENTRY_ENABLED);
   const multiRouteMatchingEnabled = parseBoolean("MULTI_ROUTE_MATCHING_ENABLED", raw.MULTI_ROUTE_MATCHING_ENABLED);
   const canonicalTripCreationEnabled = parseBoolean(
@@ -726,6 +729,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     demoFeaturesEnabled,
     demoResetAllowedDatabases,
     routeManagementEnabled,
+    routePlacesRequired,
     multiRouteEntryEnabled,
     multiRouteMatchingEnabled,
     canonicalTripCreationEnabled,

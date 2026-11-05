@@ -18,12 +18,12 @@ import { latitudeSchema, legacyLabelSchema, longitudeSchema } from "../lib/valid
 import { BATCHING_LIMITS } from "../lib/batchingConfig.js";
 import { maskPhone, normalizePhoneToE164, PhoneNormalizationError } from "../lib/phone.js";
 import {
-  detailsSchema,
   routeFields,
   routeSummarySelect,
   serviceRouteIdSchema,
   type RouteSummary
 } from "../services/operatingRoutes.js";
+import { optionalDetailsSchema, placeIdSchema } from "../services/cityPlaces.js";
 import { orderFareResponse, parcelFareResponse } from "../services/routeFares.js";
 
 /** Older app builds: a place name and coordinates per parcel; mapped to the Hebron → Bethlehem route. */
@@ -53,7 +53,8 @@ const noControlCharacters = (value: string) => !/[\u0000-\u001f\u007f]/.test(val
 
 /** Route-based parcel: the drop-off as text, and an optional receiver. */
 export const routeParcelSchema = z.object({
-  dropoff_details: detailsSchema,
+  dropoff_place_id: placeIdSchema.optional(),
+  dropoff_details: optionalDetailsSchema,
   size: parcelSizeSchema,
   priority: z.enum(["low", "normal", "high"]).default("normal"),
   receiver_name: z.string().trim().min(2).max(80).refine(noControlCharacters).optional(),
@@ -63,7 +64,8 @@ export const routeParcelSchema = z.object({
 /** Route-based order: a predefined route and the pickup as text. */
 export const createRouteOrderSchema = z.object({
   service_route_id: serviceRouteIdSchema,
-  pickup_details: detailsSchema,
+  pickup_place_id: placeIdSchema.optional(),
+  pickup_details: optionalDetailsSchema,
   parcels: z.array(routeParcelSchema).min(1).max(BATCHING_LIMITS.maxParcelsPerOrder)
 });
 
@@ -81,8 +83,10 @@ export function toOrderInput(input: LegacyMerchantOrderInput | RouteMerchantOrde
   if (!("service_route_id" in input)) return input;
   return {
     service_route_id: input.service_route_id,
+    pickup_place_id: input.pickup_place_id,
     pickup_details: input.pickup_details,
     parcels: input.parcels.map((parcel) => ({
+      dropoff_place_id: parcel.dropoff_place_id,
       dropoff_details: parcel.dropoff_details,
       size: parcel.size,
       priority: parcel.priority,
@@ -129,6 +133,9 @@ function serializeLegacyParcel(value: Record<string, unknown>) {
     status: value.status,
     batch_id: value.batch_id,
     dropoff_details: value.dropoff_details ?? null,
+    dropoff_place_id: value.dropoff_place_id ?? null,
+    dropoff_place_name_ar: value.dropoff_place_name_ar ?? null,
+    dropoff_place_name_en: value.dropoff_place_name_en ?? null,
     receiver_name: value.receiver_name ?? null,
     // The full number is only ever read by the delivering driver's trip.
     receiver_phone_masked: maskedPhone(value.receiver_phone),
@@ -197,6 +204,9 @@ function serializeLegacyMerchantOrder(value: Record<string, unknown>) {
     pickup_lng: value.pickup_lng,
     ...routeFields(value.route_version as RouteSummary),
     pickup_details: value.pickup_details ?? null,
+    pickup_place_id: value.pickup_place_id ?? null,
+    pickup_place_name_ar: value.pickup_place_name_ar ?? null,
+    pickup_place_name_en: value.pickup_place_name_en ?? null,
     status: value.status,
     created_at: value.created_at,
     trip_id: tripId,

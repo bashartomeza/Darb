@@ -16,6 +16,7 @@ import '../../../core/widgets/discard_saved_request_button.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
 import '../../operating_routes/data/operating_route_models.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
+import '../../operating_routes/presentation/route_place_picker.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
 import '../application/merchant_order_submission.dart';
@@ -45,6 +46,10 @@ class _CreateMerchantOrderScreenState
   final _formKey = GlobalKey<FormState>();
   final _pickupDetails = TextEditingController();
   String? _routeId;
+  String? _pickupPlaceId;
+
+  /// Place errors show once the merchant tried to send the order.
+  bool _showPlaceErrors = false;
   String? _error;
 
   /// The saved order being recovered, as it will be resent.
@@ -222,7 +227,13 @@ class _CreateMerchantOrderScreenState
                       padding: const EdgeInsets.only(
                         bottom: AppTokens.spaceMedium,
                       ),
-                      child: _parcelCard(l10n, entry.$1, entry.$2, editable),
+                      child: _parcelCard(
+                        l10n,
+                        entry.$1,
+                        entry.$2,
+                        editable,
+                        _selectedRoute(routeList),
+                      ),
                     ),
                   ),
                 ),
@@ -366,10 +377,31 @@ class _CreateMerchantOrderScreenState
                       validator: (value) =>
                           value == null ? l10n.orderRouteRequired : null,
                       onChanged: editable
-                          ? (id) => setState(() => _routeId = id)
+                          ? (id) => setState(() {
+                              if (id != _routeId) {
+                                // Places belong to the previous route's
+                                // cities.
+                                _pickupPlaceId = null;
+                                ref
+                                    .read(merchantOrderDraftProvider.notifier)
+                                    .clearDropoffPlaces();
+                              }
+                              _routeId = id;
+                            })
                           : null,
                     ),
                   ),
+          ),
+          RoutePlacePicker(
+            key: const ValueKey('merchantPickupPlacePicker'),
+            routeId: _selectedRoute(routeList),
+            side: RoutePlaceSide.pickup,
+            selectedId: _pickupPlaceId,
+            enabled: editable,
+            errorText: _showPlaceErrors && _pickupPlaceId == null
+                ? l10n.routePlaceRequired
+                : null,
+            onChanged: (place) => setState(() => _pickupPlaceId = place.id),
           ),
           TextFormField(
             key: const ValueKey('merchantPickupDetailsField'),
@@ -380,13 +412,11 @@ class _CreateMerchantOrderScreenState
             maxLines: 3,
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
-              labelText: l10n.merchantPickupDetailsLabel,
+              labelText: l10n.routePlaceMoreDetailsLabel,
               hintText: l10n.merchantPickupDetailsHint,
+              helperText: l10n.routePlaceDetailsHelper,
               prefixIcon: const Icon(Icons.storefront_outlined),
             ),
-            validator: (value) => routeDetailsValid(value ?? '')
-                ? null
-                : l10n.orderDetailsTooShort,
           ),
         ],
       ),
@@ -398,6 +428,7 @@ class _CreateMerchantOrderScreenState
     int index,
     ParcelDraft parcel,
     bool editable,
+    String? routeId,
   ) {
     final controller = ref.read(merchantOrderDraftProvider.notifier);
     return DarbCard(
@@ -409,6 +440,18 @@ class _CreateMerchantOrderScreenState
             '${l10n.parcel} ${index + 1}',
             style: Theme.of(context).textTheme.titleLarge,
           ),
+          RoutePlacePicker(
+            key: ValueKey('parcelDropoffPlace-$index'),
+            routeId: routeId,
+            side: RoutePlaceSide.dropoff,
+            selectedId: parcel.dropoffPlaceId,
+            enabled: editable,
+            errorText: _showPlaceErrors && parcel.dropoffPlaceId == null
+                ? l10n.routePlaceRequired
+                : null,
+            onChanged: (place) =>
+                controller.updateParcel(index, dropoffPlaceId: place.id),
+          ),
           TextFormField(
             key: ValueKey('parcelDropoff-$index'),
             initialValue: parcel.dropoffDetails,
@@ -417,13 +460,10 @@ class _CreateMerchantOrderScreenState
             minLines: 1,
             maxLines: 3,
             decoration: InputDecoration(
-              labelText: l10n.merchantDropoffDetailsLabel,
+              labelText: l10n.routePlaceMoreDetailsLabel,
               hintText: l10n.merchantDropoffDetailsHint,
               prefixIcon: const Icon(Icons.place_outlined),
             ),
-            validator: (value) => routeDetailsValid(value ?? '')
-                ? null
-                : l10n.orderDetailsTooShort,
             onChanged: (value) =>
                 controller.updateParcel(index, dropoffDetails: value),
           ),
@@ -529,7 +569,7 @@ class _CreateMerchantOrderScreenState
             label: l10n.pickup,
             value: pending.legacy
                 ? localizedCorridorPlace(context, pending.pickup)
-                : pending.pickup,
+                : _savedChoice(l10n, pending.pickup, pending.pickupPlaceChosen),
             icon: Icons.storefront_outlined,
             valueKey: const ValueKey('merchantPickupLabel'),
           ),
@@ -537,7 +577,7 @@ class _CreateMerchantOrderScreenState
             DetailRow(
               label: '${l10n.parcel} ${index + 1}',
               value:
-                  '${pending.legacy ? merchantDestinationLabel(context, parcel.dropoff) : parcel.dropoff}'
+                  '${pending.legacy ? merchantDestinationLabel(context, parcel.dropoff) : _savedChoice(l10n, parcel.dropoff, parcel.placeChosen)}'
                   ' · ${parcel.size} · ${merchantPriorityLabel(l10n, parcel.priority)}',
               icon: Icons.place_outlined,
             ),
@@ -546,11 +586,28 @@ class _CreateMerchantOrderScreenState
     );
   }
 
+  /// A saved order keeps place ids, not names: show the details typed next
+  /// to it, or that a place was chosen.
+  String _savedChoice(AppLocalizations l10n, String details, bool chosen) {
+    if (!chosen) return details;
+    return details.isEmpty
+        ? l10n.routePlaceSavedChoice
+        : '${l10n.routePlaceSavedChoice} · $details';
+  }
+
   Future<void> _submit() async {
     if (!_locked && !(_formKey.currentState?.validate() ?? false)) return;
     final routes = ref.read(operatingRoutesProvider).value ?? const [];
     final routeId = _selectedRoute(routes);
     if (!_locked && routeId == null) return;
+    final parcelDrafts = ref.read(merchantOrderDraftProvider);
+    if (!_locked &&
+        (_pickupPlaceId == null ||
+            parcelDrafts.any((parcel) => parcel.dropoffPlaceId == null))) {
+      // The pickup and every drop-off must be a place of the route's cities.
+      setState(() => _showPlaceErrors = true);
+      return;
+    }
     final service = ref.read(merchantOrderSubmissionProvider);
     setState(() {
       _busy = true;
@@ -561,8 +618,9 @@ class _CreateMerchantOrderScreenState
           ? await service.resume()
           : await service.submit(
               serviceRouteId: routeId!,
+              pickupPlaceId: _pickupPlaceId,
               pickupDetails: _pickupDetails.text,
-              parcels: ref.read(merchantOrderDraftProvider),
+              parcels: parcelDrafts,
             );
       ref.invalidate(merchantDashboardProvider);
       if (mounted) await _openOrder(order.id);

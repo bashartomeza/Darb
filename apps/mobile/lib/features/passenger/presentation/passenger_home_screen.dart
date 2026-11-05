@@ -651,7 +651,9 @@ class _RequestCard extends StatelessWidget {
       iconColor: PassengerStyle.orange,
       body: [
         '${passengerStatusLabel(l10n, request.status)} · $when',
-        ?request.pickupDetails,
+        ?request.pickupSummary(
+          arabic: Localizations.localeOf(context).languageCode == 'ar',
+        ),
       ].join('\n'),
       onTap: () => context.go(
         connected == null

@@ -21,6 +21,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/operating_routes_fixture.dart';
+import 'support/route_places_fixture.dart';
 import 'test_app_config.dart';
 
 void main() {
@@ -176,6 +177,12 @@ void main() {
     expect(find.textContaining('(2/10)'), findsOneWidget);
 
     await _fillOrder(tester);
+    await pickPlace(
+      tester,
+      'بيت ساحور',
+      side: 'dropoff',
+      pickerKey: const ValueKey('parcelDropoffPlace-1'),
+    );
     await tester.enterText(
       find.byKey(const ValueKey('parcelDropoff-1')),
       'شارع المهد قرب الصيدلية',
@@ -193,14 +200,17 @@ void main() {
     expect(handler.createKey, matches(RegExp(r'^[A-Za-z0-9._:-]{8,128}$')));
     expect(handler.createBody, {
       'service_route_id': 'route-heb-bth',
+      'pickup_place_id': 'place-heb-halhul',
       'pickup_details': 'متجر الأمل، شارع عين سارة',
       'parcels': [
         {
+          'dropoff_place_id': 'place-bth-beitjala',
           'dropoff_details': 'قرب بوابة جامعة بيت لحم',
           'size': 'S',
           'priority': 'normal',
         },
         {
+          'dropoff_place_id': 'place-bth-beitsahur',
           'dropoff_details': 'شارع المهد قرب الصيدلية',
           'size': 'S',
           'priority': 'normal',
@@ -218,13 +228,14 @@ void main() {
           .data,
       'الخليل ← بيت لحم',
     );
+    // The chosen village comes first, then the details written next to it.
     expect(
       tester
           .widget<Text>(find.byKey(const ValueKey('merchantOrderPickup')))
           .data,
-      'متجر الأمل، شارع عين سارة',
+      'حلحول · متجر الأمل، شارع عين سارة',
     );
-    expect(find.text('شارع المهد قرب الصيدلية'), findsOneWidget);
+    expect(find.text('بيت ساحور · شارع المهد قرب الصيدلية'), findsOneWidget);
 
     // The redesigned order list names the route and the typed drop-offs too.
     GoRouter.of(
@@ -253,10 +264,6 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.byKey(const ValueKey('merchantPickupDetailsField')),
-      'ab',
-    );
-    await tester.enterText(
       find.byKey(const ValueKey('parcelReceiverPhone-0')),
       'call me',
     );
@@ -264,13 +271,79 @@ void main() {
     expect(handler.createCalls, 0);
     expect(find.text('اختر المسار أولاً.'), findsOneWidget);
     expect(
-      find.text('اكتب 3 أحرف على الأقل ليجد السائق المكان.'),
-      findsNWidgets(2),
-    );
-    expect(
       find.text('أدخل رقم هاتف صحيحاً، مثل ‎+970599123456.'),
       findsOneWidget,
     );
+
+    // With a valid phone and a route, the places are still required; the
+    // details next to them are not.
+    await tester.enterText(
+      find.byKey(const ValueKey('parcelReceiverPhone-0')),
+      '',
+    );
+    await tester.tap(find.byKey(const ValueKey('merchantRouteField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('الخليل ← بيت لحم').last);
+    await tester.pumpAndSettle();
+    await _submit(tester);
+    expect(handler.createCalls, 0);
+    expect(find.text('اختر مكاناً للمتابعة.'), findsNWidgets(2));
+  });
+
+  testWidgets('order form sends only the places when no details are written', (
+    tester,
+  ) async {
+    final handler = _MerchantHandler(hasOrder: false);
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/new');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('merchantRouteField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('الخليل ← بيت لحم').last);
+    await tester.pumpAndSettle();
+    await pickPlace(
+      tester,
+      'يطا',
+      pickerKey: const ValueKey('merchantPickupPlacePicker'),
+    );
+    await pickPlace(
+      tester,
+      'بيت جالا',
+      side: 'dropoff',
+      pickerKey: const ValueKey('parcelDropoffPlace-0'),
+    );
+    await _submit(tester);
+    expect(handler.createBody, {
+      'service_route_id': 'route-heb-bth',
+      'pickup_place_id': 'place-heb-yatta',
+      'parcels': [
+        {
+          'dropoff_place_id': 'place-bth-beitjala',
+          'size': 'S',
+          'priority': 'normal',
+        },
+      ],
+    });
+  });
+
+  testWidgets('changing the route clears the chosen places', (tester) async {
+    final handler = _MerchantHandler(hasOrder: false);
+    await _pumpMerchant(tester, handler);
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('merchantHome'))),
+    ).go('/merchant/order/new');
+    await tester.pumpAndSettle();
+    await _fillOrder(tester);
+    expect(find.text('حلحول'), findsOneWidget);
+    expect(find.text('بيت جالا'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('merchantRouteField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('بيت لحم ← الخليل').last);
+    await tester.pumpAndSettle();
+    expect(find.text('حلحول'), findsNothing);
+    expect(find.text('بيت جالا'), findsNothing);
   });
 
   testWidgets(
@@ -300,7 +373,10 @@ void main() {
         find.byKey(const ValueKey('merchantPendingOrder')),
         findsOneWidget,
       );
-      expect(find.text('متجر الأمل، شارع عين سارة'), findsOneWidget);
+      expect(
+        find.text('مكان مختار من القائمة · متجر الأمل، شارع عين سارة'),
+        findsOneWidget,
+      );
       final originalKey = handler.createKey;
       GoRouter.of(
         tester.element(find.byKey(const ValueKey('merchantCreateOrder'))),
@@ -827,9 +903,20 @@ Future<void> _fillOrder(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('الخليل ← بيت لحم').last);
   await tester.pumpAndSettle();
+  await pickPlace(
+    tester,
+    'حلحول',
+    pickerKey: const ValueKey('merchantPickupPlacePicker'),
+  );
   await tester.enterText(
     find.byKey(const ValueKey('merchantPickupDetailsField')),
     'متجر الأمل، شارع عين سارة',
+  );
+  await pickPlace(
+    tester,
+    'بيت جالا',
+    side: 'dropoff',
+    pickerKey: const ValueKey('parcelDropoffPlace-0'),
   );
   await tester.enterText(
     find.byKey(const ValueKey('parcelDropoff-0')),
@@ -957,6 +1044,22 @@ class _MerchantHandler {
   final lookupKeys = <String?>[];
   final paths = <String>[];
 
+  /// The place id and names the server stores for a chosen place.
+  Map<String, dynamic> _placeNames(String prefix, Object? placeId) {
+    if (placeId == null) return const {};
+    final routePlaces = routePlacesJson('route-heb-bth');
+    final all = [
+      ...(routePlaces['pickup_places'] as List),
+      ...(routePlaces['dropoff_places'] as List),
+    ].cast<Map<String, dynamic>>();
+    final place = all.firstWhere((value) => value['id'] == placeId);
+    return {
+      '${prefix}_place_id': placeId,
+      '${prefix}_place_name_ar': place['name_ar'],
+      '${prefix}_place_name_en': place['name_en'],
+    };
+  }
+
   /// The created order as the server returns it: a route order gets the
   /// route's city labels and echoes its typed details; an older corridor
   /// order echoes its places.
@@ -971,6 +1074,7 @@ class _MerchantHandler {
         'route_name_ar': 'الخليل ← بيت لحم',
         'route_name_en': 'Hebron → Bethlehem',
         'pickup_details': body['pickup_details'],
+        ..._placeNames('pickup', body['pickup_place_id']),
       },
       'parcels': [
         for (final entry in (body['parcels'] as List).indexed)
@@ -978,6 +1082,10 @@ class _MerchantHandler {
             'id': 'parcel_${entry.$1}',
             if (route) 'destination_label': 'Bethlehem',
             ...entry.$2 as Map<String, dynamic>,
+            ..._placeNames(
+              'dropoff',
+              (entry.$2 as Map<String, dynamic>)['dropoff_place_id'],
+            ),
             'status': 'pending',
           },
       ],
@@ -1001,6 +1109,12 @@ class _MerchantHandler {
         200,
         headers: {'content-type': 'application/json; charset=utf-8'},
       );
+    }
+    final placesRoute = RegExp(
+      r'/operating-routes/([^/]+)/places$',
+    ).firstMatch(path);
+    if (placesRoute != null) {
+      return _utf8(jsonEncode(routePlacesJson(placesRoute.group(1)!)), 200);
     }
     if (path.endsWith('/operating-routes')) {
       if (routesFail) {

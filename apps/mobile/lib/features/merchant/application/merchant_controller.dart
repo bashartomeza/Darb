@@ -111,8 +111,15 @@ class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
     state = [...state]..removeAt(index);
   }
 
+  /// Drops every chosen drop-off place; they belong to the previous route's
+  /// destination city, so a new route needs new choices.
+  void clearDropoffPlaces() {
+    state = [for (final parcel in state) parcel.withoutPlace()];
+  }
+
   void updateParcel(
     int index, {
+    String? dropoffPlaceId,
     String? dropoffDetails,
     String? size,
     String? priority,
@@ -122,6 +129,7 @@ class MerchantOrderDraftController extends Notifier<List<ParcelDraft>> {
     if (index < 0 || index >= state.length) return;
     final updated = [...state];
     updated[index] = updated[index].copyWith(
+      dropoffPlaceId: dropoffPlaceId,
       dropoffDetails: dropoffDetails,
       size: size,
       priority: priority,

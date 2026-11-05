@@ -15,6 +15,15 @@ import {
   setOperatingRouteActive
 } from "../services/operatingRoutes.js";
 import { routeFareService } from "../services/routeFares.js";
+import {
+  createCityPlace,
+  createPlaceSchema,
+  listAdminPlaces,
+  listPlaceCities,
+  listPlacesForRoute,
+  updateCityPlace,
+  updatePlaceSchema
+} from "../services/cityPlaces.js";
 
 const idSchema = z.string().trim().min(1).max(191);
 const noControlCharacters = (value: string) => !/[\u0000-\u001f\u007f]/.test(value);
@@ -26,6 +35,10 @@ const createRouteSchema = z.strictObject({
   both_directions: z.boolean().default(false)
 });
 const toggleSchema = z.strictObject({ active: z.boolean() });
+const listPlacesQuery = z.object({
+  city_key: z.string().trim().min(1).max(80).optional(),
+  search: z.string().trim().max(100).optional()
+});
 const createCitySchema = z.strictObject({
   name_ar: cityName,
   name_en: cityName,
@@ -58,13 +71,29 @@ export function createOperatingRoutesRouter(db: PrismaClient = prisma) {
     }
   });
 
+  /**
+   * The villages and towns to pick from for one route: pickup places of its
+   * origin city and drop-off places of its destination city (so the reverse
+   * route lists them the other way round). Public like the route list, and
+   * cache-friendly: the body only changes when an admin edits places.
+   */
+  router.get("/operating-routes/:id/places", async (req, res, next) => {
+    try {
+      const lang = req.query.lang === "en" ? "en" : "ar";
+      res.set("Cache-Control", "public, max-age=300");
+      res.json(await listPlacesForRoute(db, pathId(req.params.id), lang));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   return router;
 }
 
 /** Admin management of operating routes and cities. Not gated by ROUTE_MANAGEMENT_ENABLED. */
 export function createAdminOperatingRoutesRouter(db: PrismaClient = prisma) {
   const router = Router();
-  router.use(["/admin/operating-routes", "/admin/cities"], requireAuth, requireRole("admin"));
+  router.use(["/admin/operating-routes", "/admin/cities", "/admin/city-places"], requireAuth, requireRole("admin"));
 
   router.get("/admin/operating-routes", async (req: AuthenticatedRequest, res, next) => {
     try {
@@ -110,6 +139,39 @@ export function createAdminOperatingRoutesRouter(db: PrismaClient = prisma) {
   router.get("/admin/cities", async (_req, res, next) => {
     try {
       res.json({ cities: await listCities(db) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /** Places of every city (or one, or a search), with each city's place counts. Disabled places are included. */
+  router.get("/admin/city-places", async (req, res, next) => {
+    try {
+      const query = listPlacesQuery.parse(req.query);
+      const [cities, places] = await Promise.all([
+        listPlaceCities(db),
+        listAdminPlaces(db, { cityKey: query.city_key, search: query.search })
+      ]);
+      res.json({ cities, places });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/admin/city-places", async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const input = createPlaceSchema.parse(req.body);
+      res.status(201).json({ place: await createCityPlace(db, input, { id: req.user!.id, requestId: req.requestId }) });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /** Rename, move, reorder, disable or re-enable a place. Places are never deleted. */
+  router.patch("/admin/city-places/:id", async (req: AuthenticatedRequest, res, next) => {
+    try {
+      const input = updatePlaceSchema.parse(req.body);
+      res.json({ place: await updateCityPlace(db, pathId(req.params.id), input, { id: req.user!.id, requestId: req.requestId }) });
     } catch (error) {
       next(error);
     }

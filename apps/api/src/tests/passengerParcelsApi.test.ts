@@ -188,7 +188,7 @@ describe("passenger parcel API", () => {
     });
 
     it.each([
-      ["short details", { pickup_details: "ab" }],
+      ["too long details", { pickup_details: "x".repeat(301) }],
       ["a large parcel", { size: "L" }],
       ["no acknowledgement", { forbidden_items_acknowledged: false }],
       ["a bad phone", { receiver_phone: "12345" }],

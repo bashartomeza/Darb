@@ -22,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/auth_test_support.dart';
 import 'support/operating_routes_fixture.dart';
+import 'support/route_places_fixture.dart';
 
 void main() {
   testWidgets(
@@ -572,6 +573,7 @@ Future<void> _pump(
         operatingRoutesProvider.overrideWith(
           (ref) async => testOperatingRoutes(),
         ),
+        routePlacesTestOverride(),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -607,7 +609,8 @@ PassengerAssistantTripDraft _routeDraft({
   dropoffDetails: '$destination bus stop',
 );
 
-/// Chooses Hebron -> Bethlehem and types both places.
+/// Chooses Hebron -> Bethlehem, picks Halhul and Beit Jala and types the
+/// optional details of both.
 Future<void> _fillForm(
   WidgetTester tester, {
   required String pickup,
@@ -617,6 +620,8 @@ Future<void> _fillForm(
   await tester.pumpAndSettle();
   await tester.tap(find.text('Hebron → Bethlehem').last);
   await tester.pumpAndSettle();
+  await pickPlace(tester, 'Halhul');
+  await pickPlace(tester, 'Beit Jala', side: 'dropoff');
   await tester.enterText(
     find.byKey(const ValueKey('pickupDetailsField')),
     pickup,

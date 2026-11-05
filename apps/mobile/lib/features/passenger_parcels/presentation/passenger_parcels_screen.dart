@@ -242,16 +242,16 @@ class _ParcelCardState extends ConsumerState<ParcelCard> {
               key: ValueKey('parcelRoute-${parcel.id}'),
               style: theme.textTheme.titleSmall,
             ),
-            if (parcel.pickupDetails != null)
+            if (parcel.pickupSummary(arabic: arabic) case final pickup?)
               DetailRow(
                 label: l10n.passengerPickupPoint,
-                value: parcel.pickupDetails!,
+                value: pickup,
                 icon: Icons.trip_origin_rounded,
               ),
-            if (parcel.dropoffDetails != null)
+            if (parcel.dropoffSummary(arabic: arabic) case final dropoff?)
               DetailRow(
                 label: l10n.passengerDropoffPoint,
-                value: parcel.dropoffDetails!,
+                value: dropoff,
                 icon: Icons.location_on_outlined,
               ),
           ] else

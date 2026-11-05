@@ -1712,5 +1712,21 @@
   "merchantOrderMapTitle": "Order route",
   "driverPhoneLabel": "Driver's phone",
   "callDriver": "Call driver",
-  "callDriverUnavailable": "This device can't place the call. Dial the number shown."
+  "callDriverUnavailable": "This device can't place the call. Dial the number shown.",
+  "routePlacePickupLabel": "Pickup village or town",
+  "routePlaceDropoffLabel": "Drop-off village or town",
+  "routePlacePickupHint": "Choose where you are picked up",
+  "routePlaceDropoffHint": "Choose where you are dropped off",
+  "routePlaceChooseRouteFirst": "Choose a route first",
+  "routePlaceRequired": "Choose a place to continue.",
+  "routePlaceSearchHint": "Search villages and towns",
+  "routePlaceNoResults": "Nothing matches your search.",
+  "routePlacesLoading": "Loading places…",
+  "routePlacesLoadFailed": "Places could not be loaded.",
+  "routePlacesEmpty": "No places are listed for this city yet.",
+  "routePlaceMoreDetailsLabel": "More details (optional)",
+  "routePlacePickupDetailsHint": "e.g. In front of the main gate",
+  "routePlaceDropoffDetailsHint": "e.g. Next to the pharmacy",
+  "routePlaceDetailsHelper": "Optional: help the driver find the exact spot.",
+  "routePlaceSavedChoice": "Place chosen from the list"
 }

@@ -14,6 +14,7 @@ import {
   routeSummarySelect
 } from "./operatingRoutes.js";
 import { routeFareService } from "./routeFares.js";
+import { placeColumns, resolveOrderPlace } from "./cityPlaces.js";
 
 const OPERATION = "legacy_passenger_request_create_v1";
 
@@ -31,11 +32,17 @@ export type LegacyPassengerCoordinateInput = {
   selected_driver_route_id?: string;
 };
 
-/** The route-based body: a predefined route plus the exact pickup and drop-off as text. */
+/**
+ * The route-based body: a predefined route plus the pickup and drop-off places
+ * (ids from the city places list) and optional extra text. A body with only
+ * text is an older app build: accepted unless ROUTE_PLACES_REQUIRED is on.
+ */
 export type RoutePassengerInput = {
   service_route_id: string;
-  pickup_details: string;
-  dropoff_details: string;
+  pickup_place_id?: string | null;
+  dropoff_place_id?: string | null;
+  pickup_details?: string | null;
+  dropoff_details?: string | null;
   preferred_time: Date;
   passenger_count: number;
   selected_driver_route_id?: string;
@@ -78,8 +85,10 @@ export function createLegacyPassengerCreationService(db: PrismaClient = prisma) 
         const payload = isRoutePassengerInput(input)
           ? {
               service_route_id: input.service_route_id,
-              pickup_details: input.pickup_details,
-              dropoff_details: input.dropoff_details,
+              ...(input.pickup_place_id ? { pickup_place_id: input.pickup_place_id } : {}),
+              ...(input.dropoff_place_id ? { dropoff_place_id: input.dropoff_place_id } : {}),
+              pickup_details: input.pickup_details ?? undefined,
+              dropoff_details: input.dropoff_details ?? undefined,
               preferred_time: input.preferred_time.toISOString(),
               passenger_count: input.passenger_count,
               ...(input.selected_driver_route_id ? { selected_driver_route_id: input.selected_driver_route_id } : {}),
@@ -134,18 +143,27 @@ export function createLegacyPassengerCreationService(db: PrismaClient = prisma) 
           });
           if (!selected) throw new HttpError(409, "selected_driver_route_unavailable");
         }
+        // The chosen places must belong to the route's own cities: pickup in
+        // the origin city, drop-off in the destination city.
+        const pickupPlace = isRoutePassengerInput(input)
+          ? await resolveOrderPlace(tx, "pickup", route.origin.stopKey, { placeId: input.pickup_place_id, details: input.pickup_details })
+          : null;
+        const dropoffPlace = isRoutePassengerInput(input)
+          ? await resolveOrderPlace(tx, "dropoff", route.destination.stopKey, { placeId: input.dropoff_place_id, details: input.dropoff_details })
+          : null;
         const place = isRoutePassengerInput(input)
           ? {
               // Stored labels stay English city names like every other label;
-              // the exact places are the passenger's own text.
+              // coordinates are the chosen place's (or the city centre for
+              // free-text orders from older builds).
               pickup_label: route.origin.nameEn,
-              pickup_lat: route.origin.latitude,
-              pickup_lng: route.origin.longitude,
+              pickup_lat: pickupPlace!.place?.latitude ?? route.origin.latitude,
+              pickup_lng: pickupPlace!.place?.longitude ?? route.origin.longitude,
               destination_label: route.destination.nameEn,
-              destination_lat: route.destination.latitude,
-              destination_lng: route.destination.longitude,
-              pickup_details: input.pickup_details,
-              dropoff_details: input.dropoff_details,
+              destination_lat: dropoffPlace!.place?.latitude ?? route.destination.latitude,
+              destination_lng: dropoffPlace!.place?.longitude ?? route.destination.longitude,
+              ...placeColumns("pickup", pickupPlace!),
+              ...placeColumns("dropoff", dropoffPlace!),
             }
           : {
               pickup_label: input.pickup_label,
