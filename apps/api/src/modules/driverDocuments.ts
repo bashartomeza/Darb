@@ -254,9 +254,27 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
   // ---- Renewal after documents expired: the driver's normal (active) session ----
   const driverSession = [requireAuth, requireRole("driver")] as const;
 
-  async function expiredVerificationFor(userId: string) {
+  /**
+   * True when the review team rejected the driver's renewal (not a first
+   * application): the revision before the rejection was a renewal submission.
+   * The driver may then send corrected documents again.
+   */
+  async function isRejectedRenewal(verification: { id: string; status: string; revision: number }) {
+    if (verification.status !== DriverVerificationStatus.rejected) return false;
+    const submitted = await prisma.driverVerificationDecision.findFirst({
+      where: { verification_id: verification.id, revision: verification.revision - 1, decision: "renewal_submitted" },
+      select: { id: true }
+    });
+    return Boolean(submitted);
+  }
+
+  /** Documents may be uploaded and sent while expired, or after a rejected renewal. */
+  async function renewableVerificationFor(userId: string) {
     const verification = await prisma.driverVerification.findUnique({ where: { user_id: userId } });
-    if (!verification || verification.status !== DriverVerificationStatus.documents_expired) {
+    if (
+      !verification ||
+      (verification.status !== DriverVerificationStatus.documents_expired && !(await isRejectedRenewal(verification)))
+    ) {
       throw new HttpError(409, "driver_verification_state_conflict");
     }
     return verification;
@@ -266,7 +284,8 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
     try {
       const verification = await prisma.driverVerification.findUnique({ where: { user_id: req.user!.id } });
       if (!verification) throw new HttpError(404, "driver_verification_not_found");
-      const editable = verification.status === DriverVerificationStatus.documents_expired;
+      const renewalRejected = await isRejectedRenewal(verification);
+      const editable = verification.status === DriverVerificationStatus.documents_expired || renewalRejected;
       const documents = await prisma.driverVerificationDocument.findMany({
         where: { verification_id: verification.id, revision: verification.revision },
         orderBy: [{ created_at: "asc" }, { id: "asc" }]
@@ -277,6 +296,9 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
         submitted: verification.status === DriverVerificationStatus.pending && Boolean(verification.renewal_submitted_at),
         documents_expired_at: verification.documents_expired_at,
         renewal_submitted_at: verification.renewal_submitted_at,
+        // After a rejected renewal: why, so the driver knows what to fix before sending again.
+        renewal_rejected: renewalRejected,
+        rejection_reason: renewalRejected ? verification.rejection_reason : null,
         documents: documents.map(serializeDocument),
         limits: { max_documents: MAX_DOCUMENTS_PER_REVISION, max_bytes: MAX_DOCUMENT_BYTES, kinds: DOCUMENT_KINDS },
         request_id: req.requestId
@@ -294,7 +316,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
     async (req: AuthenticatedRequest, res, next) => {
       try {
         const { kind } = uploadQuerySchema.parse(req.query);
-        const verification = await expiredVerificationFor(req.user!.id);
+        const verification = await renewableVerificationFor(req.user!.id);
         const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
         if (bytes.length === 0) throw new HttpError(400, "document_empty");
         const mime = sniffDocumentMime(bytes);
@@ -303,7 +325,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
         const created = await prisma.$transaction(
           async (tx) => {
             const current = await tx.driverVerification.findUnique({ where: { id: verification.id } });
-            if (!current || current.status !== DriverVerificationStatus.documents_expired || current.revision !== verification.revision) {
+            if (!current || current.status !== verification.status || current.revision !== verification.revision) {
               throw new HttpError(409, "driver_verification_state_conflict");
             }
             const count = await tx.driverVerificationDocument.count({
@@ -342,7 +364,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
 
   router.delete("/driver/document-renewal/documents/:id", available, ...driverSession, async (req: AuthenticatedRequest, res, next) => {
     try {
-      const verification = await expiredVerificationFor(req.user!.id);
+      const verification = await renewableVerificationFor(req.user!.id);
       const document = await prisma.driverVerificationDocument.findFirst({
         where: { id: routeParam(req.params.id), verification_id: verification.id, revision: verification.revision }
       });
@@ -367,7 +389,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
   /** Sends the uploaded documents to the Admin re-review queue. Access stays restricted until approval. */
   router.post("/driver/document-renewal/submit", available, ...driverSession, async (req: AuthenticatedRequest, res, next) => {
     try {
-      const verification = await expiredVerificationFor(req.user!.id);
+      const verification = await renewableVerificationFor(req.user!.id);
       await prisma.$transaction(
         async (tx) => {
           const count = await tx.driverVerificationDocument.count({
@@ -376,8 +398,8 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           if (count === 0) throw new HttpError(409, "renewal_documents_required");
           const now = new Date();
           const moved = await tx.driverVerification.updateMany({
-            where: { id: verification.id, status: DriverVerificationStatus.documents_expired, revision: verification.revision },
-            data: { status: DriverVerificationStatus.pending, submitted_at: now, renewal_submitted_at: now }
+            where: { id: verification.id, status: verification.status, revision: verification.revision },
+            data: { status: DriverVerificationStatus.pending, submitted_at: now, renewal_submitted_at: now, rejection_reason: null }
           });
           if (moved.count !== 1) throw new HttpError(409, "driver_verification_state_conflict");
           await tx.driverVerificationDecision.create({

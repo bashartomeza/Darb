@@ -567,9 +567,13 @@ class DriverTripController extends AsyncNotifier<DriverTripState> {
   /// Completes the delivery with the receivers' codes, or records why the
   /// receiver was unavailable. The trip becomes delivered once every parcel
   /// order on it is confirmed.
+  /// Confirms the stops the driver is at: with the receivers' codes, or with
+  /// why the receiver of [unavailableOrderIds] (every open stop when empty)
+  /// could not be reached. Other stops stay open until confirmed.
   Future<void> confirmDelivery({
     Map<String, String>? codesByOrderId,
     String? unavailableReason,
+    List<String> unavailableOrderIds = const [],
   }) async {
     final current = state.value;
     if (current == null ||
@@ -581,7 +585,13 @@ class DriverTripController extends AsyncNotifier<DriverTripState> {
     final tripId = _tripId;
     await _runAction(
       () => unavailableReason != null
-          ? repository.confirmReceiverUnavailable(tripId, unavailableReason)
+          ? repository.confirmReceiverUnavailable(
+              tripId,
+              unavailableReason,
+              orderIds: unavailableOrderIds.isEmpty
+                  ? null
+                  : unavailableOrderIds,
+            )
           : repository.confirmWithCodes(tripId, codesByOrderId ?? const {}),
     );
     if (ref.mounted) ref.invalidate(driverDashboardProvider);

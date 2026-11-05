@@ -290,6 +290,71 @@ void main() {
     expect(parcel, contains('+970599123456'));
   });
 
+  testWidgets('a batch offer and its trip list every order and stop', (
+    tester,
+  ) async {
+    final handler = _DriverHandler()..batched = true;
+    await _pumpApp(tester, handler: handler.call);
+    await tester.tap(find.byTooltip('English'));
+    await tester.pumpAndSettle();
+    final router = GoRouter.of(
+      tester.element(find.byKey(const ValueKey('driverHome'))),
+    );
+
+    router.go('/driver/match/match_1');
+    await tester.pumpAndSettle();
+    expect(find.text('Order 1 of 2'), findsOneWidget);
+    expect(find.text('Order 2 of 2'), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('driverBatchOrderPickup-1')))
+          .data,
+      'Al Amal shop, back door',
+    );
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('driverBatchParcelStop-1-1')))
+          .data,
+      contains('Beit Jala junction'),
+    );
+
+    router.go('/driver/trip/trip_1');
+    await tester.pumpAndSettle();
+    final sheet = find.byType(DraggableScrollableSheet);
+    await tester.drag(sheet, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    // The whole batch's parcels, not only the first order's one.
+    expect(find.text('3'), findsWidgets);
+    expect(find.byKey(const ValueKey('driverMerchantPickup')), findsNothing);
+    final secondStop = tester
+        .widget<Text>(find.byKey(const ValueKey('driverBatchParcelStop-1-0')))
+        .data!;
+    expect(secondStop, contains('University gate'));
+    expect(secondStop, contains('Sami'));
+    expect(secondStop, contains('+970599000222'));
+  });
+
+  testWidgets('the home inbox retry reads the dashboard again', (tester) async {
+    // Every dashboard read fails until the test lets them through.
+    final handler = _DriverHandler()..matchesFailures = 1000;
+    await _pumpApp(tester, handler: handler.call);
+
+    final error = find.byKey(const ValueKey('driverInboxError'));
+    expect(error, findsOneWidget);
+    final reads = handler.paths.where((path) => path.endsWith('/matches'));
+    final before = reads.length;
+
+    // The server is back; the retry button must actually read again.
+    handler.matchesFailures = 0;
+    await tester.tap(
+      find.descendant(of: error, matching: find.byIcon(Icons.refresh)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(reads.length, greaterThan(before));
+    expect(find.byKey(const ValueKey('driverInboxError')), findsNothing);
+  });
+
   testWidgets('match inbox and detail display safe summary and scoring', (
     tester,
   ) async {
@@ -466,6 +531,12 @@ class _DriverHandler {
 
   /// Serve route-based match and trip payloads with typed details.
   bool routeBased = false;
+
+  /// Serve a passenger-parcel offer and a batched trip of several orders.
+  bool batched = false;
+
+  /// How many match list reads fail before they succeed.
+  int matchesFailures = 0;
   final paths = <String>[];
   final createBodies = <Map<String, dynamic>>[];
   final onlineBodies = <Map<String, dynamic>>[];
@@ -512,6 +583,16 @@ class _DriverHandler {
       return createBodies.isEmpty && onlineBodies.isEmpty
           ? http.Response('{"routes":[$_routeJson]}', 200)
           : _utf8('{"routes":[$_namedRouteJson]}', 200);
+    }
+    if (path.endsWith('/matches') && matchesFailures > 0) {
+      matchesFailures -= 1;
+      return http.Response('{"error":"internal_error"}', 500);
+    }
+    if (batched && path.endsWith('/matches/match_1')) {
+      return _utf8('{"match":$_batchMatchJson}', 200);
+    }
+    if (batched && path.endsWith('/trips/trip_1')) {
+      return _utf8('{"trip":$_batchTripJson}', 200);
     }
     if (routeBased && path.endsWith('/matches/match_1')) {
       return _utf8('{"match":$_routeMatchJson}', 200);
@@ -620,3 +701,12 @@ const _routeTripJson =
 
 String _locationJson(int sequence) =>
     '{"lat":"31.532600","lng":"35.099800","source":"simulated","sequence":$sequence,"recorded_at":"2026-07-13T08:21:00.000Z"}';
+
+const _batchOrdersJson =
+    '[{"id":"order_1","pickup_label":"Hebron",$_routeFields,"pickup_details":"Al Amal shop, Ein Sara Street","status":"in_transit","parcels":[{"id":"p1","destination_label":"Bethlehem","dropoff_details":"Manger Street, blue gate","receiver_name":"Rana","receiver_phone":"+970599000111","size":"S","priority":"normal","status":"in_transit"}]},{"id":"order_2","pickup_label":"Hebron",$_routeFields,"pickup_details":"Al Amal shop, back door","status":"in_transit","parcels":[{"id":"p2","destination_label":"Bethlehem","dropoff_details":"University gate","receiver_name":"Sami","receiver_phone":"+970599000222","size":"M","priority":"normal","status":"in_transit"},{"id":"p3","destination_label":"Bethlehem","dropoff_details":"Beit Jala junction","receiver_name":"Omar","size":"S","priority":"normal","status":"in_transit"}]}]';
+
+const _batchMatchJson =
+    '{"id":"match_1","status":"proposed","score":"0.9317","method":"darb_route_score","explanation":"Same route","scoring_breakdown":{"corridorOverlap":1,"pickupDistanceScore":0.82,"timingFit":0.9,"trustScore":0.86,"capacityFit":1,"finalScore":0.9317},"created_at":"2026-07-13T08:10:00.000Z","driver_route":{"id":"route_1","origin_label":"Hebron","destination_label":"Bethlehem","corridor_key":"hebron-to-bethlehem",$_routeFields,"seats_available":2,"parcel_capacity_available":5,"status":"active"},"passenger_request":null,"merchant_order":{"id":"order_1","pickup_label":"Hebron",$_routeFields,"pickup_details":"Al Amal shop, Ein Sara Street","status":"matched","parcel_count":1,"is_passenger_parcel":false,"parcels":[{"id":"p1","destination_label":"Bethlehem","dropoff_details":"Manger Street, blue gate","size":"S","priority":"normal","status":"batched"}]},"parcel_batch":{"id":"batch_1","status":"proposed","estimated_distance_saved":"12.50","explanation":"Two orders share one route.","parcel_count":3,"orders":$_batchOrdersJson}}';
+
+const _batchTripJson =
+    '{"id":"trip_1","status":"in_transit","created_at":"2026-07-13T08:20:00.000Z","started_at":"2026-07-13T08:20:00.000Z","completed_at":null,"driver_route":$_namedRouteJson,"passenger_request":null,"merchant_order":{"id":"order_1","pickup_label":"Hebron",$_routeFields,"pickup_details":"Al Amal shop, Ein Sara Street","status":"in_transit","parcels":[{"id":"p1","destination_label":"Bethlehem","dropoff_details":"Manger Street, blue gate","receiver_name":"Rana","receiver_phone":"+970599000111","size":"S","priority":"normal","status":"in_transit"}]},"parcel_batch":{"id":"batch_1","status":"in_transit","estimated_distance_saved":"12.50","explanation":"Two orders share one route.","order_count":2,"parcel_count":3,"orders":$_batchOrdersJson}}';

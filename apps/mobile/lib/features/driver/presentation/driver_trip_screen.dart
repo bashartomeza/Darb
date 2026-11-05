@@ -214,11 +214,13 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
               _buildFloatingButton(
                 icon: Icons.refresh_rounded,
                 onPressed: () {
-                  ref
-                      .read(
-                        driverTripControllerProvider(widget.tripId).notifier,
-                      )
-                      .refresh();
+                  quietRefresh(
+                    ref
+                        .read(
+                          driverTripControllerProvider(widget.tripId).notifier,
+                        )
+                        .refresh,
+                  );
 
                   ref.read(checkpointsProvider.notifier).refresh();
                 },
@@ -525,12 +527,12 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
 
                     // Parcel card is intentionally hidden when the
                     // trip has no parcels.
-                    if ((trip.merchantOrder?.parcelCount ?? 0) > 0) ...[
+                    if (trip.parcelCount > 0) ...[
                       const SizedBox(width: 8),
                       Expanded(
                         child: _quickInfoItem(
                           icon: Icons.inventory_2_rounded,
-                          value: '${trip.merchantOrder?.parcelCount ?? 0}',
+                          value: '${trip.parcelCount}',
                           label: l10n.parcelCount,
                         ),
                       ),
@@ -569,6 +571,7 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                   DriverStopDetailsCard(
                     passenger: trip.passengerRequest,
                     merchantOrder: trip.merchantOrder,
+                    batchOrders: trip.parcelBatch?.orders ?? const [],
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -1291,9 +1294,11 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
       height: 40,
       child: OutlinedButton.icon(
         onPressed: () {
-          ref
-              .read(driverTripControllerProvider(widget.tripId).notifier)
-              .refresh();
+          quietRefresh(
+            ref
+                .read(driverTripControllerProvider(widget.tripId).notifier)
+                .refresh,
+          );
 
           ref.read(checkpointsProvider.notifier).refresh();
         },
@@ -1325,6 +1330,7 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
       final result = await showReceiverConfirmationDialog(
         context,
         pending: trip.deliveryConfirmation!.pending,
+        stopLabels: driverHandoverStopLabels(context, trip),
       );
       if (result == null || !mounted) return;
       await _action(
@@ -1337,6 +1343,9 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
               unavailableReason: result is ReceiverUnavailable
                   ? result.reason
                   : null,
+              unavailableOrderIds: result is ReceiverUnavailable
+                  ? result.orderIds
+                  : const [],
             ),
       );
       return;
@@ -1430,9 +1439,12 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
               driverErrorLabel(AppLocalizations.of(context), error),
         );
 
-        await ref
-            .read(driverTripControllerProvider(widget.tripId).notifier)
-            .refresh();
+        // The action's error is shown; a failing re-read must not escape.
+        await quietRefresh(
+          ref
+              .read(driverTripControllerProvider(widget.tripId).notifier)
+              .refresh,
+        );
       }
     }
   }
@@ -1497,11 +1509,15 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                 height: 46,
                 child: ElevatedButton(
                   onPressed: () {
-                    ref
-                        .read(
-                          driverTripControllerProvider(widget.tripId).notifier,
-                        )
-                        .refresh();
+                    quietRefresh(
+                      ref
+                          .read(
+                            driverTripControllerProvider(
+                              widget.tripId,
+                            ).notifier,
+                          )
+                          .refresh,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: textDark,

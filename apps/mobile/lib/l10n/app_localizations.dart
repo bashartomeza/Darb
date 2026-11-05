@@ -2852,6 +2852,48 @@ abstract class AppLocalizations {
   /// **'المسار'**
   String get orderRouteLabel;
 
+  /// No description provided for @merchantCancelOrderTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء هذا الطلب؟'**
+  String get merchantCancelOrderTitle;
+
+  /// No description provided for @merchantCancelOrderBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيُلغى الطلب {reference} مع {count, plural, =1{طرد واحد} =2{طردين} few{{count} طرود} other{{count} طرداً}}. لا يمكن التراجع عن ذلك.'**
+  String merchantCancelOrderBody(String reference, int count);
+
+  /// No description provided for @merchantCancelBatchNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الطلب مجمّع مع {count, plural, =1{طلب آخر} =2{طلبين آخرين} few{{count} طلبات أخرى} other{{count} طلباً آخر}} لسائق واحد. يُلغى هذا الطلب فقط، وتبقى الطلبات الأخرى مجمّعة بانتظار سائق.'**
+  String merchantCancelBatchNote(int count);
+
+  /// No description provided for @merchantCancelOfferNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'يُسحب عرض السائق للمجموعة، وتحتاج الطلبات الأخرى إلى مطابقة سائق جديدة.'**
+  String get merchantCancelOfferNote;
+
+  /// No description provided for @merchantCancelConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الطلب'**
+  String get merchantCancelConfirm;
+
+  /// No description provided for @merchantCancelKeep.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإبقاء على الطلب'**
+  String get merchantCancelKeep;
+
+  /// No description provided for @merchantTripOrdersTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلباتك في هذا التوصيل'**
+  String get merchantTripOrdersTitle;
+
   /// No description provided for @orderRouteChoose.
   ///
   /// In ar, this message translates to:
@@ -3013,6 +3055,42 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'أماكن الاستلام والتسليم'**
   String get driverWhereToFindTitle;
+
+  /// No description provided for @driverBatchOrderTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلب {number} من {total}'**
+  String driverBatchOrderTitle(int number, int total);
+
+  /// No description provided for @passengerParcelAssignment.
+  ///
+  /// In ar, this message translates to:
+  /// **'طرد راكب'**
+  String get passengerParcelAssignment;
+
+  /// No description provided for @handoverStopIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل الرمز الذي يعطيك إياه المستلم في المحطة التي وصلت إليها. تبقى المحطات التي لم تصلها بعد مفتوحة.'**
+  String get handoverStopIntro;
+
+  /// No description provided for @handoverStopLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المحطة {number} · {place}'**
+  String handoverStopLabel(int number, String place);
+
+  /// No description provided for @handoverStopCodeRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رمز محطة واحدة على الأقل.'**
+  String get handoverStopCodeRequired;
+
+  /// No description provided for @handoverUnavailableStop.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستلم أي محطة غير متوفر؟'**
+  String get handoverUnavailableStop;
 
   /// No description provided for @noPublishedRoutes.
   ///
@@ -5876,6 +5954,42 @@ abstract class AppLocalizations {
   /// **'تمت معالجة بلاغك.'**
   String get notifIncidentResolvedBody;
 
+  /// No description provided for @notifOrderExpiredTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية الطلب'**
+  String get notifOrderExpiredTitle;
+
+  /// No description provided for @notifOrderExpiredMaxAgeBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يأخذ أي سائق هذا الطلب خلال {hours} ساعة، فانتهت صلاحيته ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله.'**
+  String notifOrderExpiredMaxAgeBody(int hours);
+
+  /// No description provided for @notifOrderExpiredWindowBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يُعثر على سائق قبل انتهاء وقت الاستلام الذي اخترته، فانتهت صلاحية الطلب ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله.'**
+  String get notifOrderExpiredWindowBody;
+
+  /// No description provided for @notifOfferWithdrawnTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم سحب العرض'**
+  String get notifOfferWithdrawnTitle;
+
+  /// No description provided for @notifOfferWithdrawnCancelledBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغى المرسل طلباً في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.'**
+  String get notifOfferWithdrawnCancelledBody;
+
+  /// No description provided for @notifOfferWithdrawnExpiredBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية طلب في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.'**
+  String get notifOfferWithdrawnExpiredBody;
+
   /// No description provided for @verificationDocuments.
   ///
   /// In ar, this message translates to:
@@ -6679,6 +6793,24 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مستنداتك محدّثة. لا يوجد ما يتطلب التجديد.'**
   String get renewalNothingToRenew;
+
+  /// No description provided for @renewalRejectedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تتم الموافقة على التجديد'**
+  String get renewalRejectedTitle;
+
+  /// No description provided for @renewalRejectedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يوافق فريق المراجعة على مستنداتك المجددة. صحّح ما طلبوه وأرسلها مرة أخرى.'**
+  String get renewalRejectedBody;
+
+  /// No description provided for @renewalRejectedReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'السبب: {reason}'**
+  String renewalRejectedReason(String reason);
 
   /// No description provided for @passengerNavHome.
   ///

@@ -84,8 +84,9 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
             child: SafeArea(
               bottom: false,
               child: RefreshIndicator(
-                onRefresh: () =>
-                    ref.read(driverDashboardProvider.notifier).refresh(),
+                onRefresh: () => quietRefresh(
+                  ref.read(driverDashboardProvider.notifier).refresh,
+                ),
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
                     AppTokens.marginMobile,
@@ -171,7 +172,12 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
                     ),
 
                     const SizedBox(height: AppTokens.spaceLarge),
-                    _InboxSection(dashboard: dashboard),
+                    _InboxSection(
+                      dashboard: dashboard,
+                      onRetry: () => quietRefresh(
+                        ref.read(driverDashboardProvider.notifier).refresh,
+                      ),
+                    ),
 
                     if (canonicalEntry) ...[
                       const SizedBox(height: AppTokens.spaceLarge),
@@ -287,7 +293,10 @@ class _DriverHomeScreenState extends ConsumerState<DriverHomeScreen> {
               error is CanonicalOperationStorageException;
         });
       }
-      await ref.read(driverDashboardProvider.notifier).refresh();
+      // The failed action is already shown; a failing re-read must not escape.
+      if (mounted) {
+        await quietRefresh(ref.read(driverDashboardProvider.notifier).refresh);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -359,9 +368,10 @@ class _StatsRow extends StatelessWidget {
 
 /// Proposed matches waiting on the driver.
 class _InboxSection extends StatelessWidget {
-  const _InboxSection({required this.dashboard});
+  const _InboxSection({required this.dashboard, required this.onRetry});
 
   final AsyncValue<DriverDashboardState> dashboard;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -371,9 +381,10 @@ class _InboxSection extends StatelessWidget {
       skipError: dashboard.hasValue,
       loading: () => const LoadingSkeleton.card(),
       error: (error, _) => ErrorStateView(
+        key: const ValueKey('driverInboxError'),
         title: driverErrorLabel(l10n, error),
         retryLabel: l10n.retry,
-        onRetry: () {},
+        onRetry: onRetry,
       ),
       data: (state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -66,6 +66,7 @@ import { createRouteProvider } from "./maps/liveProviders.js";
 import { createRoutePreviewService, type RoutePreviewService } from "./maps/previewService.js";
 import { createRoutePreviewRouter } from "./modules/routePreview.js";
 import { createPassengerAssistantRouter } from "./modules/passengerAssistant.js";
+import { createAdminSiteRouter } from "./modules/adminSite.js";
 import { createAiServicesClientFromEnv, type AiServicesClient } from "./services/aiServicesClient.js";
 import type { PassengerAssistantService } from "./services/passengerAssistant.js";
 import type { PassengerAssistantHistoryStore } from "./services/passengerAssistantHistory.js";
@@ -277,6 +278,7 @@ export function createApp(
   app.use("/api/v1", adminAppRatingsRouter);
   app.use("/api/v1", createAdminCheckpointPositionsRouter(partnerCheckpointMap));
   app.use("/api/v1", adminRouter);
+  if (appConfig.adminStaticDir) app.use(createAdminSiteRouter(appConfig.adminStaticDir));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

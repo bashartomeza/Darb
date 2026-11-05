@@ -83,8 +83,13 @@ try{
   check(s.batches.length===1&&s.members.length===2&&s.parcels.filter(p=>p.batch_id===made.body.batch.id).length===5,'two compatible real orders and five parcels only');
   check(s.orders.find(o=>o.id===far).status==='submitted'&&s.orders.find(o=>o.id===other).status==='submitted','incompatible and cross-owner orders remain eligible');
   check((await batch(a,ids[1])).status===409,'duplicate through secondary order rejected');check(await prisma.auditEvent.count({where:{action:'parcel_batch_created',entity_id:made.body.batch.id}})===1,'single batch audit');
-  assert.equal((await cancel(a,ids[1])).status,200);const ended=await inspect('cancel-whole-batch',ids);check(ended.orders.every(o=>o.status==='cancelled')&&ended.parcels.every(p=>p.status==='cancelled')&&ended.members.every(m=>!m.active&&m.active_membership_key===null),'secondary cancellation cancels every member, preserves whole-batch rule');
-  check(await prisma.auditEvent.count({where:{user_id:a,action:'merchant_order_cancelled',entity_type:'MerchantOrder'}})===1,'whole-batch cancellation has exactly one cancellation audit');
+  // Cancelling one order cancels only that order: it leaves the batch and the other order stays batched in it.
+  assert.equal((await cancel(a,ids[1])).status,200);const ended=await inspect('cancel-one-order',ids);
+  const gone=ended.orders.find(o=>o.id===ids[1]),kept=ended.orders.find(o=>o.id===ids[0]);
+  check(gone.status==='cancelled'&&ended.parcels.filter(p=>p.order_id===ids[1]).every(p=>p.status==='cancelled'&&p.batch_id===null)&&!ended.members.some(m=>m.merchant_order_id===ids[1]),'secondary cancellation cancels only that order and removes it from the batch');
+  check(kept.status==='batched'&&ended.parcels.filter(p=>p.order_id===ids[0]).every(p=>p.status==='batched'&&p.batch_id===made.body.batch.id)&&ended.members.some(m=>m.merchant_order_id===ids[0]&&m.active)&&ended.batches[0].status==='created','the other order stays batched in the same open batch');
+  check(await prisma.auditEvent.count({where:{user_id:a,action:'merchant_order_cancelled',entity_type:'MerchantOrder'}})===1,'single-order cancellation has exactly one cancellation audit');
+  assert.equal((await cancel(a,ids[0])).status,200);const closed=await inspect('cancel-last-order',ids);check(closed.orders.every(o=>o.status==='cancelled')&&closed.batches[0].status==='cancelled'&&closed.members.every(m=>!m.active&&m.active_membership_key===null),'cancelling the last order closes the batch');
  });
  await scenario('concurrent batching from different starting orders and double clicks',async()=>{
   const a=await actor(),ids=[await order(a,2),await order(a,1)];
@@ -136,9 +141,12 @@ try{
   s=await inspect('rejected-once',ids,route);check(s.route.parcel_capacity_available===20&&s.orders.every(o=>o.status==='batched')&&s.batches[0].status==='created'&&s.matches.every(m=>!m.legacy_capacity_held),'rejection releases exactly once and restores manual-match eligibility');
   check(await prisma.auditEvent.count({where:{entity_id:offer.body.match.id,action:'match_rejected'}})===1,'concurrent rejection creates exactly one rejection audit');
   const retry=await match(a,ids[1]);assert.equal(retry.status,201);check(retry.body.match.parcel_batch_id===s.batches[0].id,'secondary-order retry matches original batch');
-  const cancelled=await Promise.all([cancel(a,ids[0]),cancel(a,ids[1])]);check(cancelled.filter(r=>r.status===200).length===1&&cancelled.every(r=>r.status===200||r.status===409),'competing whole-batch cancellations have one winner');
+  // Each order cancels only itself; cancelling both at once must still release the offer's hold exactly once.
+  // The second may see its order already reset to batched by the first and ask for a fresh read (409): retry it then.
+  const cancelled=await Promise.all([cancel(a,ids[0]),cancel(a,ids[1])]);check(cancelled.some(r=>r.status===200)&&cancelled.every(r=>r.status===200||r.status===409),'concurrent cancellations of two orders of one batch resolve categorically');
+  for(const [index,r] of cancelled.entries())if(r.status===409)check((await cancel(a,ids[index])).status===200,'a stale concurrent cancellation succeeds on a fresh retry');
   s=await inspect('offered-batch-cancelled',ids,route);check(s.route.parcel_capacity_available===20&&s.orders.every(o=>o.status==='cancelled')&&s.parcels.every(p=>p.status==='cancelled')&&s.members.every(m=>!m.active)&&s.matches.every(m=>!m.legacy_capacity_held),'one release, all members cancelled, no held offers');
-  check(await prisma.auditEvent.count({where:{user_id:a,action:'merchant_order_cancelled',entity_type:'MerchantOrder'}})===1,'competing cancellations create exactly one cancellation audit');
+  check(await prisma.auditEvent.count({where:{user_id:a,action:'merchant_order_cancelled',entity_type:'MerchantOrder'}})===2,'each cancelled order has exactly one cancellation audit');
   check((await match(a,ids[0])).status===409,'invalidated batch cannot rematch');
  });
  await scenario('driver acceptance wins against secondary-member cancellation',async()=>{
@@ -154,7 +162,7 @@ try{
  await scenario('cancellation wins before driver acceptance locks',async()=>{
   const a=await actor(),route=await supply(),ids=[await order(a,2),await order(a)];assert.equal((await batch(a,ids[0])).status,201);const offer=await match(a,ids[0]);assert.equal(offer.status,201);
   const r=await pauseRead('match','findUnique',args=>args.where.id===offer.body.match.id,()=>call(driver,'POST','/matches/'+offer.body.match.id+'/accept',{}),async()=>assert.equal((await cancel(a,ids[1])).status,200));
-  check(r.status===409,'acceptance rejects after cancellation commits');const s=await inspect('cancellation-winner',ids,route);check(s.orders.every(o=>o.status==='cancelled')&&s.route.parcel_capacity_available===20&&s.matches.every(m=>!m.legacy_capacity_held),'cancel winner holds no capacity');check(await prisma.trip.count({where:{parcel_batch_id:s.batches[0].id}})===0,'cancel winner creates no trip');
+  check(r.status===409,'acceptance rejects after cancellation commits');const s=await inspect('cancellation-winner',ids,route);check(s.orders.find(o=>o.id===ids[1]).status==='cancelled'&&s.orders.find(o=>o.id===ids[0]).status==='batched'&&s.route.parcel_capacity_available===20&&s.matches.every(m=>!m.legacy_capacity_held),'cancel winner holds no capacity; only the cancelled order leaves the batch');check(await prisma.trip.count({where:{parcel_batch_id:s.batches[0].id}})===0,'cancel winner creates no trip');
  });
  await scenario('offer expiry preserves batch and permits manual retry without duplicate release',async()=>{
   const a=await actor(),route=await supply(),ids=[await order(a,2),await order(a)];assert.equal((await batch(a,ids[0])).status,201);const offer=await match(a,ids[0]);assert.equal(offer.status,201);

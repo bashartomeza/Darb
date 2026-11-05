@@ -11,6 +11,7 @@ import '../../../core/widgets/match_widgets.dart';
 import '../../../core/widgets/state_views.dart';
 import '../application/merchant_controller.dart';
 import '../data/merchant_models.dart';
+import '../../../core/presentation/localized_labels.dart';
 import 'merchant_ui.dart';
 
 class MerchantMatchInboxScreen extends ConsumerWidget {
@@ -105,6 +106,13 @@ class _MerchantMatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    final order = match.order;
+    // The route by name and the pickup / drop-offs as the merchant typed them;
+    // orders from before routes keep their corridor places.
+    final routeName =
+        order.routeName(arabic: arabic) ??
+        match.route.routeName(arabic: arabic);
 
     return MatchResultCard(
       title: l10n.merchantOrder,
@@ -112,12 +120,22 @@ class _MerchantMatchCard extends StatelessWidget {
       statusTone: statusToneFor(match.status),
       score: match.score,
       scoreLabel: l10n.matchScore,
-      from: match.order.pickupLabel,
-      to: match.route.destinationLabel,
+      from:
+          order.pickupDetails ??
+          localizedCorridorPlace(context, order.pickupLabel),
+      to: order.dropoffs.isNotEmpty
+          ? order.dropoffs.join(' · ')
+          : localizedCorridorPlace(context, match.route.destinationLabel),
       details: [
+        if (routeName != null)
+          (
+            label: l10n.orderRouteLabel,
+            value: routeName,
+            icon: Icons.route_outlined,
+          ),
         (
           label: l10n.parcelCount,
-          value: '${match.order.parcelCount}',
+          value: '${order.parcelCount}',
           icon: Icons.widgets_outlined,
         ),
       ],

@@ -8,6 +8,7 @@ import '../../../core/widgets/language_switch.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../security/presentation/security_actions.dart';
 import '../application/merchant_controller.dart';
+import 'merchant_ui.dart';
 import 'widgets/merchant_design.dart';
 
 class MerchantProfileScreen extends ConsumerWidget {
@@ -190,8 +191,11 @@ class MerchantProfileScreen extends ConsumerWidget {
                       ),
                     ),
                     data: (state) {
+                      // Each parcel with its order, for the route name.
                       final parcels = [
-                        for (final order in state.orders) ...order.parcels,
+                        for (final order in state.orders)
+                          for (final parcel in order.parcels)
+                            (order: order, parcel: parcel),
                       ];
                       if (parcels.isEmpty) {
                         return Center(
@@ -207,11 +211,27 @@ class MerchantProfileScreen extends ConsumerWidget {
                       return ListView.separated(
                         itemCount: parcels.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        // The route by name and the drop-off as typed, not
+                        // the corridor city the record also stores.
                         itemBuilder: (_, index) => MerchantInfoTile(
                           icon: Icons.inventory_2_outlined,
-                          title:
-                              '${AppLocalizations.of(context).parcel} ${index + 1} · ${parcels[index].size}',
-                          value: parcels[index].destinationLabel,
+                          title: [
+                            '${AppLocalizations.of(context).parcel} ${index + 1} · ${parcels[index].parcel.size}',
+                            ?parcels[index].order.routeName(
+                              arabic:
+                                  Localizations.localeOf(
+                                    context,
+                                  ).languageCode ==
+                                  'ar',
+                            ),
+                          ].join(' · '),
+                          value: merchantParcelDropoffText(
+                            context,
+                            parcels[index].parcel,
+                          ),
+                          valueKey: ValueKey(
+                            'merchantProfileParcel-${parcels[index].parcel.id}',
+                          ),
                         ),
                       );
                     },

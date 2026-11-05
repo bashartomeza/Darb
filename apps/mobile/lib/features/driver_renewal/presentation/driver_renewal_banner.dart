@@ -18,18 +18,29 @@ class DriverRenewalBanner extends ConsumerWidget {
     final state = ref.watch(driverRenewalNeededProvider);
     if (state == null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
+    // After a rejected renewal the driver sees why, and can send again.
+    final rejected = state.renewalRejected && !state.submitted;
+    final reason = state.rejectionReason;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: DarbInfoCard(
         key: const ValueKey('driverRenewalBanner'),
         title: state.submitted
             ? l10n.renewalBannerSubmittedTitle
+            : rejected
+            ? l10n.renewalRejectedTitle
             : l10n.renewalBannerTitle,
         subtitle: state.submitted
             ? l10n.renewalBannerSubmittedBody
+            : rejected
+            ? (reason == null
+                  ? l10n.renewalRejectedBody
+                  : l10n.renewalRejectedReason(reason))
             : l10n.renewalBannerBody,
         icon: state.submitted
             ? Icons.hourglass_top_outlined
+            : rejected
+            ? Icons.report_gmailerrorred_outlined
             : Icons.event_busy_outlined,
         emphasis: !state.submitted,
         primaryAction: CardAction(

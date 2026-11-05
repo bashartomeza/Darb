@@ -63,6 +63,17 @@ String driverErrorLabel(AppLocalizations l10n, Object error) {
   };
 }
 
+/// Re-reads after a failed action, a retry tap or a pull to refresh. A failed
+/// read is already in the provider's state (the screen shows it), so it is not
+/// rethrown into a callback where nothing could catch it.
+Future<void> quietRefresh(Future<Object?> Function() read) async {
+  try {
+    await read();
+  } catch (_) {
+    // Shown through the provider's state; nothing else to do here.
+  }
+}
+
 bool _arabic(BuildContext context) =>
     Localizations.localeOf(context).languageCode == 'ar';
 
@@ -102,17 +113,47 @@ String? driverParcelDropoffText(BuildContext context, DriverParcelStop parcel) {
       (label == null ? null : localizedCorridorPlace(context, label));
 }
 
+/// Where one order's parcels go, for labelling its hand-over stop: each
+/// receiver's name and the drop-off, or null when the order says neither.
+String? driverOrderStopText(BuildContext context, DriverBatchOrder order) {
+  final parts = <String>{
+    for (final parcel in order.parcels) ...[
+      ?parcel.receiverName,
+      ?driverParcelDropoffText(context, parcel),
+    ],
+  };
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
+/// What to call each parcel order's hand-over stop on [trip], by order id:
+/// "Stop 2 · Sami · Door near the bakery". Stops are numbered in trip order.
+Map<String, String> driverHandoverStopLabels(
+  BuildContext context,
+  DriverTrip trip,
+) {
+  final l10n = AppLocalizations.of(context);
+  final orders = trip.parcelOrders;
+  return {
+    for (final (index, order) in orders.indexed)
+      if (driverOrderStopText(context, order) case final place?)
+        order.id: l10n.handoverStopLabel(index + 1, place),
+  };
+}
+
 /// Pickup and drop-off for every passenger and parcel on a match or trip, so
-/// the driver can find them. Parcels show their receiver when given.
+/// the driver can find them. Parcels show their receiver when given. A batch
+/// lists each of its orders ([batchOrders]) with its own pickup and drop-offs.
 class DriverStopDetailsCard extends StatelessWidget {
   const DriverStopDetailsCard({
     required this.passenger,
     required this.merchantOrder,
+    this.batchOrders = const [],
     super.key,
   });
 
   final DriverPassengerSummary? passenger;
   final DriverMerchantSummary? merchantOrder;
+  final List<DriverBatchOrder> batchOrders;
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +162,10 @@ class DriverStopDetailsCard extends StatelessWidget {
     final passenger = this.passenger;
     final order = merchantOrder;
     final parcels = order?.parcels ?? const <DriverParcelStop>[];
+    // A batch of several orders: each order is its own pickup and stops.
+    final orders = batchOrders.length > 1
+        ? batchOrders
+        : const <DriverBatchOrder>[];
 
     Widget line(IconData icon, String label, String value, {Key? key}) =>
         Padding(
@@ -177,7 +222,29 @@ class DriverStopDetailsCard extends StatelessWidget {
               key: const ValueKey('driverPassengerDropoff'),
             ),
           ],
-          if (order != null) ...[
+          for (final (orderIndex, batchOrder) in orders.indexed) ...[
+            if (passenger != null || orderIndex > 0) const Divider(),
+            Text(
+              l10n.driverBatchOrderTitle(orderIndex + 1, orders.length),
+              key: ValueKey('driverBatchOrder-$orderIndex'),
+              style: theme.textTheme.labelLarge,
+            ),
+            line(
+              Icons.storefront_outlined,
+              l10n.driverMerchantPickupLabel,
+              driverMerchantPickupText(context, batchOrder.asMerchantSummary),
+              key: ValueKey('driverBatchOrderPickup-$orderIndex'),
+            ),
+            for (final (index, parcel) in batchOrder.parcels.indexed)
+              if (driverParcelDropoffText(context, parcel) case final place?)
+                line(
+                  Icons.inventory_2_outlined,
+                  l10n.driverParcelStopLabel(index + 1),
+                  _parcelStopText(l10n, place, parcel),
+                  key: ValueKey('driverBatchParcelStop-$orderIndex-$index'),
+                ),
+          ],
+          if (order != null && orders.isEmpty) ...[
             if (passenger != null) const Divider(),
             line(
               Icons.storefront_outlined,
@@ -196,12 +263,7 @@ class DriverStopDetailsCard extends StatelessWidget {
                   line(
                     Icons.inventory_2_outlined,
                     l10n.driverParcelStopLabel(index + 1),
-                    [
-                      place,
-                      if (parcel.receiverName != null ||
-                          parcel.receiverPhone != null)
-                        '${l10n.driverReceiverLabel}: ${[parcel.receiverName, parcel.receiverPhone].nonNulls.join(' · ')}',
-                    ].join('\n'),
+                    _parcelStopText(l10n, place, parcel),
                     key: ValueKey('driverParcelStop-$index'),
                   ),
             ],
@@ -212,8 +274,21 @@ class DriverStopDetailsCard extends StatelessWidget {
   }
 }
 
+/// A parcel's drop-off, then its receiver when the sender gave one.
+String _parcelStopText(
+  AppLocalizations l10n,
+  String place,
+  DriverParcelStop parcel,
+) => [
+  place,
+  if (parcel.receiverName != null || parcel.receiverPhone != null)
+    '${l10n.driverReceiverLabel}: ${[parcel.receiverName, parcel.receiverPhone].nonNulls.join(' · ')}',
+].join('\n');
+
 String matchTypeLabel(AppLocalizations l10n, DriverMatch match) {
   if (match.isCombined) return l10n.combinedAssignment;
+  // A passenger's own parcel is not a shop's order.
+  if (match.isPassengerParcel) return l10n.passengerParcelAssignment;
   if (match.isMerchantOnly) return l10n.merchantOrder;
   return l10n.passengerRequest;
 }

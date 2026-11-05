@@ -167,7 +167,42 @@ class _DriverRenewalScreenState extends ConsumerState<DriverRenewalScreen> {
         : driverDocumentKinds.where(state.kinds.contains).toList();
     final kind = kinds.contains(_kind) ? _kind : kinds.first;
     final atLimit = state.documents.length >= state.maxDocuments;
+    final reason = state.rejectionReason;
     return [
+      // A rejected renewal: why, before the driver uploads corrected documents.
+      if (state.renewalRejected) ...[
+        DarbCard(
+          key: const ValueKey('renewalRejected'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.report_gmailerrorred_outlined,
+                size: 32,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: AppTokens.spaceSmall),
+              Text(
+                l10n.renewalRejectedTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppTokens.spaceSmall),
+              Text(l10n.renewalRejectedBody),
+              if (reason != null) ...[
+                const SizedBox(height: AppTokens.spaceSmall),
+                Text(
+                  l10n.renewalRejectedReason(reason),
+                  key: const ValueKey('renewalRejectionReason'),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: AppTokens.spaceMedium),
+      ],
       Text(l10n.renewalIntro),
       const SizedBox(height: AppTokens.spaceMedium),
       DarbCard(

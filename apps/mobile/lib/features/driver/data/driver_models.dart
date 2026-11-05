@@ -208,6 +208,7 @@ class DriverMerchantSummary {
     this.destinationLabel,
     this.pickupDetails,
     this.parcels = const [],
+    this.isPassengerParcel = false,
   });
 
   final String id;
@@ -224,6 +225,9 @@ class DriverMerchantSummary {
 
   /// The parcels, when the payload lists them.
   final List<DriverParcelStop> parcels;
+
+  /// A parcel a passenger sends, rather than a shop's order.
+  final bool isPassengerParcel;
 
   factory DriverMerchantSummary.fromJson(Map<String, dynamic> json) {
     final parcels = json['parcels'];
@@ -258,6 +262,51 @@ class DriverMerchantSummary {
           ? parcels.length
           : 0,
       pickupDetails: _text(json['pickup_details']),
+      isPassengerParcel: json['is_passenger_parcel'] == true,
+      parcels: parcels is List
+          ? [
+              for (final parcel in parcels)
+                if (parcel is Map<String, dynamic>)
+                  DriverParcelStop.fromJson(parcel),
+            ]
+          : const [],
+    );
+  }
+}
+
+/// One order of a batch: where its parcels are collected and where each goes.
+class DriverBatchOrder {
+  const DriverBatchOrder({
+    required this.id,
+    required this.pickupLabel,
+    this.pickupDetails,
+    this.parcels = const [],
+  });
+
+  final String id;
+  final String pickupLabel;
+
+  /// Where the parcels are collected, as the merchant typed it; null for
+  /// orders created before routes existed.
+  final String? pickupDetails;
+  final List<DriverParcelStop> parcels;
+
+  /// The order as a merchant summary, for the screens that show one order.
+  DriverMerchantSummary get asMerchantSummary => DriverMerchantSummary(
+    id: id,
+    pickupLabel: pickupLabel,
+    status: '',
+    parcelCount: parcels.length,
+    pickupDetails: pickupDetails,
+    parcels: parcels,
+  );
+
+  factory DriverBatchOrder.fromJson(Map<String, dynamic> json) {
+    final parcels = json['parcels'];
+    return DriverBatchOrder(
+      id: _string(json, 'id'),
+      pickupLabel: _text(json['pickup_label']) ?? '',
+      pickupDetails: _text(json['pickup_details']),
       parcels: parcels is List
           ? [
               for (final parcel in parcels)
@@ -276,6 +325,7 @@ class DriverParcelBatchSummary {
     required this.estimatedDistanceSaved,
     required this.explanation,
     this.parcelCount,
+    this.orders = const [],
   });
 
   final String id;
@@ -284,13 +334,28 @@ class DriverParcelBatchSummary {
   final String explanation;
   final int? parcelCount;
 
+  /// Every order in the batch with its pickup and drop-offs, when the payload
+  /// lists them (match offers and trips do).
+  final List<DriverBatchOrder> orders;
+
   factory DriverParcelBatchSummary.fromJson(Map<String, dynamic> json) {
+    final orders = json['orders'];
     return DriverParcelBatchSummary(
       parcelCount: (json['parcel_count'] as num?)?.toInt(),
       id: _string(json, 'id'),
       status: _string(json, 'status'),
-      estimatedDistanceSaved: _double(json, 'estimated_distance_saved'),
-      explanation: _string(json, 'explanation'),
+      // A trip's batch carries its stored columns, which may come as strings.
+      estimatedDistanceSaved: json['estimated_distance_saved'] == null
+          ? 0
+          : _double(json, 'estimated_distance_saved'),
+      explanation: _text(json['explanation']) ?? '',
+      orders: orders is List
+          ? [
+              for (final order in orders)
+                if (order is Map<String, dynamic>)
+                  DriverBatchOrder.fromJson(order),
+            ]
+          : const [],
     );
   }
 }
@@ -325,6 +390,10 @@ class DriverMatch {
   bool get canRespond => status == 'proposed' || status == 'sent_to_driver';
   bool get isCombined => passengerRequest != null && merchantOrder != null;
   bool get isMerchantOnly => passengerRequest == null && merchantOrder != null;
+
+  /// A parcel sent by a passenger, not a shop's order.
+  bool get isPassengerParcel =>
+      passengerRequest == null && (merchantOrder?.isPassengerParcel ?? false);
   String get pickupLabel =>
       passengerRequest?.pickupLabel ?? merchantOrder?.pickupLabel ?? '';
   String get destinationLabel =>
@@ -399,6 +468,33 @@ class DriverTrip {
 
   /// Receiver confirmation state for the parcel orders on this trip, when known.
   final TripDeliveryConfirmation? deliveryConfirmation;
+
+  /// The parcel orders on this trip, one hand-over stop each: every order of
+  /// a batch, or the trip's single order.
+  List<DriverBatchOrder> get parcelOrders {
+    final batchOrders = parcelBatch?.orders ?? const <DriverBatchOrder>[];
+    if (batchOrders.isNotEmpty) return batchOrders;
+    final order = merchantOrder;
+    if (order == null) return const [];
+    return [
+      DriverBatchOrder(
+        id: order.id,
+        pickupLabel: order.pickupLabel,
+        pickupDetails: order.pickupDetails,
+        parcels: order.parcels,
+      ),
+    ];
+  }
+
+  /// Parcels on the trip: the whole batch, not only its first order.
+  int get parcelCount =>
+      parcelBatch?.parcelCount ??
+      (parcelBatch?.orders.isNotEmpty ?? false
+          ? parcelBatch!.orders.fold(
+              0,
+              (sum, order) => sum + order.parcels.length,
+            )
+          : merchantOrder?.parcelCount ?? 0);
 
   /// A parcel trip cannot be delivered until its receivers have confirmed.
   bool get needsReceiverConfirmation =>

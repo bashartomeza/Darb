@@ -268,6 +268,8 @@ class MerchantBatch {
     required this.explanation,
     required this.createdAt,
     required this.route,
+    this.orderCount = 1,
+    this.orderIds = const [],
   });
 
   final String id;
@@ -277,8 +279,25 @@ class MerchantBatch {
   final DateTime? createdAt;
   final MerchantRouteSummary? route;
 
+  /// How many orders ride in this batch (this one included).
+  final int orderCount;
+
+  /// The batch's orders, when the payload lists them.
+  final List<String> orderIds;
+
+  /// Still waiting for a driver to accept it.
+  bool get isOpen => status == 'created' || status == 'proposed';
+
   factory MerchantBatch.fromJson(Map<String, dynamic> json) {
     final route = json['driver_route'];
+    final members = json['member_orders'];
+    final listed = json['order_ids'];
+    final orderIds = [
+      if (members is List)
+        for (final member in members)
+          if (member is Map && member['id'] is String) member['id'] as String,
+      if (listed is List) ...listed.whereType<String>(),
+    ];
     return MerchantBatch(
       id: _string(json, 'id'),
       status: _string(json, 'status'),
@@ -288,6 +307,12 @@ class MerchantBatch {
       route: route is Map<String, dynamic>
           ? MerchantRouteSummary.fromJson(route)
           : null,
+      orderCount: json['order_count'] is num
+          ? (json['order_count'] as num).toInt()
+          : orderIds.isEmpty
+          ? 1
+          : orderIds.length,
+      orderIds: orderIds,
     );
   }
 }
@@ -410,6 +435,7 @@ class MerchantOrderSummary {
     this.routeNameAr,
     this.routeNameEn,
     this.pickupDetails,
+    this.dropoffs = const [],
   });
 
   final String id;
@@ -420,19 +446,33 @@ class MerchantOrderSummary {
   final String? routeNameEn;
   final String? pickupDetails;
 
+  /// Each parcel's drop-off as typed (or the older place label), in order and
+  /// without repeats; empty when the payload has no parcels.
+  final List<String> dropoffs;
+
   String? routeName({required bool arabic}) =>
       storedRouteName(routeNameAr, routeNameEn, arabic: arabic);
 
-  factory MerchantOrderSummary.fromJson(Map<String, dynamic> json) =>
-      MerchantOrderSummary(
-        id: _string(json, 'id'),
-        pickupLabel: _string(json, 'pickup_label'),
-        status: _string(json, 'status'),
-        parcelCount: _intOrZero(json['parcel_count']),
-        routeNameAr: _text(json['route_name_ar']),
-        routeNameEn: _text(json['route_name_en']),
-        pickupDetails: _text(json['pickup_details']),
-      );
+  factory MerchantOrderSummary.fromJson(Map<String, dynamic> json) {
+    final parcels = json['parcels'];
+    return MerchantOrderSummary(
+      id: _string(json, 'id'),
+      pickupLabel: _string(json, 'pickup_label'),
+      status: _string(json, 'status'),
+      parcelCount: _intOrZero(json['parcel_count']),
+      routeNameAr: _text(json['route_name_ar']),
+      routeNameEn: _text(json['route_name_en']),
+      pickupDetails: _text(json['pickup_details']),
+      dropoffs: parcels is List
+          ? {
+              for (final parcel in parcels)
+                if (parcel is Map<String, dynamic>)
+                  ?(_text(parcel['dropoff_details']) ??
+                      _text(parcel['destination_label'])),
+            }.toList()
+          : const [],
+    );
+  }
 }
 
 class MerchantMatch {
@@ -499,6 +539,7 @@ class MerchantTrip {
     required this.order,
     required this.batch,
     this.driverPhone,
+    this.batchOrders = const [],
   });
 
   final String id;
@@ -511,8 +552,18 @@ class MerchantTrip {
   /// The driver's phone, sent only from the driver's acceptance until drop-off.
   final String? driverPhone;
 
+  /// This merchant's own orders on the trip when it carries a batch, each with
+  /// its pickup, drop-offs and receivers (the trip detail lists them).
+  final List<MerchantOrder> batchOrders;
+
   bool get isActive =>
       status != 'completed' && status != 'cancelled' && status != 'failed';
+
+  /// Whether [orderId] rides on this trip: its lead order or any batch order.
+  bool carriesOrder(String orderId) =>
+      order.id == orderId ||
+      (batch?.orderIds.contains(orderId) ?? false) ||
+      batchOrders.any((item) => item.id == orderId);
 
   factory MerchantTrip.fromJson(Map<String, dynamic> json) {
     final orderJson = json['merchant_order'];
@@ -537,6 +588,18 @@ class MerchantTrip {
           ? MerchantBatch.fromJson(batch)
           : null,
       driverPhone: tripDriverPhone(json),
+      batchOrders: batch is Map<String, dynamic> && batch['orders'] is List
+          ? [
+              for (final item in batch['orders'] as List)
+                if (item is Map<String, dynamic>)
+                  MerchantOrder.fromJson({
+                    ...item,
+                    'created_at': item['created_at'] ?? json['created_at'],
+                    'parcels': item['parcels'] ?? const [],
+                    'parcel_batches': const [],
+                  }),
+            ]
+          : const [],
     );
   }
 }

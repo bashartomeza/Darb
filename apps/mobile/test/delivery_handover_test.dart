@@ -282,6 +282,114 @@ void main() {
     });
   });
 
+  group('driver dialog with several stops', () {
+    OrderDeliveryConfirmation open(String id) => OrderDeliveryConfirmation(
+      orderId: id,
+      status: const HandoverStatus(
+        issued: true,
+        confirmed: false,
+        locked: false,
+        expired: false,
+        attemptsRemaining: 5,
+      ),
+    );
+    final pending = [open('o1'), open('o2'), open('o3')];
+    const labels = {
+      'o1': 'Stop 1 · Rana · Door near the bakery',
+      'o2': 'Stop 2 · Sami · Blue gate, Manger Street',
+      'o3': 'Stop 3 · Omar · University gate',
+    };
+
+    Future<ReceiverConfirmationResult?> show(
+      WidgetTester tester,
+      Future<void> Function() interact,
+    ) async {
+      ReceiverConfirmationResult? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async =>
+                    result = await showReceiverConfirmationDialog(
+                      context,
+                      pending: pending,
+                      stopLabels: labels,
+                    ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await interact();
+      return result;
+    }
+
+    testWidgets('labels each code with its stop instead of "1 of N"', (
+      tester,
+    ) async {
+      await show(tester, () async {
+        for (final label in labels.values) {
+          expect(find.text(label), findsOneWidget);
+        }
+        expect(find.textContaining('of 3'), findsNothing);
+      });
+    });
+
+    testWidgets('confirms only the stop the driver is at; others stay open', (
+      tester,
+    ) async {
+      final result = await show(tester, () async {
+        await tester.enterText(
+          find.byKey(const ValueKey('receiverCodeField-1')),
+          '654321',
+        );
+        await tester.tap(find.byKey(const ValueKey('receiverConfirmSubmit')));
+        await tester.pumpAndSettle();
+      });
+      expect(result, isA<ReceiverCodes>());
+      expect((result as ReceiverCodes).codesByOrderId, {'o2': '654321'});
+    });
+
+    testWidgets('asks for at least one stop code', (tester) async {
+      final result = await show(tester, () async {
+        await tester.tap(find.byKey(const ValueKey('receiverConfirmSubmit')));
+        await tester.pumpAndSettle();
+        expect(find.text('Enter the code for at least one stop.'), findsOne);
+      });
+      expect(result, isNull);
+    });
+
+    testWidgets('records an unavailable receiver for the chosen stop only', (
+      tester,
+    ) async {
+      final result = await show(tester, () async {
+        await tester.tap(
+          find.byKey(const ValueKey('receiverToggleUnavailable')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('receiverUnavailableStop-2')),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const ValueKey('receiverUnavailableReason')),
+          'Nobody answered the door or phone',
+        );
+        await tester.tap(find.byKey(const ValueKey('receiverConfirmSubmit')));
+        await tester.pumpAndSettle();
+      });
+      expect(result, isA<ReceiverUnavailable>());
+      expect((result as ReceiverUnavailable).orderIds, ['o3']);
+    });
+  });
+
   testWidgets('API failures map to actionable driver messages', (tester) async {
     late HandoverStrings s;
     await tester.pumpWidget(

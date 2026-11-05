@@ -15,6 +15,8 @@ class DriverRenewalState {
     this.kinds = const [],
     this.documentsExpiredAt,
     this.renewalSubmittedAt,
+    this.renewalRejected = false,
+    this.rejectionReason,
   });
 
   factory DriverRenewalState.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,11 @@ class DriverRenewalState {
       kinds: kinds is List ? kinds.whereType<String>().toList() : const [],
       documentsExpiredAt: date(json['documents_expired_at']),
       renewalSubmittedAt: date(json['renewal_submitted_at']),
+      renewalRejected: json['renewal_rejected'] == true,
+      rejectionReason: switch (json['rejection_reason']) {
+        final String reason when reason.trim().isNotEmpty => reason.trim(),
+        _ => null,
+      },
     );
   }
 
@@ -65,6 +72,12 @@ class DriverRenewalState {
   final List<String> kinds;
   final DateTime? documentsExpiredAt;
   final DateTime? renewalSubmittedAt;
+
+  /// The review team rejected the last renewal; the driver may send again.
+  final bool renewalRejected;
+
+  /// Why the renewal was rejected, when the review team said.
+  final String? rejectionReason;
 
   /// Whether the driver has something to do or is waiting on a review.
   bool get needsAttention => canUpload || submitted;
