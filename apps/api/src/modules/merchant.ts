@@ -15,7 +15,7 @@ import {
   merchantCreateDigest,
   type RouteOrderInput
 } from "../services/legacyMerchantOrders.js";
-import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
+import { latitudeSchema, legacyLabelSchema, longitudeSchema } from "../lib/validation.js";
 import { BATCHING_LIMITS } from "../lib/batchingConfig.js";
 import { maskPhone, normalizePhoneToE164, PhoneNormalizationError } from "../lib/phone.js";
 import {
@@ -29,7 +29,7 @@ import { orderFareResponse, parcelFareResponse } from "../services/routeFares.js
 
 /** Older app builds: a place name and coordinates per parcel; mapped to the Hebron → Bethlehem route. */
 export const parcelSchema = z.object({
-  destination_label: z.string().min(1),
+  destination_label: legacyLabelSchema,
   destination_lat: latitudeSchema,
   destination_lng: longitudeSchema,
   size: z.enum(["S", "M", "L"]),
@@ -37,7 +37,7 @@ export const parcelSchema = z.object({
 });
 
 export const createOrderSchema = z.object({
-  pickup_label: z.string().min(1),
+  pickup_label: legacyLabelSchema,
   pickup_lat: latitudeSchema,
   pickup_lng: longitudeSchema,
   parcels: z.array(parcelSchema).min(1).max(BATCHING_LIMITS.maxParcelsPerOrder)

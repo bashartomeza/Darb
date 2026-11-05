@@ -133,6 +133,23 @@ describe("manual role APIs", () => {
     expect(prismaMock.passengerRequest.create).toHaveBeenCalledOnce();
   });
 
+  it("answers 400, not a database error, for place names longer than their 191-character columns", async () => {
+    prismaMock.passengerRequest.create.mockResolvedValue({ id: "must_not_exist", status: "pending" });
+    prismaMock.merchantOrder.create.mockResolvedValue({ id: "must_not_exist", status: "submitted", parcels: [] });
+    const long = "x".repeat(192);
+    for (const body of [{ ...passengerBody, pickup_label: long }, { ...passengerBody, destination_label: long }]) {
+      await request(createApp()).post("/api/v1/passenger/requests").set(auth("passenger_1")).send(body).expect(400);
+    }
+    for (const body of [
+      { ...merchantBody, pickup_label: long },
+      { ...merchantBody, parcels: [{ ...merchantBody.parcels[0], destination_label: long }] }
+    ]) {
+      await request(createApp()).post("/api/v1/merchant/orders").set(auth("merchant_1")).send(body).expect(400);
+    }
+    expect(prismaMock.passengerRequest.create).not.toHaveBeenCalled();
+    expect(prismaMock.merchantOrder.create).not.toHaveBeenCalled();
+  });
+
   it("rejects a past passenger departure before inserting a request", async () => {
     prismaMock.passengerRequest.create.mockResolvedValue({ id: "must_not_exist", status: "pending" });
     await request(createApp()).post("/api/v1/passenger/requests").set(auth("passenger_1"))

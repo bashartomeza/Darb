@@ -5,7 +5,7 @@ import { pagedWhere, listPageOrderBy, listPageResult, parseListPage } from "../l
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
-import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
+import { latitudeSchema, legacyLabelSchema, longitudeSchema } from "../lib/validation.js";
 import { MatchStatus, TripStatus } from "../generated/prisma/enums.js";
 import { advanceLegacyTrip } from "../services/tripLifecycle.js";
 import { releaseLegacyCapacity } from "../services/legacyCapacity.js";
@@ -15,10 +15,10 @@ import { passengerFareResponse } from "../services/routeFares.js";
 
 /** Older app builds: coordinates for each end; mapped to the Hebron → Bethlehem route. */
 const createPassengerRequestSchema = z.object({
-  pickup_label: z.string().min(1),
+  pickup_label: legacyLabelSchema,
   pickup_lat: latitudeSchema,
   pickup_lng: longitudeSchema,
-  destination_label: z.string().min(1),
+  destination_label: legacyLabelSchema,
   destination_lat: latitudeSchema,
   destination_lng: longitudeSchema,
   preferred_time: z.coerce.date(),
