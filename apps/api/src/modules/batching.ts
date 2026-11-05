@@ -1,12 +1,11 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { auditEvent } from "../lib/audit.js";
-import { haversineKm, lockedCorridorDistanceKm, round, toNumber } from "../lib/geo.js";
+import { haversineKm, round, toNumber, type Point } from "../lib/geo.js";
 import { BATCHING_LIMITS, type ParcelSize } from "../lib/batchingConfig.js";
 import { planBatches } from "../services/batchPlanner.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
-import { LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 
 export const batchingRouter = Router();
@@ -16,12 +15,53 @@ function routeParam(value: string | string[] | undefined) {
   return value;
 }
 
+const routeLengthSelect = {
+  service_route_id: true,
+  name_en: true,
+  estimated_distance_meters: true,
+  stops: {
+    select: { sequence: true, distance_from_origin_meters: true, stop: { select: { latitude: true, longitude: true } } },
+    orderBy: { sequence: "asc" as const }
+  }
+};
+
+/**
+ * Length of one trip for a batch, from the order's own route: the route version's measured length,
+ * else the distance along its ordered stops; orders without a route (stored before routes existed)
+ * or a route without usable stops fall back to the order's own pickup-to-dropoff distance.
+ */
+export function batchTripLengthKm(
+  routeVersion: {
+    estimated_distance_meters?: number | null;
+    stops?: Array<{ sequence: number; distance_from_origin_meters?: number | null; stop: { latitude: unknown; longitude: unknown } }>;
+  } | null | undefined,
+  fallback: { pickup: Point; dropoff: Point }
+) {
+  if (routeVersion?.estimated_distance_meters && routeVersion.estimated_distance_meters > 0) {
+    return routeVersion.estimated_distance_meters / 1_000;
+  }
+  const stops = [...(routeVersion?.stops ?? [])].sort((a, b) => a.sequence - b.sequence);
+  const lastOffset = stops.at(-1)?.distance_from_origin_meters;
+  if (stops.length >= 2 && lastOffset && lastOffset > 0) return lastOffset / 1_000;
+  if (stops.length >= 2) {
+    let km = 0;
+    for (let index = 1; index < stops.length; index += 1) {
+      km += haversineKm(
+        { lat: toNumber(stops[index - 1]!.stop.latitude), lng: toNumber(stops[index - 1]!.stop.longitude) },
+        { lat: toNumber(stops[index]!.stop.latitude), lng: toNumber(stops[index]!.stop.longitude) }
+      );
+    }
+    if (Number.isFinite(km) && km > 0) return km;
+  }
+  return haversineKm(fallback.pickup, fallback.dropoff);
+}
+
 export async function createParcelBatch(req: AuthenticatedRequest, orderId: string) {
   const result = await prisma.$transaction(async (tx) => {
     const order = await tx.merchantOrder.findUnique({
       where: { id: orderId },
       include: {
-        route_version: { select: { service_route_id: true, name_en: true } },
+        route_version: { select: routeLengthSelect },
         parcels: true,
         parcel_batches: { select: { id: true, status: true }, orderBy: { created_at: "desc" }, take: 20 },
         batch_members: { select: { parcel_batch_id: true, active: true }, orderBy: { created_at: "desc" }, take: 20 }
@@ -79,16 +119,14 @@ export async function createParcelBatch(req: AuthenticatedRequest, orderId: stri
     const parcelCount = planned.parcel_count;
     if (selectedOrders.length < 1 || parcelCount < 1) throw new HttpError(400, "invalid_batch_contents");
 
-    // The trip length is the route's own origin-to-destination distance.
-    const corridorKm = serviceRouteId
-      ? haversineKm(
-          { lat: toNumber(order.pickup_lat), lng: toNumber(order.pickup_lng) },
-          { lat: toNumber(order.parcels[0]!.destination_lat), lng: toNumber(order.parcels[0]!.destination_lng) }
-        )
-      : lockedCorridorDistanceKm();
+    // One trip instead of one per parcel: each extra parcel saves one trip of the order's real length.
+    const corridorKm = batchTripLengthKm(order.route_version, {
+      pickup: { lat: toNumber(order.pickup_lat), lng: toNumber(order.pickup_lng) },
+      dropoff: { lat: toNumber(order.parcels[0]!.destination_lat), lng: toNumber(order.parcels[0]!.destination_lng) }
+    });
     const estimatedDistanceSaved = round(Math.max(0, parcelCount * corridorKm - corridorKm), 2);
     const orderWord = selectedOrders.length === 1 ? "order" : "orders";
-    const corridorName = order.route_version ? `${order.route_version.name_en} route` : `${LOCKED_CORRIDOR_LABEL} pickup corridor`;
+    const corridorName = order.route_version ? `${order.route_version.name_en} route` : "same pickup point";
     const explanation =
       `${selectedOrders.length} compatible merchant ${orderWord} with ${parcelCount} parcels share the ` +
       `${corridorName} and can be assigned together to one driver capacity allocation.`;

@@ -65,20 +65,28 @@ class PassengerDashboardController
 
   Future<PassengerDashboardState> refresh() async {
     try {
-      final requests = await ref
-          .read(passengerRepositoryProvider)
-          .activeRequests();
-      final trips = await ref.read(tripRepositoryProvider).listTrips();
-      final next = PassengerDashboardState(
-        activeRequests: requests,
-        trips: trips,
-      );
+      final next = await _load();
       state = AsyncData(next);
       return next;
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);
       Error.throwWithStackTrace(error, stackTrace);
     }
+  }
+
+  /// Background refresh while Home is on screen: only a successful read
+  /// replaces the dashboard, so a dropped poll never blanks it.
+  Future<void> poll() async {
+    final next = await _load();
+    state = AsyncData(next);
+  }
+
+  Future<PassengerDashboardState> _load() async {
+    final requests = await ref
+        .read(passengerRepositoryProvider)
+        .activeRequests();
+    final trips = await ref.read(tripRepositoryProvider).listTrips();
+    return PassengerDashboardState(activeRequests: requests, trips: trips);
   }
 }
 

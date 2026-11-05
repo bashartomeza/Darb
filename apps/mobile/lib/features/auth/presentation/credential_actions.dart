@@ -7,6 +7,7 @@ import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
 import 'auth_completion_screen.dart';
 import 'widgets/google_auth_button.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Action proofs stay in this dialog's memory and are cleared on disposal.
 class CredentialActionDialog extends ConsumerStatefulWidget {
@@ -107,18 +108,10 @@ class _CredentialActionDialogState
   @override
   Widget build(BuildContext context) {
     final title = switch (widget.action) {
-      'set' => authText(
-        context,
-        'Set or change password',
-        'تعيين أو تغيير كلمة المرور',
-      ),
-      'link' => authText(context, 'Link Google explicitly', 'ربط حساب Google'),
-      'verify' => authText(
-        context,
-        'Verify email',
-        'التحقق من البريد الإلكتروني',
-      ),
-      _ => authText(context, 'Reset password', 'إعادة تعيين كلمة المرور'),
+      'set' => AppLocalizations.of(context).authSetChangePassword,
+      'link' => AppLocalizations.of(context).authLinkGoogleExplicitly,
+      'verify' => AppLocalizations.of(context).authVerifyEmail,
+      _ => AppLocalizations.of(context).authResetPassword,
     };
     return PopScope(
       canPop: !_busy,
@@ -136,11 +129,7 @@ class _CredentialActionDialogState
                   Semantics(
                     liveRegion: true,
                     child: Text(
-                      authText(
-                        context,
-                        'Completed. Sign in again if needed.',
-                        'اكتمل الطلب. سجل الدخول مجدداً عند الحاجة.',
-                      ),
+                      AppLocalizations.of(context).authCompletedSignAgainIf,
                     ),
                   )
                 else ...[
@@ -153,20 +142,12 @@ class _CredentialActionDialogState
                       autofillHints: const [AutofillHints.email],
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        labelText: authText(
-                          context,
-                          'Email',
-                          'البريد الإلكتروني',
-                        ),
+                        labelText: AppLocalizations.of(context).email,
                       ),
                     ),
                   if (_authenticated) ...[
                     Text(
-                      authText(
-                        context,
-                        'Enter your current password. If you have no password, request an email proof.',
-                        'أدخل كلمة المرور الحالية. إذا لم تكن لديك كلمة مرور، اطلب إثباتاً عبر البريد الإلكتروني.',
-                      ),
+                      AppLocalizations.of(context).authEnterCurrentPasswordIf,
                     ),
                     TextField(
                       controller: _current,
@@ -174,33 +155,23 @@ class _CredentialActionDialogState
                       obscureText: true,
                       autofillHints: const [AutofillHints.password],
                       decoration: InputDecoration(
-                        labelText: authText(
+                        labelText: AppLocalizations.of(
                           context,
-                          'Current password',
-                          'كلمة المرور الحالية',
-                        ),
+                        ).authCurrentPassword,
                       ),
                     ),
                   ],
                   TextButton(
                     onPressed: _busy ? null : _start,
                     child: Text(
-                      authText(
-                        context,
-                        'Send email proof',
-                        'إرسال إثبات البريد',
-                      ),
+                      AppLocalizations.of(context).authSendEmailProof,
                     ),
                   ),
                   if (_sent)
                     Semantics(
                       liveRegion: true,
                       child: Text(
-                        authText(
-                          context,
-                          'If eligible, an email has been sent. Check your inbox and spam folder.',
-                          'إذا كان الحساب مؤهلاً، أُرسلت رسالة. تحقق من الوارد والبريد غير المرغوب.',
-                        ),
+                        AppLocalizations.of(context).authIfEligibleEmailHas,
                       ),
                     ),
                   TextField(
@@ -218,11 +189,9 @@ class _CredentialActionDialogState
                     autofillHints: const [AutofillHints.oneTimeCode],
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
-                      labelText: authText(
+                      labelText: AppLocalizations.of(
                         context,
-                        'Six-digit code from your email',
-                        'الرمز المكون من ستة أرقام من بريدك الإلكتروني',
-                      ),
+                      ).authSixDigitCodeFrom,
                     ),
                   ),
                   if (_passwordAction)
@@ -231,21 +200,15 @@ class _CredentialActionDialogState
                       obscureText: true,
                       autofillHints: const [AutofillHints.newPassword],
                       decoration: InputDecoration(
-                        labelText: authText(
-                          context,
-                          'New password',
-                          'كلمة المرور الجديدة',
-                        ),
+                        labelText: AppLocalizations.of(context).authNewPassword,
                         helperText: passwordRuleHint(context),
                       ),
                     ),
                   if (widget.action == 'link') ...[
                     Text(
-                      authText(
+                      AppLocalizations.of(
                         context,
-                        'Selecting Google confirms linking that identity to this signed-in account.',
-                        'اختيار Google يؤكد ربط تلك الهوية بهذا الحساب المسجل دخوله.',
-                      ),
+                      ).authSelectingGoogleConfirmsLinking,
                     ),
                     GoogleAuthButton(
                       enabled: !_busy,
@@ -274,13 +237,13 @@ class _CredentialActionDialogState
         actions: [
           TextButton(
             onPressed: _busy ? null : () => Navigator.of(context).pop(),
-            child: Text(authText(context, 'Close', 'إغلاق')),
+            child: Text(AppLocalizations.of(context).authClose),
           ),
           if (!_done && widget.action != 'link')
             FilledButton(
               key: const ValueKey('credentialConfirm'),
               onPressed: _busy || !_canConfirm ? null : _confirm,
-              child: Text(authText(context, 'Confirm', 'تأكيد')),
+              child: Text(AppLocalizations.of(context).authConfirm),
             ),
         ],
       ),
@@ -302,20 +265,12 @@ class CredentialSettings extends StatelessWidget {
     children: [
       ListTile(
         leading: const Icon(Icons.password),
-        title: Text(
-          authText(
-            context,
-            'Set or change password',
-            'تعيين أو تغيير كلمة المرور',
-          ),
-        ),
+        title: Text(AppLocalizations.of(context).authSetChangePassword),
         onTap: () => openCredentialAction(context, 'set'),
       ),
       ListTile(
         leading: const Icon(Icons.link),
-        title: Text(
-          authText(context, 'Link Google account', 'ربط حساب Google'),
-        ),
+        title: Text(AppLocalizations.of(context).authLinkGoogleAccount),
         onTap: () => openCredentialAction(context, 'link'),
       ),
     ],

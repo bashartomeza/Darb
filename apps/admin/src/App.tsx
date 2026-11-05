@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { createApiClient, createDemoApiClient, type AccountStatus, type BatchResponse, type Comparison, type DashboardResponse, type DriverProfile, type DriverRoute, type LocationEvent, type MatchRunResponse, type MerchantOrder, type PassengerRequest, type Trip, type User, type UserAccountStatus } from "./api";
+import { createApiClient, createDemoApiClient, type AccountStatus, type DashboardResponse, type DriverRoute, type User, type UserAccountStatus } from "./api";
 import { demoUiEnabled, getAdminBuildConfig, routeManagementUiEnabled, type AdminBuildConfig } from "./config";
 import { useLocale } from "./i18n/LocaleContext";
 import type { TranslationKey } from "./i18n/translations";
@@ -21,14 +21,17 @@ import { TripsManagement } from "./features/trips/TripsManagement";
 import { MatchingBatchingMonitoring } from "./features/monitoring/MatchingBatchingMonitoring";
 import { InvitationsPage } from "./features/invitations/InvitationsPage";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
-import { DriverDirectory } from "./features/verification/DriverDirectory";
+import { DriversPage } from "./features/verification/DriversPage";
 import { UsersDirectory } from "./features/users/UsersDirectory";
 import { DemoControl } from "./features/demo/DemoControl";
 import { ModuleUnavailable } from "./features/placeholder/ModuleUnavailable";
 import { ReportsPanel } from "./features/reports/ReportsPanel";
 import { SuccessMetricsPanel } from "./features/reports/SuccessMetricsPanel";
+import { AppRatingsPage } from "./features/ratings/AppRatingsPage";
 import { IncidentsPanel } from "./features/incidents/IncidentsPanel";
 import { UncertainAiRequests } from "./features/incidents/UncertainAiRequests";
+import { CommunityReportsPage } from "./features/communityReports/CommunityReportsPage";
+import { CheckpointPositionsPage } from "./features/checkpoints/CheckpointPositionsPage";
 import { ProfilePanel } from "./features/profile/ProfilePanel";
 import {
   hashForModule,
@@ -42,8 +45,6 @@ import { AppShell, Button, Notice, SideNav, TopBar } from "./ui";
 import { GoogleAdminSignIn } from "./GoogleAdminSignIn";
 
 export { ADMIN_TOKEN_KEY, purgeStoredAdminTokens } from "./session";
-
-const tripFlow = ["accepted", "pickup_started", "picked_up", "in_transit", "delivered", "completed"];
 
 type NoticeState = { type: "success" | "error"; message: string } | null;
 type DemoStep = { key: TranslationKey; statusValue?: string };
@@ -96,22 +97,12 @@ export function App({
   const [notice, setNotice] = useState<NoticeState>(null);
 
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
-  const [drivers, setDrivers] = useState<DriverProfile[]>([]);
   const [routes, setRoutes] = useState<DriverRoute[]>([]);
-  const [requests, setRequests] = useState<PassengerRequest[]>([]);
-  const [orders, setOrders] = useState<MerchantOrder[]>([]);
-  const [matchResult, setMatchResult] = useState<MatchRunResponse | null>(null);
-  const [batchResult, setBatchResult] = useState<BatchResponse | null>(null);
-  const [comparison, setComparison] = useState<Comparison | null>(null);
-  const [trips, setTrips] = useState<Trip[]>([]);
   const [overviewResources, setOverviewResources] = useState(createInitialOverviewResourceStates);
   const overviewRefreshRef = useRef<{
     token: string;
     promise: Promise<{ succeeded: number; failed: number }>;
   } | null>(null);
-  const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
-  const [latestLocation, setLatestLocation] = useState<LocationEvent | null>(null);
-  const [locationTrail, setLocationTrail] = useState<LocationEvent[]>([]);
   const [demoSteps, setDemoSteps] = useState<DemoStep[]>([]);
   const [demoResetAvailable, setDemoResetAvailable] = useState(false);
   const [activeModule, setActiveModule] = useState<AdminRouteId>(() => moduleFromHash(window.location.hash));
@@ -125,18 +116,8 @@ export function App({
     setBusy(null);
     setAdmin(null);
     setDashboard(null);
-    setDrivers([]);
     setRoutes([]);
-    setRequests([]);
-    setOrders([]);
-    setMatchResult(null);
-    setBatchResult(null);
-    setComparison(null);
-    setTrips([]);
     setOverviewResources(createInitialOverviewResourceStates());
-    setActiveTrip(null);
-    setLatestLocation(null);
-    setLocationTrail([]);
     setDemoSteps([]);
     setDemoResetAvailable(false);
   }
@@ -184,15 +165,7 @@ export function App({
     [config.apiBaseUrl, sessionExpiry]
   );
 
-  const selectedRequest = requests[0];
-  const selectedOrder = orders[0];
-  const selectedRoute =
-    routes.find(
-      (route) =>
-        route.origin_label === "Hebron / PPU / Bab Al-Zawiya" && route.destination_label === "Bethlehem"
-    ) ?? routes[0];
   const canAct = Boolean(token) && !busy;
-  const nextTripStatus = activeTrip ? tripFlow[tripFlow.indexOf(activeTrip.status) + 1] : undefined;
 
   async function runAction<T>(label: string, action: () => Promise<T>, success?: string) {
     setBusy(label);
@@ -218,23 +191,11 @@ export function App({
       setOverviewResources((current) => beginOverviewRefresh(current));
       const results = await loadOverviewResources({
         dashboard: () => api.dashboard(currentToken),
-        drivers: () => api.drivers(currentToken),
-        routes: () => api.routes(currentToken),
-        requests: () => api.requests(currentToken),
-        orders: () => api.orders(currentToken),
-        trips: () => api.trips(currentToken)
+        routes: () => api.routes(currentToken)
       });
 
       if (results.dashboard.status === "fulfilled") setDashboard(results.dashboard.value);
-      if (results.drivers.status === "fulfilled") setDrivers(results.drivers.value.drivers);
       if (results.routes.status === "fulfilled") setRoutes(results.routes.value.routes);
-      if (results.requests.status === "fulfilled") setRequests(results.requests.value.requests);
-      if (results.orders.status === "fulfilled") setOrders(results.orders.value.orders);
-      if (results.trips.status === "fulfilled") {
-        const loadedTrips = results.trips.value.trips;
-        setTrips(loadedTrips);
-        setActiveTrip((current) => current ?? loadedTrips[0] ?? null);
-      }
 
       for (const key of OVERVIEW_RESOURCE_KEYS) {
         const result = results[key];
@@ -254,10 +215,9 @@ export function App({
   /**
    * Suspend, disable or reactivate an account.
    *
-   * The full overview is reloaded afterwards rather than the row being patched
-   * locally: the API revokes the target's sessions and may reject the change
-   * (the last active admin cannot be suspended), so the console shows what the
-   * server actually decided.
+   * The API revokes the target's sessions and may reject the change (the last
+   * active admin cannot be suspended), so the caller reloads its list to show
+   * what the server actually decided.
    */
   async function updateUserStatus(userId: string, status: AccountStatus, reason: string | undefined, expectedStatus: UserAccountStatus) {
     const result = await runAction(
@@ -265,7 +225,8 @@ export function App({
       () => api.updateUserStatus(token, userId, status, reason, expectedStatus),
       t("accountStatusUpdated")
     );
-    if (result) await refreshOverview();
+    if (result) void refreshOverview();
+    return Boolean(result);
   }
 
   async function refreshData() {
@@ -335,110 +296,8 @@ export function App({
     const session = newAdminSessionHandle();
     setSession(session);
     setAdmin(signedIn.user);
-    setMatchResult(null);
-    setBatchResult(null);
-    setComparison(null);
-    setTrips([]);
-    setActiveTrip(null);
-    setLatestLocation(null);
-    setLocationTrail([]);
     setDemoSteps([]);
     await refreshOverview(session);
-  }
-
-  async function runMatch() {
-    if (!selectedRequest && !selectedOrder) return setNotice({ type: "error", message: t("noSeededInputs") });
-    const result = await runAction(
-      "match",
-      () => demoApi!.runMatch(token, selectedRequest?.id, selectedOrder?.id),
-      t("matchingCompleted")
-    );
-    if (result) setMatchResult(result);
-  }
-
-  async function runBatch() {
-    if (!selectedOrder) return setNotice({ type: "error", message: t("noMerchantOrder") });
-    const result = await runAction("batch", () => demoApi!.batchOrder(token, selectedOrder.id), t("parcelBatchCreated"));
-    if (result) {
-      setBatchResult(result);
-      await refreshOverview();
-    }
-  }
-
-  async function runComparison() {
-    const result = await runAction(
-      "comparison",
-      () => demoApi!.runComparison(token, selectedRequest?.id, selectedOrder?.id),
-      t("comparisonGenerated")
-    );
-    if (!result) return;
-    const read = await demoApi!.getComparison(token, result.comparison.id);
-    setComparison(read.comparison);
-  }
-
-  async function acceptMatch() {
-    if (!matchResult) return setNotice({ type: "error", message: t("runMatchBeforeAccept") });
-    const result = await runAction("accept", () => demoApi!.acceptMatch(token, matchResult.match.id), t("matchAccepted"));
-    if (result) {
-      setActiveTrip(result.trip);
-      setMatchResult((current) =>
-        current ? { ...current, match: { ...current.match, status: "accepted" } } : current
-      );
-      await refreshTrips();
-    }
-  }
-
-  async function rejectMatch() {
-    if (!matchResult) return setNotice({ type: "error", message: t("runMatchBeforeReject") });
-    const result = await runAction("reject", () => demoApi!.rejectMatch(token, matchResult.match.id), t("matchRejected"));
-    if (result && matchResult) setMatchResult({ ...matchResult, match: result.match });
-  }
-
-  async function refreshTrips() {
-    if (!token) return;
-    const result = await api.trips(token);
-    setTrips(result.trips);
-    if (activeTrip) {
-      const fresh = result.trips.find((trip) => trip.id === activeTrip.id);
-      if (fresh) setActiveTrip(fresh);
-    } else {
-      setActiveTrip(result.trips[0] ?? null);
-    }
-  }
-
-  async function refreshTripData() {
-    await runAction("refresh-trips", () => refreshTrips(), t("dataRefreshed"));
-  }
-
-  async function moveTrip(status: string) {
-    if (!activeTrip) return;
-    const result = await runAction("status", () => demoApi!.updateTripStatus(token, activeTrip.id, status), t("tripMoved", { status: statusLabel(status) }));
-    if (result) {
-      setActiveTrip(result.trip);
-      await refreshTrips();
-    }
-  }
-
-  async function simulateStep() {
-    if (!activeTrip) return;
-    const result = await runAction("tracking", () => demoApi!.simulateStep(token, activeTrip.id), t("locationRecorded"));
-    if (result) {
-      setLatestLocation(result.location);
-      setLocationTrail((items) => [result.location, ...items].slice(0, 7));
-    }
-  }
-
-  async function resetSimulation() {
-    if (!activeTrip) return;
-    await runAction("tracking-reset", () => demoApi!.resetSimulation(token, activeTrip.id), t("simulationReset"));
-    setLatestLocation(null);
-    setLocationTrail([]);
-  }
-
-  async function readLatestLocation() {
-    if (!activeTrip) return;
-    const result = await runAction("latest", () => api.latestLocation(token, activeTrip.id), t("latestLocationLoaded"));
-    if (result) setLatestLocation(result.location);
   }
 
   async function runFullDemoSequence() {
@@ -466,11 +325,11 @@ export function App({
       const order = overview[1].orders[0];
       if (!request || !order) throw new Error(t("seededInputsMissingAfterReset"));
       mark("stepCreateBatch");
-      const batch = await demoApi.batchOrder(currentToken, order.id);
+      await demoApi.batchOrder(currentToken, order.id);
       mark("stepRunMatch");
       const match = await demoApi.runMatch(currentToken, request.id, order.id);
       mark("stepRunComparison");
-      const comparisonRun = await demoApi.runComparison(currentToken, request.id, order.id);
+      await demoApi.runComparison(currentToken, request.id, order.id);
       mark("stepAcceptTrip");
       const accepted = await demoApi.acceptMatch(currentToken, match.match.id);
       let trip = accepted.trip;
@@ -479,20 +338,10 @@ export function App({
         trip = (await demoApi.updateTripStatus(currentToken, trip.id, status)).trip;
       }
       mark("stepRecordTracking");
-      const location = await demoApi.simulateStep(currentToken, trip.id);
-      setMatchResult({ ...match, match: { ...match.match, status: "accepted" } });
-      setBatchResult({ ...batch, batch: { ...batch.batch, status: "delivered" } });
-      setComparison(comparisonRun.comparison);
-      setActiveTrip(trip);
-      setLatestLocation(location.location);
-      setLocationTrail([location.location]);
+      await demoApi.simulateStep(currentToken, trip.id);
       await refreshOverview(currentToken);
       mark("stepDemoComplete");
     }, t("fullDemoCompleted"));
-  }
-
-  function statusLabel(value: string) {
-    return status(value);
   }
 
   useEffect(() => {
@@ -570,7 +419,7 @@ export function App({
     );
   }
 
-  const overviewData: OverviewData = { dashboard, drivers, routes, requests, orders, trips, resources: overviewResources };
+  const overviewData: OverviewData = { dashboard, routes, resources: overviewResources };
   const overviewRefreshing = Object.values(overviewResources).some((resource) => resource.phase === "loading");
   const activeNavId = navItemForModule(currentModule);
   const activeNavItem = navItems.find((item) => item.id === activeNavId);
@@ -610,7 +459,7 @@ export function App({
       case "deliveries":
         return (
           <>
-            <RequestsBoard requests={requests} orders={orders} search={search} />
+            <RequestsBoard api={api} token={token} search={search} />
             <PassengerParcelsPanel api={api} token={token} search={search} />
           </>
         );
@@ -640,6 +489,9 @@ export function App({
           <ModuleUnavailable icon="edit_road" reason="no-api" />
         );
 
+      case "checkpointPositions":
+        return <CheckpointPositionsPage api={api} token={token} search={search} />;
+
       case "settings":
         return <SettingsPanel config={config} admin={admin} api={api} token={token} />;
 
@@ -654,15 +506,12 @@ export function App({
 
       case "drivers":
         return (
-          <DriverDirectory
+          <DriversPage
             api={api}
             token={token}
-            drivers={drivers}
             search={search}
             busy={Boolean(busy)}
-            state={overviewResources.drivers}
-            onRefresh={() => void refreshOverview()}
-            onUpdateStatus={(userId, status, reason, expectedStatus) => void updateUserStatus(userId, status, reason, expectedStatus)}
+            onUpdateStatus={updateUserStatus}
           />
         );
 
@@ -674,6 +523,9 @@ export function App({
           </>
         );
 
+      case "communityReports":
+        return <CommunityReportsPage api={api} token={token} />;
+
       case "reports":
         return (
           <>
@@ -681,6 +533,9 @@ export function App({
             <SuccessMetricsPanel api={api} token={token} />
           </>
         );
+
+      case "appRatings":
+        return <AppRatingsPage api={api} token={token} />;
 
       default:
         return null;
@@ -693,11 +548,14 @@ export function App({
     matchingBatching: t("matchingDescription"),
     trips: t("tripsDescription"),
     routes: t("operatingRoutesDescription"),
+    checkpointPositions: t("checkpointPositionsDescription"),
     users: t("usersDescription"),
     invitations: t("invitationsDescription"),
     drivers: t("verificationDescription"),
     reports: t("reportsDescription"),
+    appRatings: t("appRatingsDescription"),
     incidentsSafety: t("incidentsDescription"),
+    communityReports: t("communityReportsDescription"),
     settings: t("settingsDescription"),
     profile: t("profileDescription")
   };
@@ -751,7 +609,6 @@ export function App({
             onSearch={setSearch}
             searchPlaceholder={t("searchPlaceholder")}
             searchLabel={t("searchLabel")}
-            helpLabel={t("helpLabel")}
             notificationsLabel={t("notificationsLabel")}
             notificationsTitle={t("notificationsTitle")}
             notificationsDescription={t("notificationsUnavailableDescription")}

@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { pagedWhere, listPageOrderBy, listPageResult, parseListPage } from "../lib/pagination.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction } from "../generated/prisma/enums.js";
-import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
+import { latitudeSchema, legacyLabelSchema, longitudeSchema } from "../lib/validation.js";
 import { MatchStatus, TripStatus } from "../generated/prisma/enums.js";
 import { advanceLegacyTrip } from "../services/tripLifecycle.js";
 import { releaseLegacyCapacity } from "../services/legacyCapacity.js";
@@ -14,10 +15,10 @@ import { passengerFareResponse } from "../services/routeFares.js";
 
 /** Older app builds: coordinates for each end; mapped to the Hebron → Bethlehem route. */
 const createPassengerRequestSchema = z.object({
-  pickup_label: z.string().min(1),
+  pickup_label: legacyLabelSchema,
   pickup_lat: latitudeSchema,
   pickup_lng: longitudeSchema,
-  destination_label: z.string().min(1),
+  destination_label: legacyLabelSchema,
   destination_lat: latitudeSchema,
   destination_lng: longitudeSchema,
   preferred_time: z.coerce.date(),
@@ -89,12 +90,18 @@ passengerRouter.post("/passenger/requests", async (req: AuthenticatedRequest, re
 
 passengerRouter.get("/passenger/requests", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const requests = await prisma.passengerRequest.findMany({
-      where: { passenger_id: req.user!.id, canonical_entry_version: null },
+    const page = parseListPage(req.query);
+    const rows = await prisma.passengerRequest.findMany({
+      where: pagedWhere({ passenger_id: req.user!.id, canonical_entry_version: null }, page),
       include: passengerRequestInclude,
-      orderBy: { created_at: "desc" }
+      orderBy: listPageOrderBy,
+      take: page.limit + 1
     });
-    res.json({ requests: requests.map((request) => serializeLegacyPassengerRequest(request as unknown as Record<string, unknown>)) });
+    const { items: requests, nextCursor } = listPageResult(rows, page);
+    res.json({
+      requests: requests.map((request) => serializeLegacyPassengerRequest(request as unknown as Record<string, unknown>)),
+      next_cursor: nextCursor
+    });
   } catch (error) {
     next(error);
   }

@@ -1073,6 +1073,34 @@ adminRouter.patch("/admin/users/:id/status", async (req: AuthenticatedRequest, r
   }
 });
 
+/** Requests still waiting for a driver, and merchant orders not yet in a batch: the overview alerts. */
+const AWAITING_MATCH_REQUEST_STATUSES = ["draft", "pending"] as const;
+const UNBATCHED_ORDER_STATUSES = ["draft", "submitted"] as const;
+/** Passenger parcels are stored as merchant orders; the merchant-order figures leave them out. */
+const merchantOrdersOnly = { passenger_parcel: null } satisfies Prisma.MerchantOrderWhereInput;
+/**
+ * In-progress trips: from the start of pickup until delivery is recorded.
+ * `accepted` is assigned but not yet moving; `delivered` only awaits closeout.
+ */
+export const ACTIVE_TRIP_STATUSES = ["pickup_started", "picked_up", "in_transit"] as const;
+/** How many in-progress trips the overview lists; the count covers all of them. */
+export const DASHBOARD_ACTIVE_TRIP_LIMIT = 50;
+const activeTripSelect = {
+  id: true,
+  status: true,
+  driver_route_id: true,
+  created_at: true,
+  started_at: true,
+  driver_route: {
+    select: {
+      id: true,
+      origin_label: true,
+      destination_label: true,
+      driver: { select: { id: true, user: { select: safeUserSelect } } }
+    }
+  }
+} satisfies Prisma.TripSelect;
+
 adminRouter.get("/admin/dashboard", async (req: AuthenticatedRequest, res, next) => {
   try {
     const [
@@ -1081,20 +1109,27 @@ adminRouter.get("/admin/dashboard", async (req: AuthenticatedRequest, res, next)
       routes,
       requests,
       orders,
+      passengerParcels,
       parcels,
       activeDriverGroups,
       pendingDriverApprovals,
       openIncidents,
+      unmatchedRequests,
+      unbatchedOrders,
+      unverifiedDriverRoutes,
       recentRequests,
       recentOrders,
-      recentRoutes
+      recentRoutes,
+      tripStatusGroups,
+      activeTrips
     ] =
       await Promise.all([
         prisma.user.count(),
         prisma.driverProfile.count(),
         prisma.driverRoute.count(),
         prisma.passengerRequest.count(),
-        prisma.merchantOrder.count(),
+        prisma.merchantOrder.count({ where: merchantOrdersOnly }),
+        prisma.merchantOrder.count({ where: { passenger_parcel: { isNot: null } } }),
         prisma.parcel.count(),
         // Active driver = verified driver with a route in service: waiting for work
         // (active), holding an accepted job (assigned), or driving it (on_trip).
@@ -1104,10 +1139,34 @@ adminRouter.get("/admin/dashboard", async (req: AuthenticatedRequest, res, next)
         }),
         prisma.driverVerification.count({ where: { status: "pending", user: { review_submitted_at: { not: null } } } }),
         prisma.incident.count({ where: { status: { not: "resolved" } } }),
-        prisma.passengerRequest.findMany({ orderBy: { created_at: "desc" }, take: 5 }),
-        prisma.merchantOrder.findMany({ orderBy: { created_at: "desc" }, take: 5, include: { parcels: true } }),
-        prisma.driverRoute.findMany({ orderBy: { activated_at: "desc" }, take: 5 })
+        prisma.passengerRequest.count({ where: { status: { in: [...AWAITING_MATCH_REQUEST_STATUSES] } } }),
+        prisma.merchantOrder.count({ where: { ...merchantOrdersOnly, status: { in: [...UNBATCHED_ORDER_STATUSES] } } }),
+        prisma.driverRoute.count({ where: { status: "active", driver: { verified: false } } }),
+        prisma.passengerRequest.findMany({
+          orderBy: [{ created_at: "desc" }, { id: "asc" }],
+          take: 5,
+          include: { passenger: { select: safeUserSelect } }
+        }),
+        prisma.merchantOrder.findMany({
+          where: merchantOrdersOnly,
+          orderBy: [{ created_at: "desc" }, { id: "asc" }],
+          take: 5,
+          include: { parcels: true, merchant: { select: safeUserSelect } }
+        }),
+        prisma.driverRoute.findMany({ orderBy: [{ activated_at: "desc" }, { id: "asc" }], take: 5 }),
+        // Counted in the database, so the overview stays right however many trips there are.
+        prisma.trip.groupBy({ by: ["status"], _count: { _all: true } }),
+        prisma.trip.findMany({
+          where: { status: { in: [...ACTIVE_TRIP_STATUSES] } },
+          orderBy: [{ created_at: "desc" }, { id: "asc" }],
+          take: DASHBOARD_ACTIVE_TRIP_LIMIT,
+          select: activeTripSelect
+        })
       ]);
+
+    const tripsByStatus: Record<string, number> = {};
+    for (const group of tripStatusGroups) tripsByStatus[group.status] = group._count._all;
+    const activeTripTotal = ACTIVE_TRIP_STATUSES.reduce((total, status) => total + (tripsByStatus[status] ?? 0), 0);
 
     await auditEvent(prisma, {
       userId: req.user!.id,
@@ -1123,62 +1182,188 @@ adminRouter.get("/admin/dashboard", async (req: AuthenticatedRequest, res, next)
         routes,
         passenger_requests: requests,
         merchant_orders: orders,
+        passenger_parcels: passengerParcels,
         parcels,
         active_drivers: activeDriverGroups.length,
         pending_driver_approvals: pendingDriverApprovals,
         open_incidents: openIncidents
       },
-      recent: { passenger_requests: recentRequests, merchant_orders: recentOrders, routes: recentRoutes }
+      alerts: {
+        unmatched_requests: unmatchedRequests,
+        unbatched_orders: unbatchedOrders,
+        unverified_driver_routes: unverifiedDriverRoutes
+      },
+      recent: {
+        passenger_requests: recentRequests.map((request) => ({
+          ...request,
+          passenger: request.passenger ? serializeSafeUser(request.passenger) : null
+        })),
+        merchant_orders: recentOrders.map((order) => ({
+          ...order,
+          merchant: order.merchant ? serializeSafeUser(order.merchant) : null
+        })),
+        routes: recentRoutes
+      },
+      trips: {
+        by_status: tripsByStatus,
+        active_total: activeTripTotal,
+        /** The newest in-progress trips, at most DASHBOARD_ACTIVE_TRIP_LIMIT. */
+        active: activeTrips.map((trip) => ({
+          ...trip,
+          driver_route: {
+            ...trip.driver_route,
+            driver: { ...trip.driver_route.driver, user: serializeSafeUser(trip.driver_route.driver.user) }
+          }
+        }))
+      }
     });
   } catch (error) {
     next(error);
   }
 });
 
-adminRouter.get("/admin/drivers", async (_req, res, next) => {
+/**
+ * Optional paging for the operational lists. Without `page` or `limit` a list
+ * returns every row as before; with either it returns one page plus `total`.
+ */
+const operationalListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(10_000).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  search: z.string().trim().max(64).optional()
+});
+export const DEFAULT_OPERATIONAL_PAGE_SIZE = 50;
+
+function operationalListQuery(query: unknown) {
+  const input = operationalListQuerySchema.parse(query);
+  const search = input.search ? input.search : undefined;
+  if (input.page === undefined && input.limit === undefined) return { paged: null, search };
+  const page = input.page ?? 1;
+  const limit = input.limit ?? DEFAULT_OPERATIONAL_PAGE_SIZE;
+  return { paged: { page, limit, skip: (page - 1) * limit, take: limit }, search };
+}
+
+function pageFields(paged: { page: number; limit: number } | null, total: number) {
+  return paged ? { page: paged.page, limit: paged.limit, total } : {};
+}
+
+const userSearch = (search: string) => ({
+  OR: [{ name: { contains: search } }, { phone: { contains: search } }, { id: { contains: search } }]
+});
+
+adminRouter.get("/admin/drivers", async (req, res, next) => {
   try {
-    const drivers = await prisma.driverProfile.findMany({
-      include: { user: { select: safeUserSelect }, routes: true }
+    const { paged, search } = operationalListQuery(req.query);
+    const where: Prisma.DriverProfileWhereInput = search
+      ? { OR: [{ id: { contains: search } }, { vehicle_type: { contains: search } }, { user: userSearch(search) }] }
+      : {};
+    const [drivers, total] = await Promise.all([
+      prisma.driverProfile.findMany({
+        where,
+        include: { user: { select: safeUserSelect }, routes: true },
+        orderBy: [{ created_at: "desc" }, { id: "asc" }],
+        skip: paged?.skip,
+        take: paged?.take
+      }),
+      paged ? prisma.driverProfile.count({ where }) : Promise.resolve(0)
+    ]);
+    res.json({
+      drivers: drivers.map((driver) => ({ ...driver, user: serializeSafeUser(driver.user) })),
+      ...pageFields(paged, total)
     });
-    res.json({ drivers: drivers.map((driver) => ({ ...driver, user: serializeSafeUser(driver.user) })) });
   } catch (error) {
     next(error);
   }
 });
 
-adminRouter.get("/admin/requests", async (_req, res, next) => {
+adminRouter.get("/admin/requests", async (req, res, next) => {
   try {
-    const requests = await prisma.passengerRequest.findMany({
-      include: { passenger: { select: safeUserSelect }, route_version: routeSummarySelect }
+    const { paged, search } = operationalListQuery(req.query);
+    const where: Prisma.PassengerRequestWhereInput = search
+      ? {
+          OR: [
+            { id: { contains: search } },
+            { pickup_label: { contains: search } },
+            { destination_label: { contains: search } },
+            { passenger: userSearch(search) }
+          ]
+        }
+      : {};
+    const [requests, total] = await Promise.all([
+      prisma.passengerRequest.findMany({
+        where,
+        include: { passenger: { select: safeUserSelect }, route_version: routeSummarySelect },
+        orderBy: [{ created_at: "desc" }, { id: "asc" }],
+        skip: paged?.skip,
+        take: paged?.take
+      }),
+      paged ? prisma.passengerRequest.count({ where }) : Promise.resolve(0)
+    ]);
+    res.json({
+      requests: requests.map((request) => ({ ...withRouteFields(request), passenger: serializeSafeUser(request.passenger) })),
+      ...pageFields(paged, total)
     });
-    res.json({ requests: requests.map((request) => ({ ...withRouteFields(request), passenger: serializeSafeUser(request.passenger) })) });
   } catch (error) {
     next(error);
   }
 });
 
-adminRouter.get("/admin/orders", async (_req, res, next) => {
+adminRouter.get("/admin/orders", async (req, res, next) => {
   try {
-    const orders = await prisma.merchantOrder.findMany({
-      where: { passenger_parcel: null },
-      include: { merchant: { select: safeUserSelect }, parcels: true, route_version: routeSummarySelect }
+    const { paged, search } = operationalListQuery(req.query);
+    const where: Prisma.MerchantOrderWhereInput = {
+      ...merchantOrdersOnly,
+      ...(search
+        ? { OR: [{ id: { contains: search } }, { pickup_label: { contains: search } }, { merchant: userSearch(search) }] }
+        : {})
+    };
+    const [orders, total] = await Promise.all([
+      prisma.merchantOrder.findMany({
+        where,
+        include: { merchant: { select: safeUserSelect }, parcels: true, route_version: routeSummarySelect },
+        orderBy: [{ created_at: "desc" }, { id: "asc" }],
+        skip: paged?.skip,
+        take: paged?.take
+      }),
+      paged ? prisma.merchantOrder.count({ where }) : Promise.resolve(0)
+    ]);
+    res.json({
+      orders: orders.map((order) => ({ ...withRouteFields(order), merchant: serializeSafeUser(order.merchant) })),
+      ...pageFields(paged, total)
     });
-    res.json({ orders: orders.map((order) => ({ ...withRouteFields(order), merchant: serializeSafeUser(order.merchant) })) });
   } catch (error) {
     next(error);
   }
 });
 
-adminRouter.get("/admin/routes", async (_req, res, next) => {
+adminRouter.get("/admin/routes", async (req, res, next) => {
   try {
-    const routes = await prisma.driverRoute.findMany({
-      include: { driver: { include: { user: { select: safeUserSelect } } } }
-    });
+    const { paged, search } = operationalListQuery(req.query);
+    const where: Prisma.DriverRouteWhereInput = search
+      ? {
+          OR: [
+            { id: { contains: search } },
+            { origin_label: { contains: search } },
+            { destination_label: { contains: search } },
+            { driver: { user: userSearch(search) } }
+          ]
+        }
+      : {};
+    const [routes, total] = await Promise.all([
+      prisma.driverRoute.findMany({
+        where,
+        include: { driver: { include: { user: { select: safeUserSelect } } } },
+        orderBy: [{ activated_at: "desc" }, { id: "asc" }],
+        skip: paged?.skip,
+        take: paged?.take
+      }),
+      paged ? prisma.driverRoute.count({ where }) : Promise.resolve(0)
+    ]);
     res.json({
       routes: routes.map((route) => ({
         ...route,
         driver: { ...route.driver, user: serializeSafeUser(route.driver.user) }
-      }))
+      })),
+      ...pageFields(paged, total)
     });
   } catch (error) {
     next(error);

@@ -13,6 +13,8 @@ import { createAdminOperatingRoutesRouter, createOperatingRoutesRouter } from ".
 import { merchantBulkRouter } from "./modules/merchantBulk.js";
 import { parcelHandoverRouter } from "./modules/parcelHandover.js";
 import { adminRouter } from "./modules/admin.js";
+import { adminAppRatingsRouter } from "./modules/adminAppRatings.js";
+import { createAdminCheckpointPositionsRouter } from "./modules/adminCheckpointPositions.js";
 import { matchingRouter } from "./modules/matching.js";
 import { batchingRouter } from "./modules/batching.js";
 import { comparisonRouter } from "./modules/comparison.js";
@@ -172,16 +174,10 @@ export function createApp(
   app.use("/api/v1", createOperatingRoutesRouter());
   app.use("/api/v1", createLimitedCheckpointDirectoryRouter(appConfig, limitedDirectory));
   app.use("/api/v1", createCheckpointDirectoryRouter(appConfig, directory));
-  app.use(
-    "/api/v1",
-    createCheckpointRouter(
-      appConfig,
-      dependencies.checkpointService,
-      appConfig.partnerCheckpointMapEnabled && limitedDirectory
-        ? dependencies.partnerCheckpointMapService ?? new PartnerCheckpointMapService(limitedDirectory)
-        : undefined
-    ),
-  );
+  const partnerCheckpointMap = appConfig.partnerCheckpointMapEnabled && limitedDirectory
+    ? dependencies.partnerCheckpointMapService ?? new PartnerCheckpointMapService(limitedDirectory)
+    : undefined;
+  app.use("/api/v1", createCheckpointRouter(appConfig, dependencies.checkpointService, partnerCheckpointMap));
   if (appConfig.demoFeaturesEnabled) app.use("/api/v1", createDemoRouter(appConfig));
   app.use(
     "/api/v1",
@@ -276,6 +272,8 @@ export function createApp(
     "/api/v1",
     createAdminMatchingMonitoringRouter(dependencies.adminMatchingMonitoringService),
   );
+  app.use("/api/v1", adminAppRatingsRouter);
+  app.use("/api/v1", createAdminCheckpointPositionsRouter(partnerCheckpointMap));
   app.use("/api/v1", adminRouter);
 
   app.use(notFoundHandler);

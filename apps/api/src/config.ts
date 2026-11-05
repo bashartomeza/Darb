@@ -421,10 +421,10 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   if (googleMobileClientIds.some((id) => googleAdminClientIds.includes(id))) problems.push("Google mobile and admin audiences must be distinct");
   if (raw.GOOGLE_PASSENGER_SIGNUP_MODE !== "disabled" && (!googleMobileClientIds.length || !raw.AUTH_ACTION_TOKEN_PEPPER)) problems.push("Google passenger signup requires mobile audiences and AUTH_ACTION_TOKEN_PEPPER");
   if (raw.GOOGLE_PASSENGER_SIGNUP_MODE === "allowlist" && googlePassengerAllowlist.length === 0) problems.push("Google passenger signup requires nonempty HMAC allowlist");
-  // No approved email/SMS adapter is currently wired into the application.
-  // A configuration assertion cannot substitute for delivery, published legal
-  // releases, and a completed runtime rehearsal. Keep rollout closed until the
-  // approved adapters and their startup checks are implemented together.
+  // Email delivery is wired (EMAIL_DELIVERY=smtp, validated below); SMS is not.
+  // A configuration assertion cannot substitute for published legal releases and
+  // a completed runtime rehearsal, so Google passenger signup stays closed in
+  // staging and production until this gate is lifted deliberately.
   if (productionLike && raw.GOOGLE_PASSENGER_SIGNUP_MODE !== "disabled") {
     problems.push("google_signup_prerequisite_missing: approved delivery providers, published legal releases, and runtime rehearsal required");
   }

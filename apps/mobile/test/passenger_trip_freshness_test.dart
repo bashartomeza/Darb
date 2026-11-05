@@ -17,7 +17,7 @@ void main() {
       final l10n = await _pump(tester, locale, ageSeconds: 30);
       final tile = find.byKey(const ValueKey('tripLocationQuickInfo'));
       expect(
-        find.descendant(of: tile, matching: find.text(l10n.tripLocationLive)),
+        find.descendant(of: tile, matching: find.text(l10n.tripLive)),
         findsOneWidget,
       );
       expect(
@@ -36,7 +36,7 @@ void main() {
       final l10n = await _pump(tester, locale, ageSeconds: 7 * 60 + 20);
       final tile = find.byKey(const ValueKey('tripLocationQuickInfo'));
       expect(
-        find.descendant(of: tile, matching: find.text(l10n.tripLocationLive)),
+        find.descendant(of: tile, matching: find.text(l10n.tripLive)),
         findsNothing,
       );
       expect(
@@ -46,7 +46,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text(l10n.liveLocationBadge), findsNothing);
+      expect(find.text(l10n.tripLive), findsNothing);
       expect(
         _driverMarker(tester).label,
         contains(l10n.locationLastSeenMinutes(7)),

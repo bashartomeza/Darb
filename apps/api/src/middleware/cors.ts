@@ -56,5 +56,3 @@ export function createCors(appConfig: AppConfig = config): RequestHandler {
     next();
   };
 }
-
-export const localDevCors = createCors();

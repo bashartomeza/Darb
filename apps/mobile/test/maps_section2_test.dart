@@ -587,7 +587,7 @@ void main() {
       ).single;
       expect(marker.color, checkpointStatusColor(CheckpointStatus.congested));
       expect(marker.label, isNot(contains(l10n.checkpointOfficialUnknown)));
-      expect(marker.label, contains('دخول: أزمة خانقة'));
+      expect(marker.label, contains('Entering: أزمة خانقة'));
       expect(parseCheckpointStatus('أزمة خانقة'), CheckpointStatus.congested);
       final unplaced = live.unplaced.single;
       expect(unplaced.status, CheckpointStatus.closed);

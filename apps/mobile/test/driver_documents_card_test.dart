@@ -85,6 +85,22 @@ void main() {
     expect(repository.merchantCalls.toSet(), {true});
   });
 
+  testWidgets('a list that failed to load can be retried', (tester) async {
+    final repository = _FakeRepository()..listStatus = 500;
+    await _pump(tester, repository, pick: () async => null);
+    expect(find.text('Verification documents'), findsOneWidget);
+    expect(find.byKey(const ValueKey('driverDocument-d1')), findsNothing);
+    expect(find.byKey(const ValueKey('driverDocumentAdd')), findsNothing);
+
+    repository.listStatus = null;
+    await tester.tap(find.byKey(const ValueKey('driverDocumentsRetry')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('driverDocument-d1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('driverDocumentAdd')), findsOneWidget);
+    expect(find.byKey(const ValueKey('driverDocumentsRetry')), findsNothing);
+  });
+
   testWidgets('stays hidden when the server has uploads switched off', (
     tester,
   ) async {

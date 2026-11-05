@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/i18n/locale_controller.dart';
 import '../../../../core/theme/passenger_theme.dart';
 import '../../../app_rating/data/app_rating_repository.dart';
-import '../../../auth/presentation/auth_completion_screen.dart' show authText;
+import '../../../../l10n/app_localizations.dart';
 
 /// Keys an earlier build used to keep the rating on the phone only. The rating
 /// now lives in the database; these are removed when the sheet opens.
@@ -115,24 +115,20 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
         ),
         const SizedBox(height: 12),
         Text(
-          authText(context, 'Thank you!', 'شكراً لك!'),
+          AppLocalizations.of(context).rateAppThank,
           textAlign: TextAlign.center,
           style: PassengerStyle.sectionTitle,
         ),
         const SizedBox(height: 6),
         Text(
-          authText(
-            context,
-            'Your feedback helps us improve Darb.',
-            'ملاحظاتك تساعدنا على تحسين درب.',
-          ),
+          AppLocalizations.of(context).rateAppFeedbackHelpsUsImprove,
           textAlign: TextAlign.center,
           style: PassengerStyle.cardBody,
         ),
         const SizedBox(height: 20),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(authText(context, 'Done', 'تم')),
+          child: Text(AppLocalizations.of(context).rateAppDone),
         ),
       ],
     );
@@ -144,17 +140,13 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          authText(context, 'Rate Our App', 'قيّم التطبيق'),
+          AppLocalizations.of(context).settingsRateOurApp,
           textAlign: TextAlign.center,
           style: PassengerStyle.sectionTitle,
         ),
         const SizedBox(height: 6),
         Text(
-          authText(
-            context,
-            'How is your experience with Darb?',
-            'كيف تجد تجربتك مع درب؟',
-          ),
+          AppLocalizations.of(context).rateAppHowExperienceDarb,
           textAlign: TextAlign.center,
           style: PassengerStyle.cardBody,
         ),
@@ -189,20 +181,12 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
           maxLength: 500,
           textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(
-            hintText: authText(
-              context,
-              'Tell us more (optional)',
-              'أخبرنا المزيد (اختياري)',
-            ),
+            hintText: AppLocalizations.of(context).rateAppTellUsMoreOptional,
           ),
         ),
         if (_failed) ...[
           Text(
-            authText(
-              context,
-              'Your rating could not be sent. Check your connection and try again.',
-              'تعذّر إرسال تقييمك. تحقّق من الاتصال وحاول مرة أخرى.',
-            ),
+            AppLocalizations.of(context).rateAppRatingCouldNotSent,
             key: const ValueKey('ratingError'),
             textAlign: TextAlign.center,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -212,7 +196,7 @@ class _RateAppSheetState extends ConsumerState<RateAppSheet> {
         FilledButton(
           key: const ValueKey('ratingSubmit'),
           onPressed: _rating == 0 || _saving ? null : _submit,
-          child: Text(authText(context, 'Submit', 'إرسال')),
+          child: Text(AppLocalizations.of(context).rateAppSubmit),
         ),
       ],
     );

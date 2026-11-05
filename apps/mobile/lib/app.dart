@@ -17,7 +17,7 @@ class DarbApp extends ConsumerWidget {
         ref.watch(localeControllerProvider).value ?? DomainLabels.defaultLocale;
 
     return MaterialApp.router(
-      title: 'Darb',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       locale: locale,

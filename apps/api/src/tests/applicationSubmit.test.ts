@@ -130,6 +130,9 @@ describe("submitting an application for review", () => {
     expect(db.user.update).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "applicant_1" }, data: { review_submitted_at: expect.any(Date) } })
     );
+    expect(db.auditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "application_submitted", entity_id: "applicant_1" })
+    }));
   });
 
   it("refuses a driver without licence, vehicle registration, vehicle photo and national ID", async () => {

@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { Prisma, PrismaClient, UserRole } from "../generated/prisma/client.js";
 import { config, type AppConfig } from "../config.js";
@@ -643,9 +643,17 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
   }, { isolationLevel: "Serializable" });
 }
 
+/** Constant-time comparison of the x-demo-reset-key header with the configured key. */
+export function demoResetKeyMatches(provided: string | undefined, expected: string | undefined) {
+  if (!provided || !expected) return false;
+  // Hashing first gives equal-length inputs, so neither length nor content leaks through timing.
+  const actual = createHash("sha256").update(provided, "utf8").digest();
+  const wanted = createHash("sha256").update(expected, "utf8").digest();
+  return timingSafeEqual(actual, wanted);
+}
+
 async function canReset(req: Request, res: Response, appConfig: AppConfig) {
-  const resetKey = req.header("x-demo-reset-key");
-  if (appConfig.demo && resetKey === appConfig.demo.resetKey) {
+  if (appConfig.demo && demoResetKeyMatches(req.header("x-demo-reset-key"), appConfig.demo.resetKey)) {
     return true;
   }
 

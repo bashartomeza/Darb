@@ -136,6 +136,10 @@ describe("shop owner documents", () => {
     expect(file).toMatchObject({ merchant_document_id: "mdoc_1", content_type: "image/jpeg", size_bytes: JPEG.length, sha256: data.sha256 });
     expect(Buffer.from(file.bytes as Uint8Array)).toEqual(JPEG);
     expect(await readdir(dir)).toEqual([]);
+    // An upload changes the application, not the account status.
+    expect(tx.auditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "application_document_uploaded", entity_id: "shop_user" })
+    }));
   });
 
   it("rejects unknown content, empty bodies and driver-only kinds without writing anything", async () => {

@@ -161,8 +161,8 @@ describe("matching, batching, comparison", () => {
   });
 
   it("route-compatible driver scores higher than nearest wrong-direction driver", () => {
-    const compatible = scoreDriverRoute({ route: compatibleRoute, passengerRequest, parcelCount: 0 });
-    const wrongDirection = scoreDriverRoute({ route: wrongDirectionRoute, passengerRequest, parcelCount: 0 });
+    const compatible = scoreDriverRoute({ route: compatibleRoute, passengerRequest, parcelCount: 0, sameRoute: true });
+    const wrongDirection = scoreDriverRoute({ route: wrongDirectionRoute, passengerRequest, parcelCount: 0, sameRoute: false });
 
     expect(compatible.finalScore).toBeGreaterThan(wrongDirection.finalScore);
   });

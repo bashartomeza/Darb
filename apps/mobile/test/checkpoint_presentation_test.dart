@@ -137,7 +137,9 @@ void main() {
                   final browser = find.text(
                     driver
                         ? (locale == 'ar' ? 'الحواجز' : 'Barriers')
-                        : 'الحواجز على الطريق',
+                        : (locale == 'ar'
+                              ? 'الحواجز على الطريق'
+                              : 'Checkpoints on the road'),
                   );
                   await tester.ensureVisible(browser);
                   await tester.tap(browser);

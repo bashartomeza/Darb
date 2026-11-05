@@ -167,6 +167,9 @@ describe("passenger parcel cancellation", () => {
     expect(db.passengerParcelDetail.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ receiver_name: null, receiver_phone: null, note: null })
     }));
+    expect(db.auditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "merchant_order_cancelled", user_id: "passenger_1", entity_id: "order_1" })
+    }));
   });
 
   it.each([

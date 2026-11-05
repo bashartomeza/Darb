@@ -60,7 +60,8 @@ const expected = {
   "20261107120000_app_ratings": "0c8a6345400c9cce44dfd4197b75b80c325572dc0541764b3ab976d5cda9fe90",
   "20261108120000_checkpoint_positions": "76e2a9a434ca671a4079cd6712cd60a1256663c6cc1d1ab68f5d72ef42e13235",
   "20261109120000_document_files_in_database": "6f623d449c9bb07d0122a8b69652d0bae68acbe1f5c194bcaecefe8858590e41",
-  "20261110120000_route_fare_driver_price": "469d44c0a9cdbd32fc9279d89dbc5bb37d61f296583f8595a19de78e95bb80e0"
+  "20261110120000_route_fare_driver_price": "469d44c0a9cdbd32fc9279d89dbc5bb37d61f296583f8595a19de78e95bb80e0",
+  "20261111130000_reliability_indexes": "6c31fa141425d26d6c8ee684dd08c2ecfc24d140edf815ddcb199f65d793d674"
 };
 
 function normalizedChecksum(path) {

@@ -8,6 +8,7 @@ import 'package:darb_mobile/core/widgets/status_chip.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
@@ -15,6 +16,8 @@ import '../application/passenger_history_controller.dart';
 import '../data/passenger_models.dart';
 import 'passenger_home_screen.dart' show passengerStatusLabel;
 import 'passenger_request_labels.dart';
+import 'settings/passenger_settings_screen.dart'
+    show showPassengerLanguagePicker;
 
 /// Passenger "My Trips" screen.
 ///
@@ -42,170 +45,175 @@ class _PassengerTripsScreenState extends ConsumerState<PassengerTripsScreen> {
 
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: scheme.surface,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            const _GlassBackground(),
+    // Driver accept/start/complete reaches the list without pull-to-refresh.
+    return ForegroundRefresh(
+      refresh: () => ref.read(passengerHistoryProvider.notifier).poll(),
+      child: Scaffold(
+        backgroundColor: scheme.surface,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              const _GlassBackground(),
 
-            RefreshIndicator(
-              color: scheme.primary,
-              backgroundColor: scheme.surface.withValues(alpha: 0.92),
-              onRefresh: () =>
-                  ref.read(passengerHistoryProvider.notifier).refresh(),
-              child: history.when(
-                loading: () => ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: _pagePadding,
-                  children: const [
-                    _HeaderSkeleton(),
-                    SizedBox(height: AppTokens.spaceMedium),
-                    _StatsSkeleton(),
-                    SizedBox(height: AppTokens.spaceMedium),
-                    _TripSkeleton(),
-                  ],
-                ),
+              RefreshIndicator(
+                color: scheme.primary,
+                backgroundColor: scheme.surface.withValues(alpha: 0.92),
+                onRefresh: () =>
+                    ref.read(passengerHistoryProvider.notifier).refresh(),
+                child: history.when(
+                  loading: () => ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: _pagePadding,
+                    children: const [
+                      _HeaderSkeleton(),
+                      SizedBox(height: AppTokens.spaceMedium),
+                      _StatsSkeleton(),
+                      SizedBox(height: AppTokens.spaceMedium),
+                      _TripSkeleton(),
+                    ],
+                  ),
 
-                error: (error, _) => ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: _pagePadding,
-                  children: [
-                    _TopHeader(
-                      onLanguageTap: () => _showLanguagePicker(context),
-                    ),
-                    const SizedBox(height: AppTokens.spaceLarge),
-                    _GlassCard(
-                      padding: const EdgeInsets.all(AppTokens.spaceMedium),
-                      child: ErrorStateView(
-                        title: l10n.tripHistoryFailed,
-                        retryLabel: l10n.retry,
-                        onRetry: () => ref
-                            .read(passengerHistoryProvider.notifier)
-                            .refresh(),
-                      ),
-                    ),
-                  ],
-                ),
-
-                data: (state) {
-                  final filteredRequests = _filteredRequests(state);
-
-                  return ListView(
-                    key: const ValueKey('passengerTripsList'),
+                  error: (error, _) => ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: _pagePadding,
                     children: [
-                      // ------------------------------------------------------
-                      // HEADER
-                      // ------------------------------------------------------
                       _TopHeader(
                         onLanguageTap: () => _showLanguagePicker(context),
                       ),
-
-                      const SizedBox(height: AppTokens.spaceMedium),
-
-                      // ------------------------------------------------------
-                      // STATS
-                      // ------------------------------------------------------
-                      _TripStats(
-                        total:
-                            state.active.length +
-                            state.upcoming.length +
-                            state.past.length +
-                            state.cancelled.length,
-                        active: state.active.length,
-                        upcoming: state.upcoming.length,
-                        past: state.past.length,
-                        cancelled: state.cancelled.length,
-                      ),
-
-                      const SizedBox(height: AppTokens.spaceMedium),
-
-                      // ------------------------------------------------------
-                      // FILTERS
-                      // ------------------------------------------------------
-                      _FilterBar(
-                        selectedFilter: _selectedFilter,
-                        onChanged: (filter) {
-                          setState(() {
-                            _selectedFilter = filter;
-                          });
-                        },
-                        activeCount: state.active.length,
-                        upcomingCount: state.upcoming.length,
-                        pastCount: state.past.length,
-                        cancelledCount: state.cancelled.length,
-                      ),
-
                       const SizedBox(height: AppTokens.spaceLarge),
+                      _GlassCard(
+                        padding: const EdgeInsets.all(AppTokens.spaceMedium),
+                        child: ErrorStateView(
+                          title: l10n.tripHistoryFailed,
+                          retryLabel: l10n.retry,
+                          onRetry: () => ref
+                              .read(passengerHistoryProvider.notifier)
+                              .refresh(),
+                        ),
+                      ),
+                    ],
+                  ),
 
-                      // ------------------------------------------------------
-                      // EMPTY
-                      // ------------------------------------------------------
-                      if (state.isEmpty)
-                        _ModernEmptyState(
-                          title: l10n.noTripsYet,
-                          message: l10n.noTripsYetBody,
-                          actionLabel: l10n.createRequest,
-                          onAction: () => context.go('/passenger/request/new'),
-                        )
-                      // ------------------------------------------------------
-                      // FILTER EMPTY
-                      // ------------------------------------------------------
-                      else if (filteredRequests.isEmpty)
-                        _FilterEmptyState(
-                          onReset: () {
+                  data: (state) {
+                    final filteredRequests = _filteredRequests(state);
+
+                    return ListView(
+                      key: const ValueKey('passengerTripsList'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: _pagePadding,
+                      children: [
+                        // ------------------------------------------------------
+                        // HEADER
+                        // ------------------------------------------------------
+                        _TopHeader(
+                          onLanguageTap: () => _showLanguagePicker(context),
+                        ),
+
+                        const SizedBox(height: AppTokens.spaceMedium),
+
+                        // ------------------------------------------------------
+                        // STATS
+                        // ------------------------------------------------------
+                        _TripStats(
+                          total:
+                              state.active.length +
+                              state.upcoming.length +
+                              state.past.length +
+                              state.cancelled.length,
+                          active: state.active.length,
+                          upcoming: state.upcoming.length,
+                          past: state.past.length,
+                          cancelled: state.cancelled.length,
+                        ),
+
+                        const SizedBox(height: AppTokens.spaceMedium),
+
+                        // ------------------------------------------------------
+                        // FILTERS
+                        // ------------------------------------------------------
+                        _FilterBar(
+                          selectedFilter: _selectedFilter,
+                          onChanged: (filter) {
                             setState(() {
-                              _selectedFilter = _TripFilter.all;
+                              _selectedFilter = filter;
                             });
                           },
-                        )
-                      // ------------------------------------------------------
-                      // TRIPS
-                      // ------------------------------------------------------
-                      else ...[
-                        _TripsTitle(
-                          filter: _selectedFilter,
-                          count: filteredRequests.length,
+                          activeCount: state.active.length,
+                          upcomingCount: state.upcoming.length,
+                          pastCount: state.past.length,
+                          cancelledCount: state.cancelled.length,
                         ),
 
-                        const SizedBox(height: AppTokens.spaceSmall),
+                        const SizedBox(height: AppTokens.spaceLarge),
 
-                        for (final (index, item)
-                            in filteredRequests.indexed) ...[
-                          if (index > 0)
-                            const SizedBox(height: AppTokens.spaceSmall),
+                        // ------------------------------------------------------
+                        // EMPTY
+                        // ------------------------------------------------------
+                        if (state.isEmpty)
+                          _ModernEmptyState(
+                            title: l10n.noTripsYet,
+                            message: l10n.noTripsYetBody,
+                            actionLabel: l10n.createRequest,
+                            onAction: () =>
+                                context.go('/passenger/request/new'),
+                          )
+                        // ------------------------------------------------------
+                        // FILTER EMPTY
+                        // ------------------------------------------------------
+                        else if (filteredRequests.isEmpty)
+                          _FilterEmptyState(
+                            onReset: () {
+                              setState(() {
+                                _selectedFilter = _TripFilter.all;
+                              });
+                            },
+                          )
+                        // ------------------------------------------------------
+                        // TRIPS
+                        // ------------------------------------------------------
+                        else ...[
+                          _TripsTitle(
+                            filter: _selectedFilter,
+                            count: filteredRequests.length,
+                          ),
 
-                          _TripCard(
-                            key: ValueKey('passengerTrip-${item.request.id}'),
-                            request: item.request,
-                            tripId: item.tripId,
-                            active: item.isActive,
+                          const SizedBox(height: AppTokens.spaceSmall),
+
+                          for (final (index, item)
+                              in filteredRequests.indexed) ...[
+                            if (index > 0)
+                              const SizedBox(height: AppTokens.spaceSmall),
+
+                            _TripCard(
+                              key: ValueKey('passengerTrip-${item.request.id}'),
+                              request: item.request,
+                              tripId: item.tripId,
+                              active: item.isActive,
+                            ),
+                          ],
+                        ],
+
+                        // ------------------------------------------------------
+                        // CANONICAL ASSIGNMENTS
+                        // ------------------------------------------------------
+                        if (canonicalStatus) ...[
+                          const SizedBox(height: AppTokens.spaceLarge),
+                          _CanonicalCard(
+                            title: l10n.canonicalAssignments,
+                            sectionTitle: l10n.canonicalRoutes,
+                            onPressed: () =>
+                                context.go('/passenger/canonical-assignments'),
                           ),
                         ],
-                      ],
 
-                      // ------------------------------------------------------
-                      // CANONICAL ASSIGNMENTS
-                      // ------------------------------------------------------
-                      if (canonicalStatus) ...[
                         const SizedBox(height: AppTokens.spaceLarge),
-                        _CanonicalCard(
-                          title: l10n.canonicalAssignments,
-                          sectionTitle: l10n.canonicalRoutes,
-                          onPressed: () =>
-                              context.go('/passenger/canonical-assignments'),
-                        ),
                       ],
-
-                      const SizedBox(height: AppTokens.spaceLarge),
-                    ],
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -318,101 +326,12 @@ class _PassengerTripsScreenState extends ConsumerState<PassengerTripsScreen> {
   // LANGUAGE PICKER
   // --------------------------------------------------------------------------
 
-  Future<void> _showLanguagePicker(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      builder: (context) {
-        final theme = Theme.of(context);
-        final scheme = theme.colorScheme;
-
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-            child: Container(
-              decoration: BoxDecoration(
-                color: scheme.surface.withValues(alpha: 0.78),
-                border: Border(
-                  top: BorderSide(
-                    color: scheme.onSurface.withValues(alpha: 0.10),
-                  ),
-                ),
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppTokens.marginMobile,
-                    0,
-                    AppTokens.marginMobile,
-                    AppTokens.spaceLarge,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: scheme.primary.withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.language_rounded,
-                                color: scheme.primary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Language',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: AppTokens.spaceMedium),
-
-                      _LanguageOption(
-                        title: 'العربية',
-                        selected:
-                            Localizations.localeOf(context).languageCode ==
-                            'ar',
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-
-                      const SizedBox(height: AppTokens.spaceSmall),
-
-                      _LanguageOption(
-                        title: 'English',
-                        selected:
-                            Localizations.localeOf(context).languageCode ==
-                            'en',
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  Future<void> _showLanguagePicker(BuildContext context) =>
+      showPassengerLanguagePicker(
+        context,
+        ref,
+        Localizations.localeOf(context),
+      );
 
   static const _pagePadding = EdgeInsets.fromLTRB(
     AppTokens.marginMobile,
@@ -553,9 +472,7 @@ class _TopHeader extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                Localizations.localeOf(context).languageCode == 'ar'
-                    ? 'كل رحلاتك في مكان واحد'
-                    : 'Your journeys in one place',
+                AppLocalizations.of(context).myTripsSubtitle,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
@@ -1083,7 +1000,9 @@ class _TripCard extends StatelessWidget {
                     const SizedBox(height: 3),
 
                     Text(
-                      active ? 'Current trip' : request.pickupText(context),
+                      active
+                          ? AppLocalizations.of(context).myTripsCurrentTrip
+                          : request.pickupText(context),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -1518,94 +1437,6 @@ class _CanonicalCard extends StatelessWidget {
 // LANGUAGE
 // =============================================================================
 
-class _LanguageOption extends StatelessWidget {
-  const _LanguageOption({
-    required this.title,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String title;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Material(
-          color: selected
-              ? scheme.primary.withValues(alpha: 0.10)
-              : scheme.surface.withValues(alpha: 0.35),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: selected
-                      ? scheme.primary.withValues(alpha: 0.20)
-                      : scheme.onSurface.withValues(alpha: 0.07),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 35,
-                    height: 35,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? scheme.primary.withValues(alpha: 0.12)
-                          : scheme.surfaceContainerHighest.withValues(
-                              alpha: 0.45,
-                            ),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Icon(
-                      title == 'العربية'
-                          ? Icons.translate_rounded
-                          : Icons.language_rounded,
-                      size: 17,
-                      color: selected
-                          ? scheme.primary
-                          : scheme.onSurfaceVariant,
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ),
-
-                  if (selected)
-                    Icon(
-                      Icons.check_circle_rounded,
-                      color: scheme.primary,
-                      size: 21,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // =============================================================================
 // EMPTY
 // =============================================================================
@@ -1734,7 +1565,7 @@ class _FilterEmptyState extends StatelessWidget {
           const SizedBox(height: 12),
 
           Text(
-            'No trips here',
+            AppLocalizations.of(context).myTripsFilterEmptyTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w900,
             ),
@@ -1743,7 +1574,7 @@ class _FilterEmptyState extends StatelessWidget {
           const SizedBox(height: 5),
 
           Text(
-            'There are no trips in this category yet.',
+            AppLocalizations.of(context).myTripsFilterEmptyBody,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
@@ -1761,7 +1592,7 @@ class _FilterEmptyState extends StatelessWidget {
               ),
             ),
             child: Text(
-              'Show all trips',
+              AppLocalizations.of(context).myTripsShowAll,
               style: TextStyle(
                 fontWeight: FontWeight.w900,
                 color: scheme.primary,

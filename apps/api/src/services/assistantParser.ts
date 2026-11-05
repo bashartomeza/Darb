@@ -665,7 +665,7 @@ function routeServes(routes: AssistantRoute[], pickup: string, dropoff: string):
 }
 
 /** Stops that can legally be paired with `known` on at least one route. */
-export function reachablePlaces(
+function reachablePlaces(
   context: Pick<ParseContext, "places" | "routes">,
   known: string,
   as: "pickup" | "dropoff"

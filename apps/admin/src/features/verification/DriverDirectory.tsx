@@ -4,8 +4,9 @@ import { useLocale } from "../../i18n/LocaleContext";
 import { AlertItem, BentoGrid, Button, Card, CardHeader, DataTable, EmptyState, Skeleton, StatusBadge, TechnicalValue, type Column, type Tone } from "../../ui";
 import type { OverviewResourceState } from "../overview/overviewState";
 import { matchesSearch } from "../search";
+import { Pager } from "../shared/Pager";
 
-type VerificationApi = Pick<ApiClient, "driverVerifications" | "driverVerification" | "approveDriverVerification" | "rejectDriverVerification" | "reopenDriverVerification" | "recordDriverEvidence" | "downloadDriverDocument" | "driverVerificationsExpiring" | "driverVerificationsReReview">;
+type VerificationApi = Pick<ApiClient, "driverVerifications" | "driverVerification" | "approveDriverVerification" | "rejectDriverVerification" | "reopenDriverVerification" | "recordDriverEvidence" | "downloadDriverDocument" | "driverVerificationsExpiring" | "driverVerificationsReReview" | "updateDriverExpiry">;
 type ProfileForm = { vehicle_type: string; seats_total: string; parcel_capacity: string };
 type ExpiryForm = Record<DriverExpiryKind, string>;
 type QueueView = DriverVerificationStatus | "expiring" | "re_review";
@@ -18,7 +19,58 @@ export function expiryInputFrom(form: ExpiryForm): DriverExpiryInput {
   for (const kind of EXPIRY_KINDS) if (DATE_PATTERN.test(form[kind])) out[kind] = form[kind];
   return out;
 }
+/** The recorded dates as form values; a missing date is an empty field. */
+export function expiryFormFrom(verification: Pick<DriverVerification, "expiry">): ExpiryForm {
+  const form = { ...EMPTY_EXPIRY };
+  for (const kind of EXPIRY_KINDS) form[kind] = verification.expiry?.[kind]?.expires_on ?? "";
+  return form;
+}
+
+/**
+ * What a correction sends: only the dates the admin changed. Emptying a
+ * recorded date clears it (null); an untouched field is left out. Null when a
+ * filled field is not a date.
+ */
+export function expiryCorrectionFrom(form: ExpiryForm, recorded: ExpiryForm): DriverExpiryInput | null {
+  const out: DriverExpiryInput = {};
+  for (const kind of EXPIRY_KINDS) {
+    const value = form[kind].trim();
+    if (value === recorded[kind]) continue;
+    if (value === "") out[kind] = null;
+    else if (DATE_PATTERN.test(value)) out[kind] = value;
+    else return null;
+  }
+  return out;
+}
 type DriverAccountChange = { driver: DriverProfile; status: AccountStatus; expectedStatus: UserAccountStatus };
+
+/** Corrects the recorded expiry dates of an approved driver, for example after an early licence renewal. */
+function ExpiryCorrection({ verification, busy, error, onSave }: {
+  verification: DriverVerification;
+  busy: boolean;
+  error?: string | null;
+  onSave: (expiry: DriverExpiryInput) => Promise<boolean>;
+}) {
+  const { t } = useLocale();
+  const recorded = expiryFormFrom(verification);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<ExpiryForm>(recorded);
+  const correction = expiryCorrectionFrom(form, recorded);
+  const unchanged = correction !== null && Object.keys(correction).length === 0;
+
+  if (!editing) {
+    return <div className="card__actions"><Button variant="secondary" size="sm" icon="id_card" disabled={busy} onClick={() => { setForm(recorded); setEditing(true); }}>{t("correctExpiryDates")}</Button></div>;
+  }
+  return <div className="stack stack--tight" aria-label={t("correctExpiryDates")} role="group">
+    <p className="muted">{t("correctExpiryHint")}</p>
+    {EXPIRY_KINDS.map((kind) => <label className="field" key={kind}>{t(`expiryKind_${kind}`)}<input type="date" value={form[kind]} disabled={busy} onChange={(event) => setForm({ ...form, [kind]: event.target.value })} /></label>)}
+    {error && <p role="alert" className="overview-resource-note overview-resource-note--error">{error}</p>}
+    <div className="card__actions">
+      <Button variant="primary" size="sm" disabled={busy || correction === null || unchanged} onClick={() => { if (correction) void onSave(correction).then((saved) => { if (saved) setEditing(false); }); }}>{busy ? t("saving") : t("saveExpiryDates")}</Button>
+      <Button variant="ghost" size="sm" disabled={busy} onClick={() => setEditing(false)}>{t("cancel")}</Button>
+    </div>
+  </div>;
+}
 
 /** The trust score with the components behind it. Aggregates only: never individual ratings. */
 function TrustCell({ driver }: { driver: DriverProfile }) {
@@ -63,7 +115,8 @@ function EvidenceForm({ busy, onRecord }: { busy: boolean; onRecord: (kind: Evid
   </div>;
 }
 
-export function DriverReviewPanel({ verification, busy, action, reason, profile, expiry = EMPTY_EXPIRY, error, onExpiryChange = () => undefined, onRecordEvidence, onDownloadDocument, onAction, onReasonChange, onProfileChange, onConfirm, onClose }: {
+export function DriverReviewPanel({ verification, busy, action, reason, profile, expiry = EMPTY_EXPIRY, error, onExpiryChange = () => undefined, onRecordEvidence, onDownloadDocument, onCorrectExpiry, onAction, onReasonChange, onProfileChange, onConfirm, onClose }: {
+  onCorrectExpiry?: (expiry: DriverExpiryInput) => Promise<boolean>;
   verification: DriverVerification;
   busy: boolean;
   action: "approve" | "reject" | "reopen" | null;
@@ -133,7 +186,10 @@ export function DriverReviewPanel({ verification, busy, action, reason, profile,
     </Card>
     <Card span={6}>
       <CardHeader title={t("reviewDecisionSection")} />
-      {verification.status === "approved" ? <AlertItem tone="success" title={t("verificationDecisionRecorded")} description={t("verificationDecisionFinal")} /> : verification.status === "documents_expired" ? <AlertItem tone="warning" title={t("documentsExpiredTitle")} description={t("documentsExpiredDescription")} /> : verification.status === "rejected" && action === null ? <>
+      {verification.status === "approved" ? <>
+        <AlertItem tone="success" title={t("verificationDecisionRecorded")} description={t("verificationDecisionFinal")} />
+        {onCorrectExpiry && <ExpiryCorrection key={`${verification.id}-${verification.revision}`} verification={verification} busy={busy} error={error} onSave={onCorrectExpiry} />}
+      </> : verification.status === "documents_expired" ? <AlertItem tone="warning" title={t("documentsExpiredTitle")} description={t("documentsExpiredDescription")} /> : verification.status === "rejected" && action === null ? <>
         <AlertItem tone="warning" title={t("verificationDecisionRecorded")} description={t("verificationReopenDescription")} />
         <div className="card__actions"><Button variant="secondary" icon="refresh" disabled={busy} onClick={() => onAction("reopen")}>{t("reopenVerification")}</Button></div>
       </> : action === null ? <>
@@ -168,16 +224,20 @@ export function DriverReviewPanel({ verification, busy, action, reason, profile,
   </>;
 }
 
-export function DriverDirectory({ api, token, drivers, search, busy, onUpdateStatus, state = { phase: "ready", hasData: true }, onRefresh = () => undefined, initialVerifications }: {
+export function DriverDirectory({ api, token, drivers, search, busy, onUpdateStatus, state = { phase: "ready", hasData: true }, onRefresh = () => undefined, initialVerifications, driversTotal, driversFooter }: {
   api?: VerificationApi;
   token?: string;
   drivers: DriverProfile[];
   search: string;
   busy: boolean;
-  onUpdateStatus: (userId: string, status: AccountStatus, reason: string | undefined, expectedStatus: UserAccountStatus) => void;
+  onUpdateStatus: (userId: string, status: AccountStatus, reason: string | undefined, expectedStatus: UserAccountStatus) => unknown;
   state?: OverviewResourceState;
   onRefresh?: () => void;
   initialVerifications?: DriverVerification[];
+  /** Every driver the list covers, when it is paged. */
+  driversTotal?: number;
+  /** Paging controls under the driver table. */
+  driversFooter?: ReactNode;
 }) {
   const { t, number, dateTime } = useLocale();
   const [accountChange, setAccountChange] = useState<DriverAccountChange | null>(null);
@@ -198,6 +258,7 @@ export function DriverDirectory({ api, token, drivers, search, busy, onUpdateSta
   const [decisionReason, setDecisionReason] = useState("");
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileForm>({ vehicle_type: "", seats_total: "", parcel_capacity: "" });
+  const [expirySaved, setExpirySaved] = useState(false);
 
   async function loadPending() {
     if (!api || !token) return;
@@ -220,6 +281,7 @@ export function DriverDirectory({ api, token, drivers, search, busy, onUpdateSta
     if (!api || !token) return;
     setDetailLoading(true);
     setDecisionError(null);
+    setExpirySaved(false);
     try {
       const result = await api.driverVerification(token, userId);
       setSelected(result.verification);
@@ -262,6 +324,30 @@ export function DriverDirectory({ api, token, drivers, search, busy, onUpdateSta
       link.remove();
       URL.revokeObjectURL(url);
     } catch { setDecisionError(t("documentDownloadFailed")); }
+  }
+
+  async function correctExpiry(expiry: DriverExpiryInput) {
+    if (!api || !token || !selected) return false;
+    setDecisionBusy(true);
+    setDecisionError(null);
+    setExpirySaved(false);
+    try {
+      const result = await api.updateDriverExpiry(token, selected.candidate.id, selected.revision, expiry);
+      setSelected(result.verification);
+      setExpirySaved(true);
+      await loadPending();
+      return true;
+    } catch (error) {
+      if ((error as ApiError)?.status === 409) {
+        await openReview(selected.candidate.id);
+        setDecisionError(t("verificationStale"));
+      } else if ((error as ApiError)?.message === "expiry_date_in_past") {
+        setDecisionError(t("expiryDateInPast"));
+      } else {
+        setDecisionError(t("verificationActionFailed"));
+      }
+      return false;
+    } finally { setDecisionBusy(false); }
   }
 
   async function confirmDecision() {
@@ -345,15 +431,23 @@ export function DriverDirectory({ api, token, drivers, search, busy, onUpdateSta
       {queuePhase === "loading" && <div className="overview-resource-state" role="status"><Skeleton lines={3} /></div>}
       {queuePhase === "error" && <EmptyState compact icon="report" title={t("verificationQueueLoadFailed")} action={<Button size="sm" variant="secondary" icon="refresh" onClick={() => void loadPending()}>{t("retry")}</Button>} />}
       {queuePhase === "ready" && <DataTable columns={pendingColumns} rows={visiblePending} rowKey={(item) => item.id} empty={<EmptyState compact icon="verified_user" title={search ? t("searchNoResults") : t("noDriverVerificationsForStatus")} />} />}
-      {queuePhase === "ready" && pendingTotal > 50 && <div className="card__actions"><Button size="sm" variant="ghost" disabled={queuePage === 1} onClick={() => setQueuePage((page) => Math.max(1, page - 1))}>{t("previousPage")}</Button><span className="muted">{t("pageOf", { page: number(queuePage), pages: number(Math.ceil(pendingTotal / 50)) })}</span><Button size="sm" variant="ghost" disabled={queuePage >= Math.ceil(pendingTotal / 50)} onClick={() => setQueuePage((page) => page + 1)}>{t("nextPage")}</Button></div>}
+      {queuePhase === "ready" && <Pager page={queuePage} total={pendingTotal} limit={50} onPage={setQueuePage} />}
     </Card>
-    {selected && <DriverReviewPanel verification={selected} busy={decisionBusy} action={decision} reason={decisionReason} profile={profile} expiry={expiryForm} onExpiryChange={setExpiryForm} error={decisionError} onRecordEvidence={(kind, note) => void recordEvidence(kind, note)} onDownloadDocument={(id) => void downloadDocument(id)} onAction={(next) => { setDecision(next); setDecisionError(null); }} onReasonChange={setDecisionReason} onProfileChange={setProfile} onConfirm={() => void confirmDecision()} onClose={() => setSelected(null)} />}
+    {selected && <DriverReviewPanel verification={selected} busy={decisionBusy} action={decision} reason={decisionReason} profile={profile} expiry={expiryForm} onExpiryChange={setExpiryForm} error={decisionError} onRecordEvidence={(kind, note) => void recordEvidence(kind, note)} onDownloadDocument={(id) => void downloadDocument(id)} onCorrectExpiry={api && token ? correctExpiry : undefined} onAction={(next) => { setDecision(next); setDecisionError(null); }} onReasonChange={setDecisionReason} onProfileChange={setProfile} onConfirm={() => void confirmDecision()} onClose={() => setSelected(null)} />}
+    {selected && expirySaved && <Card span={12}><p role="status" className="muted">{t("expiryDatesSaved")}</p></Card>}
     {!selected && decisionError && <Card span={12}><AlertItem tone="warning" icon="report" title={t("verificationDetailLoadFailed")} description={decisionError} /></Card>}
     <Card span={12} padded={false}>
-      <CardHeader title={t("driverDirectory")} badge={state.hasData ? <StatusBadge tone={unverified > 0 ? "warning" : "success"}>{t("unverifiedCount", { count: number(unverified) })}</StatusBadge> : undefined} />
+      <CardHeader
+        title={t("driverDirectory")}
+        badge={state.hasData ? <StatusBadge tone={unverified > 0 ? "warning" : "success"}>{t("unverifiedCount", { count: number(unverified) })}</StatusBadge> : undefined}
+        action={driversTotal !== undefined && state.hasData ? <span className="muted">{t("driversTotal", { count: number(driversTotal) })}</span> : undefined}
+      />
       {initialLoading && <div className="overview-resource-state" role="status" aria-label={t("metricLoading")}><Skeleton lines={5} /></div>}
       {initialError && <EmptyState compact icon="report" title={t("resourceLoadError")} description={t("resourceLoadErrorDescription")} action={<Button size="sm" variant="secondary" icon="refresh" onClick={onRefresh}>{t("retry")}</Button>} />}
+      {state.hasData && state.phase === "loading" && <p className="overview-resource-note" role="status">{t("metricRefreshing")}</p>}
+      {state.hasData && state.phase === "error" && <p className="overview-resource-note overview-resource-note--error" role="alert">{t("metricRefreshError")}</p>}
       {state.hasData && <DataTable columns={columns} rows={visible} rowKey={(driver) => driver.id} empty={<EmptyState compact icon="verified_user" title={search ? t("searchNoResults") : t("noExistingDriverProfiles")} />} />}
+      {state.hasData && driversFooter}
     </Card>
     {accountChange && <Card span={12}>
       <CardHeader title={accountChange.status === "active" ? t("reactivateAccount") : t("suspendAccount")} />

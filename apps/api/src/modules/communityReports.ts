@@ -91,6 +91,9 @@ const voteSchema = z.object({ value: z.union([z.literal(1), z.literal(-1), z.lit
 
 const adminListSchema = z.object({
   pending: z.enum(["true", "false"]).default("true"),
+  category: z.enum(COMMUNITY_REPORT_CATEGORIES).optional(),
+  /** "true": only hidden reports; "false": only visible ones; absent: both. */
+  hidden: z.enum(["true", "false"]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(25)
 });
@@ -137,7 +140,9 @@ function serialize(row: ReportRow, tally: Tally | undefined, viewerId: string, a
     awaiting_admin_review: row.needs_admin_review && row.admin_reviewed_at === null,
     // The author, trip and driver stay private; only that a trip is linked is shown.
     has_trip: row.trip_id !== null,
-    ...(admin ? { author_id: row.author_id, trip_id: row.trip_id, hidden_at: row.hidden_at } : {})
+    ...(admin
+      ? { author_id: row.author_id, trip_id: row.trip_id, hidden_at: row.hidden_at, admin_reviewed_at: row.admin_reviewed_at }
+      : {})
   };
 }
 
@@ -284,7 +289,11 @@ communityReportsRouter.post("/community-reports/:id/flag", async (req: Authentic
 communityReportsRouter.get("/admin/community-reports", async (req: AuthenticatedRequest, res, next) => {
   try {
     const input = adminListSchema.parse(req.query);
-    const where = input.pending === "true" ? { needs_admin_review: true, admin_reviewed_at: null } : {};
+    const where = {
+      ...(input.pending === "true" ? { needs_admin_review: true, admin_reviewed_at: null } : {}),
+      ...(input.category ? { category: input.category } : {}),
+      ...(input.hidden === "true" ? { hidden_at: { not: null } } : input.hidden === "false" ? { hidden_at: null } : {})
+    };
     const [rows, total] = await Promise.all([
       prisma.communityReport.findMany({
         where,
@@ -295,12 +304,16 @@ communityReportsRouter.get("/admin/community-reports", async (req: Authenticated
       prisma.communityReport.count({ where })
     ]);
     const viewerId = req.user!.id;
-    const counts = await tallies(
-      rows.map((row) => row.id),
-      viewerId
-    );
+    const ids = rows.map((row) => row.id);
+    const [counts, flagGroups] = await Promise.all([
+      tallies(ids, viewerId),
+      ids.length
+        ? prisma.communityReportFlag.groupBy({ by: ["report_id"], where: { report_id: { in: ids } }, _count: { _all: true } })
+        : Promise.resolve([])
+    ]);
+    const flags = new Map(flagGroups.map((group) => [group.report_id, group._count._all]));
     res.json({
-      reports: rows.map((row) => serialize(row, counts.get(row.id), viewerId, true)),
+      reports: rows.map((row) => ({ ...serialize(row, counts.get(row.id), viewerId, true), flag_count: flags.get(row.id) ?? 0 })),
       page: input.page,
       limit: input.limit,
       total

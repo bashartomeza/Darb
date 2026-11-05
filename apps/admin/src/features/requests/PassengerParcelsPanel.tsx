@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PassengerParcelRow, PassengerParcelTrackingState } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
+import { parcelSizeLabel } from "../../i18n/locale";
 import type { TranslationKey } from "../../i18n/translations";
 import { BentoGrid, Card, CardHeader, Column, DataTable, EmptyState, RouteChip, Skeleton, StatusBadge } from "../../ui";
 import type { Tone } from "../../ui/StatusBadge";
@@ -37,7 +38,7 @@ export const PARCEL_STATE_TONE: Record<PassengerParcelTrackingState, Tone> = {
  * receiver's name, phone and note are never returned by the admin endpoint.
  */
 export function PassengerParcelsPanel({ api, token, search = "" }: { api: PassengerParcelsApi; token: string; search?: string }) {
-  const { t, dateTime } = useLocale();
+  const { t, dateTime, locale } = useLocale();
   const [parcels, setParcels] = useState<PassengerParcelRow[] | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -73,7 +74,7 @@ export function PassengerParcelsPanel({ api, token, search = "" }: { api: Passen
         </div>
       )
     },
-    { key: "size", header: t("passengerParcelColumnSize"), cell: (parcel) => parcel.size },
+    { key: "size", header: t("passengerParcelColumnSize"), cell: (parcel) => parcelSizeLabel(locale, parcel.size) },
     {
       key: "state",
       header: t("passengerParcelColumnState"),

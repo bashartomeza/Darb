@@ -271,7 +271,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
           if (tripId != null && tripState != null && tripState.hasError)
             _Notice(
               icon: Icons.location_disabled_outlined,
-              message: 'تعذر تحديث موقع السائق حاليًا.',
+              message: l10n.mapDriverLocationFailed,
               actionLabel: l10n.retry,
               onAction: () => ref
                   .read(passengerTripControllerProvider(tripId).notifier)
@@ -281,9 +281,9 @@ class _MapBodyState extends ConsumerState<_MapBody> {
           if (tripId != null &&
               tripState?.value?.location == null &&
               !tripState!.isLoading)
-            const _Notice(
+            _Notice(
               icon: Icons.location_searching_rounded,
-              message: 'بانتظار آخر موقع مسجل للسائق.',
+              message: l10n.mapWaitingDriverLocation,
             ),
 
           // ==================================================================
@@ -630,8 +630,12 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'الوقت المتبقي: '
-                                '${result.formattedDuration}',
+                                l10n.mapTimeRemaining(
+                                  formatRouteDuration(
+                                    l10n,
+                                    result.durationMinutes,
+                                  ),
+                                ),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
@@ -639,7 +643,9 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                               ),
                             ),
                             Text(
-                              '${result.distanceKilometers.toStringAsFixed(1)} km',
+                              l10n.distanceKmValue(
+                                result.distanceKilometers.toStringAsFixed(1),
+                              ),
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontWeight: FontWeight.w700,
@@ -673,8 +679,8 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                       Expanded(
                         child: Text(
                           driverLocation != null
-                              ? 'المسار يتحدث حسب موقع السائق الحالي'
-                              : 'المسار المعروض هو المسار المحدد للرحلة',
+                              ? l10n.mapRouteFollowsDriver
+                              : l10n.mapRouteIsPlanned,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 color: Theme.of(
@@ -850,18 +856,8 @@ class _MapBodyState extends ConsumerState<_MapBody> {
     );
   }
 
-  String _statusLabel(AppLocalizations l10n, String status) => switch (status) {
-    'pending' => l10n.statusPending,
-    'matched' => l10n.statusMatched,
-    'accepted' => l10n.statusAccepted,
-    'picked_up' => l10n.statusPickedUp,
-    'in_transit' => l10n.statusInTransit,
-    'delivered' => l10n.statusDelivered,
-    'cancelled' => l10n.statusCancelled,
-    'completed' => l10n.statusCompleted,
-    'pickup_started' => l10n.statusPickupStarted,
-    _ => status,
-  };
+  String _statusLabel(AppLocalizations l10n, String status) =>
+      tripStatusLabel(l10n, status);
 }
 
 // ============================================================================
@@ -880,12 +876,15 @@ class _DriverArrivalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     final distanceLabel = distanceKm < 1
-        ? '${(distanceKm * 1000).round()} م'
-        : '${distanceKm.toStringAsFixed(1)} كم';
+        ? l10n.distanceMetersValue((distanceKm * 1000).round())
+        : l10n.distanceKmValue(distanceKm.toStringAsFixed(1));
 
-    final etaLabel = etaMinutes == null ? '—' : '$etaMinutes د';
+    final etaLabel = etaMinutes == null
+        ? '—'
+        : l10n.durationMinutesValue(etaMinutes!);
 
     return DarbCard(
       child: Column(
@@ -912,14 +911,14 @@ class _DriverArrivalCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'السائق في الطريق إليك',
+                      l10n.driverArrivalTitle,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: AppTokens.spaceExtraSmall),
                     Text(
-                      'المسافة والوقت المتبقي للوصول إلى نقطة الالتقاء',
+                      l10n.driverArrivalSubtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -938,7 +937,7 @@ class _DriverArrivalCard extends StatelessWidget {
                 child: _DriverArrivalMetric(
                   icon: Icons.route_rounded,
                   value: distanceLabel,
-                  label: 'المسافة المتبقية',
+                  label: l10n.driverArrivalDistance,
                 ),
               ),
               const SizedBox(width: AppTokens.spaceSmall),
@@ -946,7 +945,7 @@ class _DriverArrivalCard extends StatelessWidget {
                 child: _DriverArrivalMetric(
                   icon: Icons.access_time_rounded,
                   value: etaLabel,
-                  label: 'وقت الوصول التقريبي',
+                  label: l10n.driverArrivalEta,
                 ),
               ),
             ],
@@ -955,7 +954,7 @@ class _DriverArrivalCard extends StatelessWidget {
           const SizedBox(height: AppTokens.spaceSmall),
 
           Text(
-            'الوقت تقديري وقد يتغير حسب حركة الطريق.',
+            l10n.driverArrivalDisclaimer,
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -1044,7 +1043,7 @@ class _PassengerRouteSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'مسار رحلتك',
+            l10n.mapYourTripRoute,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
@@ -1056,7 +1055,7 @@ class _PassengerRouteSummary extends StatelessWidget {
             _PassengerRoutePoint(
               icon: Icons.location_on_rounded,
               color: SemanticColors.upcomingRoute,
-              title: 'نقطة الالتقاء',
+              title: l10n.mapPickupPoint,
               value: stopName(view.pickup!),
             ),
 
@@ -1074,7 +1073,7 @@ class _PassengerRouteSummary extends StatelessWidget {
             _PassengerRoutePoint(
               icon: Icons.flag_rounded,
               color: SemanticColors.completedRoute,
-              title: 'الوجهة',
+              title: l10n.destination,
               value: stopName(view.dropoff!),
             ),
         ],
@@ -1186,7 +1185,7 @@ class _CheckpointsPanel extends ConsumerWidget {
         final grouped = <String, List<Checkpoint>>{};
         for (final checkpoint in snapshot.checkpoints) {
           final city = checkpoint.city.trim().isEmpty
-              ? 'مدينة غير محددة'
+              ? l10n.checkpointCityUnspecified
               : checkpoint.city.trim();
           grouped.putIfAbsent(city, () => <Checkpoint>[]).add(checkpoint);
         }
@@ -1256,9 +1255,9 @@ class _CheckpointsPanel extends ConsumerWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'الحواجز على الطريق',
-                                      style: TextStyle(
+                                    Text(
+                                      l10n.checkpointsOnRoad,
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w900,
@@ -1266,7 +1265,10 @@ class _CheckpointsPanel extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 5),
                                     Text(
-                                      '${snapshot.checkpoints.length} حاجز · ${cities.length} مدينة',
+                                      l10n.checkpointsCityCount(
+                                        snapshot.checkpoints.length,
+                                        cities.length,
+                                      ),
                                       style: TextStyle(
                                         color: Colors.white.withValues(
                                           alpha: 0.72,
@@ -1290,7 +1292,7 @@ class _CheckpointsPanel extends ConsumerWidget {
                             children: [
                               Expanded(
                                 child: _CheckpointMiniMetric(
-                                  label: 'المدن',
+                                  label: l10n.checkpointsCitiesLabel,
                                   value: '${cities.length}',
                                   icon: Icons.location_city_rounded,
                                 ),
@@ -1298,7 +1300,7 @@ class _CheckpointsPanel extends ConsumerWidget {
                               const SizedBox(width: 9),
                               Expanded(
                                 child: _CheckpointMiniMetric(
-                                  label: 'حواجز عليها ازدحام',
+                                  label: l10n.checkpointsCongestedLabel,
                                   value: '$congestedCount',
                                   icon: Icons.traffic_rounded,
                                   accent: congestedCount > 0,
@@ -1316,18 +1318,18 @@ class _CheckpointsPanel extends ConsumerWidget {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.visibility_rounded,
                                   color: _navy,
                                   size: 18,
                                 ),
-                                SizedBox(width: 8),
+                                const SizedBox(width: 8),
                                 Text(
-                                  'عرض تفاصيل الحواجز وحالتها',
-                                  style: TextStyle(
+                                  l10n.checkpointsViewDetails,
+                                  style: const TextStyle(
                                     color: _navy,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w900,
@@ -1346,7 +1348,9 @@ class _CheckpointsPanel extends ConsumerWidget {
             if (snapshot.fetchedAt != null) ...[
               const SizedBox(height: 10),
               Text(
-                'آخر تحديث للبيانات: ${_formatCheckpointTime(snapshot.fetchedAt)}',
+                l10n.checkpointsDataUpdated(
+                  formatCheckpointTime(snapshot.fetchedAt!),
+                ),
                 textAlign: TextAlign.end,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: AppTheme.onSurfaceVariant,
@@ -1360,7 +1364,7 @@ class _CheckpointsPanel extends ConsumerWidget {
                 onPressed: () =>
                     ref.read(checkpointsProvider.notifier).refresh(),
                 icon: const Icon(Icons.refresh_rounded, size: 17),
-                label: const Text('تحديث بيانات الحواجز'),
+                label: Text(l10n.checkpointsRefreshData),
                 style: TextButton.styleFrom(
                   foregroundColor: _navy,
                   padding: const EdgeInsets.symmetric(
@@ -1410,10 +1414,10 @@ class _CheckpointsPanel extends ConsumerWidget {
                   children: [
                     const Icon(Icons.location_city_rounded, color: _orange),
                     const SizedBox(width: 9),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'الحواجز حسب المدينة',
-                        style: TextStyle(
+                        AppLocalizations.of(context).checkpointsByCity,
+                        style: const TextStyle(
                           color: _navy,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
@@ -1518,7 +1522,9 @@ class _CheckpointsPanel extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      '${checkpoints.length} حاجز',
+                      AppLocalizations.of(
+                        context,
+                      ).checkpointCount(checkpoints.length),
                       style: const TextStyle(
                         color: _textMuted,
                         fontWeight: FontWeight.w700,
@@ -1675,7 +1681,9 @@ class _CheckpointCityTile extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '${checkpoints.length} حاجز',
+                          AppLocalizations.of(
+                            context,
+                          ).checkpointCount(checkpoints.length),
                           style: const TextStyle(
                             color: Color(0xFF707070),
                             fontSize: 11,
@@ -1693,9 +1701,11 @@ class _CheckpointCityTile extends StatelessWidget {
                               color: const Color(0xFFFEE2E2),
                               borderRadius: BorderRadius.circular(7),
                             ),
-                            child: const Text(
-                              'يوجد أزمة',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(
+                                context,
+                              ).checkpointCityHasCongestion,
+                              style: const TextStyle(
                                 color: Color(0xFFDC2626),
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
@@ -1730,6 +1740,7 @@ class _CheckpointDetailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final name = checkpoint.displayName;
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1770,12 +1781,12 @@ class _CheckpointDetailCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 13),
-          Text(checkpointStatusLabel(checkpoint.status)),
+          Text(checkpointStatusLabel(l10n, checkpoint.status)),
           Row(
             children: [
               Expanded(
                 child: _CheckpointDirectionStatus(
-                  label: 'الدخول',
+                  label: l10n.checkpointDirectionEntering,
                   status: checkpoint.enteringStatus,
                   updatedAt: checkpoint.enteringStatusLastUpdated,
                   icon: Icons.login_rounded,
@@ -1784,7 +1795,7 @@ class _CheckpointDetailCard extends StatelessWidget {
               const SizedBox(width: 9),
               Expanded(
                 child: _CheckpointDirectionStatus(
-                  label: 'الخروج',
+                  label: l10n.checkpointDirectionLeaving,
                   status: checkpoint.leavingStatus,
                   updatedAt: checkpoint.leavingStatusLastUpdated,
                   icon: Icons.logout_rounded,
@@ -1813,8 +1824,9 @@ class _CheckpointDirectionStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final style = _checkpointStatusStyle(status);
-    final statusLabel = _checkpointStatusLabel(status);
+    final statusLabel = _checkpointStatusLabel(l10n, status);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -1860,8 +1872,8 @@ class _CheckpointDirectionStatus extends StatelessWidget {
           const SizedBox(height: 7),
           Text(
             updatedAt == null
-                ? 'التحديث: غير متوفر'
-                : 'التحديث: ${_formatCheckpointTime(updatedAt)}',
+                ? l10n.checkpointUpdatedUnavailable
+                : l10n.checkpointUpdatedAt(formatCheckpointTime(updatedAt!)),
             style: const TextStyle(
               color: Color(0xFF707070),
               fontSize: 9,
@@ -1914,9 +1926,11 @@ _CheckpointStatusStyle _checkpointStatusStyle(String? status) {
   }
 }
 
-String _checkpointStatusLabel(String? status) {
+String _checkpointStatusLabel(AppLocalizations l10n, String? status) {
   final value = status?.trim();
-  return value == null || value.isEmpty ? 'الحالة غير متوفرة' : value;
+  return value == null || value.isEmpty
+      ? l10n.checkpointStatusNotAvailable
+      : value;
 }
 
 class _CheckpointSheetHandle extends StatelessWidget {
@@ -1932,22 +1946,6 @@ class _CheckpointSheetHandle extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
     ),
   );
-}
-
-// ============================================================================
-// CHECKPOINT DATE / TIME
-// ============================================================================
-
-/// Converts the API timestamp from UTC to Palestine time (UTC+3).
-String _formatCheckpointTime(DateTime? value) {
-  if (value == null) return 'غير متوفر';
-  final palestineTime = value.toUtc().add(const Duration(hours: 3));
-  final year = palestineTime.year.toString().padLeft(4, '0');
-  final month = palestineTime.month.toString().padLeft(2, '0');
-  final day = palestineTime.day.toString().padLeft(2, '0');
-  final hour = palestineTime.hour.toString().padLeft(2, '0');
-  final minute = palestineTime.minute.toString().padLeft(2, '0');
-  return '$year-$month-$day $hour:$minute';
 }
 
 // ============================================================================

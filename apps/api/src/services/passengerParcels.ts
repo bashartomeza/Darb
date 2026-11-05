@@ -285,7 +285,7 @@ export function createPassengerParcelService(
     });
     await auditEvent(tx, {
       userId: senderId,
-      action: AuditAction.admin_action,
+      action: AuditAction.merchant_order_cancelled,
       entityType: "MerchantOrder",
       entityId: orderId,
       metadata: { action: "passenger_parcel_cancelled", withdrawn_offers: offers.length }
@@ -464,7 +464,7 @@ export function createPassengerParcelService(
         });
         await auditEvent(tx, {
           userId: senderId,
-          action: AuditAction.admin_action,
+          action: AuditAction.merchant_order_cancelled,
           entityType: "MerchantOrder",
           entityId: orderId,
           metadata: { action: "passenger_parcel_cancelled" }

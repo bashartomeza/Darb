@@ -59,7 +59,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final label = find.text('حواجز عليها ازدحام');
+      final label = find.text('Congested checkpoints');
       expect(label, findsOneWidget);
       final metric = find
           .ancestor(of: label, matching: find.byType(Column))

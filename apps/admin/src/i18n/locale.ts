@@ -40,6 +40,12 @@ export function statusLabel(locale: Locale, status: string) {
   return key in translations.en ? translate(locale, key as TranslationKey) : status;
 }
 
+/** The S / M / L parcel size codes in words; an unknown code is shown as sent. */
+export function parcelSizeLabel(locale: Locale, size: string) {
+  const key = `parcelSize_${size}`;
+  return key in translations.en ? translate(locale, key as TranslationKey) : size;
+}
+
 export function roleLabel(locale: Locale, role: string) {
   const key = `role_${role}`;
   return key in translations.en ? translate(locale, key as TranslationKey) : role;
