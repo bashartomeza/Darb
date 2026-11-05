@@ -36,7 +36,7 @@ echo "Checking the settings..."
 node ops/run.mjs node --input-type=module -e "await import('./dist/config.js'); console.log('Settings OK')"
 
 echo "Applying database migrations..."
-node ops/run.mjs npx prisma migrate deploy
+node ops/run.mjs node ops/mariadb/migrate-deploy.mjs deploy
 
 echo "Restarting the app..."
 mkdir -p tmp && touch tmp/restart.txt

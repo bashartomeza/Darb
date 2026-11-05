@@ -42,7 +42,9 @@ export function createCapabilitiesRouter(appConfig: AppConfig, directory?: Check
       ...(req.query.include === "limited-checkpoint-directory" ? {
         limited_checkpoint_directory_available: appConfig.limitedCheckpointDirectoryEnabled && ["passenger", "driver"].includes((req as AuthenticatedRequest).user?.role ?? "")
       } : {}),
-      live_tracking_available: false,
+      // Drivers share their position on active trips and riders see it only
+      // while this is on (LIVE_TRACKING_ENABLED).
+      live_tracking_available: appConfig.liveTrackingEnabled,
       // Only the admin console reads this, and installed Flutter builds reject
       // any field they do not know, so mobile roles never receive it.
       ...((req as AuthenticatedRequest).user?.role === "admin" ? {

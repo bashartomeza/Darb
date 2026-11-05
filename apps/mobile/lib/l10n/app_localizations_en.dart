@@ -780,6 +780,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sourceSimulated => 'Simulated';
 
   @override
+  String get sourceDriverGps => 'Driver\'s phone GPS';
+
+  @override
   String get recordedTime => 'Recorded time';
 
   @override
@@ -2852,6 +2855,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationEnable => 'Enable location';
 
   @override
+  String get locationSharingConsentTitle => 'Share your location on this trip?';
+
+  @override
+  String get locationSharingConsentBody =>
+      'While this trip screen is open, Darb sends your position to the passengers and senders on the trip so they can see where you are and when you will arrive. Sharing stops when the trip ends, when you leave this screen or when the app goes to the background.';
+
+  @override
+  String get locationSharingAllow => 'Share my location';
+
+  @override
+  String get locationSharingNotNow => 'Not now';
+
+  @override
+  String get locationSharingActive =>
+      'Your location is shared with this trip while this screen is open.';
+
+  @override
+  String get locationSharingDeclined =>
+      'Your location is not shared, so passengers cannot see where you are.';
+
+  @override
+  String get locationSharingDenied =>
+      'Location access was not allowed, so passengers cannot see where you are.';
+
+  @override
+  String get locationSharingPermanentlyDenied =>
+      'Location access is blocked for Darb. Allow it in the phone settings so passengers can see where you are.';
+
+  @override
+  String get locationSharingServiceDisabled =>
+      'Location services are off on this phone. Turn them on to share your position.';
+
+  @override
+  String get locationSharingUnavailable =>
+      'Your position is not available right now. Darb keeps trying while this screen is open.';
+
+  @override
+  String get locationSharingTurnOn => 'Share location';
+
+  @override
+  String get locationSharingOpenSettings => 'Open settings';
+
+  @override
+  String locationLastSeenMinutes(int minutes) {
+    return 'Seen $minutes min ago';
+  }
+
+  @override
   String get checkpoints => 'Barriers';
 
   @override
@@ -3614,6 +3665,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notifDriverApproachingBody =>
       'Your driver is near your pickup point. Please get ready.';
+
+  @override
+  String get notifDriverOnTheWayBody =>
+      'Your driver has set off to your pickup point. Please get ready.';
 
   @override
   String get pushSettingTitle => 'Push notifications';

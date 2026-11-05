@@ -183,7 +183,7 @@ try {
   await prisma.driverRoute.createMany({ data: [routeData("route"), routeData("demo_route", { driver_id: id("demo_profile") })] });
   await prisma.passengerRequest.createMany({ data: [requestData("request"), requestData("old_request", { created_at: old }), requestData("seed_request", { source: "seed" }),
     requestData("unknown_request", { source: "unknown" }), requestData("demo_request", { passenger_id: id("demo_passenger") })] });
-  // Keep the empty order recent: the API expiry worker can run during this
+  // Keep the empty order recent: the API background expiry worker can run during this
   // integration and expire stale open fixtures. The empty batch stays historical.
   await prisma.merchantOrder.createMany({ data: [orderData("order"), orderData("empty_order"), orderData("demo_order", { merchant_id: id("demo_merchant") })] });
   await prisma.parcel.createMany({ data: Array.from({ length: 26 }, (_, index) => ({ id: id(`parcel_${String(index).padStart(2, "0")}`), order_id: id("order"), ...location, size: marker, priority: marker, batch_id: null })) });

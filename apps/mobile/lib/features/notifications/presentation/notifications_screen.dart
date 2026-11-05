@@ -306,7 +306,11 @@ bool opensDriverRenewal(String type) =>
     case 'driver_approaching':
       return (
         title: l10n.notifDriverApproachingTitle,
-        body: l10n.notifDriverApproachingBody,
+        // A route request has no pickup point to measure against; it is told
+        // when the driver sets off to collect the passenger.
+        body: notification.params['reason'] == 'pickup_started'
+            ? l10n.notifDriverOnTheWayBody
+            : l10n.notifDriverApproachingBody,
       );
     case 'merchant_order_expired':
       // Says why, so a sender is not left wondering where the order went.

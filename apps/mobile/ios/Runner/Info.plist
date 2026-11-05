@@ -50,7 +50,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Darb uses the camera so you can photograph your driver documents for verification.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Darb uses your location to show nearby routes and your position on the map.</string>
+	<string>Darb uses your location to show nearby routes and your position on the map. Drivers share it with the passengers of a trip only while that trip is open on screen.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Darb uses the microphone so you can speak your trip request to the assistant.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

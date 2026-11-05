@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
 import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 import '../../../core/location/locate_device.dart';
 import '../../../core/maps/darb_route_map.dart';
@@ -449,18 +450,20 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                                 ? TextDirection.rtl
                                 : TextDirection.ltr,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.circle,
                                 size: 7,
-                                color: _success,
+                                color: data.hasLiveLocation
+                                    ? _success
+                                    : _orange,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                data.location != null
+                                data.hasLiveLocation
                                     ? l10n.tripLiveTracking
                                     : l10n.tripWaitingForLocation,
                                 style: TextStyle(
-                                  color: data.location != null
+                                  color: data.hasLiveLocation
                                       ? _success
                                       : _orange,
                                   fontSize: 10,
@@ -501,11 +504,22 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
+                      // Live only for a recent point; an older one says
+                      // how long ago the driver was last seen.
                       child: _quickInfoItem(
+                        key: const ValueKey('tripLocationQuickInfo'),
                         icon: Icons.location_on_rounded,
-                        value: data.location != null ? l10n.tripLive : '--',
+                        value: data.location == null
+                            ? '--'
+                            : data.hasLiveLocation
+                            ? l10n.tripLive
+                            : _lastSeen(l10n, data.location!),
                         label: l10n.tripLocationLabel,
-                        iconColor: data.location != null ? _success : _muted,
+                        iconColor: data.hasLiveLocation
+                            ? _success
+                            : data.location != null
+                            ? _orange
+                            : _muted,
                       ),
                     ),
                   ],
@@ -644,13 +658,21 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   // QUICK INFO ITEM
   // ============================================================
 
+  /// "Seen N min ago" for a point too old to call live.
+  String _lastSeen(AppLocalizations l10n, TripLocation location) {
+    final age = location.ageAt(DateTime.now());
+    return l10n.locationLastSeenMinutes(age.inMinutes < 1 ? 1 : age.inMinutes);
+  }
+
   Widget _quickInfoItem({
+    Key? key,
     required IconData icon,
     required String value,
     required String label,
     Color? iconColor,
   }) {
     return Container(
+      key: key,
       height: 66,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
@@ -938,7 +960,8 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
               ],
             ),
           ),
-          if (location != null)
+          // Only a recent point is live; an old one is the last known place.
+          if (data.hasLiveLocation)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
               decoration: BoxDecoration(
@@ -1075,7 +1098,10 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                 position: GeoPoint(data.location!.lat, data.location!.lng),
                 icon: Icons.local_shipping_rounded,
                 color: _orange,
-                label: localizedLocationSource(l10n, data.location!.source),
+                label: data.locationIsStale
+                    ? '${localizedLocationSource(l10n, data.location!.source)}'
+                          ' · ${_lastSeen(l10n, data.location!)}'
+                    : localizedLocationSource(l10n, data.location!.source),
                 size: 50,
                 type: DarbMapMarkerType.driver,
               ),

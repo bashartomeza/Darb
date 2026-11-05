@@ -41,6 +41,8 @@ Copy-Item apps/api/prisma.config.ts $stage
 Copy-Item -Recurse apps/admin/dist (Join-Path $stage "admin")
 Copy-Item deploy/cpanel/app.js $stage
 Copy-Item -Recurse deploy/cpanel/ops (Join-Path $stage "ops")
+New-Item -ItemType Directory (Join-Path $stage "ops\mariadb") | Out-Null
+Copy-Item scripts/mariadb/*.mjs (Join-Path $stage "ops\mariadb")
 Set-Content -NoNewline -Path (Join-Path $stage "release.txt") -Value $release
 node -e @"
 const fs = require('fs');
@@ -67,7 +69,7 @@ if ($LASTEXITCODE -ne 0) { throw "Unpacking on the server failed" }
 # 4. First run: create .env and register the app, then stop so the owner can fill in the two passwords.
 if ($FirstTime) {
   ssh @sshArgs $sshTarget "cd ~/darb-app && bash ops/setup.sh"
-  Write-Output "Next: open cPanel > File Manager > darb-app/.env, fill DB_PASSWORD and SMTP_PASSWORD, save, then run deploy.ps1 without -FirstTime."
+  Write-Output "Next: open cPanel > Setup Node.js App > darb-app > Environment variables, set DB_PASSWORD and SMTP_PASSWORD, save, then run deploy.ps1 without -FirstTime."
   exit $LASTEXITCODE
 }
 

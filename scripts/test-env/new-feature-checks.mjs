@@ -541,15 +541,21 @@ async function tripChecks() {
   const tripId = t.trip.id;
   const approaching = async () => (await http("/notifications?limit=100", { token: t.passenger, expect: 200 })).json.notifications.filter((n) => n.type === "driver_approaching");
 
-  await check("E30", "approaching alert: the passenger is told once when the simulated driver comes within the radius", async () => {
+  // The seeded request is a route request: its pickup is typed text and its coordinate the
+  // Hebron centre, where the simulated driver starts. Positions must not fire it; starting
+  // the pickup does, once.
+  await check("E30", "approaching alert: a route request is told once, when the driver starts the pickup, never from the city centre", async () => {
     must((await approaching()).length === 0, "an alert existed before the driver moved");
     const counts = [];
-    for (let i = 0; i < 3; i += 1) {
+    for (let i = 0; i < 2; i += 1) {
       await http(`/trips/${tripId}/simulate/step`, { method: "POST", token: t.driver, body: {}, expect: 201 });
       counts.push((await approaching()).length);
     }
-    must(counts.at(-1) === 1, `driver_approaching notifications after each step: ${counts.join(",")}`);
-    must(counts.every((c) => c <= 1), `the alert repeated: ${counts.join(",")}`);
+    await setStatus(tripId, t.driver, "pickup_started");
+    counts.push((await approaching()).length);
+    await http(`/trips/${tripId}/simulate/step`, { method: "POST", token: t.driver, body: {}, expect: 201 });
+    counts.push((await approaching()).length);
+    must(counts.join(",") === "0,0,1,1", `driver_approaching notifications after each step: ${counts.join(",")}`);
     const alert = (await approaching())[0];
     const { created_at, read_at, id, entity_id, ...content } = alert;
     must(!/\d+\.\d{3,}/.test(JSON.stringify(content)), `the alert carries coordinates: ${JSON.stringify(content)}`);
@@ -558,7 +564,7 @@ async function tripChecks() {
     must(!merchantList.json.notifications.some((n) => n.type === "driver_approaching"), "the merchant got a passenger alert");
   });
 
-  for (const status of ["pickup_started", "picked_up", "in_transit"]) await setStatus(tripId, t.driver, status);
+  for (const status of ["picked_up", "in_transit"]) await setStatus(tripId, t.driver, status);
 
   await check("E31", "handover: a parcel trip cannot be delivered without the receiver code (plain status route, other roles, no code)", async () => {
     const plain = await setStatus(tripId, t.driver, "delivered", 409);

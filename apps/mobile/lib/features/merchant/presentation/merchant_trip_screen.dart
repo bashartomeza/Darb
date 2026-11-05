@@ -133,9 +133,9 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
     final route = state.trip.route;
     final location = state.location;
     final currentIndex = merchantTripTimeline.indexOf(state.trip.status);
-    final progress = location == null
-        ? 0.0
-        : ((location.sequence + 1) / 7).clamp(0.0, 1.0);
+    // Progress follows the trip's own status steps, not the location feed.
+    final progress = merchantTripProgress(state.trip.status);
+    final stale = location != null && location.isStaleAt(DateTime.now());
     final material = MaterialLocalizations.of(context);
     final time = location == null
         ? l10n.noLocationYet
@@ -166,7 +166,7 @@ class _MerchantTripScreenState extends ConsumerState<MerchantTripScreen>
             Text(
               location == null
                   ? l10n.noLocationYet
-                  : '${l10n.latestLocation} · $time',
+                  : '${stale ? l10n.locationIsStale : l10n.latestLocation} · $time',
               style: MerchantStyle.text(size: 11, color: MerchantStyle.muted),
               textAlign: TextAlign.center,
             ),

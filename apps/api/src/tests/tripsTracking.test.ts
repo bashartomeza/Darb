@@ -665,7 +665,11 @@ describe("trip acceptance, status, and tracking", () => {
   it("valid status sequence works", async () => {
     const statuses = ["accepted", "pickup_started", "picked_up", "in_transit", "delivered"];
     prismaMock.deliveryHandover.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }]);
-    prismaMock.trip.findUnique.mockImplementation(() => baseTrip(statuses.shift() ?? "completed"));
+    // The approaching check reads the trip with `select`; only the status
+    // reads (with `include`) advance through the sequence.
+    let current = "accepted";
+    prismaMock.trip.findUnique.mockImplementation((args: { select?: unknown }) =>
+      args.select ? baseTrip(current) : baseTrip((current = statuses.shift() ?? "completed")));
     prismaMock.trip.update.mockImplementation(({ data }) => ({ ...baseTrip(data.status), status: data.status }));
 
     await request(createApp()).post("/api/v1/trips/trip_1/status").set(auth("driver_1")).send({ status: "pickup_started" }).expect(200);
@@ -955,7 +959,7 @@ describe("trip acceptance, status, and tracking", () => {
 
   it("latest location endpoint returns latest event", async () => {
     prismaMock.trip.findUnique.mockResolvedValue(baseTrip());
-    prismaMock.locationEvent.findFirst.mockResolvedValue({ id: "loc_2", sequence: 2, lat: "31.585000", lng: "35.123000" });
+    prismaMock.locationEvent.findFirst.mockResolvedValue({ id: "loc_2", trip_id: "trip_1", sequence: 2, lat: "31.585000", lng: "35.123000", source: "simulated", recorded_at: new Date() });
 
     const response = await request(createApp()).get("/api/v1/trips/trip_1/location").set(auth("passenger_1")).expect(200);
 

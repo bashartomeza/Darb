@@ -264,6 +264,27 @@ class DriverRepository {
     await apiClient.postJson('/trips/$id/simulate/reset', body: const {});
   }
 
+  /// Shares the phone's position for the driver's active trip. True when the
+  /// server stored it; false when it fell inside the server's 10-second window.
+  Future<bool> postLocation(
+    String id, {
+    required double lat,
+    required double lng,
+    required double accuracyMeters,
+    required DateTime recordedAt,
+  }) async {
+    final json = await apiClient.postJson(
+      '/trips/$id/location',
+      body: {
+        'lat': lat,
+        'lng': lng,
+        'accuracy_m': accuracyMeters,
+        'recorded_at': recordedAt.toUtc().toIso8601String(),
+      },
+    );
+    return json['stored'] == true;
+  }
+
   Future<TripLocation?> latestLocation(String id) async {
     final json = await apiClient.getJson('/trips/$id/location');
     final location = json['location'];
