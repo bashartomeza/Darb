@@ -42,11 +42,15 @@ export function loadServerEnv(file = join(appRoot, ".env")) {
   }
 }
 
-/** mysql://user:password@host:port/name from the DB_* parts, each part URL-encoded. */
+/** The database URL from the DB_* parts; user and password are encoded by the URL class. */
 export function databaseUrlFromEnv(env = process.env) {
   const missing = ["DB_USER", "DB_PASSWORD", "DB_NAME"].filter((key) => !env[key]);
   if (missing.length) throw new Error(`Missing ${missing.join(", ")} in .env`);
-  const host = env.DB_HOST || "localhost";
-  const port = env.DB_PORT || "3306";
-  return `mysql://${encodeURIComponent(env.DB_USER)}:${encodeURIComponent(env.DB_PASSWORD)}@${host}:${port}/${encodeURIComponent(env.DB_NAME)}`;
+  const url = new URL("mysql://localhost");
+  url.hostname = env.DB_HOST || "localhost";
+  url.port = env.DB_PORT || "3306";
+  url.username = env.DB_USER;
+  url.password = env.DB_PASSWORD;
+  url.pathname = `/${env.DB_NAME}`;
+  return url.toString();
 }

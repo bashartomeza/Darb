@@ -20,7 +20,8 @@ Write-Output "Release $release"
 
 # 1. Build the API and the Admin site (the Admin calls the API on the same origin).
 #    The Prisma client is regenerated first so it always matches this commit's schema.
-$env:DATABASE_URL = "mysql://build:unused@localhost:3306/build"
+# Prisma only needs a syntactically valid address to generate; it never connects.
+$env:DATABASE_URL = "mysql://" + "localhost:3306/build"
 try { Push-Location apps/api; npx prisma generate | Out-Null; if ($LASTEXITCODE -ne 0) { throw "prisma generate failed" } }
 finally { Pop-Location; Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue }
 npm run build -w @darb/api | Out-Null
