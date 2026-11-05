@@ -420,6 +420,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sourceSimulated => 'محاكى';
 
   @override
+  String get sourceDriverGps => 'موقع هاتف السائق';
+
+  @override
   String get recordedTime => 'وقت التسجيل';
 
   @override
@@ -2181,6 +2184,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get liveLocationBadge => 'مباشر';
+
+  @override
+  String get tripLocationLive => 'مباشر';
+
+  @override
+  String locationLastSeenMinutes(int minutes) {
+    return 'قبل $minutes د';
+  }
 
   @override
   String get checkpoints => 'الحواجز';

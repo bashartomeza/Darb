@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
 import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
+import 'package:darb_mobile/features/trips/data/trip_models.dart';
 
 import '../../../core/maps/darb_route_map.dart';
 import '../../../core/maps/map_overlays.dart';
@@ -520,13 +521,22 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
+                      // Live only for a recent point; an older one says
+                      // how long ago the driver was last seen.
                       child: _quickInfoItem(
+                        key: const ValueKey('tripLocationQuickInfo'),
                         icon: Icons.location_on_rounded,
-                        value: data.location != null
-                            ? (isArabic ? 'مباشر' : 'Live')
-                            : '--',
+                        value: data.location == null
+                            ? '--'
+                            : data.hasLiveLocation
+                            ? l10n.tripLocationLive
+                            : _lastSeen(l10n, data.location!),
                         label: isArabic ? 'الموقع' : 'Location',
-                        iconColor: data.location != null ? _success : _muted,
+                        iconColor: data.hasLiveLocation
+                            ? _success
+                            : data.location != null
+                            ? _orange
+                            : _muted,
                       ),
                     ),
                   ],
@@ -665,13 +675,21 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   // QUICK INFO ITEM
   // ============================================================
 
+  /// "Seen N min ago" for a point too old to call live.
+  String _lastSeen(AppLocalizations l10n, TripLocation location) {
+    final age = location.ageAt(DateTime.now());
+    return l10n.locationLastSeenMinutes(age.inMinutes < 1 ? 1 : age.inMinutes);
+  }
+
   Widget _quickInfoItem({
+    Key? key,
     required IconData icon,
     required String value,
     required String label,
     Color? iconColor,
   }) {
     return Container(
+      key: key,
       height: 66,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
@@ -1100,7 +1118,10 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                 position: GeoPoint(data.location!.lat, data.location!.lng),
                 icon: Icons.local_shipping_rounded,
                 color: _orange,
-                label: localizedLocationSource(l10n, data.location!.source),
+                label: data.locationIsStale
+                    ? '${localizedLocationSource(l10n, data.location!.source)}'
+                          ' · ${_lastSeen(l10n, data.location!)}'
+                    : localizedLocationSource(l10n, data.location!.source),
                 size: 50,
                 type: DarbMapMarkerType.driver,
               ),

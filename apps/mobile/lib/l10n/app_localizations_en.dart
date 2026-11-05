@@ -421,6 +421,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sourceSimulated => 'Simulated';
 
   @override
+  String get sourceDriverGps => 'Driver\'s phone GPS';
+
+  @override
   String get recordedTime => 'Recorded time';
 
   @override
@@ -2200,6 +2203,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get liveLocationBadge => 'LIVE';
+
+  @override
+  String get tripLocationLive => 'Live';
+
+  @override
+  String locationLastSeenMinutes(int minutes) {
+    return 'Seen $minutes min ago';
+  }
 
   @override
   String get checkpoints => 'Barriers';

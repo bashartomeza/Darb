@@ -132,6 +132,7 @@
   "sequence": "التسلسل",
   "source": "المصدر",
   "sourceSimulated": "محاكى",
+  "sourceDriverGps": "موقع هاتف السائق",
   "recordedTime": "وقت التسجيل",
   "refresh": "تحديث",
   "statusPending": "قيد الانتظار",
@@ -816,6 +817,15 @@
   "locationSharingTurnOn": "مشاركة الموقع",
   "locationSharingOpenSettings": "فتح الإعدادات",
   "liveLocationBadge": "مباشر",
+  "tripLocationLive": "مباشر",
+  "locationLastSeenMinutes": "قبل {minutes} د",
+  "@locationLastSeenMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "checkpoints": "الحواجز",
   "checkpointsUnavailable": "بيانات الحواجز غير متاحة",
   "checkpointsUnavailableBody": "تعذّر جلب حالة الحواجز. المسار معروض بدونها.",

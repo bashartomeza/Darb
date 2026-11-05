@@ -132,6 +132,7 @@
   "sequence": "Sequence",
   "source": "Source",
   "sourceSimulated": "Simulated",
+  "sourceDriverGps": "Driver's phone GPS",
   "recordedTime": "Recorded time",
   "refresh": "Refresh",
   "statusPending": "Pending",
@@ -729,6 +730,15 @@
   "locationSharingTurnOn": "Share location",
   "locationSharingOpenSettings": "Open settings",
   "liveLocationBadge": "LIVE",
+  "tripLocationLive": "Live",
+  "locationLastSeenMinutes": "Seen {minutes} min ago",
+  "@locationLastSeenMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "checkpoints": "Barriers",
   "checkpointsUnavailable": "Barrier data unavailable",
   "checkpointsUnavailableBody": "Barrier status could not be fetched. The route is shown without it.",

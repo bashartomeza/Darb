@@ -890,6 +890,12 @@ abstract class AppLocalizations {
   /// **'محاكى'**
   String get sourceSimulated;
 
+  /// No description provided for @sourceDriverGps.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقع هاتف السائق'**
+  String get sourceDriverGps;
+
   /// No description provided for @recordedTime.
   ///
   /// In ar, this message translates to:
@@ -4117,6 +4123,18 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مباشر'**
   String get liveLocationBadge;
+
+  /// No description provided for @tripLocationLive.
+  ///
+  /// In ar, this message translates to:
+  /// **'مباشر'**
+  String get tripLocationLive;
+
+  /// No description provided for @locationLastSeenMinutes.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبل {minutes} د'**
+  String locationLastSeenMinutes(int minutes);
 
   /// No description provided for @checkpoints.
   ///

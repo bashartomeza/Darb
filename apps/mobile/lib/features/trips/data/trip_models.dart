@@ -160,14 +160,17 @@ class TripLocation {
   /// When this device received [ageSeconds].
   final DateTime? receivedAt;
 
-  bool isStaleAt(DateTime now) {
+  /// How old the point is at [now], by the server's age when it sent one.
+  Duration ageAt(DateTime now) {
     final age = ageSeconds;
     final received = receivedAt;
     if (age != null && received != null) {
-      return Duration(seconds: age) + now.difference(received) > staleAfter;
+      return Duration(seconds: age) + now.difference(received);
     }
-    return now.difference(recordedAt) > staleAfter;
+    return now.difference(recordedAt);
   }
+
+  bool isStaleAt(DateTime now) => ageAt(now) > staleAfter;
 
   factory TripLocation.fromJson(Map<String, dynamic> json) {
     final age = json['age_seconds'];
