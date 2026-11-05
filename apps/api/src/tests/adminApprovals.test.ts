@@ -10,6 +10,7 @@ const tx = vi.hoisted(() => ({
   auditEvent: { create: vi.fn() },
   authSession: { findMany: vi.fn(), updateMany: vi.fn() },
   refreshToken: { updateMany: vi.fn() },
+  pushDevice: { updateMany: vi.fn() },
   onboardingSession: { updateMany: vi.fn() }
 }));
 

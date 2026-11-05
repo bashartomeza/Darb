@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { config } from "../config.js";
+import { revokePushDevicesForSessions, revokePushDevicesForUser } from "../services/pushDevices.js";
 
 const REFRESH_SECRET_BYTES = 32;
 const TOKEN_ID_PATTERN = /^rt_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -68,6 +69,8 @@ export async function revokeSessionRecords(
     where: { session_id: input.sessionId, revoked_at: null },
     data: { revoked_at: now }
   });
+  // A signed-out phone must stop receiving pushes for this account.
+  await revokePushDevicesForSessions(db, [input.sessionId], input.reason, now);
 }
 
 export async function revokeAllUserSessions(
@@ -75,6 +78,7 @@ export async function revokeAllUserSessions(
   input: { userId: string; reason: string; now?: Date }
 ) {
   const now = input.now ?? new Date();
+  await revokePushDevicesForUser(db, input.userId, input.reason, now);
   const sessions = await db.authSession.findMany({
     where: { user_id: input.userId },
     select: { id: true }

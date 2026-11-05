@@ -74,6 +74,7 @@ import { adminTripsRouter } from "./modules/adminTrips.js";
 import { adminPassengerParcelsRouter, createPassengerParcelRouter, type PassengerParcelMatcher } from "./modules/passengerParcels.js";
 import type { PassengerParcelService } from "./services/passengerParcels.js";
 import { notificationsRouter } from "./modules/notifications.js";
+import { createPushNotificationsRouter } from "./modules/pushNotifications.js";
 import { reportsRouter } from "./modules/reports.js";
 import { adminSuccessMetricsRouter } from "./modules/adminSuccessMetrics.js";
 import { incidentsRouter } from "./modules/incidents.js";
@@ -201,6 +202,7 @@ export function createApp(
     ),
   );
   app.use("/api/v1", notificationsRouter);
+  app.use("/api/v1", createPushNotificationsRouter(appConfig));
   app.use("/api/v1", reportsRouter);
   app.use("/api/v1", adminSuccessMetricsRouter);
   app.use("/api/v1", incidentsRouter);

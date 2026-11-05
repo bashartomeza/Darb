@@ -11,6 +11,7 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
     updateMany: vi.fn()
   },
+  pushDevice: { updateMany: vi.fn() },
   refreshToken: {
     findUnique: vi.fn(),
     create: vi.fn(),
@@ -279,6 +280,11 @@ describe("refresh rotation and session APIs", () => {
     prismaMock.authSession.findUnique.mockResolvedValue(session({ revoked_at: new Date() }));
     await request(createApp()).post("/api/v1/auth/logout").set(authorization()).expect(200);
     expect(prismaMock.authSession.updateMany).toHaveBeenCalledTimes(2);
+    // The phone signed out with the session stops receiving pushes.
+    expect(prismaMock.pushDevice.updateMany).toHaveBeenCalledWith({
+      where: { session_id: { in: [session().id] }, revoked_at: null },
+      data: { revoked_at: expect.any(Date), revoke_reason: "logout" }
+    });
   });
 
   it("logs out all sessions, increments security version, and invalidates the access token", async () => {
@@ -286,6 +292,10 @@ describe("refresh rotation and session APIs", () => {
     expect(prismaMock.user.update).toHaveBeenCalledWith({
       where: { id: user.id },
       data: { security_version: { increment: 1 } }
+    });
+    expect(prismaMock.pushDevice.updateMany).toHaveBeenCalledWith({
+      where: { user_id: user.id, revoked_at: null },
+      data: { revoked_at: expect.any(Date), revoke_reason: "logout_all" }
     });
 
     prismaMock.authSession.findUnique.mockResolvedValue(

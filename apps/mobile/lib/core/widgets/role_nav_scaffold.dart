@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../theme/passenger_theme.dart';
 import '../theme/merchant_theme.dart';
 import 'merchant_bottom_nav.dart';
+import '../../features/push/presentation/push_permission_prompt.dart';
 
 /// A bottom-nav destination. The branch it selects is its index in the list, so
 /// the order here must match the order of the shell's branches.
@@ -59,7 +60,10 @@ class RoleShellScaffold extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      PushPermissionPrompt(child: _shell(context));
+
+  Widget _shell(BuildContext context) {
     final passenger = passengerItems;
     if (passenger != null) return _passengerShell(context, passenger);
     if (merchant) return _merchantShell(context);

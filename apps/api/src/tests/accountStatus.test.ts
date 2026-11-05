@@ -7,6 +7,7 @@ const prismaMock = vi.hoisted(() => ({
   authSession: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   onboardingSession: { updateMany: vi.fn() },
   refreshToken: { updateMany: vi.fn() },
+  pushDevice: { updateMany: vi.fn() },
   auditEvent: { create: vi.fn() }
 }));
 
