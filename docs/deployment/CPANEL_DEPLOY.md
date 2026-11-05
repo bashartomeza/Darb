@@ -48,7 +48,7 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
 - every 5 minutes: `ops/keepalive.sh` — Passenger stops idle apps, which would also stop the API's
   background workers (order expiry, dispatch); a health request keeps it running.
 - 02:15 daily: `ops/backup.sh` — `mysqldump` of `aynurzzx_Darb` into `~/darb-backups`.
-- 02:40 daily: `ops/jobs.sh` — document expiry reminders, document and receiver-data retention, trust scores.
+- 02:40 daily: `ops/jobs.sh` — document expiry reminders, retention purges (documents, parcel receivers, live-location points, expired sessions/codes/counters/notifications; see `docs/operations/data-retention.md`), trust scores. Each job runs on its own: one failing does not stop the rest.
 
 ## Running a command with the production settings
 

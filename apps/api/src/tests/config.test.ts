@@ -166,16 +166,25 @@ describe("fail-closed application configuration", () => {
     }
   });
 
-  it("shares live driver positions by default only where data is disposable", () => {
+  it("shares live driver positions by default everywhere, including production, unless switched off", () => {
     // Demo and test also default on; they need demo credentials to build a config here.
-    expect(createConfig(environment({ APP_ENV: "local" })).liveTrackingEnabled).toBe(true);
-    for (const appEnv of ["staging", "production"]) {
-      expect(createConfig(environment({ APP_ENV: appEnv })).liveTrackingEnabled).toBe(false);
-      expect(createConfig(environment({ APP_ENV: appEnv, LIVE_TRACKING_ENABLED: "true" })).liveTrackingEnabled).toBe(true);
+    for (const appEnv of ["local", "staging", "production"]) {
+      expect(createConfig(environment({ APP_ENV: appEnv })).liveTrackingEnabled).toBe(true);
+      expect(createConfig(environment({ APP_ENV: appEnv, LIVE_TRACKING_ENABLED: "" })).liveTrackingEnabled).toBe(true);
+      expect(createConfig(environment({ APP_ENV: appEnv, LIVE_TRACKING_ENABLED: "false" })).liveTrackingEnabled).toBe(false);
     }
-    expect(createConfig(environment({ APP_ENV: "local", LIVE_TRACKING_ENABLED: "false" })).liveTrackingEnabled).toBe(false);
     for (const value of ["TRUE", "1", "yes"]) {
       expect(() => createConfig(environment({ LIVE_TRACKING_ENABLED: value }))).toThrow(/LIVE_TRACKING_ENABLED must be true or false/);
+    }
+  });
+
+  it("has retention windows with safe defaults and validated ranges", () => {
+    expect(createConfig(environment({ APP_ENV: "production" })).retention).toEqual({
+      locationDays: 30, sessionDays: 30, authTokenDays: 7, idempotencyDays: 7, abuseCounterDays: 1, pushDeviceDays: 30, notificationDays: 180
+    });
+    expect(createConfig(environment({ LOCATION_RETENTION_DAYS: "365" })).retention.locationDays).toBe(365);
+    for (const value of ["0", "366", "-1", "abc", "1.5"]) {
+      expect(() => createConfig(environment({ LOCATION_RETENTION_DAYS: value }))).toThrow();
     }
   });
 

@@ -732,6 +732,7 @@ model AbuseCounter {
 
   @@unique([bucket_type, subject_digest, digest_version, window_start, window_seconds])
   @@index([window_start])
+  @@index([expires_at])
   @@map("abuse_counters")
 }
 
@@ -1606,6 +1607,7 @@ model LocationEvent {
   trip Trip @relation(fields: [trip_id], references: [id], onDelete: Cascade)
 
   @@index([trip_id, sequence])
+  @@index([recorded_at])
   @@map("location_events")
 }
 
@@ -1658,6 +1660,7 @@ model Notification {
   @@index([user_id, created_at])
   @@index([user_id, read_at])
   @@index([push_attempted_at, created_at])
+  @@index([created_at])
   @@map("notifications")
 }
 

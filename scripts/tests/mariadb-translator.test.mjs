@@ -64,7 +64,7 @@ test("translates the repository migration set without changing source files", ()
     const report = translateMigrationsFolder(source, output);
     const changed = report.filter((entry) => entry.applied.length > 0);
 
-    assert.equal(report.length, 56);
+    assert.equal(report.length, 57);
     assert.deepEqual(changed.map((entry) => entry.migration), [
       "20260722180000_harden_multi_route_operations",
       "20260722200000_enforce_operational_mode_and_expiry_quarantine",
