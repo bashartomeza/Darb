@@ -21,8 +21,13 @@ environment:
 
 dependencies:
   file_picker: ^13.3.0
-  firebase_core: ^5.1.0
-  firebase_messaging: ^17.0.1
+  # Push notifications (dormant unless built with PUSH_ENABLED=true). Held
+  # below firebase_core 5 / firebase_messaging 17: those pull Firebase iOS SDK
+  # 13, which needs gtm-session-fetcher 4+, while GoogleSignIn-iOS 9 (used by
+  # google_sign_in_ios) needs gtm-session-fetcher < 4, so iOS packages would
+  # not resolve. Firebase iOS SDK 12.19 accepts 3.4.1..<6.
+  firebase_core: ^4.15.2
+  firebase_messaging: ^16.7.1
   flutter:
     sdk: flutter
   flutter_localizations:

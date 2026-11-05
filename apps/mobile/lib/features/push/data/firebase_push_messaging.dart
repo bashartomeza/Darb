@@ -68,9 +68,9 @@ class FirebasePushMessaging implements PushMessaging {
       };
 
   // The classic FCM registration token, which the API sends to through the
-  // HTTP v1 `message.token` field. firebase_messaging 17 marks it deprecated
-  // in favour of Firebase Installation ID registration; it remains supported,
-  // and moving to installation IDs needs a matching server change.
+  // HTTP v1 `message.token` field. Newer firebase_messaging (17+) deprecates
+  // it in favour of Firebase Installation ID registration; moving to
+  // installation IDs would need a matching server change.
   @override
   Future<String?> token() async {
     try {
