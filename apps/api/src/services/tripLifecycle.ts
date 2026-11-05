@@ -42,6 +42,22 @@ type AdvanceOptions = {
   expectedStatus: TripStatus;
   /** Admin forward-moves may close unconfirmed handovers; they are recorded as admin_override. */
   adminOverride?: boolean;
+  /**
+   * Cancellations (services/cancellations.ts) word and send their own notifications
+   * to everyone affected, so the generic "trip status" one is skipped.
+   */
+  skipNotify?: boolean;
+  /**
+   * A cancellation before pickup: the driver's route goes back to waiting for work
+   * instead of being closed as cancelled.
+   */
+  beforePickup?: boolean;
+  /**
+   * A driver cancelling: only the trip is cancelled. The passenger request or orders
+   * are not touched here; the caller puts them back to waiting (or cancels them) itself.
+   * The trip also gives up its assignment key so the same demand can be accepted again.
+   */
+  keepDemand?: boolean;
 };
 
 async function batchMemberOrderIds(tx: Prisma.TransactionClient, batchId: string) {
@@ -192,6 +208,7 @@ export async function advanceLegacyTrip(
       started_at: nextStatus === TripStatus.pickup_started ? new Date() : undefined,
       completed_at: completedAt,
       cancelled_by_user_id: nextStatus === TripStatus.cancelled || nextStatus === TripStatus.failed ? options.actorId : undefined,
+      legacy_assignment_key: options.keepDemand && nextStatus === TripStatus.cancelled ? null : undefined,
     },
   });
   if (claimed.count !== 1) throw new HttpError(409, "trip_status_conflict");
@@ -205,6 +222,19 @@ export async function advanceLegacyTrip(
   // observe the newly-cancelled rows and restore zero capacity.
   if (nextStatus === TripStatus.cancelled || nextStatus === TripStatus.failed) {
     await restoreLegacyCapacity(tx, trip);
+  }
+  if (options.keepDemand) {
+    // The caller decides what happens to the demand; only the trip and route change here.
+    await tx.auditEvent.create({
+      data: {
+        user_id: options.actorId,
+        action: AuditAction.trip_status_updated,
+        entity_type: "Trip",
+        entity_id: trip.id,
+        metadata: { from: trip.status, to: nextStatus },
+      },
+    });
+    return updated;
   }
   if (trip.passenger_request_id) {
     const passengerStatus: Partial<Record<TripStatus, string>> = {
@@ -226,7 +256,7 @@ export async function advanceLegacyTrip(
   if (nextStatus === TripStatus.completed || nextStatus === TripStatus.failed) {
     await tx.driverRoute.update({ where: { id: trip.driver_route_id }, data: { status: "completed", completed_at: new Date() } });
   }
-  if (nextStatus === TripStatus.cancelled && trip.status !== TripStatus.accepted) {
+  if (nextStatus === TripStatus.cancelled && trip.status !== TripStatus.accepted && !options.beforePickup) {
     await tx.driverRoute.update({ where: { id: trip.driver_route_id }, data: { status: "completed", completed_at: new Date(), cancelled_at: new Date() } });
   }
 
@@ -240,7 +270,7 @@ export async function advanceLegacyTrip(
     },
   });
 
-  await notifyTripStatus(tx, trip, nextStatus);
+  if (!options.skipNotify) await notifyTripStatus(tx, trip, nextStatus);
 
   return updated;
 }

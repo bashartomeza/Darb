@@ -73,6 +73,7 @@ import type { PassengerAssistantHistoryStore } from "./services/passengerAssista
 import { createAdminConsentRouter } from "./modules/adminConsents.js";
 import type { ConsentReleaseService } from "./services/consentReleases.js";
 import { adminTripsRouter } from "./modules/adminTrips.js";
+import { adminCancellationsRouter } from "./modules/adminCancellations.js";
 import { adminPassengerParcelsRouter, createPassengerParcelRouter, type PassengerParcelMatcher } from "./modules/passengerParcels.js";
 import type { PassengerParcelService } from "./services/passengerParcels.js";
 import { notificationsRouter } from "./modules/notifications.js";
@@ -270,6 +271,7 @@ export function createApp(
   app.use("/api/v1", createRoutePreviewRouter(appConfig, routePreviewService));
   app.use("/api/v1", createAdminConsentRouter(dependencies.consentReleaseService));
   app.use("/api/v1", adminTripsRouter);
+  app.use("/api/v1", adminCancellationsRouter);
   app.use("/api/v1", adminPassengerParcelsRouter);
   app.use(
     "/api/v1",

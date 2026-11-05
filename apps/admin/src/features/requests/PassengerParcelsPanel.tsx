@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
-import type { PassengerParcelRow, PassengerParcelTrackingState } from "../../api";
+import type { CancellationBody, PassengerParcelRow, PassengerParcelTrackingState } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
 import { parcelSizeLabel } from "../../i18n/locale";
 import type { TranslationKey } from "../../i18n/translations";
-import { BentoGrid, Card, CardHeader, Column, DataTable, EmptyState, RouteChip, Skeleton, StatusBadge } from "../../ui";
+import { BentoGrid, Button, Card, CardHeader, Column, DataTable, EmptyState, RouteChip, Skeleton, StatusBadge } from "../../ui";
 import type { Tone } from "../../ui/StatusBadge";
 import { OrderRouteDetails, orderRouteSearchValues } from "../operatingRoutes/OrderRouteDetails";
+import { CancelDialog } from "../cancellations/CancelDialog";
+import { ADMIN_CANCELLABLE_PARCEL_STATES, isOneOf } from "../cancellations/cancellationModel";
 
 type PassengerParcelsApi = {
   passengerParcels: (token: string) => Promise<{ parcels: PassengerParcelRow[] }>;
+  /** When given, parcels not yet delivered get a cancel action that asks for a reason. */
+  cancelMerchantOrder?: (token: string, id: string, body: CancellationBody) => Promise<unknown>;
 };
 
 export const PARCEL_STATE_LABEL: Record<PassengerParcelTrackingState, TranslationKey> = {
@@ -37,10 +41,23 @@ export const PARCEL_STATE_TONE: Record<PassengerParcelTrackingState, Tone> = {
  * Parcels that ordinary passengers send. Shows tracking state only: the
  * receiver's name, phone and note are never returned by the admin endpoint.
  */
-export function PassengerParcelsPanel({ api, token, search = "" }: { api: PassengerParcelsApi; token: string; search?: string }) {
+export function PassengerParcelsPanel({
+  api,
+  token,
+  search = "",
+  canAct = true
+}: {
+  api: PassengerParcelsApi;
+  token: string;
+  search?: string;
+  canAct?: boolean;
+}) {
   const { t, dateTime, locale } = useLocale();
   const [parcels, setParcels] = useState<PassengerParcelRow[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [cancelTarget, setCancelTarget] = useState<PassengerParcelRow | null>(null);
+  const canCancel = Boolean(api.cancelMerchantOrder) && canAct;
 
   useEffect(() => {
     let current = true;
@@ -51,7 +68,14 @@ export function PassengerParcelsPanel({ api, token, search = "" }: { api: Passen
     return () => {
       current = false;
     };
-  }, [api, token]);
+  }, [api, token, reload]);
+
+  async function confirmCancel(body: CancellationBody) {
+    if (!cancelTarget || !api.cancelMerchantOrder) return;
+    await api.cancelMerchantOrder(token, cancelTarget.id, body);
+    setCancelTarget(null);
+    setReload((value) => value + 1);
+  }
 
   const needle = search.trim().toLowerCase();
   const rows = (parcels ?? []).filter(
@@ -84,7 +108,17 @@ export function PassengerParcelsPanel({ api, token, search = "" }: { api: Passen
         </StatusBadge>
       )
     },
-    { key: "created", header: t("passengerParcelColumnCreated"), align: "end", cell: (parcel) => dateTime(parcel.created_at) }
+    { key: "created", header: t("passengerParcelColumnCreated"), align: "end", cell: (parcel) => dateTime(parcel.created_at) },
+    ...(canCancel
+      ? [{
+          key: "actions",
+          header: t("columnActions"),
+          align: "end" as const,
+          cell: (parcel: PassengerParcelRow) => isOneOf(ADMIN_CANCELLABLE_PARCEL_STATES, parcel.tracking_state)
+            ? <Button size="sm" variant="ghost" icon="block" onClick={() => setCancelTarget(parcel)}>{t("cancelParcelAction")}</Button>
+            : null
+        }]
+      : [])
   ];
 
   return (
@@ -105,6 +139,12 @@ export function PassengerParcelsPanel({ api, token, search = "" }: { api: Passen
           />
         )}
       </Card>
+      <CancelDialog
+        open={cancelTarget !== null}
+        subject={cancelTarget ? t("cancelParcelSubject", { id: cancelTarget.id, owner: cancelTarget.sender.name }) : ""}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={confirmCancel}
+      />
     </BentoGrid>
   );
 }

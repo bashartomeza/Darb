@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/prisma.js", () => ({ prisma: {} }));
+// The route-based cancellation itself is covered by cancellations.test.ts; here only the hand-off.
+const cancelMerchantOrder = vi.hoisted(() => vi.fn());
+vi.mock("../services/cancellations.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../services/cancellations.js")>()),
+  cancelMerchantOrder
+}));
 const {
   createPassengerParcelService,
   issueHandoverOnCreated,
@@ -374,28 +380,45 @@ describe("route-based passenger parcels (legacy pipeline)", () => {
     });
   });
 
-  it("cancels while an offer waits for the driver, withdrawing it and its capacity", async () => {
+  it("cancels through the shared order cancellation, with the sender's reason, at read committed", async () => {
+    cancelMerchantOrder.mockReset();
     const db = await routeDb();
     db.passengerParcelDetail.findFirst.mockResolvedValue(detailRow({}, { status: "matched", canonical_dispatch: null }));
-    db.match.findMany.mockResolvedValue([{ id: "match_1", driver_route_id: "route_1", legacy_capacity_held: true }]);
-    db.match.updateMany.mockResolvedValue({ count: 1 });
-    await createPassengerParcelService(db).cancel("passenger_1", "order_1");
-    expect(db.driverRoute.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: "route_1" }, data: expect.objectContaining({ parcel_capacity_available: { increment: 1 } })
-    }));
-    expect(db.match.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ["match_1"] } }, data: { status: "invalidated", legacy_demand_key: null, legacy_capacity_held: false }
+    await createPassengerParcelService(db).cancel("passenger_1", "order_1", { code: "changed_plans", note: "later" });
+    expect(cancelMerchantOrder).toHaveBeenCalledWith(db, {
+      orderId: "order_1",
+      ownerId: "passenger_1",
+      actor: { userId: "passenger_1", role: "passenger" },
+      reason: { code: "changed_plans", note: "later" }
     });
-    expect(db.merchantOrder.updateMany).toHaveBeenCalledWith({ where: { id: "order_1", status: { in: ["submitted", "matched"] } }, data: { status: "cancelled" } });
-    expect(db.passengerParcelDetail.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ receiver_phone: null }) }));
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "ReadCommitted" });
+    // No canonical dispatch is locked or touched for a route-based parcel.
     expect(db.canonicalDemandDispatch.updateMany).not.toHaveBeenCalled();
   });
 
-  it("refuses to cancel once a driver accepted the parcel", async () => {
+  it("passes the shared cancellation's refusal through (a parcel already picked up)", async () => {
+    cancelMerchantOrder.mockReset();
+    cancelMerchantOrder.mockRejectedValue(Object.assign(new Error("order_cannot_be_cancelled"), { statusCode: 409 }));
     const db = await routeDb();
-    db.passengerParcelDetail.findFirst.mockResolvedValue(detailRow({}, { status: "assigned", canonical_dispatch: null }, { status: "assigned" }));
+    db.passengerParcelDetail.findFirst.mockResolvedValue(detailRow({}, { status: "in_transit", canonical_dispatch: null }, { status: "in_transit" }));
     await expect(createPassengerParcelService(db).cancel("passenger_1", "order_1"))
-      .rejects.toMatchObject({ statusCode: 409, message: "parcel_cannot_be_cancelled" });
-    expect(db.merchantOrder.updateMany).not.toHaveBeenCalled();
+      .rejects.toMatchObject({ statusCode: 409, message: "order_cannot_be_cancelled" });
+  });
+
+  it("can be cancelled until pickup: waiting, or accepted with the driver not yet at pickup", () => {
+    const legacy = { canonical_dispatch: null };
+    expect(serializePassengerParcel(detailRow({}, { ...legacy, status: "batched" }) as never).can_cancel).toBe(true);
+    expect(serializePassengerParcel(detailRow({}, { ...legacy, status: "assigned", trips: [{ id: "t", status: "accepted" }] }, { status: "assigned" }) as never).can_cancel).toBe(true);
+    expect(serializePassengerParcel(detailRow({}, { ...legacy, status: "assigned", trips: [{ id: "t", status: "pickup_started" }] }, { status: "assigned" }) as never).can_cancel).toBe(true);
+    expect(serializePassengerParcel(detailRow({}, { ...legacy, status: "in_transit", trips: [{ id: "t", status: "in_transit" }] }, { status: "in_transit" }) as never).can_cancel).toBe(false);
+    expect(serializePassengerParcel(detailRow({}, { ...legacy, status: "cancelled" }, { status: "cancelled" }) as never).can_cancel).toBe(false);
+  });
+
+  it("shows who cancelled the parcel and why, only once it is cancelled", () => {
+    const row = { reason_code: "no_driver_in_time", automatic: true, actor_role: "system", created_at: new Date("2026-11-01T11:00:00Z") };
+    const cancelled = serializePassengerParcel(detailRow({}, { canonical_dispatch: null, status: "cancelled", cancellations: [row] }, { status: "cancelled" }) as never);
+    expect(cancelled.cancellation).toEqual({ reason: "no_driver_in_time", by: "system", automatic: true, at: row.created_at });
+    const waiting = serializePassengerParcel(detailRow({}, { canonical_dispatch: null, status: "submitted", cancellations: [row] }) as never);
+    expect(waiting.cancellation).toBeNull();
   });
 });

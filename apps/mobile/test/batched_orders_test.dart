@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:darb_mobile/core/cancellation/cancellation.dart';
 import 'package:darb_mobile/features/driver/data/driver_models.dart';
 import 'package:darb_mobile/features/driver/presentation/driver_ui.dart';
 import 'package:darb_mobile/features/merchant/data/merchant_models.dart';
@@ -208,8 +209,11 @@ void main() {
       expect(summary.dropoffs, ['Manger St', 'Beit Jala']);
     });
 
-    Future<bool?> openCancel(WidgetTester tester, MerchantOrder order) async {
-      bool? answer;
+    Future<CancelChoice?> openCancel(
+      WidgetTester tester,
+      MerchantOrder order,
+    ) async {
+      CancelChoice? answer;
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en'),
@@ -295,10 +299,10 @@ void main() {
       );
     });
 
-    testWidgets('a lone order has no batch note and confirms with yes', (
+    testWidgets('a lone order has no batch note and confirms with a reason', (
       tester,
     ) async {
-      bool? answer;
+      CancelChoice? answer;
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en'),
@@ -324,11 +328,58 @@ void main() {
         find.byKey(const ValueKey('merchantCancelBatchNote')),
         findsNothing,
       );
+      // Nothing can be confirmed before a reason is picked.
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('merchantCancelOrderConfirm')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('cancelReason-wrong_details')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('cancelNoteField')),
+        '  typo in the address  ',
+      );
+      await tester.pump();
       await tester.tap(
         find.byKey(const ValueKey('merchantCancelOrderConfirm')),
       );
       await tester.pumpAndSettle();
-      expect(answer, isTrue);
+      expect(answer?.reason, 'wrong_details');
+      expect(answer?.note, 'typo in the address');
+    });
+
+    testWidgets('an order a driver accepted says the driver is told', (
+      tester,
+    ) async {
+      await openCancel(tester, order(status: 'assigned'));
+      expect(
+        find.byKey(const ValueKey('merchantCancelAcceptedNote')),
+        findsOneWidget,
+      );
+    });
+
+    test('an order can be cancelled any time before pickup', () {
+      MerchantOrder withStatus(String status, {String? trip}) => MerchantOrder(
+        id: 'o',
+        pickupLabel: 'Hebron',
+        status: status,
+        createdAt: DateTime(2026, 7, 13),
+        parcels: const [],
+        batches: const [],
+        tripStatus: trip,
+      );
+      expect(withStatus('submitted').canCancel, isTrue);
+      expect(withStatus('matched').canCancel, isTrue);
+      expect(withStatus('assigned', trip: 'accepted').canCancel, isTrue);
+      expect(withStatus('assigned', trip: 'pickup_started').canCancel, isTrue);
+      expect(withStatus('assigned').canCancel, isTrue);
+      expect(withStatus('in_transit', trip: 'in_transit').canCancel, isFalse);
+      expect(withStatus('cancelled').canCancel, isFalse);
     });
   });
 }

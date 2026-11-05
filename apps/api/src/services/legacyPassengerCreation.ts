@@ -6,6 +6,7 @@ import { claimIdempotency, completeIdempotency } from "../lib/idempotency.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../middleware/error.js";
 import { legacyRouteTimingWhere } from "./legacyCapacity.js";
+import { endedCancellationInclude } from "./cancellations.js";
 import {
   LEGACY_DEFAULT_ROUTE_KEY,
   resolveOperatingRoute,
@@ -51,7 +52,7 @@ export function isRoutePassengerInput(input: LegacyPassengerCreationInput): inpu
 }
 
 /** Every passenger request read returns its route summary alongside the row. */
-export const passengerRequestInclude = { route_version: routeSummarySelect } as const;
+export const passengerRequestInclude = { route_version: routeSummarySelect, ...endedCancellationInclude } as const;
 
 /** The supply filter matching ranks from, narrowed to the one route the passenger picked. */
 function selectableRouteWhere(routeId: string, seats: number, now: Date, serviceRouteId: string): Prisma.DriverRouteWhereInput {

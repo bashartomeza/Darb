@@ -2,11 +2,10 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { pagedWhere, listPageOrderBy, listPageResult, parseListPage } from "../lib/pagination.js";
-import { auditEvent } from "../lib/audit.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
-import { AuditAction } from "../generated/prisma/enums.js";
-import { closeOpenLegacyOrder, OPEN_LEGACY_ORDER_STATUSES, type OpenLegacyOrderStatus } from "../services/legacyOrderClosure.js";
+import { cancelMerchantOrder, endedCancellationInclude, serializeCancellation } from "../services/cancellations.js";
+import { cancelBodySchema } from "../services/cancellationReasons.js";
 import { describeHandover } from "../services/deliveryHandover.js";
 import {
   createdOrderInclude,
@@ -209,11 +208,14 @@ function serializeLegacyMerchantOrder(value: Record<string, unknown>) {
     fare: Array.isArray(value.parcels) ? orderFareResponse(value.parcels as Array<Record<string, unknown>>) : null,
     // Confirmation state only; the code itself is shown once, when it is issued.
     handover: describeHandover((value.delivery_handover ?? null) as Parameters<typeof describeHandover>[0]),
+    // Who ended the order and why, once it is cancelled; otherwise null.
+    cancellation: value.status === "cancelled" ? serializeCancellation(value.cancellations as never) : null,
     parcel_batches: batches
   };
 }
 
 const merchantOrderInclude = {
+  ...endedCancellationInclude,
   parcels: true,
   delivery_handover: true,
   route_version: routeSummarySelect,
@@ -359,48 +361,26 @@ merchantRouter.post("/merchant/orders", async (req: AuthenticatedRequest, res, n
   }
 });
 
-// Cancels this one order. An order that shares a batch leaves it; the other
-// orders of the batch are not cancelled (see closeOpenLegacyOrder).
+// Cancels this one order, before pickup (also after a driver accepted it). An order that shares
+// a batch leaves it; the other orders of the batch are not cancelled (see services/cancellations.ts).
 merchantRouter.patch("/merchant/orders/:id/cancel", async (req: AuthenticatedRequest, res, next) => {
   try {
     const orderId = routeParam(req.params.id);
+    const input = cancelBodySchema("sender").parse(req.body ?? {});
     const result = await prisma.$transaction(async (tx) => {
-      const order = await tx.merchantOrder.findFirst({
-        where: { id: orderId, merchant_id: req.user!.id, canonical_entry_version: null },
-        select: { id: true, status: true }
+      const outcome = await cancelMerchantOrder(tx, {
+        orderId,
+        ownerId: req.user!.id,
+        actor: { userId: req.user!.id, role: "merchant" },
+        reason: { code: input.reason, note: input.note }
       });
-      if (!order) throw new HttpError(404, "order_not_found");
-      if (!(OPEN_LEGACY_ORDER_STATUSES as readonly string[]).includes(order.status)) {
-        throw new HttpError(409, "order_cannot_be_cancelled");
-      }
-      const closed = await closeOpenLegacyOrder(tx, {
-        orderId: order.id,
-        expectedStatus: order.status as OpenLegacyOrderStatus,
-        outcome: "cancelled",
-        merchantId: req.user!.id
-      });
-      // Another write (matching, acceptance) changed the order since it was read.
-      if (!closed) throw new HttpError(409, "order_cannot_be_cancelled");
-      await auditEvent(tx, {
-        userId: req.user!.id,
-        action: AuditAction.merchant_order_cancelled,
-        entityType: "MerchantOrder",
-        entityId: order.id,
-        metadata: {
-          action: "merchant_order_cancelled",
-          ...(closed.batchId
-            ? { parcel_batch_id: closed.batchId, batch_orders_remaining: closed.remainingOrderIds.length }
-            : {}),
-          ...(closed.withdrawnMatchIds.length ? { withdrawn_match_ids: closed.withdrawnMatchIds } : {})
-        }
-      });
-      const updated = await tx.merchantOrder.findUniqueOrThrow({ where: { id: order.id }, include: merchantOrderInclude });
-      return { updated, closed };
+      const updated = await tx.merchantOrder.findUniqueOrThrow({ where: { id: orderId }, include: merchantOrderInclude });
+      return { updated, closed: outcome.closed };
     }, { isolationLevel: "ReadCommitted" });
     res.json({
       order: serializeLegacyMerchantOrder(result.updated as unknown as Record<string, unknown>),
       // The other orders of its batch: they stay batched and were not cancelled.
-      batch_orders_remaining: result.closed.remainingOrderIds
+      batch_orders_remaining: result.closed?.remainingOrderIds ?? []
     });
   } catch (error) {
     // A deadlock with a concurrent match or acceptance rolled everything back: retry is safe.

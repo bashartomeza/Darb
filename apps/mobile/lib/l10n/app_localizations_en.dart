@@ -3295,6 +3295,168 @@ class AppLocalizationsEn extends AppLocalizations {
       'An order in this parcel offer expired, so it is no longer waiting for you. The space it held is free again.';
 
   @override
+  String get cancelReasonPrompt => 'Why are you cancelling?';
+
+  @override
+  String get cancelNoteLabel => 'Add a note (optional)';
+
+  @override
+  String get cancelReasonKeep => 'Keep it';
+
+  @override
+  String get cancelReasonChangedPlans => 'Changed plans';
+
+  @override
+  String get cancelReasonFoundOtherTransport => 'Found other transport';
+
+  @override
+  String get cancelReasonDriverTooFar => 'The driver is too far or too slow';
+
+  @override
+  String get cancelReasonWrongDetails => 'Wrong details entered';
+
+  @override
+  String get cancelReasonFoundOtherDelivery => 'Found another delivery option';
+
+  @override
+  String get cancelReasonVehicleProblem => 'Vehicle problem';
+
+  @override
+  String get cancelReasonEmergency => 'Emergency';
+
+  @override
+  String get cancelReasonCannotReachPickup => 'Cannot reach the pickup point';
+
+  @override
+  String get cancelReasonRouteChanged => 'Route changed';
+
+  @override
+  String get cancelReasonCustomerRequest => 'Customer request';
+
+  @override
+  String get cancelReasonDriverUnavailable => 'Driver unavailable';
+
+  @override
+  String get cancelReasonSafetyConcern => 'Safety concern';
+
+  @override
+  String get cancelReasonDuplicate => 'Duplicate request';
+
+  @override
+  String get cancelReasonPolicyViolation => 'Policy violation';
+
+  @override
+  String get cancelReasonNoDriverInTime => 'No driver accepted in time';
+
+  @override
+  String get cancelReasonOther => 'Other';
+
+  @override
+  String cancelledAutomaticallyReason(String reason) {
+    return 'Cancelled automatically: $reason';
+  }
+
+  @override
+  String cancelledByDriverReason(String reason) {
+    return 'Cancelled by the driver: $reason';
+  }
+
+  @override
+  String cancelledByAdminReason(String reason) {
+    return 'Cancelled by the Darb team: $reason';
+  }
+
+  @override
+  String cancelledByYouReason(String reason) {
+    return 'You cancelled: $reason';
+  }
+
+  @override
+  String cancelledByPassengerReason(String reason) {
+    return 'Cancelled by the passenger: $reason';
+  }
+
+  @override
+  String cancelledBySenderReason(String reason) {
+    return 'Cancelled by the sender: $reason';
+  }
+
+  @override
+  String get cancelAcceptedRideConfirm =>
+      'A driver has accepted this request. Cancel it anyway? The driver will be told.';
+
+  @override
+  String get cancelAcceptedOrderNote =>
+      'A driver already accepted this order. Cancelling tells the driver and frees their space.';
+
+  @override
+  String get driverCancelTripWarning =>
+      'The request goes back to waiting for another driver. Cancelling an accepted trip counts against your trust score, and the number of cancellations per day is limited.';
+
+  @override
+  String get driverCancelLimitReached =>
+      'You have reached today\'s limit for cancelling trips. Please contact support if you cannot continue this trip.';
+
+  @override
+  String get driverTripCancelledWaiting =>
+      'Trip cancelled. The request is waiting for another driver.';
+
+  @override
+  String get notifCancelledRideTitle => 'Ride request cancelled';
+
+  @override
+  String get notifCancelledOrderTitle => 'Order cancelled';
+
+  @override
+  String get notifCancelledParcelTitle => 'Parcel cancelled';
+
+  @override
+  String get notifCancelledAutomaticBody =>
+      'No driver accepted it in time, so it was cancelled.';
+
+  @override
+  String notifCancelledByAdminBody(String reason) {
+    return 'Cancelled by the Darb team: $reason.';
+  }
+
+  @override
+  String get notifCancelledWaitingTitle => 'Your driver cancelled';
+
+  @override
+  String get notifCancelledWaitingBody =>
+      'Your request is waiting for another driver.';
+
+  @override
+  String get notifCancelledDriverTitle => 'Trip cancelled';
+
+  @override
+  String notifCancelledDriverByPassengerBody(String reason) {
+    return 'The passenger cancelled this trip: $reason.';
+  }
+
+  @override
+  String notifCancelledDriverBySenderBody(String reason) {
+    return 'The sender cancelled this trip: $reason.';
+  }
+
+  @override
+  String notifCancelledDriverByAdminBody(String reason) {
+    return 'The Darb team cancelled this trip: $reason.';
+  }
+
+  @override
+  String get notifCancelledPartialTitle => 'Order removed from your trip';
+
+  @override
+  String notifCancelledPartialBody(String reason) {
+    return 'An order was cancelled: $reason. The rest of the trip continues.';
+  }
+
+  @override
+  String get notifOfferWithdrawnRequestCancelledBody =>
+      'The passenger cancelled this request, so it is no longer waiting for you.';
+
+  @override
   String get verificationDocuments => 'Verification documents';
 
   @override

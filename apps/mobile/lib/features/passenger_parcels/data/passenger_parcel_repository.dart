@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cancellation/cancellation.dart';
 import '../../auth/data/authenticated_api_client.dart';
 import 'passenger_parcel_models.dart';
 
@@ -43,10 +44,10 @@ class PassengerParcelRepository {
     );
   }
 
-  Future<PassengerParcel> cancel(String id) async {
+  Future<PassengerParcel> cancel(String id, CancelChoice choice) async {
     final json = await apiClient.patchJson(
       '/passenger/parcels/${Uri.encodeComponent(id)}/cancel',
-      body: const {},
+      body: choice.toBody(),
     );
     return PassengerParcel.fromJson(_map(json['parcel']));
   }

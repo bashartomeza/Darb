@@ -1,3 +1,4 @@
+import '../../../core/cancellation/cancellation.dart';
 import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
@@ -454,11 +455,20 @@ class DriverTrip {
     required this.merchantOrder,
     required this.parcelBatch,
     this.deliveryConfirmation,
+    this.cancellation,
   });
 
   final String id;
   final String status;
   final DateTime createdAt;
+
+  /// Who cancelled the trip and why; null while it is not cancelled.
+  final CancellationInfo? cancellation;
+
+  /// Before pickup a driver cancels with a reason (and the order goes back to
+  /// waiting for another driver); later, cancelling just ends the trip.
+  bool get cancelsWithReason =>
+      status == 'accepted' || status == 'pickup_started';
   final DateTime? startedAt;
   final DateTime? completedAt;
   final DriverRoute route;
@@ -552,6 +562,7 @@ class DriverTrip {
       parcelBatch: batch is Map<String, dynamic>
           ? DriverParcelBatchSummary.fromJson(batch)
           : null,
+      cancellation: CancellationInfo.tryParse(json['cancellation']),
       deliveryConfirmation:
           json['delivery_confirmation'] is Map<String, dynamic>
           ? TripDeliveryConfirmation.fromJson(

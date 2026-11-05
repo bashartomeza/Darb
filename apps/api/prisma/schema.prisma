@@ -465,6 +465,7 @@ model User {
   assistant_conversations          PassengerAssistantConversation[]
   app_rating                       AppRating?
   push_devices                     PushDevice[]
+  cancellations_made               Cancellation[]
   notification_preference          NotificationPreference?
 
   @@map("users")
@@ -1120,6 +1121,7 @@ model PassengerRequest {
   selected_driver_route DriverRoute? @relation("PassengerRequestSelectedRoute", fields: [selected_driver_route_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
   matches      Match[]
   trips        Trip[]
+  cancellations Cancellation[]
   canonical_dispatch CanonicalDemandDispatch?
   canonical_manifest_members CanonicalTripManifestMember[]
   assistant_conversations PassengerAssistantConversation[]
@@ -1159,6 +1161,7 @@ model MerchantOrder {
   batch_members  ParcelBatchOrder[]
   matches        Match[]
   trips          Trip[]
+  cancellations  Cancellation[]
   canonical_dispatch CanonicalDemandDispatch?
   canonical_manifest_members CanonicalTripManifestMember[]
   passenger_parcel PassengerParcelDetail?
@@ -1374,6 +1377,7 @@ model Trip {
 
   incidents         Incident[]
   community_reports CommunityReport[]
+  cancellations     Cancellation[]
   ratings          TripRating[]
   driver_route      DriverRoute       @relation(fields: [driver_route_id], references: [id], onDelete: Restrict)
   mode_driver_route DriverRoute       @relation("TripAvailabilityMode", fields: [driver_route_id, operational_mode], references: [id, operational_mode], onDelete: Restrict, onUpdate: Restrict)
@@ -2091,4 +2095,33 @@ model NotificationPreference {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+/// Who cancelled what and why: people and the automatic no-driver timeout alike.
+/// ends_order is false when only the trip was cancelled and the order went back to waiting.
+model Cancellation {
+  id                   String   @id @default(cuid())
+  actor_user_id        String?  @db.VarChar(191)
+  /// passenger, merchant, driver, admin or system.
+  actor_role           String   @db.VarChar(20)
+  passenger_request_id String?  @db.VarChar(191)
+  merchant_order_id    String?  @db.VarChar(191)
+  trip_id              String?  @db.VarChar(191)
+  reason_code          String   @db.VarChar(40)
+  note                 String?  @db.VarChar(300)
+  automatic            Boolean  @default(false)
+  ends_order           Boolean  @default(true)
+  created_at           DateTime @default(now())
+
+  actor             User?             @relation(fields: [actor_user_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  passenger_request PassengerRequest? @relation(fields: [passenger_request_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  merchant_order    MerchantOrder?    @relation(fields: [merchant_order_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  trip              Trip?             @relation(fields: [trip_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([created_at])
+  @@index([actor_user_id, created_at])
+  @@index([passenger_request_id])
+  @@index([merchant_order_id])
+  @@index([trip_id])
+  @@map("cancellations")
 }

@@ -1,3 +1,4 @@
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/fares/fare.dart';
 
 /// Where a parcel sent by a passenger is, from the sender's point of view.
@@ -73,6 +74,7 @@ class PassengerParcel {
     this.dropoffDetails,
     this.preferredTime,
     this.fare,
+    this.cancellation,
   });
 
   final String id;
@@ -87,6 +89,9 @@ class PassengerParcel {
   final bool receiverDetailsRemoved;
   final String? note;
   final bool canCancel;
+
+  /// Who cancelled the parcel and why; null while it is not cancelled.
+  final CancellationInfo? cancellation;
   final DateTime createdAt;
   final DateTime? departureFrom;
   final DateTime? departureUntil;
@@ -168,6 +173,7 @@ class PassengerParcel {
       dropoffDetails: optionalString('dropoff_details'),
       preferredTime: optionalDate('preferred_time'),
       fare: FareSnapshot.tryParse(json['fare']),
+      cancellation: CancellationInfo.tryParse(json['cancellation']),
     );
   }
 }

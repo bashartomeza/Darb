@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/cancellation/cancellation.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import '../../auth/data/authenticated_api_client.dart';
 import '../../trips/data/trip_models.dart';
@@ -244,6 +245,13 @@ class DriverRepository {
 
   Future<void> updateTripStatus(String id, String status) async {
     await apiClient.postJson('/trips/$id/status', body: {'status': status});
+  }
+
+  /// Cancels an accepted trip before pickup with a reason. The request or
+  /// orders go back to waiting for another driver; the cancellation counts
+  /// against the driver's trust score and is limited per day.
+  Future<void> cancelAcceptedTrip(String id, CancelChoice choice) async {
+    await apiClient.postJson('/trips/$id/cancel', body: choice.toBody());
   }
 
   Future<TripLocation> simulateStep(String id) async {

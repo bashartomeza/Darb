@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cancellation/cancellation.dart';
 import '../../auth/data/authenticated_api_client.dart';
 import '../../trips/data/trip_models.dart';
 import 'merchant_bulk_models.dart';
@@ -124,8 +125,11 @@ class MerchantRepository {
     return MerchantBatch.fromJson(json['batch'] as Map<String, dynamic>);
   }
 
-  Future<MerchantOrder> cancelOrder(String orderId) async {
-    final json = await apiClient.patchJson('/merchant/orders/$orderId/cancel');
+  Future<MerchantOrder> cancelOrder(String orderId, CancelChoice choice) async {
+    final json = await apiClient.patchJson(
+      '/merchant/orders/$orderId/cancel',
+      body: choice.toBody(),
+    );
     return MerchantOrder.fromJson(json['order'] as Map<String, dynamic>);
   }
 

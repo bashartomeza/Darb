@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:darb_mobile/core/api/api_client.dart';
+import 'package:darb_mobile/core/cancellation/cancellation.dart';
 import 'package:darb_mobile/core/widgets/darb_map.dart';
 import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_models.dart';
 import 'package:darb_mobile/core/maps/osrm_route_service.dart';
@@ -311,6 +312,121 @@ void main() {
     container.dispose();
   });
 
+  group('cancelling a trip', () {
+    ProviderContainer containerFor(_CancelRecorder recorder) =>
+        ProviderContainer(
+          overrides: [
+            httpClientProvider.overrideWithValue(
+              MockClient((_) async => _road(31.8, 35.3)),
+            ),
+            checkpointsProvider.overrideWith(
+              () => _NoCheckpoints(CheckpointSnapshot.empty),
+            ),
+            driverTripControllerProvider('one').overrideWith(() => recorder),
+          ],
+        );
+
+    Future<void> tapCancel(WidgetTester tester) async {
+      // The actions sit at the bottom of the draggable trip sheet.
+      final sheet = find.descendant(
+        of: find.byType(DraggableScrollableSheet),
+        matching: find.byType(Scrollable),
+      );
+      final cancel = find.text('Cancel request');
+      await tester.dragUntilVisible(cancel, sheet, const Offset(0, -120));
+      await tester.pumpAndSettle();
+      await tester.tap(cancel);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('before pickup asks why, warns, and sends the reason', (
+      tester,
+    ) async {
+      final recorder = _CancelRecorder('one');
+      final container = containerFor(recorder);
+      await _pump(tester, container, 'one');
+      await tapCancel(tester);
+
+      expect(find.byKey(const ValueKey('cancelReasonDialog')), findsOneWidget);
+      expect(
+        find.textContaining('counts against your trust score'),
+        findsOneWidget,
+      );
+      // A driver sees driver reasons only.
+      expect(
+        find.byKey(const ValueKey('cancelReason-vehicle_problem')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('cancelReason-changed_plans')),
+        findsNothing,
+      );
+      expect(recorder.choices, isEmpty);
+
+      await tester.tap(find.byKey(const ValueKey('cancelReason-emergency')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('cancelReasonConfirm')));
+      await tester.pumpAndSettle();
+
+      expect(recorder.choices.single.reason, 'emergency');
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+    });
+
+    testWidgets('keeping the trip sends nothing', (tester) async {
+      final recorder = _CancelRecorder('one');
+      final container = containerFor(recorder);
+      await _pump(tester, container, 'one');
+      await tapCancel(tester);
+      await tester.tap(find.byKey(const ValueKey('cancelReasonKeep')));
+      await tester.pumpAndSettle();
+      expect(recorder.choices, isEmpty);
+      expect(recorder.cancelCalls, 0);
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+    });
+
+    testWidgets('once under way there is no reason to give', (tester) async {
+      final recorder = _CancelRecorder('one');
+      final container = containerFor(recorder);
+      await _pump(tester, container, 'one');
+      recorder.replace({..._tripJson('one'), 'status': 'in_transit'});
+      await tester.pumpAndSettle();
+      await tapCancel(tester);
+      expect(find.byKey(const ValueKey('cancelReasonDialog')), findsNothing);
+      await tester.tap(find.widgetWithText(FilledButton, 'Cancel request'));
+      await tester.pumpAndSettle();
+      expect(recorder.cancelCalls, 1);
+      expect(recorder.choices, isEmpty);
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+    });
+
+    testWidgets('a cancelled trip shows who cancelled it and why', (
+      tester,
+    ) async {
+      final recorder = _CancelRecorder('one');
+      final container = containerFor(recorder);
+      await _pump(tester, container, 'one');
+      recorder.replace({
+        ..._tripJson('one'),
+        'status': 'cancelled',
+        'cancellation': {
+          'reason': 'changed_plans',
+          'by': 'passenger',
+          'automatic': false,
+        },
+      });
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Cancelled by the passenger: Changed plans'),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
+    });
+  });
+
   testWidgets('Arabic preserves an arbitrary selected origin name', (
     tester,
   ) async {
@@ -387,6 +503,18 @@ class _Trip extends DriverTripController {
     state = AsyncData(
       DriverTripState(trip: DriverTrip.fromJson(json), location: null),
     );
+  }
+}
+
+class _CancelRecorder extends _Trip {
+  _CancelRecorder(super.id);
+  final choices = <CancelChoice>[];
+  int cancelCalls = 0;
+
+  @override
+  Future<void> cancelTrip({CancelChoice? choice}) async {
+    cancelCalls += 1;
+    if (choice != null) choices.add(choice);
   }
 }
 

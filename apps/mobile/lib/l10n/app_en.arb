@@ -1131,6 +1131,127 @@
   "notifOfferWithdrawnTitle": "Offer withdrawn",
   "notifOfferWithdrawnCancelledBody": "The sender cancelled an order in this parcel offer, so it is no longer waiting for you. The space it held is free again.",
   "notifOfferWithdrawnExpiredBody": "An order in this parcel offer expired, so it is no longer waiting for you. The space it held is free again.",
+  "cancelReasonPrompt": "Why are you cancelling?",
+  "cancelNoteLabel": "Add a note (optional)",
+  "cancelReasonKeep": "Keep it",
+  "cancelReasonChangedPlans": "Changed plans",
+  "cancelReasonFoundOtherTransport": "Found other transport",
+  "cancelReasonDriverTooFar": "The driver is too far or too slow",
+  "cancelReasonWrongDetails": "Wrong details entered",
+  "cancelReasonFoundOtherDelivery": "Found another delivery option",
+  "cancelReasonVehicleProblem": "Vehicle problem",
+  "cancelReasonEmergency": "Emergency",
+  "cancelReasonCannotReachPickup": "Cannot reach the pickup point",
+  "cancelReasonRouteChanged": "Route changed",
+  "cancelReasonCustomerRequest": "Customer request",
+  "cancelReasonDriverUnavailable": "Driver unavailable",
+  "cancelReasonSafetyConcern": "Safety concern",
+  "cancelReasonDuplicate": "Duplicate request",
+  "cancelReasonPolicyViolation": "Policy violation",
+  "cancelReasonNoDriverInTime": "No driver accepted in time",
+  "cancelReasonOther": "Other",
+  "cancelledAutomaticallyReason": "Cancelled automatically: {reason}",
+  "@cancelledAutomaticallyReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelledByDriverReason": "Cancelled by the driver: {reason}",
+  "@cancelledByDriverReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelledByAdminReason": "Cancelled by the Darb team: {reason}",
+  "@cancelledByAdminReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelledByYouReason": "You cancelled: {reason}",
+  "@cancelledByYouReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelledByPassengerReason": "Cancelled by the passenger: {reason}",
+  "@cancelledByPassengerReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelledBySenderReason": "Cancelled by the sender: {reason}",
+  "@cancelledBySenderReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelAcceptedRideConfirm": "A driver has accepted this request. Cancel it anyway? The driver will be told.",
+  "cancelAcceptedOrderNote": "A driver already accepted this order. Cancelling tells the driver and frees their space.",
+  "driverCancelTripWarning": "The request goes back to waiting for another driver. Cancelling an accepted trip counts against your trust score, and the number of cancellations per day is limited.",
+  "driverCancelLimitReached": "You have reached today's limit for cancelling trips. Please contact support if you cannot continue this trip.",
+  "driverTripCancelledWaiting": "Trip cancelled. The request is waiting for another driver.",
+  "notifCancelledRideTitle": "Ride request cancelled",
+  "notifCancelledOrderTitle": "Order cancelled",
+  "notifCancelledParcelTitle": "Parcel cancelled",
+  "notifCancelledAutomaticBody": "No driver accepted it in time, so it was cancelled.",
+  "notifCancelledByAdminBody": "Cancelled by the Darb team: {reason}.",
+  "@notifCancelledByAdminBody": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCancelledWaitingTitle": "Your driver cancelled",
+  "notifCancelledWaitingBody": "Your request is waiting for another driver.",
+  "notifCancelledDriverTitle": "Trip cancelled",
+  "notifCancelledDriverByPassengerBody": "The passenger cancelled this trip: {reason}.",
+  "@notifCancelledDriverByPassengerBody": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCancelledDriverBySenderBody": "The sender cancelled this trip: {reason}.",
+  "@notifCancelledDriverBySenderBody": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCancelledDriverByAdminBody": "The Darb team cancelled this trip: {reason}.",
+  "@notifCancelledDriverByAdminBody": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCancelledPartialTitle": "Order removed from your trip",
+  "notifCancelledPartialBody": "An order was cancelled: {reason}. The rest of the trip continues.",
+  "@notifCancelledPartialBody": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "notifOfferWithdrawnRequestCancelledBody": "The passenger cancelled this request, so it is no longer waiting for you.",
   "verificationDocuments": "Verification documents",
   "verificationDocumentsHint": "To get approved, upload clear photos or PDFs of your driving licence, your vehicle registration and your national ID. Files are stored on our server and only the review team can open them.",
   "documentKind": "Document type",

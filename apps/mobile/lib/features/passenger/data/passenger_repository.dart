@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/cancellation/cancellation.dart';
 import '../../auth/data/authenticated_api_client.dart';
 import 'passenger_models.dart';
 
@@ -129,11 +130,13 @@ class PassengerRepository {
   // --------------------------------------------------------------------------
 
   Future<PassengerRequest> cancelRequest(
-    String id, {
+    String id,
+    CancelChoice choice, {
     void Function()? beforeSend,
   }) async {
     final json = await apiClient.patchJson(
       '/passenger/requests/$id/cancel',
+      body: choice.toBody(),
       beforeSend: beforeSend,
     );
 

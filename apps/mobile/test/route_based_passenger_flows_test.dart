@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
+import 'package:darb_mobile/core/cancellation/cancellation.dart';
 import 'package:darb_mobile/core/api/api_error.dart';
 import 'package:darb_mobile/core/theme/app_theme.dart';
 import 'package:darb_mobile/features/assistant/application/passenger_assistant_controller.dart';
@@ -1333,7 +1334,8 @@ class _ParcelRepository implements PassengerParcelRepository {
   }
 
   @override
-  Future<PassengerParcel> cancel(String id) => throw UnimplementedError();
+  Future<PassengerParcel> cancel(String id, CancelChoice choice) =>
+      throw UnimplementedError();
 }
 
 class _Dashboard extends PassengerDashboardController {

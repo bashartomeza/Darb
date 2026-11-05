@@ -193,6 +193,10 @@ jobs:
         env:
           MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
         run: npm run test:integration:capacity
+      - name: Real MySQL cancellation flow (sender and driver cancels, automatic cancel, admin cancels)
+        env:
+          MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
+        run: npm run test:integration:cancellations
       - name: Real MySQL deterministic and trusted-session integration smoke
         run: npm run test:integration:mysql
       - name: Real MySQL persistent demo-reset gate matrix

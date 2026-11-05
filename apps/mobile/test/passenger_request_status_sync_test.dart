@@ -81,6 +81,31 @@ void main() {
   );
 
   testWidgets(
+    'cancelling sends the chosen reason, and the cancelled request shows it',
+    (tester) async {
+      final h = _Harness();
+      await _pump(tester, h);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel request'));
+      await tester.pumpAndSettle();
+      // An accepted request says the driver will be told.
+      expect(
+        find.text(
+          'A driver has accepted this request. Cancel it anyway? The driver will be told.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('cancelReason-found_other_transport')),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('cancelReasonConfirm')));
+      await tester.pumpAndSettle();
+      expect(h.lastCancelBody, {'reason': 'found_other_transport'});
+      expect(find.text('You cancelled: Changed plans'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'unavailable reconciliation does not claim cancellation failed or replay it',
     (tester) async {
       final h = _Harness()
@@ -153,9 +178,7 @@ void main() {
         storage.pause();
         await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel request'));
         await tester.pumpAndSettle();
-        await tester.tap(
-          find.byKey(const ValueKey('confirmSecurityActionButton')),
-        );
+        await _confirmCancelDialog(tester);
         await tester.pumpAndSettle();
         await storage.started.future;
         final binding = h.container.read(authenticatedActorBindingProvider);
@@ -301,9 +324,7 @@ void main() {
       await tester.pumpAndSettle();
       final dialogs = find.byType(AlertDialog).evaluate().length;
       // Close the current dialog before asserting, including on the RED baseline.
-      await tester.tap(
-        find.byKey(const ValueKey('confirmSecurityActionButton')).last,
-      );
+      await _confirmCancelDialog(tester);
       await tester.pumpAndSettle();
       expect(dialogs, 1);
       expect(h.cancellations, 1);
@@ -408,9 +429,7 @@ void main() {
       h.cancelBarrier = barrier;
       await tester.tap(find.widgetWithText(OutlinedButton, 'Cancel request'));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const ValueKey('confirmSecurityActionButton')),
-      );
+      await _confirmCancelDialog(tester);
       await tester.pumpAndSettle();
       final reads = h.requestReads + h.tripReads;
       h.container.read(authenticatedActorBindingProvider).clear();
@@ -497,6 +516,15 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
+/// Answers the cancel dialog: picks a reason, which enables the confirm button.
+Future<void> _confirmCancelDialog(WidgetTester tester) async {
+  await tester.tap(
+    find.byKey(const ValueKey('cancelReason-changed_plans')).last,
+  );
+  await tester.pump();
+  await tester.tap(find.byKey(const ValueKey('cancelReasonConfirm')).last);
+}
+
 Future<void> _cancel(WidgetTester tester, {String language = 'en'}) async {
   await tester.tap(
     find.widgetWithText(
@@ -505,7 +533,7 @@ Future<void> _cancel(WidgetTester tester, {String language = 'en'}) async {
     ),
   );
   await tester.pumpAndSettle();
-  await tester.tap(find.byKey(const ValueKey('confirmSecurityActionButton')));
+  await _confirmCancelDialog(tester);
   await tester.pumpAndSettle();
 }
 
@@ -546,11 +574,13 @@ class _Harness {
   bool failReconciliation = false;
   int cancellations = 0, restorations = 0, requestReads = 0, tripReads = 0;
   Completer<void>? nextTripBarrier, cancelBarrier;
+  Map<String, dynamic>? lastCancelBody;
 
   Future<http.Response> _handle(http.Request request) async {
     if (request.method == 'PATCH' &&
         request.url.path == '/api/v1/passenger/requests/request-1/cancel') {
       cancellations++;
+      lastCancelBody = jsonDecode(request.body) as Map<String, dynamic>;
       await cancelBarrier?.future;
       if (response == 'revoked') {
         return _json({'error': 'session_revoked'}, 401);
@@ -617,6 +647,12 @@ class _Harness {
     'preferred_time': '2099-10-22T13:00:00Z',
     'created_at': '2026-10-22T12:00:00Z',
     'status': requestStatus,
+    if (requestStatus == 'cancelled')
+      'cancellation': {
+        'reason': 'changed_plans',
+        'by': 'passenger',
+        'automatic': false,
+      },
   };
 }
 

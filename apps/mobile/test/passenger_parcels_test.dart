@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:darb_mobile/core/cancellation/cancellation.dart';
 import 'package:darb_mobile/core/api/api_error.dart';
 import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
 import 'package:darb_mobile/features/passenger_parcels/data/passenger_parcel_draft.dart';
@@ -16,6 +17,7 @@ Map<String, dynamic> parcelJson({
   String state = 'searching',
   bool canCancel = true,
   bool removed = false,
+  Map<String, dynamic>? cancellation,
 }) => {
   'id': id,
   'tracking_state': state,
@@ -27,6 +29,7 @@ Map<String, dynamic> parcelJson({
   'receiver_details_removed': removed,
   'note': null,
   'can_cancel': canCancel,
+  'cancellation': cancellation,
   'created_at': '2026-10-28T10:00:00.000Z',
   'requested_departure_from': '2026-10-29T10:00:00.000Z',
   'requested_departure_until': '2026-10-29T11:00:00.000Z',
@@ -36,6 +39,7 @@ class _FakeRepository implements PassengerParcelRepository {
   _FakeRepository(this.parcels);
   List<PassengerParcel> parcels;
   final cancelled = <String>[];
+  final cancelChoices = <CancelChoice>[];
   ApiException? cancelError;
 
   @override
@@ -51,9 +55,10 @@ class _FakeRepository implements PassengerParcelRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<PassengerParcel> cancel(String id) async {
+  Future<PassengerParcel> cancel(String id, CancelChoice choice) async {
     if (cancelError != null) throw cancelError!;
     cancelled.add(id);
+    cancelChoices.add(choice);
     parcels = [
       for (final parcel in parcels)
         if (parcel.id == id)
@@ -258,7 +263,7 @@ void main() {
       },
     );
 
-    testWidgets('cancelling asks first, then shows the cancelled state', (
+    testWidgets('cancelling asks why first, then shows the cancelled state', (
       tester,
     ) async {
       final repository = _FakeRepository([
@@ -268,9 +273,23 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('cancelParcel-order_1')));
       await tester.pumpAndSettle();
       expect(repository.cancelled, isEmpty);
+      // The confirm button waits for a reason.
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('confirmCancelParcel')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('cancelReason-changed_plans')),
+      );
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('confirmCancelParcel')));
       await tester.pumpAndSettle();
       expect(repository.cancelled, ['order_1']);
+      expect(repository.cancelChoices.single.reason, 'changed_plans');
       expect(find.text('Cancelled'), findsOneWidget);
       expect(find.text('Receiver details have been erased.'), findsOneWidget);
       expect(find.byKey(const ValueKey('cancelParcel-order_1')), findsNothing);
@@ -287,9 +306,74 @@ void main() {
       await _pump(tester, repository);
       await tester.tap(find.byKey(const ValueKey('cancelParcel-order_1')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('cancelReason-other')));
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('confirmCancelParcel')));
       await tester.pumpAndSettle();
       expect(find.textContaining('can no longer be cancelled'), findsOneWidget);
+    });
+
+    testWidgets('a cancelled parcel shows who cancelled it and why', (
+      tester,
+    ) async {
+      final repository = _FakeRepository([
+        PassengerParcel.fromJson(
+          parcelJson(
+            state: 'cancelled',
+            canCancel: false,
+            removed: true,
+            cancellation: {
+              'reason': 'no_driver_in_time',
+              'by': 'system',
+              'automatic': true,
+            },
+          ),
+        ),
+        PassengerParcel.fromJson(
+          parcelJson(
+            id: 'order_2',
+            state: 'cancelled',
+            canCancel: false,
+            removed: true,
+            cancellation: {
+              'reason': 'safety_concern',
+              'by': 'admin',
+              'automatic': false,
+            },
+          ),
+        ),
+      ]);
+      await _pump(tester, repository);
+      expect(
+        find.text('Cancelled automatically: No driver accepted in time'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Cancelled by the Darb team: Safety concern'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the cancellation is shown in Arabic too', (tester) async {
+      final repository = _FakeRepository([
+        PassengerParcel.fromJson(
+          parcelJson(
+            state: 'cancelled',
+            canCancel: false,
+            removed: true,
+            cancellation: {
+              'reason': 'no_driver_in_time',
+              'by': 'system',
+              'automatic': true,
+            },
+          ),
+        ),
+      ]);
+      await _pump(tester, repository, locale: const Locale('ar'));
+      expect(
+        find.text('أُلغي تلقائياً: لم يقبله أي سائق في الوقت المحدد'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('renders right-to-left Arabic with Arabic tracking wording', (

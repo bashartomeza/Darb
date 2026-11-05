@@ -152,6 +152,7 @@ export async function resetDemoData(db: PrismaClient = prisma, appConfig: AppCon
     await tx.refreshToken.deleteMany();
     await tx.authSession.deleteMany();
     await tx.locationEvent.deleteMany();
+    await tx.cancellation.deleteMany();
     const resetAt = new Date();
     await tx.canonicalDemandAttempt.deleteMany();
     await tx.canonicalDemandDispatch.updateMany({

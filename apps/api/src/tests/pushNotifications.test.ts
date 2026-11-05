@@ -391,7 +391,7 @@ describe("push dispatcher", () => {
     for (const type of [
       "match_offered", "match_accepted", "match_rejected", "trip_status", "driver_approaching",
       "driver_verification_approved", "driver_verification_rejected", "driver_documents_expiring",
-      "driver_documents_expired", "driver_documents_renewal_submitted", "incident_updated", "merchant_order_expired", "match_withdrawn", "something_new"
+      "driver_documents_expired", "driver_documents_renewal_submitted", "incident_updated", "merchant_order_expired", "match_withdrawn", "cancelled", "something_new"
     ]) {
       for (const locale of ["ar", "en-US", null]) {
         expect(pushText(type, {}, locale).title.length).toBeGreaterThan(0);
@@ -410,6 +410,34 @@ describe("push dispatcher", () => {
     expect(pushText("driver_approaching", { reason: "eta" }, "ar").body).toBe("سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.");
     // A reviewer's free-text reason never goes to a lock screen.
     expect(pushText("driver_verification_rejected", { reason: "Blurry photo of the licence" }, "en").body).not.toContain("Blurry");
+  });
+
+  it("words cancellations for the person affected, in the device language", () => {
+    const owner = { audience: "owner", kind: "ride" };
+    expect(pushText("cancelled", { ...owner, by: "system", automatic: true, reason: "no_driver_in_time" }, "en")).toEqual({
+      title: "Ride request cancelled",
+      body: "No driver accepted it in time, so it was cancelled."
+    });
+    expect(pushText("cancelled", { ...owner, by: "system", automatic: true, reason: "no_driver_in_time" }, "ar")).toEqual({
+      title: "تم إلغاء طلب الرحلة",
+      body: "لم يقبله أي سائق في الوقت المحدد، لذلك أُلغي تلقائياً."
+    });
+    expect(pushText("cancelled", { ...owner, by: "driver", waiting: true, reason: "vehicle_problem" }, "en")).toEqual({
+      title: "Your driver cancelled",
+      body: "Your request is waiting for another driver."
+    });
+    expect(pushText("cancelled", { audience: "owner", kind: "parcel", by: "admin", reason: "safety_concern" }, "en")).toEqual({
+      title: "Parcel cancelled",
+      body: "Cancelled by the Darb team: Safety concern."
+    });
+    expect(pushText("cancelled", { audience: "driver", kind: "ride", by: "passenger", reason: "changed_plans" }, "en")).toEqual({
+      title: "Trip cancelled",
+      body: "The passenger cancelled this trip: Changed plans."
+    });
+    expect(pushText("cancelled", { audience: "driver", kind: "order", by: "merchant", reason: "wrong_details", partial: true }, "ar").title)
+      .toBe("تمت إزالة طلب من رحلتك");
+    // An unknown reason code never leaks as a raw code.
+    expect(pushText("cancelled", { audience: "owner", kind: "order", by: "admin", reason: "zzz" }, "en").body).toBe("Cancelled by the Darb team: Other.");
   });
 });
 

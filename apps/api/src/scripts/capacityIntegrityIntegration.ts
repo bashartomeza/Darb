@@ -67,7 +67,7 @@ async function merchant() {
 }
 const match = (id: string, actor: Actor = "p1", routeId?: string) => call(actor, "POST", "/matches/run", { ...(actor === "merchant" ? { merchantOrderId: id } : { passengerRequestId: id }), ...(routeId ? { driverRouteId: routeId } : {}) });
 const accept = (id: string) => call("driver", "POST", `/matches/${id}/accept`, {});
-const cancel = (id: string, actor: Actor = "p1") => call(actor, "PATCH", `/passenger/requests/${id}/cancel`, {});
+const cancel = (id: string, actor: Actor = "p1") => call(actor, "PATCH", `/passenger/requests/${id}/cancel`, { reason: "other" });
 async function capacity(id: string, seats: number, parcels: number, label: string) {
   const r = await prisma.driverRoute.findUniqueOrThrow({ where: { id } });
   check(r.seats_available === seats && r.parcel_capacity_available === parcels, label);
@@ -143,7 +143,7 @@ try {
     await capacity(r, 0, 0, "independent dimensions fully held");
     const winner = await accept(both[0].body.match.id); check(winner.status === 201, "existing one-trip-per-route acceptance");
     await capacity(r, 0, 1, "competing parcel hold released once");
-    check((await call("merchant", "PATCH", `/merchant/orders/${o.id}/cancel`, {})).status === 200, "invalidated parcel order can cancel");
+    check((await call("merchant", "PATCH", `/merchant/orders/${o.id}/cancel`, { reason: "other" })).status === 200, "invalidated parcel order can cancel");
     await capacity(r, 0, 1, "parcel cancellation does not release twice");
     await cancel(p); await capacity(r, 1, 1, "passenger cancellation leaves both original totals");
   }

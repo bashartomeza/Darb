@@ -124,7 +124,9 @@ function requestData(suffix: string, extra: Partial<Prisma.PassengerRequestUnche
   return { id: id(suffix), passenger_id: id("user_passenger"), ...pickup, ...location, preferred_time: preferredTime, passenger_count: 2, source: "manual", created_at: created, ...extra };
 }
 function orderData(suffix: string, extra: Partial<Prisma.MerchantOrderUncheckedCreateInput> = {}): Prisma.MerchantOrderUncheckedCreateInput {
-  return { id: id(suffix), merchant_id: id("user_merchant"), ...pickup, created_at: created, ...extra };
+  return { id: id(suffix), merchant_id: id("user_merchant"), ...pickup, created_at: created,
+    // Booked for later: the background worker cancels unaccepted orders 45 minutes after their booked time.
+    requested_departure_from: preferredTime, requested_departure_until: new Date(preferredTime.getTime() + 3_600_000), ...extra };
 }
 function routeData(suffix: string, extra: Partial<Prisma.DriverRouteUncheckedCreateInput> = {}): Prisma.DriverRouteUncheckedCreateInput {
   return { id: id(suffix), driver_id: id("profile"), origin_label: marker, origin_lat: "31.5", origin_lng: "35.1", ...location,

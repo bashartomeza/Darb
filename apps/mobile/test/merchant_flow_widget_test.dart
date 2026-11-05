@@ -714,9 +714,21 @@ void main() {
     await tester.ensureVisible(cancel);
     await tester.tap(cancel);
     await tester.pumpAndSettle();
+    // The order stays until a reason is picked.
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('merchantCancelOrderConfirm')),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.byKey(const ValueKey('cancelReason-wrong_details')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('merchantCancelOrderConfirm')));
     await tester.pumpAndSettle();
     expect(handler.cancelCalls, 1);
+    expect(handler.lastCancelBody, {'reason': 'wrong_details'});
   });
 
   testWidgets('merchant tracking offers to call the driver when sent', (
@@ -941,6 +953,7 @@ class _MerchantHandler {
   /// Serve a trip that carries two of the merchant's orders in one batch.
   bool batchTrip = false;
   int cancelCalls = 0;
+  Map<String, dynamic>? lastCancelBody;
   final lookupKeys = <String?>[];
   final paths = <String>[];
 
@@ -1096,6 +1109,7 @@ class _MerchantHandler {
     }
     if (path.endsWith('/merchant/orders/order_1/cancel')) {
       cancelCalls += 1;
+      lastCancelBody = jsonDecode(request.body) as Map<String, dynamic>;
       return http.Response(
         '{"order":${_orderJson(batched).replaceFirst(RegExp('"status":"(batched|submitted)"'), '"status":"cancelled"')},"batch_orders_remaining":[]}',
         200,

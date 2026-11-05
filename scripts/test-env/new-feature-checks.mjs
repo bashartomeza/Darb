@@ -330,7 +330,7 @@ async function passengerParcelChecks(admin) {
     must(mine.json.parcel.receiver_name === "QA Receiver", "the sender cannot see the receiver name");
     const stranger = await loginAs("demo.passenger@darb.app", env.DEMO_PASSENGER_PASSWORD);
     must((await http(`/passenger/parcels/${id}`, { token: stranger })).status === 404, "another passenger can read the parcel");
-    must((await http(`/passenger/parcels/${id}/cancel`, { method: "PATCH", token: stranger })).status === 404, "another passenger can cancel it");
+    must((await http(`/passenger/parcels/${id}/cancel`, { method: "PATCH", body: { reason: "other" }, token: stranger })).status === 404, "another passenger can cancel it");
     must((await http("/passenger/parcels", { token: await loginAs("demo.driver@darb.app", env.DEMO_DRIVER_PASSWORD) })).status === 403, "a driver reached passenger parcels");
     must((await http("/passenger/parcels", { token: await loginAs("demo.merchant@darb.app", env.DEMO_MERCHANT_PASSWORD) })).status === 403, "a merchant reached passenger parcels");
     must((await http("/passenger/parcels", {})).status === 401, "anonymous reached passenger parcels");
@@ -350,11 +350,11 @@ async function passengerParcelChecks(admin) {
     must(fourth.status === 409 && fourth.json.error === "passenger_parcel_limit_reached", `4th parcel gave ${fourth.status} ${fourth.json?.error}`);
   });
   await check("E21", "passenger parcel: cancelling erases the receiver data and frees a slot; cancelling twice is refused", async () => {
-    const cancelled = await http(`/passenger/parcels/${created[0]}/cancel`, { method: "PATCH", token: sender, expect: 200 });
+    const cancelled = await http(`/passenger/parcels/${created[0]}/cancel`, { method: "PATCH", body: { reason: "other" }, token: sender, expect: 200 });
     const parcel = cancelled.json.parcel;
     must(parcel.receiver_details_removed === true && parcel.receiver_name === null && parcel.receiver_phone_masked === null && parcel.note === null, `receiver data kept: ${JSON.stringify(parcel).slice(0, 200)}`);
     must(String(parcel.tracking_state).includes("cancel"), `tracking ${parcel.tracking_state}`);
-    must((await http(`/passenger/parcels/${created[0]}/cancel`, { method: "PATCH", token: sender })).status === 409, "second cancel not refused");
+    must((await http(`/passenger/parcels/${created[0]}/cancel`, { method: "PATCH", body: { reason: "other" }, token: sender })).status === 409, "second cancel not refused");
     const again = await post(parcelBody());
     must(again.status === 201, `after a cancel the slot was not freed: ${again.status}`);
     created.push(again.json.parcel.id);

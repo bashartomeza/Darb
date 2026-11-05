@@ -174,6 +174,7 @@ describe("demo reset", () => {
       refreshToken: { deleteMany: vi.fn() },
       authSession: { deleteMany: vi.fn() },
       locationEvent: { deleteMany: vi.fn() },
+      cancellation: { deleteMany: vi.fn() },
       capacityReservation: { updateMany: vi.fn(), deleteMany: vi.fn() },
       canonicalDemandDispatch: { updateMany: vi.fn(), deleteMany: vi.fn() },
       canonicalDemandAttempt: { deleteMany: vi.fn() },

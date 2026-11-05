@@ -1,14 +1,19 @@
-import type { ReactNode } from "react";
-import type { ApiClient, MerchantOrder, PassengerRequest } from "../../api";
+import { useState, type ReactNode } from "react";
+import type { ApiClient, CancellationBody, MerchantOrder, PassengerRequest } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
 import { BentoGrid, Button, Card, CardHeader, Column, DataTable, EmptyState, RouteChip, Skeleton, StatusBadge, TechnicalValue } from "../../ui";
 import { OrderRouteDetails, orderRouteSearchValues } from "../operatingRoutes/OrderRouteDetails";
+import { CancelDialog } from "../cancellations/CancelDialog";
+import { ADMIN_CANCELLABLE_ORDER_STATUSES, ADMIN_CANCELLABLE_REQUEST_STATUSES, isOneOf } from "../cancellations/cancellationModel";
 import { Pager } from "../shared/Pager";
 import { useDebouncedValue, usePagedList, type PagedPhase } from "../shared/usePagedList";
 
 export const DELIVERIES_PAGE_SIZE = 25;
 
-export type RequestsBoardApi = Pick<ApiClient, "requests" | "orders">;
+export type RequestsBoardApi = Pick<ApiClient, "requests" | "orders"> &
+  Partial<Pick<ApiClient, "cancelPassengerRequest" | "cancelMerchantOrder">>;
+
+type CancelTarget = { kind: "request"; row: PassengerRequest } | { kind: "order"; row: MerchantOrder };
 
 function ListBody({
   phase,
@@ -48,11 +53,24 @@ function ListBody({
 /**
  * Passenger requests and merchant orders, each loaded page by page with its
  * own loading, error and refresh state. The search box is sent to the API so
- * it covers every page, not just the one on screen.
+ * it covers every page, not just the one on screen. Unfinished requests and
+ * orders get a cancel action that asks for a reason first.
  */
-export function RequestsBoard({ api, token, search }: { api: RequestsBoardApi; token: string; search: string }) {
+export function RequestsBoard({
+  api,
+  token,
+  search,
+  canAct = true
+}: {
+  api: RequestsBoardApi;
+  token: string;
+  search: string;
+  canAct?: boolean;
+}) {
   const { t, status, number } = useLocale();
   const query = useDebouncedValue(search.trim());
+  const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
+  const canCancel = canAct && Boolean(api.cancelPassengerRequest) && Boolean(api.cancelMerchantOrder);
 
   const requests = usePagedList<PassengerRequest>(async (page) => {
     const result = await api.requests(token, { page, limit: DELIVERIES_PAGE_SIZE, search: query });
@@ -63,6 +81,20 @@ export function RequestsBoard({ api, token, search }: { api: RequestsBoardApi; t
     const result = await api.orders(token, { page, limit: DELIVERIES_PAGE_SIZE, search: query });
     return { items: result.orders, total: result.total ?? result.orders.length };
   }, [token, query]);
+
+  async function confirmCancel(body: CancellationBody) {
+    if (!cancelTarget) return;
+    if (cancelTarget.kind === "request") await api.cancelPassengerRequest!(token, cancelTarget.row.id, body);
+    else await api.cancelMerchantOrder!(token, cancelTarget.row.id, body);
+    setCancelTarget(null);
+    await Promise.all([requests.reload(), orders.reload()]);
+  }
+
+  const cancelSubject = !cancelTarget
+    ? ""
+    : cancelTarget.kind === "request"
+      ? t("cancelRequestSubject", { id: cancelTarget.row.id, owner: cancelTarget.row.passenger?.name ?? t("noData") })
+      : t("cancelOrderSubject", { id: cancelTarget.row.id, owner: cancelTarget.row.merchant?.name ?? t("noData") });
 
   const requestColumns: Column<PassengerRequest>[] = [
     {
@@ -91,7 +123,17 @@ export function RequestsBoard({ api, token, search }: { api: RequestsBoardApi; t
       header: t("columnStatus"),
       cell: (request) => <StatusBadge status={request.status}>{status(request.status)}</StatusBadge>
     },
-    { key: "id", header: t("columnReference"), align: "end", cell: (request) => <TechnicalValue>{request.id}</TechnicalValue> }
+    { key: "id", header: t("columnReference"), align: "end", cell: (request) => <TechnicalValue>{request.id}</TechnicalValue> },
+    ...(canCancel
+      ? [{
+          key: "actions",
+          header: t("columnActions"),
+          align: "end" as const,
+          cell: (request: PassengerRequest) => isOneOf(ADMIN_CANCELLABLE_REQUEST_STATUSES, request.status)
+            ? <Button size="sm" variant="ghost" icon="block" onClick={() => setCancelTarget({ kind: "request", row: request })}>{t("cancelRequestAction")}</Button>
+            : null
+        }]
+      : [])
   ];
 
   const orderColumns: Column<MerchantOrder>[] = [
@@ -122,7 +164,17 @@ export function RequestsBoard({ api, token, search }: { api: RequestsBoardApi; t
       header: t("columnStatus"),
       cell: (order) => <StatusBadge status={order.status}>{status(order.status)}</StatusBadge>
     },
-    { key: "id", header: t("columnReference"), align: "end", cell: (order) => <TechnicalValue>{order.id}</TechnicalValue> }
+    { key: "id", header: t("columnReference"), align: "end", cell: (order) => <TechnicalValue>{order.id}</TechnicalValue> },
+    ...(canCancel
+      ? [{
+          key: "actions",
+          header: t("columnActions"),
+          align: "end" as const,
+          cell: (order: MerchantOrder) => isOneOf(ADMIN_CANCELLABLE_ORDER_STATUSES, order.status)
+            ? <Button size="sm" variant="ghost" icon="block" onClick={() => setCancelTarget({ kind: "order", row: order })}>{t("cancelOrderAction")}</Button>
+            : null
+        }]
+      : [])
   ];
 
   return (
@@ -160,6 +212,7 @@ export function RequestsBoard({ api, token, search }: { api: RequestsBoardApi; t
           <Pager page={orders.page} total={orders.total} limit={DELIVERIES_PAGE_SIZE} disabled={orders.phase === "loading"} onPage={orders.setPage} />
         </ListBody>
       </Card>
+      <CancelDialog open={cancelTarget !== null} subject={cancelSubject} onClose={() => setCancelTarget(null)} onConfirm={confirmCancel} />
     </BentoGrid>
   );
 }

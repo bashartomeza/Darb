@@ -3271,6 +3271,168 @@ class AppLocalizationsAr extends AppLocalizations {
       'انتهت صلاحية طلب في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.';
 
   @override
+  String get cancelReasonPrompt => 'ما سبب الإلغاء؟';
+
+  @override
+  String get cancelNoteLabel => 'أضف ملاحظة (اختياري)';
+
+  @override
+  String get cancelReasonKeep => 'إبقاء';
+
+  @override
+  String get cancelReasonChangedPlans => 'تغيّرت الخطط';
+
+  @override
+  String get cancelReasonFoundOtherTransport => 'وجدت وسيلة نقل أخرى';
+
+  @override
+  String get cancelReasonDriverTooFar => 'السائق بعيد أو متأخر';
+
+  @override
+  String get cancelReasonWrongDetails => 'إدخال بيانات خاطئة';
+
+  @override
+  String get cancelReasonFoundOtherDelivery => 'وجدت خيار توصيل آخر';
+
+  @override
+  String get cancelReasonVehicleProblem => 'مشكلة في المركبة';
+
+  @override
+  String get cancelReasonEmergency => 'حالة طارئة';
+
+  @override
+  String get cancelReasonCannotReachPickup =>
+      'لا يمكن الوصول إلى نقطة الاستلام';
+
+  @override
+  String get cancelReasonRouteChanged => 'تغيّر المسار';
+
+  @override
+  String get cancelReasonCustomerRequest => 'بطلب من العميل';
+
+  @override
+  String get cancelReasonDriverUnavailable => 'السائق غير متاح';
+
+  @override
+  String get cancelReasonSafetyConcern => 'مخاوف تتعلق بالسلامة';
+
+  @override
+  String get cancelReasonDuplicate => 'طلب مكرر';
+
+  @override
+  String get cancelReasonPolicyViolation => 'مخالفة للسياسة';
+
+  @override
+  String get cancelReasonNoDriverInTime => 'لم يقبله أي سائق في الوقت المحدد';
+
+  @override
+  String get cancelReasonOther => 'سبب آخر';
+
+  @override
+  String cancelledAutomaticallyReason(String reason) {
+    return 'أُلغي تلقائياً: $reason';
+  }
+
+  @override
+  String cancelledByDriverReason(String reason) {
+    return 'ألغاه السائق: $reason';
+  }
+
+  @override
+  String cancelledByAdminReason(String reason) {
+    return 'ألغاه فريق درب: $reason';
+  }
+
+  @override
+  String cancelledByYouReason(String reason) {
+    return 'ألغيتَه: $reason';
+  }
+
+  @override
+  String cancelledByPassengerReason(String reason) {
+    return 'ألغاه الراكب: $reason';
+  }
+
+  @override
+  String cancelledBySenderReason(String reason) {
+    return 'ألغاه المرسل: $reason';
+  }
+
+  @override
+  String get cancelAcceptedRideConfirm =>
+      'قبل سائق هذا الطلب. هل تريد إلغاءه؟ سيتم إبلاغ السائق.';
+
+  @override
+  String get cancelAcceptedOrderNote =>
+      'قبل سائق هذا الطلب بالفعل. الإلغاء يُبلغ السائق ويُعيد المساحة التي حجزها.';
+
+  @override
+  String get driverCancelTripWarning =>
+      'يعود الطلب لانتظار سائق آخر. إلغاء رحلة مقبولة يؤثر على درجة الثقة لديك، وعدد مرات الإلغاء في اليوم محدود.';
+
+  @override
+  String get driverCancelLimitReached =>
+      'وصلتَ إلى حد الإلغاء اليومي للرحلات. تواصل مع الدعم إن تعذّر عليك إكمال هذه الرحلة.';
+
+  @override
+  String get driverTripCancelledWaiting =>
+      'تم إلغاء الرحلة. الطلب بانتظار سائق آخر.';
+
+  @override
+  String get notifCancelledRideTitle => 'تم إلغاء طلب الرحلة';
+
+  @override
+  String get notifCancelledOrderTitle => 'تم إلغاء الطلب';
+
+  @override
+  String get notifCancelledParcelTitle => 'تم إلغاء الطرد';
+
+  @override
+  String get notifCancelledAutomaticBody =>
+      'لم يقبله أي سائق في الوقت المحدد، لذلك أُلغي تلقائياً.';
+
+  @override
+  String notifCancelledByAdminBody(String reason) {
+    return 'ألغاه فريق درب: $reason.';
+  }
+
+  @override
+  String get notifCancelledWaitingTitle => 'ألغى السائق الرحلة';
+
+  @override
+  String get notifCancelledWaitingBody => 'طلبك بانتظار سائق آخر.';
+
+  @override
+  String get notifCancelledDriverTitle => 'تم إلغاء الرحلة';
+
+  @override
+  String notifCancelledDriverByPassengerBody(String reason) {
+    return 'ألغى الراكب هذه الرحلة: $reason.';
+  }
+
+  @override
+  String notifCancelledDriverBySenderBody(String reason) {
+    return 'ألغى المرسل هذه الرحلة: $reason.';
+  }
+
+  @override
+  String notifCancelledDriverByAdminBody(String reason) {
+    return 'ألغى فريق درب هذه الرحلة: $reason.';
+  }
+
+  @override
+  String get notifCancelledPartialTitle => 'تمت إزالة طلب من رحلتك';
+
+  @override
+  String notifCancelledPartialBody(String reason) {
+    return 'أُلغي طلب: $reason. تستمر بقية الرحلة.';
+  }
+
+  @override
+  String get notifOfferWithdrawnRequestCancelledBody =>
+      'ألغى الراكب هذا الطلب، لذلك لم يعد بانتظارك.';
+
+  @override
   String get verificationDocuments => 'مستندات التوثيق';
 
   @override

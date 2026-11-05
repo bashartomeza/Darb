@@ -12,7 +12,7 @@ import { LOCKED_CORRIDOR_KEY, LOCKED_CORRIDOR_LABEL } from "./demoReset.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { AuditAction, MatchStatus } from "../generated/prisma/enums.js";
 import { notifyMatchOffered } from "../services/notifications.js";
-import { isLegacyRouteTimely, legacyRouteTimingWhere, reserveLegacyCapacity, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
+import { isLegacyRouteTimely, legacyRouteTimingWhere, reserveLegacyCapacity, requestExpiryCutoff, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
 import {
   LEGACY_DEFAULT_ROUTE_KEY,
   resolveOperatingRoute,
@@ -440,7 +440,7 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
   if (merchantOrder && !["submitted", "batched", "matched"].includes(merchantOrder.status)) {
     throw new HttpError(409, "merchant_order_not_matchable");
   }
-  if (passengerRequest && passengerRequest.preferred_time <= new Date()) {
+  if (passengerRequest && passengerRequest.preferred_time <= requestExpiryCutoff(new Date())) {
     throw new HttpError(409, "passenger_request_expired");
   }
   const merchantBatchId = merchantOrder?.parcel_batches[0]?.id ?? merchantOrder?.batch_members[0]?.parcel_batch_id ?? null;
@@ -500,7 +500,7 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
             passenger_id: passengerRequest.passenger_id,
             status: { in: ["pending", "matched"] },
             canonical_entry_version: null,
-            preferred_time: { gt: new Date() }
+            preferred_time: { gt: requestExpiryCutoff(new Date()) }
           },
           data: { status: "matched" }
         });

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cancellation/cancellation.dart';
 import '../data/passenger_parcel_models.dart';
 import '../data/passenger_parcel_repository.dart';
 
@@ -28,11 +29,14 @@ class PassengerParcelsNotifier extends AsyncNotifier<List<PassengerParcel>> {
 
   /// Cancels, then reloads so the list always reflects what the server holds
   /// (a lost response can leave the cancellation committed).
-  Future<PassengerParcel> cancel(PassengerParcel parcel) async {
+  Future<PassengerParcel> cancel(
+    PassengerParcel parcel,
+    CancelChoice choice,
+  ) async {
     try {
       return await ref
           .read(passengerParcelRepositoryProvider)
-          .cancel(parcel.id);
+          .cancel(parcel.id, choice);
     } finally {
       await refresh();
     }

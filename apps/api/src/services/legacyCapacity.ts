@@ -1,5 +1,15 @@
 import type { Prisma } from "../generated/prisma/client.js";
 import { HttpError } from "../middleware/error.js";
+import { config } from "../config.js";
+
+/**
+ * A ride request can still be matched and accepted until ORDER_AUTO_CANCEL_MINUTES after its
+ * booked time (when it is cancelled automatically), so a request is "expired" for matching
+ * only when its booked time is at or before this cutoff.
+ */
+export function requestExpiryCutoff(now: Date): Date {
+  return new Date(now.getTime() - config.orderAutoCancelMinutes * 60_000);
+}
 
 export type LegacyCapacityInput = {
   driverRouteId: string;
@@ -33,7 +43,7 @@ export async function requireEligibleLegacyRoute(
       (route.availability_window_end && route.availability_window_end <= clock.now)) {
     throw new HttpError(409, "selected_driver_route_unavailable");
   }
-  if (route.preferred_time && route.preferred_time <= clock.now) throw new HttpError(409, "passenger_request_expired");
+  if (route.preferred_time && route.preferred_time <= requestExpiryCutoff(clock.now)) throw new HttpError(409, "passenger_request_expired");
   if (route.match_expires_at && route.match_expires_at <= clock.now) throw new HttpError(409, "match_expired");
   return clock.now;
 }

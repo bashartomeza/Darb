@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:darb_mobile/core/cancellation/cancellation.dart';
 import 'package:darb_mobile/features/auth/application/auth_controller.dart';
 import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
 import 'package:darb_mobile/features/auth/domain/auth_models.dart';
@@ -78,7 +79,8 @@ class _ParcelRepository implements PassengerParcelRepository {
   );
 
   @override
-  Future<PassengerParcel> cancel(String id) => throw UnimplementedError();
+  Future<PassengerParcel> cancel(String id, CancelChoice choice) =>
+      throw UnimplementedError();
 }
 
 class _HandoverRepository implements DeliveryHandoverRepository {

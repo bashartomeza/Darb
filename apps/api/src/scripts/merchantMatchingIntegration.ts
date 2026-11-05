@@ -61,7 +61,7 @@ async function demand(two = false) {
   return { id: first.body.order.id, secondId: second?.body.order.id, batchId: batch.body.batch.id };
 }
 async function match(id: string) { return call("merchant", "POST", "/matches/run", { merchantOrderId: id }); }
-async function cancel(id: string) { await call("merchant", "PATCH", `/merchant/orders/${id}/cancel`, {}); }
+async function cancel(id: string) { await call("merchant", "PATCH", `/merchant/orders/${id}/cancel`, { reason: "other" }); }
 async function interleaveOrderRead(
   orderId: string,
   method: "findFirst" | "findUnique",
@@ -193,7 +193,7 @@ try {
 
   await available(); const racing = await demand(true); const racingOffer = await match(racing.id); assert.equal(racingOffer.status, 201);
   const cancelledRace = await interleaveOrderRead(racing.secondId, "findFirst",
-    () => call("merchant", "PATCH", `/merchant/orders/${racing.secondId}/cancel`, {}),
+    () => call("merchant", "PATCH", `/merchant/orders/${racing.secondId}/cancel`, { reason: "other" }),
     async () => { assert.equal((await call("driver", "POST", `/matches/${racingOffer.body.match.id}/accept`, {})).status, 201); });
   check(cancelledRace.status === 409, "stale secondary-order cancellation rejects after acceptance commits");
   check((await prisma.parcelBatch.findUniqueOrThrow({ where: { id: racing.batchId } })).status === "assigned", "acceptance winner retains assigned batch");
@@ -202,7 +202,7 @@ try {
 
   await available(); const newMatchRace = await demand();
   const staleCancel = await interleaveOrderRead(newMatchRace.id, "findFirst",
-    () => call("merchant", "PATCH", `/merchant/orders/${newMatchRace.id}/cancel`, {}),
+    () => call("merchant", "PATCH", `/merchant/orders/${newMatchRace.id}/cancel`, { reason: "other" }),
     async () => { assert.equal((await match(newMatchRace.id)).status, 201); });
   check(staleCancel.status === 409, "changed order state requires fresh cancellation read");
   check((await prisma.parcelBatch.findUniqueOrThrow({ where: { id: newMatchRace.batchId } })).status === "proposed", "concurrent matching winner remains proposed");
@@ -211,7 +211,7 @@ try {
   await available(); const aba = await demand(); const oldOffer = await match(aba.id); assert.equal(oldOffer.status, 201);
   let newOfferId = "";
   const abaCancel = await interleaveOrderRead(aba.id, "findFirst",
-    () => call("merchant", "PATCH", `/merchant/orders/${aba.id}/cancel`, {}),
+    () => call("merchant", "PATCH", `/merchant/orders/${aba.id}/cancel`, { reason: "other" }),
     async () => {
       assert.equal((await call("driver", "POST", `/matches/${oldOffer.body.match.id}/reject`, {})).status, 200);
       const rematched = await match(aba.id); assert.equal(rematched.status, 201); newOfferId = rematched.body.match.id;
@@ -226,7 +226,7 @@ try {
   const batchRaceOrder = await call("merchant", "POST", "/merchant/orders", payload); assert.equal(batchRaceOrder.status, 201);
   const batchRace = await interleaveOrderRead(batchRaceOrder.body.order.id, "findUnique",
     () => call("merchant", "POST", `/merchant/orders/${batchRaceOrder.body.order.id}/batch`, {}),
-    async () => { assert.equal((await call("merchant", "PATCH", `/merchant/orders/${batchRaceOrder.body.order.id}/cancel`, {})).status, 200); });
+    async () => { assert.equal((await call("merchant", "PATCH", `/merchant/orders/${batchRaceOrder.body.order.id}/cancel`, { reason: "other" })).status, 200); });
   check(batchRace.status === 409, "batching rejects order cancelled after initial read");
   check(await prisma.parcelBatch.count({ where: { merchant_order_id: batchRaceOrder.body.order.id } }) === 0, "cancelled order creates no batch or membership");
 
@@ -247,7 +247,7 @@ try {
   // Cancelling one order of a batch cancels only that order; the rest stay batched and can be offered again.
   await available(); const partial = await demand(true); const partialOffer = await match(partial.id); assert.equal(partialOffer.status, 201);
   check((await prisma.driverRoute.findUniqueOrThrow({ where: { id: routeId } })).parcel_capacity_available === 17, "partial: batch offer holds all three parcels");
-  const partialCancel = await call("merchant", "PATCH", `/merchant/orders/${partial.id}/cancel`, {});
+  const partialCancel = await call("merchant", "PATCH", `/merchant/orders/${partial.id}/cancel`, { reason: "other" });
   check(partialCancel.status === 200 && partialCancel.body.order.status === "cancelled", "partial: the chosen order is cancelled");
   check(JSON.stringify(partialCancel.body.batch_orders_remaining) === JSON.stringify([partial.secondId]), "partial: response names the orders that stay");
   check((await prisma.merchantOrder.findUniqueOrThrow({ where: { id: partial.secondId } })).status === "batched", "partial: the other order stays batched");

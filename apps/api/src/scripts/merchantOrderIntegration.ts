@@ -106,7 +106,7 @@ try {
   check(recovered.status === 200, "lost response recovered without another mutation");
   const lostReplay = await call("POST", "/merchant/orders", merchant, "task9-lost-response", payload);
   check(lostReplay.status === 200 && lostReplay.body.order.id === recovered.body.order.id, "lost response retry preserves order identity");
-  const cancelled = await call("PATCH", `/merchant/orders/${recovered.body.order.id}/cancel`, merchant);
+  const cancelled = await call("PATCH", `/merchant/orders/${recovered.body.order.id}/cancel`, merchant, undefined, { reason: "other" });
   check(cancelled.status === 200 && cancelled.body.order.status === "cancelled", "recovered order uses existing cancellation path");
   const cancelledReplay = await call("POST", "/merchant/orders", merchant, "task9-lost-response", payload);
   check(cancelledReplay.status === 200 && cancelledReplay.body.order.id === recovered.body.order.id && cancelledReplay.body.order.status === "cancelled", "cancelled original is replayed, not recreated");

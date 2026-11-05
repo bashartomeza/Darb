@@ -125,6 +125,11 @@ const rawSchema = z.object({
   DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
   ADMIN_STATIC_DIR: z.string().min(1).optional(),
   DRIVER_DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  // A ride request, order or parcel no driver has accepted is cancelled this many minutes after
+  // its reference time (the booked time if for later, otherwise when it was created).
+  ORDER_AUTO_CANCEL_MINUTES: z.coerce.number().int().min(10).max(240).default(45),
+  // A driver may cancel at most this many accepted trips in 24 hours.
+  DRIVER_CANCELLATIONS_PER_DAY: z.coerce.number().int().min(1).max(100).default(3),
   // Data retention (docs/operations/data-retention.md). Windows in days; the purge jobs run from cron.
   LOCATION_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   SESSION_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
@@ -833,7 +838,8 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
       etaMinutes: raw.APPROACH_ALERT_ETA_MINUTES,
       assumedSpeedKmh: raw.APPROACH_ALERT_ASSUMED_SPEED_KMH
     },
-    merchantOrderMaxAgeHours: raw.MERCHANT_ORDER_MAX_AGE_HOURS,
+    orderAutoCancelMinutes: raw.ORDER_AUTO_CANCEL_MINUTES,
+    driverCancellationsPerDay: raw.DRIVER_CANCELLATIONS_PER_DAY,
     readinessTimeoutMs: raw.READINESS_TIMEOUT_MS,
     rateLimits: {
       global: { windowMs: raw.RATE_LIMIT_GLOBAL_WINDOW_MS, max: globalRateLimitMax },

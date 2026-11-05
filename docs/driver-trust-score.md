@@ -29,6 +29,7 @@ A driver with no history therefore scores exactly 70 (the same as the default on
 ### What counts as what
 
 - A trip is a driver cancellation only when `trips.cancelled_by_user_id` is the driver's own user. Passenger and admin cancellations are not held against the driver.
+- A driver cancels an accepted trip before pickup with `POST /trips/:id/cancel` and a reason (docs/api/cancellations.md). The trip is recorded as cancelled by the driver, so it counts here; the request or orders go back to waiting for another driver. At most `DRIVER_CANCELLATIONS_PER_DAY` (default 3) such cancellations are allowed in 24 hours.
 - Failed trips (a trip that could not be finished) count as non-completions alongside driver cancellations.
 - Departure punctuality uses `trips.started_at` against `driver_routes.departure_at`. Trips without a scheduled departure are not measured.
 - Arrival punctuality uses `trips.completed_at` against `driver_routes.availability_window_end`, the only arrival deadline the data model has today. Trips without it are not measured. If a real planned arrival time is added later, swap it in at one place.

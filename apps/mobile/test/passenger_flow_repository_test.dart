@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:darb_mobile/core/cancellation/cancellation.dart';
 import 'package:darb_mobile/core/api/api_error.dart';
 import 'package:darb_mobile/features/auth/data/authenticated_api_client.dart';
 import 'package:darb_mobile/features/matching/data/matching_repository.dart';
@@ -16,6 +17,8 @@ void main() {
     'passenger request list, active, detail, create, and cancel parsing',
     () async {
       Map<String, dynamic>? createBody;
+      Map<String, dynamic>? cancelBody;
+      String? cancelMethod;
 
       final repo = PassengerRepository(
         apiClient: _client((request) async {
@@ -27,6 +30,8 @@ void main() {
           }
 
           if (request.url.path.endsWith('/cancel')) {
+            cancelMethod = request.method;
+            cancelBody = jsonDecode(request.body) as Map<String, dynamic>;
             return http.Response(
               '{"request":${_requestJson('cancelled')}}',
               200,
@@ -103,7 +108,16 @@ void main() {
       // CANCEL
       // ------------------------------------------------------------------
 
-      expect((await repo.cancelRequest('request_1')).status, 'cancelled');
+      expect(
+        (await repo.cancelRequest(
+          'request_1',
+          const CancelChoice('changed_plans', note: 'later'),
+        )).status,
+        'cancelled',
+      );
+      // The reason (and note) go with the cancellation.
+      expect(cancelMethod, 'PATCH');
+      expect(cancelBody, {'reason': 'changed_plans', 'note': 'later'});
     },
   );
 

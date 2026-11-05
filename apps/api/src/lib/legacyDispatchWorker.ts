@@ -18,7 +18,7 @@ export function startLegacyDispatchWorker(
     running = true;
     try {
       const result = await expireLegacyDispatches();
-      if (result.matchesExpired || result.requestsExpired || result.ordersExpired) {
+      if (result.matchesExpired || result.requestsCancelled || result.ordersCancelled) {
         logger.info(
           { event: "legacy_dispatch_expiry_pass", ...result },
           "Legacy dispatch expiry pass completed",

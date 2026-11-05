@@ -16,7 +16,8 @@ export type NotificationType =
   | "driver_documents_renewal_submitted"
   | "incident_updated"
   | "merchant_order_expired"
-  | "match_withdrawn";
+  | "match_withdrawn"
+  | "cancelled";
 
 type NotifyInput = {
   userId: string | null | undefined;

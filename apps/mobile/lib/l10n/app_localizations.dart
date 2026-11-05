@@ -5996,6 +5996,270 @@ abstract class AppLocalizations {
   /// **'انتهت صلاحية طلب في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.'**
   String get notifOfferWithdrawnExpiredBody;
 
+  /// No description provided for @cancelReasonPrompt.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما سبب الإلغاء؟'**
+  String get cancelReasonPrompt;
+
+  /// No description provided for @cancelNoteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف ملاحظة (اختياري)'**
+  String get cancelNoteLabel;
+
+  /// No description provided for @cancelReasonKeep.
+  ///
+  /// In ar, this message translates to:
+  /// **'إبقاء'**
+  String get cancelReasonKeep;
+
+  /// No description provided for @cancelReasonChangedPlans.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيّرت الخطط'**
+  String get cancelReasonChangedPlans;
+
+  /// No description provided for @cancelReasonFoundOtherTransport.
+  ///
+  /// In ar, this message translates to:
+  /// **'وجدت وسيلة نقل أخرى'**
+  String get cancelReasonFoundOtherTransport;
+
+  /// No description provided for @cancelReasonDriverTooFar.
+  ///
+  /// In ar, this message translates to:
+  /// **'السائق بعيد أو متأخر'**
+  String get cancelReasonDriverTooFar;
+
+  /// No description provided for @cancelReasonWrongDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدخال بيانات خاطئة'**
+  String get cancelReasonWrongDetails;
+
+  /// No description provided for @cancelReasonFoundOtherDelivery.
+  ///
+  /// In ar, this message translates to:
+  /// **'وجدت خيار توصيل آخر'**
+  String get cancelReasonFoundOtherDelivery;
+
+  /// No description provided for @cancelReasonVehicleProblem.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشكلة في المركبة'**
+  String get cancelReasonVehicleProblem;
+
+  /// No description provided for @cancelReasonEmergency.
+  ///
+  /// In ar, this message translates to:
+  /// **'حالة طارئة'**
+  String get cancelReasonEmergency;
+
+  /// No description provided for @cancelReasonCannotReachPickup.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن الوصول إلى نقطة الاستلام'**
+  String get cancelReasonCannotReachPickup;
+
+  /// No description provided for @cancelReasonRouteChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيّر المسار'**
+  String get cancelReasonRouteChanged;
+
+  /// No description provided for @cancelReasonCustomerRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'بطلب من العميل'**
+  String get cancelReasonCustomerRequest;
+
+  /// No description provided for @cancelReasonDriverUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'السائق غير متاح'**
+  String get cancelReasonDriverUnavailable;
+
+  /// No description provided for @cancelReasonSafetyConcern.
+  ///
+  /// In ar, this message translates to:
+  /// **'مخاوف تتعلق بالسلامة'**
+  String get cancelReasonSafetyConcern;
+
+  /// No description provided for @cancelReasonDuplicate.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب مكرر'**
+  String get cancelReasonDuplicate;
+
+  /// No description provided for @cancelReasonPolicyViolation.
+  ///
+  /// In ar, this message translates to:
+  /// **'مخالفة للسياسة'**
+  String get cancelReasonPolicyViolation;
+
+  /// No description provided for @cancelReasonNoDriverInTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يقبله أي سائق في الوقت المحدد'**
+  String get cancelReasonNoDriverInTime;
+
+  /// No description provided for @cancelReasonOther.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب آخر'**
+  String get cancelReasonOther;
+
+  /// No description provided for @cancelledAutomaticallyReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُلغي تلقائياً: {reason}'**
+  String cancelledAutomaticallyReason(String reason);
+
+  /// No description provided for @cancelledByDriverReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغاه السائق: {reason}'**
+  String cancelledByDriverReason(String reason);
+
+  /// No description provided for @cancelledByAdminReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغاه فريق درب: {reason}'**
+  String cancelledByAdminReason(String reason);
+
+  /// No description provided for @cancelledByYouReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغيتَه: {reason}'**
+  String cancelledByYouReason(String reason);
+
+  /// No description provided for @cancelledByPassengerReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغاه الراكب: {reason}'**
+  String cancelledByPassengerReason(String reason);
+
+  /// No description provided for @cancelledBySenderReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغاه المرسل: {reason}'**
+  String cancelledBySenderReason(String reason);
+
+  /// No description provided for @cancelAcceptedRideConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبل سائق هذا الطلب. هل تريد إلغاءه؟ سيتم إبلاغ السائق.'**
+  String get cancelAcceptedRideConfirm;
+
+  /// No description provided for @cancelAcceptedOrderNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبل سائق هذا الطلب بالفعل. الإلغاء يُبلغ السائق ويُعيد المساحة التي حجزها.'**
+  String get cancelAcceptedOrderNote;
+
+  /// No description provided for @driverCancelTripWarning.
+  ///
+  /// In ar, this message translates to:
+  /// **'يعود الطلب لانتظار سائق آخر. إلغاء رحلة مقبولة يؤثر على درجة الثقة لديك، وعدد مرات الإلغاء في اليوم محدود.'**
+  String get driverCancelTripWarning;
+
+  /// No description provided for @driverCancelLimitReached.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصلتَ إلى حد الإلغاء اليومي للرحلات. تواصل مع الدعم إن تعذّر عليك إكمال هذه الرحلة.'**
+  String get driverCancelLimitReached;
+
+  /// No description provided for @driverTripCancelledWaiting.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إلغاء الرحلة. الطلب بانتظار سائق آخر.'**
+  String get driverTripCancelledWaiting;
+
+  /// No description provided for @notifCancelledRideTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إلغاء طلب الرحلة'**
+  String get notifCancelledRideTitle;
+
+  /// No description provided for @notifCancelledOrderTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إلغاء الطلب'**
+  String get notifCancelledOrderTitle;
+
+  /// No description provided for @notifCancelledParcelTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إلغاء الطرد'**
+  String get notifCancelledParcelTitle;
+
+  /// No description provided for @notifCancelledAutomaticBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يقبله أي سائق في الوقت المحدد، لذلك أُلغي تلقائياً.'**
+  String get notifCancelledAutomaticBody;
+
+  /// No description provided for @notifCancelledByAdminBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغاه فريق درب: {reason}.'**
+  String notifCancelledByAdminBody(String reason);
+
+  /// No description provided for @notifCancelledWaitingTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغى السائق الرحلة'**
+  String get notifCancelledWaitingTitle;
+
+  /// No description provided for @notifCancelledWaitingBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبك بانتظار سائق آخر.'**
+  String get notifCancelledWaitingBody;
+
+  /// No description provided for @notifCancelledDriverTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إلغاء الرحلة'**
+  String get notifCancelledDriverTitle;
+
+  /// No description provided for @notifCancelledDriverByPassengerBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغى الراكب هذه الرحلة: {reason}.'**
+  String notifCancelledDriverByPassengerBody(String reason);
+
+  /// No description provided for @notifCancelledDriverBySenderBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغى المرسل هذه الرحلة: {reason}.'**
+  String notifCancelledDriverBySenderBody(String reason);
+
+  /// No description provided for @notifCancelledDriverByAdminBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغى فريق درب هذه الرحلة: {reason}.'**
+  String notifCancelledDriverByAdminBody(String reason);
+
+  /// No description provided for @notifCancelledPartialTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت إزالة طلب من رحلتك'**
+  String get notifCancelledPartialTitle;
+
+  /// No description provided for @notifCancelledPartialBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُلغي طلب: {reason}. تستمر بقية الرحلة.'**
+  String notifCancelledPartialBody(String reason);
+
+  /// No description provided for @notifOfferWithdrawnRequestCancelledBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغى الراكب هذا الطلب، لذلك لم يعد بانتظارك.'**
+  String get notifOfferWithdrawnRequestCancelledBody;
+
   /// No description provided for @verificationDocuments.
   ///
   /// In ar, this message translates to:
