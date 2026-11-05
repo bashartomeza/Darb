@@ -10,7 +10,7 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
 
 | Path | What |
 | --- | --- |
-| `~/darb-app/app.js` | Passenger startup file: loads `.env`, builds `DATABASE_URL`, starts `dist/server.js` |
+| `~/darb-app/app.cjs` | Passenger startup file (CommonJS) that imports `app-main.mjs`, which loads the settings, builds `DATABASE_URL` and starts `dist/server.js` |
 | `~/darb-app/dist`, `prisma`, `admin` | compiled API, schema + migrations, Admin build (replaced on each deploy) |
 | `~/darb-app/ops/` | setup, install, keep-alive, backup and daily-job scripts |
 | `~/darb-app/.env` | production settings and secrets (chmod 600, never in git) |
@@ -24,7 +24,7 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
    `~/.ssh/darb_injazat` authorized in cPanel > SSH Access:
    `pwsh -NoProfile -File deploy/cpanel/deploy.ps1 -FirstTime`
    This uploads the release, creates `~/darb-app/.env` with freshly generated secrets, and registers the
-   Node.js app for `darb.aynur.ps` (startup file `app.js`, Node 22).
+   Node.js app for `darb.aynur.ps` (startup file `app.cjs`, Node 22).
 2. The owner opens cPanel > Setup Node.js App > darb-app > Environment variables and adds two variables
    (name left, value right, exactly as they are):
    - `DB_PASSWORD` - the password of the MySQL user `aynurzzx_Darb_User`

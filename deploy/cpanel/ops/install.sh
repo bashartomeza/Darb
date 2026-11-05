@@ -38,6 +38,8 @@ node ops/run.mjs node --input-type=module -e "await import('./dist/config.js'); 
 echo "Applying database migrations..."
 node ops/run.mjs node ops/mariadb/migrate-deploy.mjs deploy
 
+# Existing installs registered app.js (an ES module Passenger cannot require()); point them at app.cjs.
+cloudlinux-selector set --json --interpreter nodejs --app-root darb-app --startup-file app.cjs >/dev/null 2>&1 || true
 echo "Restarting the app..."
 mkdir -p tmp && touch tmp/restart.txt
 

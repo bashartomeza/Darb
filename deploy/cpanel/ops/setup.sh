@@ -100,6 +100,6 @@ if cloudlinux-selector get --json --interpreter nodejs 2>/dev/null | grep -q '"d
   echo "Node.js app darb-app is already registered."
 else
   cloudlinux-selector create --json --interpreter nodejs --version "$NODE_VERSION" \
-    --app-root darb-app --domain "$DOMAIN" --app-uri / --app-mode production --startup-file app.js
-  echo "Registered the Node.js app for https://$DOMAIN (startup file app.js, Node $NODE_VERSION)."
+    --app-root darb-app --domain "$DOMAIN" --app-uri / --app-mode production --startup-file app.cjs
+  echo "Registered the Node.js app for https://$DOMAIN (startup file app.cjs, Node $NODE_VERSION)."
 fi
