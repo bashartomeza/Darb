@@ -62,12 +62,19 @@ jobs:
           DARB_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           API_BASE_URL: ${{ inputs.api_base_url }}
           BUILD_NUMBER: ${{ inputs.build_number }}
+          # Not secrets: set them as repository variables (docs/maps/PRODUCTION_PROVIDERS.md).
+          ROUTING_BASE_URL: ${{ vars.ROUTING_BASE_URL }}
+          TILE_URL_TEMPLATE: ${{ vars.TILE_URL_TEMPLATE }}
+          TILE_ATTRIBUTION: ${{ vars.TILE_ATTRIBUTION }}
         run: >-
           flutter build appbundle --release
           --build-number="$BUILD_NUMBER"
           --dart-define=APP_ENV=production
           --dart-define=ENABLE_DEMO_FEATURES=false
           --dart-define=API_BASE_URL="$API_BASE_URL"
+          --dart-define=ROUTING_BASE_URL="$ROUTING_BASE_URL"
+          --dart-define=TILE_URL_TEMPLATE="$TILE_URL_TEMPLATE"
+          --dart-define=TILE_ATTRIBUTION="$TILE_ATTRIBUTION"
       - name: Remove keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/upload.jks"

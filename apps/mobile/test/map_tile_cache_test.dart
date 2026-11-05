@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:darb_mobile/core/maps/map_tile_cache.dart';
+import 'package:darb_mobile/core/maps/maps_config.dart';
 import 'package:darb_mobile/core/widgets/map_cache_tile.dart';
 import 'package:darb_mobile/core/widgets/darb_map.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
@@ -161,6 +162,57 @@ void main() {
       expect(disk.destroyed, isTrue);
       expect(disk.deletedFiles, isTrue);
       expect(cache.showingSavedMap.value, isFalse);
+    });
+  });
+
+  group('DarbMap production tile configuration', () {
+    final saved = MapsConfig.current;
+    tearDown(() => MapsConfig.current = saved);
+
+    testWidgets('no tile source: no tile layer and a visible note', (
+      tester,
+    ) async {
+      MapsConfig.current = MapsConfig.fromValues(appEnvironment: 'production');
+      await tester.pumpWidget(
+        _host(
+          DarbMap(
+            emptyLabel: 'empty',
+            attributionLabel: 'attr',
+            tileProvider: _FakeTileProvider(),
+            tileCache: MapTileCache(factory: () => _FakeDiskCache({})),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(TileLayer), findsNothing);
+      expect(
+        find.text('Map tiles are not configured for this build'),
+        findsOne,
+      );
+    });
+
+    testWidgets('attribution comes from TILE_ATTRIBUTION when set', (
+      tester,
+    ) async {
+      MapsConfig.current = MapsConfig.fromValues(
+        appEnvironment: 'production',
+        tileUrlTemplate: 'https://tiles.darb.example/{z}/{x}/{y}.png',
+        tileAttribution: '© Tiles Co, © OpenStreetMap contributors',
+      );
+      await tester.pumpWidget(
+        _host(
+          DarbMap(
+            emptyLabel: 'empty',
+            attributionLabel: 'attr',
+            tileProvider: _FakeTileProvider(),
+            tileCache: MapTileCache(factory: () => _FakeDiskCache({})),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(TileLayer), findsOneWidget);
+      expect(find.text('© Tiles Co, © OpenStreetMap contributors'), findsOne);
+      expect(find.text('attr'), findsNothing);
     });
   });
 

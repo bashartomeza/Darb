@@ -3995,6 +3995,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mapStraightLineNote => 'تعذر حساب الطريق: يظهر خط مستقيم';
 
   @override
+  String get mapRoutingNotConfiguredNote =>
+      'معاينة المسار غير متاحة: يُعرض خط مستقيم';
+
+  @override
+  String get mapTilesNotConfiguredNote =>
+      'لم تُهيَّأ بلاطات الخريطة في هذا الإصدار';
+
+  @override
   String get mapCheckpointsUnavailable => 'بيانات الحواجز غير متوفرة';
 
   @override

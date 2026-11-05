@@ -4,6 +4,10 @@ Connectivity is poor at checkpoints, so map tiles are cached on the device.
 Areas the user has already looked at (including the corridor's route area)
 keep rendering with no connection.
 
+Tile source: `--dart-define=TILE_URL_TEMPLATE=...` and `TILE_ATTRIBUTION=...`. The public OpenStreetMap server is used
+only for local/test/demo builds; production builds with no (or a public) tile URL show no tiles and a note. See
+docs/maps/PRODUCTION_PROVIDERS.md.
+
 ## How it works
 
 - Code: `apps/mobile/lib/core/maps/map_tile_cache.dart` (`MapTileConfig`,

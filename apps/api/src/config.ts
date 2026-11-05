@@ -1,6 +1,7 @@
 import { isAbsolute } from "node:path";
 import { z } from "zod";
 import { parsePushConfig } from "./lib/pushConfig.js";
+import { parseRouteProxyConfig } from "./maps/routeProxyConfig.js";
 
 export const APP_ENVIRONMENTS = ["local", "test", "demo", "staging", "production"] as const;
 export type AppEnvironment = (typeof APP_ENVIRONMENTS)[number];
@@ -93,6 +94,16 @@ const rawSchema = z.object({
   ROUTE_PROVIDER_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(86_400).default(0),
   ROUTE_PROVIDER_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(900_000),
   ROUTE_PROVIDER_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100).default(20),
+  MAPS_ROUTING_PROVIDER: z.string().optional(),
+  MAPS_ROUTING_BASE_URL: z.string().optional(),
+  MAPS_ROUTING_API_KEY: z.string().optional(),
+  MAPS_ROUTING_ATTRIBUTION: z.string().optional(),
+  MAPS_ROUTING_TIMEOUT_MS: z.string().optional(),
+  MAPS_ROUTING_CACHE_TTL_SECONDS: z.string().optional(),
+  MAPS_ROUTING_MAX_WAYPOINTS: z.string().optional(),
+  MAPS_ROUTING_MAX_RESPONSE_BYTES: z.string().optional(),
+  MAPS_ROUTING_USER_RATE_PER_MINUTE: z.string().optional(),
+  MAPS_ROUTING_GLOBAL_RATE_PER_MINUTE: z.string().optional(),
   DEMO_RESET_KEY: z.string().min(8).optional(),
   DEMO_RESET_ALLOWED_DATABASES: z.string().optional(),
   DEMO_PASSENGER_PASSWORD: z.string().min(12).optional(),
@@ -655,6 +666,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   // Push notifications through Firebase Cloud Messaging: off unless enabled, and then the
   // service-account credentials are required. Problems name variables only, never values.
   const push = parsePushConfig(raw, problems, parseBoolean);
+  const routeProxy = parseRouteProxyConfig(raw, productionLike, problems);
 
   if (problems.length > 0) throw new ConfigurationError(problems);
 
@@ -730,6 +742,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           cacheTtlSeconds: raw.CHECKPOINTS_CACHE_TTL_SECONDS
         }
       : undefined,
+    routeProxy,
     routeMaps: {
       enabled: routeMapsEnabled,
       provider: raw.ROUTE_PROVIDER,

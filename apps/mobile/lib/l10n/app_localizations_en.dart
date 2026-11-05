@@ -4022,6 +4022,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Road route unavailable: showing a straight line';
 
   @override
+  String get mapRoutingNotConfiguredNote =>
+      'Route preview unavailable: showing a straight line';
+
+  @override
+  String get mapTilesNotConfiguredNote =>
+      'Map tiles are not configured for this build';
+
+  @override
   String get mapCheckpointsUnavailable => 'Checkpoint data unavailable';
 
   @override

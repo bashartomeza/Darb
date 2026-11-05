@@ -65,6 +65,8 @@ import type { LegacyDriverOnlineStateService } from "./services/legacyDriverOnli
 import { createRouteProvider } from "./maps/liveProviders.js";
 import { createRoutePreviewService, type RoutePreviewService } from "./maps/previewService.js";
 import { createRoutePreviewRouter } from "./modules/routePreview.js";
+import { createMapsRouteRouter } from "./modules/mapsRoute.js";
+import { createRouteProxyService, type RouteProxyService } from "./maps/routeProxy.js";
 import { createPassengerAssistantRouter } from "./modules/passengerAssistant.js";
 import { createAdminSiteRouter } from "./modules/adminSite.js";
 import { createAiServicesClientFromEnv, type AiServicesClient } from "./services/aiServicesClient.js";
@@ -110,6 +112,7 @@ type AppDependencies = {
   partnerCheckpointMapService?: PartnerCheckpointMapService;
   legacyDriverOnlineStateService?: LegacyDriverOnlineStateService;
   routePreviewService?: RoutePreviewService;
+  routeProxyService?: RouteProxyService;
   aiServicesClient?: AiServicesClient | null;
   passengerAssistantService?: PassengerAssistantService;
   passengerAssistantHistory?: PassengerAssistantHistoryStore;
@@ -268,6 +271,10 @@ export function createApp(
     cacheTtlMs: appConfig.routeMaps.cacheTtlSeconds * 1_000
   });
   app.use("/api/v1", createRoutePreviewRouter(appConfig, routePreviewService));
+  app.use(
+    "/api/v1",
+    createMapsRouteRouter(appConfig, dependencies.routeProxyService ?? createRouteProxyService(appConfig.routeProxy))
+  );
   app.use("/api/v1", createAdminConsentRouter(dependencies.consentReleaseService));
   app.use("/api/v1", adminTripsRouter);
   app.use("/api/v1", adminPassengerParcelsRouter);

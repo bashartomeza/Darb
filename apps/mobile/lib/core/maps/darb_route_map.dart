@@ -30,7 +30,9 @@ List<DarbMapPath> roadRoutePaths(
 /// Notes for a route line: says so when the line is the straight fallback.
 List<String> roadRouteNotes(AppLocalizations l10n, RoadRoute? road) => [
   if (road != null && !road.routed && road.points.length >= 2)
-    l10n.mapStraightLineNote,
+    road.routingDisabled
+        ? l10n.mapRoutingNotConfiguredNote
+        : l10n.mapStraightLineNote,
 ];
 
 /// Watches the road route through [waypoints] (the record's own points, in

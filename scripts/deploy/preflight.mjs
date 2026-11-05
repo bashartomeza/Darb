@@ -59,6 +59,46 @@ function intIn(value, min, max) {
   return n >= min && n <= max;
 }
 
+const MAP_PROVIDERS = ["disabled", "osrm", "openrouteservice", "graphhopper", "mapbox"];
+
+// Free public servers that forbid production or heavy traffic.
+export function isPublicDemoHost(urlText) {
+  try {
+    const host = new URL(urlText.replace(/[{}]/g, "")).hostname.toLowerCase();
+    return ["openstreetmap.org", "project-osrm.org"].some((d) => host === d || host.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
+
+// Road routing and map tiles. The API proxy (MAPS_ROUTING_*) holds provider keys; ROUTING_BASE_URL,
+// TILE_URL_TEMPLATE and TILE_ATTRIBUTION are build-time --dart-define values for the mobile app and are
+// only checked when present in the environment being inspected. See docs/maps/PRODUCTION_PROVIDERS.md.
+function checkMapProviders(env, add, results) {
+  const val = (name) => (env[name] ?? "").trim();
+  const provider = val("MAPS_ROUTING_PROVIDER") || "disabled";
+  add("MAPS_ROUTING_PROVIDER", MAP_PROVIDERS.includes(provider), `MAPS_ROUTING_PROVIDER must be one of ${MAP_PROVIDERS.join(", ")}`);
+  if (provider === "disabled") {
+    results.push({ id: "MAPS_ROUTING_DISABLED", status: "WARN", message: "MAPS_ROUTING_PROVIDER is not set; GET /api/v1/maps/route answers 503 and app maps draw a straight line with a 'route preview unavailable' note" });
+  } else if (MAP_PROVIDERS.includes(provider)) {
+    const base = val("MAPS_ROUTING_BASE_URL");
+    if (provider === "osrm") add("MAPS_ROUTING_BASE_URL", /^https:\/\//.test(base) && !isPublicDemoHost(base), "MAPS_ROUTING_BASE_URL must be an https:// OSRM server (the public demo server is forbidden in production)");
+    else if (base !== "") add("MAPS_ROUTING_BASE_URL", /^https:\/\//.test(base) && !isPublicDemoHost(base), "MAPS_ROUTING_BASE_URL, when set, must be https:// and not a public demo server");
+    if (provider !== "osrm") add("MAPS_ROUTING_API_KEY", val("MAPS_ROUTING_API_KEY").length >= 8 && !isPlaceholder(val("MAPS_ROUTING_API_KEY")), `MAPS_ROUTING_API_KEY required (not a placeholder) for MAPS_ROUTING_PROVIDER=${provider}`);
+    for (const [name, min, max] of [["MAPS_ROUTING_TIMEOUT_MS", 250, 20000], ["MAPS_ROUTING_CACHE_TTL_SECONDS", 0, 86400], ["MAPS_ROUTING_USER_RATE_PER_MINUTE", 1, 600], ["MAPS_ROUTING_GLOBAL_RATE_PER_MINUTE", 1, 6000]]) {
+      add(name, intIn(val(name), min, max) !== false, `${name} must be ${min}-${max} when set`);
+    }
+  }
+  for (const name of ["ROUTING_BASE_URL", "TILE_URL_TEMPLATE"]) {
+    if (val(name) !== "" && isPublicDemoHost(val(name))) {
+      results.push({ id: name, status: "WARN", message: `${name} points at a public demo server (OpenStreetMap tiles / OSRM demo); their usage policies forbid production traffic and the production app refuses them` });
+    }
+  }
+  if (val("TILE_URL_TEMPLATE") === "") {
+    results.push({ id: "TILE_URL_TEMPLATE", status: "WARN", message: "TILE_URL_TEMPLATE is not set in this environment; production app builds show no map tiles unless it is passed as --dart-define (check your build command)" });
+  }
+}
+
 /**
  * @param {Record<string, string | undefined>} env
  * @param {{ target?: "production" | "staging" }} [options]
@@ -137,6 +177,8 @@ export function runPreflight(env, options = {}) {
   add("ROUTE_PROVIDER", provider !== "fake" && (mapsOn || provider === "disabled"), "ROUTE_PROVIDER must be disabled when maps are off, and never fake");
   if (mapsOn) add("ROUTE_PROVIDER_SECRET", val("ROUTE_PROVIDER_SECRET").length >= 8 && !isPlaceholder(val("ROUTE_PROVIDER_SECRET")), "ROUTE_PROVIDER_SECRET required for a live route provider");
   add("ROUTE_PROVIDER_CACHE_TTL_SECONDS", (val("ROUTE_PROVIDER_CACHE_TTL_SECONDS") || "0") === "0", "ROUTE_PROVIDER_CACHE_TTL_SECONDS must be 0");
+
+  checkMapProviders(env, add, results);
 
   if (bool("DRIVER_DOCUMENTS_ENABLED")) {
     // Document bytes are stored in MySQL. The directory is optional and only read for

@@ -7,13 +7,28 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
+import '../../features/auth/data/authenticated_api_client.dart';
 import '../api/api_client.dart';
+import 'maps_config.dart';
 import 'service_area.dart';
 
 /// One routing service (and so one route cache) for the whole app.
-final osrmRouteServiceProvider = Provider<OsrmRouteService>(
-  (ref) => OsrmRouteService(client: ref.watch(httpClientProvider)),
-);
+final osrmRouteServiceProvider = Provider<OsrmRouteService>((ref) {
+  final api = ref.watch(authenticatedApiClientProvider);
+  return OsrmRouteService(
+    client: ref.watch(httpClientProvider),
+    apiGet: (path) => api.getJson(path),
+  );
+});
+
+/// Routing is switched off in this build (production without a configured
+/// provider). Maps fall back to a straight line and say so.
+class RoutingUnavailableException implements Exception {
+  const RoutingUnavailableException();
+
+  @override
+  String toString() => 'RoutingUnavailableException';
+}
 
 /// Coordinate component of a route cache key, rounded to ~110 m so GPS jitter
 /// does not trigger a new routing request on every location update.
@@ -55,7 +70,9 @@ class OsrmRouteResult {
   double get distanceKilometers => distanceMeters / 1000;
 }
 
-/// Road routing through the public OSRM server.
+/// Road routing: through the Darb API proxy (production default), an
+/// OSRM-compatible server from `ROUTING_BASE_URL`, or the public OSRM demo
+/// server in local/test/demo builds only (see [MapsConfig]).
 ///
 /// Every request is cached by its rounded waypoints (so the same trip shown on
 /// several screens, or re-rendered by a 5-second refresh, asks once), identical
@@ -64,13 +81,23 @@ class OsrmRouteResult {
 class OsrmRouteService {
   OsrmRouteService({
     this.client,
+    MapsConfig? config,
+    this.apiGet,
     this.timeout = const Duration(seconds: 8),
     this.maxCachedRoutes = 64,
     this.failureCooldown = const Duration(seconds: 30),
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+  }) : _config = config ?? MapsConfig.current,
+       _clock = clock ?? DateTime.now;
 
   final http.Client? client;
+  final MapsConfig _config;
+
+  /// Authenticated GET against the Darb API, for [RoutingSource.api].
+  final Future<Map<String, dynamic>> Function(String path)? apiGet;
+
+  /// True when this build can ask for road routes at all.
+  bool get available => _config.routingSource != RoutingSource.disabled;
   final Duration timeout;
   final int maxCachedRoutes;
   final Duration failureCooldown;
@@ -100,6 +127,9 @@ class OsrmRouteService {
         waypoints.length > 25 ||
         !waypoints.every(_valid)) {
       return Future.error(const FormatException('Invalid route endpoints'));
+    }
+    if (!available) {
+      return Future.error(const RoutingUnavailableException());
     }
     final key = cacheKey(waypoints);
     final cached = _cache.remove(key);
@@ -142,20 +172,33 @@ class OsrmRouteService {
   }
 
   Future<OsrmRouteResult> _fetch(List<LatLng> waypoints) async {
-    final url = Uri.parse(
-      'https://router.project-osrm.org/route/v1/driving/'
-      '${waypoints.map((p) => '${p.longitude},${p.latitude}').join(';')}'
-      '?overview=full&geometries=geojson',
-    );
-
     _requestCount++;
-    final response = await (client?.get(url) ?? http.get(url)).timeout(timeout);
-
-    if (response.statusCode != 200) {
-      throw http.ClientException('OSRM request failed: ${response.statusCode}');
+    final Map<String, dynamic> data;
+    if (_config.routingSource == RoutingSource.api) {
+      final get = apiGet;
+      if (get == null) throw const RoutingUnavailableException();
+      final query = waypoints
+          .map((p) => '${p.latitude},${p.longitude}')
+          .join(';');
+      data = await get(
+        '/api/v1/maps/route?waypoints=${Uri.encodeQueryComponent(query)}',
+      ).timeout(timeout);
+    } else {
+      final url = Uri.parse(
+        '${_config.routingBaseUrl}/route/v1/driving/'
+        '${waypoints.map((p) => '${p.longitude},${p.latitude}').join(';')}'
+        '?overview=full&geometries=geojson',
+      );
+      final response = await (client?.get(url) ?? http.get(url)).timeout(
+        timeout,
+      );
+      if (response.statusCode != 200) {
+        throw http.ClientException(
+          'OSRM request failed: ${response.statusCode}',
+        );
+      }
+      data = jsonDecode(response.body) as Map<String, dynamic>;
     }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
 
     if (data['code'] != 'Ok') {
       throw const FormatException('OSRM returned an invalid route');
@@ -238,19 +281,30 @@ class RoadRoute {
   const RoadRoute({
     required this.points,
     required this.routed,
+    this.routingDisabled = false,
     this.durationSeconds,
     this.distanceMeters,
   });
 
   /// Straight segments between the record's points, used when no road route
   /// is available. The map draws it dashed and labels it.
-  factory RoadRoute.straight(List<GeoPoint> waypoints) =>
-      RoadRoute(points: List.unmodifiable(waypoints), routed: false);
+  factory RoadRoute.straight(
+    List<GeoPoint> waypoints, {
+    bool routingDisabled = false,
+  }) => RoadRoute(
+    points: List.unmodifiable(waypoints),
+    routed: false,
+    routingDisabled: routingDisabled,
+  );
 
   final List<GeoPoint> points;
 
   /// True when [points] follow real roads; false for the straight fallback.
   final bool routed;
+
+  /// The straight line is shown because routing is switched off in this
+  /// build, not because a request failed.
+  final bool routingDisabled;
   final double? durationSeconds;
   final double? distanceMeters;
 }
@@ -261,7 +315,11 @@ class RoadRoute {
 final roadRouteProvider = FutureProvider.autoDispose
     .family<RoadRoute, RoadRouteRequest>((ref, request) async {
       final waypoints = request.waypoints;
-      final straight = RoadRoute.straight(waypoints);
+      final service = ref.read(osrmRouteServiceProvider);
+      final straight = RoadRoute.straight(
+        waypoints,
+        routingDisabled: !service.available,
+      );
       if (waypoints.length < 2 ||
           !waypoints.every(
             (p) => DarbServiceArea.contains(p.latitude, p.longitude),
@@ -269,9 +327,9 @@ final roadRouteProvider = FutureProvider.autoDispose
         return straight;
       }
       try {
-        final result = await ref.read(osrmRouteServiceProvider).getRouteThrough(
-          [for (final p in waypoints) LatLng(p.latitude, p.longitude)],
-        );
+        final result = await service.getRouteThrough([
+          for (final p in waypoints) LatLng(p.latitude, p.longitude),
+        ]);
         return RoadRoute(
           points: List.unmodifiable([
             for (final p in result.points) GeoPoint(p.latitude, p.longitude),

@@ -1,17 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 
+import 'maps_config.dart';
+
 /// Where map tiles come from and how they are cached on the device.
 ///
-/// To move off the public OpenStreetMap servers (self-hosted or commercial
-/// tile server), change [tileUrlTemplate] or build with
-/// `--dart-define=MAP_TILE_URL=...`. See docs/mobile/offline-map-tiles.md.
+/// The tile address comes from [MapsConfig] (`--dart-define=TILE_URL_TEMPLATE`);
+/// the public OpenStreetMap server is used only outside production. See
+/// docs/maps/PRODUCTION_PROVIDERS.md and docs/mobile/offline-map-tiles.md.
 abstract final class MapTileConfig {
-  /// Tile address template. Defaults to the public OpenStreetMap server.
-  static const String tileUrlTemplate = String.fromEnvironment(
-    'MAP_TILE_URL',
-    defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  );
+  /// Tile address template, or null when tiles are not configured.
+  static String? get tileUrlTemplate => MapsConfig.current.tileUrlTemplate;
 
   /// Identifies the app to the tile server (OSM tile usage policy requires an
   /// identifying User-Agent). flutter_map sends it as

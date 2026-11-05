@@ -7232,6 +7232,18 @@ abstract class AppLocalizations {
   /// **'تعذر حساب الطريق: يظهر خط مستقيم'**
   String get mapStraightLineNote;
 
+  /// No description provided for @mapRoutingNotConfiguredNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'معاينة المسار غير متاحة: يُعرض خط مستقيم'**
+  String get mapRoutingNotConfiguredNote;
+
+  /// No description provided for @mapTilesNotConfiguredNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم تُهيَّأ بلاطات الخريطة في هذا الإصدار'**
+  String get mapTilesNotConfiguredNote;
+
   /// No description provided for @mapCheckpointsUnavailable.
   ///
   /// In ar, this message translates to:

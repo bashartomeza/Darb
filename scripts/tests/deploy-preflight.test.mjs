@@ -152,3 +152,23 @@ test("OTP_PROVIDER=email needs SMTP, fake is refused, and public onboarding need
   assert.ok(failing(runPreflight({ ...goodEnv(), PUBLIC_ONBOARDING_ENABLED: "true" })).includes("PUBLIC_ONBOARDING_ENABLED"));
   assert.ok(!runPreflight(goodEnv()).some((r) => r.id === "SMS_DELIVERY"));
 });
+
+const warned = (results) => results.filter((r) => r.status === "WARN").map((r) => r.id);
+
+test("production warns while map routing and tiles are unconfigured or use public demo servers", () => {
+  const base = runPreflight(goodEnv());
+  assert.ok(warned(base).includes("MAPS_ROUTING_DISABLED"));
+  assert.ok(warned(base).includes("TILE_URL_TEMPLATE"));
+  const demo = runPreflight({ ...goodEnv(), TILE_URL_TEMPLATE: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", ROUTING_BASE_URL: "https://router.project-osrm.org" });
+  assert.ok(warned(demo).includes("TILE_URL_TEMPLATE"));
+  assert.ok(warned(demo).includes("ROUTING_BASE_URL"));
+});
+
+test("the API routing proxy must not use the public OSRM demo server or lack a key", () => {
+  const osrm = { ...goodEnv(), MAPS_ROUTING_PROVIDER: "osrm", MAPS_ROUTING_BASE_URL: "https://router.project-osrm.org" };
+  assert.ok(failing(runPreflight(osrm)).includes("MAPS_ROUTING_BASE_URL"));
+  assert.deepEqual(failing(runPreflight({ ...osrm, MAPS_ROUTING_BASE_URL: "https://routing.darb.example" })), []);
+  assert.ok(failing(runPreflight({ ...goodEnv(), MAPS_ROUTING_PROVIDER: "mapbox" })).includes("MAPS_ROUTING_API_KEY"));
+  assert.ok(failing(runPreflight({ ...goodEnv(), MAPS_ROUTING_PROVIDER: "bing" })).includes("MAPS_ROUTING_PROVIDER"));
+  assert.deepEqual(failing(runPreflight({ ...goodEnv(), MAPS_ROUTING_PROVIDER: "mapbox", MAPS_ROUTING_API_KEY: fill("k") })), []);
+});

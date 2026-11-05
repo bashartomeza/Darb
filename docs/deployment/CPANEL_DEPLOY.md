@@ -55,6 +55,16 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
 `cd ~/darb-app && source ~/nodevenv/darb-app/22/bin/activate && node ops/run.mjs <command>`
 (for example `npx prisma migrate status`). Secrets reach the child process only and are never printed.
 
+## Maps: road routes and tiles
+
+The free public OSRM and OpenStreetMap tile servers forbid production traffic, so the API and the production app
+refuse them (the API fails to start if `MAPS_ROUTING_BASE_URL` points at one; the app draws a straight line,
+labelled "route preview unavailable", and shows no tiles until a provider is configured). Choose a provider in
+docs/maps/PRODUCTION_PROVIDERS.md, then in cPanel > Setup Node.js App > darb-app > Environment variables set
+`MAPS_ROUTING_PROVIDER` (and `MAPS_ROUTING_BASE_URL` / `MAPS_ROUTING_API_KEY` as that guide says). The key stays in
+cPanel and never ships in the app. Tiles are a build-time choice: pass `TILE_URL_TEMPLATE` and `TILE_ATTRIBUTION`
+to the release build. `node scripts/deploy/preflight.mjs` warns while production still points at public demo servers.
+
 ## Direct sign-up (no emailed code)
 
 Outbound Gmail SMTP is blocked on this host, and riders should be able to sign up directly. In cPanel >

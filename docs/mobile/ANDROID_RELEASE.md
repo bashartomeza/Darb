@@ -72,8 +72,14 @@ flutter build appbundle --release --build-number=<N> \
   --dart-define=APP_ENV=production \
   --dart-define=ENABLE_DEMO_FEATURES=false \
   --dart-define=API_BASE_URL=https://darb.aynur.ps \
+  --dart-define=TILE_URL_TEMPLATE=<tile URL with {z}/{x}/{y}> \
+  --dart-define=TILE_ATTRIBUTION="<provider credit>" \
   --dart-define=GOOGLE_SERVER_CLIENT_ID=<SERVER_CLIENT_ID>
 ```
+
+Map defines (see docs/maps/PRODUCTION_PROVIDERS.md): without `TILE_URL_TEMPLATE` a production build shows no map tiles
+(the public OpenStreetMap server is refused outside local/test/demo). Road routes use the API proxy by default;
+`ROUTING_BASE_URL` is only for pointing the app straight at your own OSRM server.
 
 Output: `build/app/outputs/bundle/release/app-release.aab`. Equivalent config file: `config/production.example.json` via `--dart-define-from-file`.
 

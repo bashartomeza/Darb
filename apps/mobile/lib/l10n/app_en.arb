@@ -1443,6 +1443,8 @@
     }
   },
   "mapStraightLineNote": "Road route unavailable: showing a straight line",
+  "mapRoutingNotConfiguredNote": "Route preview unavailable: showing a straight line",
+  "mapTilesNotConfiguredNote": "Map tiles are not configured for this build",
   "mapCheckpointsUnavailable": "Checkpoint data unavailable",
   "mapCheckpointsLoadFailed": "Checkpoints could not be loaded",
   "checkpointOfficialUnknown": "Official status: not published",

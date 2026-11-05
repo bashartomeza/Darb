@@ -1677,6 +1677,8 @@
     }
   },
   "mapStraightLineNote": "تعذر حساب الطريق: يظهر خط مستقيم",
+  "mapRoutingNotConfiguredNote": "معاينة المسار غير متاحة: يُعرض خط مستقيم",
+  "mapTilesNotConfiguredNote": "لم تُهيَّأ بلاطات الخريطة في هذا الإصدار",
   "mapCheckpointsUnavailable": "بيانات الحواجز غير متوفرة",
   "mapCheckpointsLoadFailed": "تعذر تحميل الحواجز",
   "checkpointOfficialUnknown": "الحالة الرسمية: غير منشورة",

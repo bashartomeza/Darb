@@ -10,6 +10,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
 import '../../features/checkpoints/domain/checkpoint_models.dart';
 import '../maps/map_tile_cache.dart';
+import '../maps/maps_config.dart';
 import '../maps/service_area.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
@@ -378,6 +379,13 @@ class DarbMap extends StatefulWidget {
 
 class _DarbMapState extends State<DarbMap> {
   final MapController _controller = MapController();
+
+  /// Caller notes, plus a notice when this build has no tile source.
+  List<String> get _notes => [
+    ...widget.notes,
+    if (!MapsConfig.current.tilesAvailable)
+      AppLocalizations.of(context).mapTilesNotConfiguredNote,
+  ];
   final MapTileLoadTracker _tiles = MapTileLoadTracker();
   final StreamController<void> _resetTiles = StreamController<void>.broadcast();
 
@@ -639,23 +647,24 @@ class _DarbMapState extends State<DarbMap> {
               // ==============================================================
               // MAP TILES
               // ==============================================================
-              TileLayer(
-                urlTemplate: MapTileConfig.tileUrlTemplate,
-                userAgentPackageName: MapTileConfig.userAgentPackageName,
-                tileProvider: _tileProvider,
-                errorTileCallback: (tile, error, stackTrace) =>
-                    _tileCache.reportTileError(),
-                maxNativeZoom: 19,
-                // Tiles appear as soon as they arrive (no fade), and a ring of
-                // neighbours is kept and preloaded so panning is not blank.
-                tileDisplay: const TileDisplay.instantaneous(),
-                keepBuffer: 3,
-                panBuffer: 1,
-                reset: _resetTiles.stream,
-                // A tile that failed once is retried when it scrolls back into view.
-                evictErrorTileStrategy:
-                    EvictErrorTileStrategy.notVisibleRespectMargin,
-              ),
+              if (MapTileConfig.tileUrlTemplate != null)
+                TileLayer(
+                  urlTemplate: MapTileConfig.tileUrlTemplate!,
+                  userAgentPackageName: MapTileConfig.userAgentPackageName,
+                  tileProvider: _tileProvider,
+                  errorTileCallback: (tile, error, stackTrace) =>
+                      _tileCache.reportTileError(),
+                  maxNativeZoom: 19,
+                  // Tiles appear as soon as they arrive (no fade), and a ring of
+                  // neighbours is kept and preloaded so panning is not blank.
+                  tileDisplay: const TileDisplay.instantaneous(),
+                  keepBuffer: 3,
+                  panBuffer: 1,
+                  reset: _resetTiles.stream,
+                  // A tile that failed once is retried when it scrolls back into view.
+                  evictErrorTileStrategy:
+                      EvictErrorTileStrategy.notVisibleRespectMargin,
+                ),
 
               // ==============================================================
               // ROUTES
@@ -689,12 +698,12 @@ class _DarbMapState extends State<DarbMap> {
               if (!hasContent && widget.banner == null)
                 _EmptyMapMessage(label: widget.emptyLabel),
 
-              for (var i = 0; i < widget.notes.length; i++)
+              for (var i = 0; i < _notes.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: _MapNote(
                     key: ValueKey('mapNote-$i'),
-                    label: widget.notes[i],
+                    label: _notes[i],
                   ),
                 ),
 
@@ -773,7 +782,10 @@ class _DarbMapState extends State<DarbMap> {
         PositionedDirectional(
           start: 6,
           bottom: 5,
-          child: _Attribution(label: widget.attributionLabel),
+          child: _Attribution(
+            label:
+                MapsConfig.current.tileAttribution ?? widget.attributionLabel,
+          ),
         ),
 
         // ====================================================================
