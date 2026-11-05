@@ -220,11 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ? null
                             : () => openCredentialAction(context, 'reset'),
                         child: Text(
-                          authText(
-                            context,
-                            'Forgot password?',
-                            'نسيت كلمة المرور؟',
-                          ),
+                          AppLocalizations.of(context).authForgotPassword,
                         ),
                       ),
                       if (onboardingEnabled)

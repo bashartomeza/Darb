@@ -188,6 +188,350 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passwordRuleHint => '8+ characters with a letter and a number';
 
   @override
+  String get authSignExistingAccountThen =>
+      'Sign in to your existing account, then link Google in account security.';
+
+  @override
+  String get authPhoneBelongsAnotherAccount =>
+      'This phone belongs to another account. Recover that account or contact support.';
+
+  @override
+  String get authVerifyEmailUsingEmail =>
+      'Verify your email using the email verification option below.';
+
+  @override
+  String get authProofIncorrectExpiredRequest =>
+      'The proof is incorrect or expired. Request a new code, or restart email registration.';
+
+  @override
+  String get authDocumentsChangedReadAccept =>
+      'The documents changed. Read and accept the latest versions.';
+
+  @override
+  String get authConfirmCurrentPasswordRequest =>
+      'Confirm your current password or request a fresh email proof.';
+
+  @override
+  String get authGoogleIdentityAlreadyLinked =>
+      'This Google identity is already linked. Use account recovery or contact support.';
+
+  @override
+  String get authEnterValidInternationalPhone =>
+      'Enter a valid international phone number beginning with +.';
+
+  @override
+  String get authGooglePassengerRegistrationNot =>
+      'Google passenger registration is not available for this account yet.';
+
+  @override
+  String get authUnableCompleteRequestCheck =>
+      'Unable to complete the request. Check your connection and try again.';
+
+  @override
+  String get authCompleteRegistration => 'Complete registration';
+
+  @override
+  String get authReadAcceptAllRequired =>
+      'Read and accept all required documents to create your passenger account.';
+
+  @override
+  String get authIHaveReadAccept => 'I have read and accept this document';
+
+  @override
+  String get authCancelRegistration => 'Cancel registration';
+
+  @override
+  String get authSixDigitCodeFrom => 'Six-digit code from your email';
+
+  @override
+  String get authSetChangePassword => 'Set or change password';
+
+  @override
+  String get authLinkGoogleExplicitly => 'Link Google explicitly';
+
+  @override
+  String get authVerifyEmail => 'Verify email';
+
+  @override
+  String get authResetPassword => 'Reset password';
+
+  @override
+  String get authCompletedSignAgainIf => 'Completed. Sign in again if needed.';
+
+  @override
+  String get authEnterCurrentPasswordIf =>
+      'Enter your current password. If you have no password, request an email proof.';
+
+  @override
+  String get authCurrentPassword => 'Current password';
+
+  @override
+  String get authSendEmailProof => 'Send email proof';
+
+  @override
+  String get authIfEligibleEmailHas =>
+      'If eligible, an email has been sent. Check your inbox and spam folder.';
+
+  @override
+  String get authNewPassword => 'New password';
+
+  @override
+  String get authSelectingGoogleConfirmsLinking =>
+      'Selecting Google confirms linking that identity to this signed-in account.';
+
+  @override
+  String get authClose => 'Close';
+
+  @override
+  String get authConfirm => 'Confirm';
+
+  @override
+  String get authLinkGoogleAccount => 'Link Google account';
+
+  @override
+  String get onboardingSetUpAccount => 'Set up your account';
+
+  @override
+  String get onboardingGetStarted => 'Get started';
+
+  @override
+  String onboardingStep(Object value, Object stepsLength) {
+    return 'Step $value of $stepsLength';
+  }
+
+  @override
+  String get onboardingBack => 'Back';
+
+  @override
+  String get onboardingSubmitApplication => 'Submit application';
+
+  @override
+  String get onboardingChooseOneSetsUp =>
+      'Choose one. It sets up the right experience for you.';
+
+  @override
+  String get onboardingPassenger => 'Passenger';
+
+  @override
+  String get onboardingBookRidesSendParcels =>
+      'Book rides and send parcels. Ready right away.';
+
+  @override
+  String get onboardingDriveDarbRoutesNeeds =>
+      'Drive on Darb routes. Needs Admin approval first.';
+
+  @override
+  String get onboardingDriverApplicationsAreNot =>
+      'Driver applications are not open right now.';
+
+  @override
+  String get onboardingSendOrdersCustomersReady =>
+      'Send orders to your customers. Ready right away.';
+
+  @override
+  String get onboardingAbout => 'About you';
+
+  @override
+  String get onboardingFilledNameFromGoogle =>
+      'We filled in your name from Google. You can change it.';
+
+  @override
+  String get onboardingWhereAre => 'Where are you?';
+
+  @override
+  String get onboardingCityHelpsUsShow =>
+      'Your city helps us show routes near you.';
+
+  @override
+  String get onboardingIdentityLicence => 'Identity and licence';
+
+  @override
+  String get onboardingAdminChecksTheseAgainst =>
+      'An Admin checks these against the documents you upload next.';
+
+  @override
+  String get onboardingNationalIdNumber => 'National ID number';
+
+  @override
+  String get onboardingEnterIdNumber => 'Enter your ID number';
+
+  @override
+  String get onboardingDrivingLicenceNumber => 'Driving licence number';
+
+  @override
+  String get onboardingEnterLicenceNumber => 'Enter your licence number';
+
+  @override
+  String get onboardingLicenceExpiryDate => 'Licence expiry date';
+
+  @override
+  String get onboardingPickExpiryDate => 'Pick the expiry date';
+
+  @override
+  String get onboardingVehicle => 'Your vehicle';
+
+  @override
+  String get onboardingCarDriveDarb => 'The car you will drive on Darb.';
+
+  @override
+  String get onboardingMakeModelEG => 'Make and model (e.g. Kia Optima)';
+
+  @override
+  String get onboardingEnterMakeModel => 'Enter make and model';
+
+  @override
+  String get onboardingColour => 'Colour';
+
+  @override
+  String get onboardingEnterColour => 'Enter colour';
+
+  @override
+  String get onboardingPlateNumber => 'Plate number';
+
+  @override
+  String get onboardingEnterPlate => 'Enter plate';
+
+  @override
+  String get onboardingParcelsCarry => 'Parcels you can carry';
+
+  @override
+  String get onboardingSedan => 'Sedan';
+
+  @override
+  String get onboardingSuv => 'SUV';
+
+  @override
+  String get onboardingVan => 'Van';
+
+  @override
+  String get onboardingMinibus => 'Minibus';
+
+  @override
+  String get onboardingStore => 'Your store';
+
+  @override
+  String get onboardingTellCustomersWhoAre => 'Tell customers who you are.';
+
+  @override
+  String get onboardingStoreName => 'Store name';
+
+  @override
+  String get onboardingEnterStoreName => 'Enter the store name';
+
+  @override
+  String get onboardingOwnerFullName => 'Owner full name';
+
+  @override
+  String get onboardingStoreType => 'Store type';
+
+  @override
+  String get onboardingChooseStoreType => 'Choose a store type';
+
+  @override
+  String get onboardingGrocery => 'Grocery';
+
+  @override
+  String get onboardingRestaurant => 'Restaurant';
+
+  @override
+  String get onboardingPharmacy => 'Pharmacy';
+
+  @override
+  String get onboardingClothing => 'Clothing';
+
+  @override
+  String get onboardingElectronics => 'Electronics';
+
+  @override
+  String get onboardingBakery => 'Bakery';
+
+  @override
+  String get onboardingContactLocation => 'Contact and location';
+
+  @override
+  String get onboardingHowCustomersDriversReach =>
+      'How customers and drivers reach you.';
+
+  @override
+  String get onboardingWhereDoSell => 'Where do you sell?';
+
+  @override
+  String get onboardingShop => 'In a shop';
+
+  @override
+  String get onboardingOnline => 'Online';
+
+  @override
+  String get onboardingBoth => 'Both';
+
+  @override
+  String get onboardingShopAddress => 'Shop address';
+
+  @override
+  String get onboardingEnterShopAddress => 'Enter the shop address';
+
+  @override
+  String get onboardingAlmostDone => 'Almost done';
+
+  @override
+  String get onboardingAcceptTermsSendDetails =>
+      'Accept the terms to send your details. Next you upload your driving licence, vehicle registration and ID for Admin review.';
+
+  @override
+  String get onboardingReadAcceptTheseCreate =>
+      'Read and accept these to create your account.';
+
+  @override
+  String get onboardingIHaveReadAccept => 'I have read and accept this';
+
+  @override
+  String get onboardingTermsService => 'Terms of service';
+
+  @override
+  String get onboardingPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get authAdultSelfAttestation => 'Adult self-attestation';
+
+  @override
+  String get onboardingIAm18Older => 'I am 18 or older';
+
+  @override
+  String get onboardingEnterFullName => 'Enter your full name';
+
+  @override
+  String get onboardingPhoneEG970599123456 => 'Phone, e.g. +970599123456';
+
+  @override
+  String get onboardingUseInternationalFormatStarting =>
+      'Use international format starting with +';
+
+  @override
+  String get onboardingCity => 'City';
+
+  @override
+  String get onboardingEnterCity => 'Enter your city';
+
+  @override
+  String get onboardingDrivingLicenceHasExpired =>
+      'Your driving licence has expired. Renew it before applying.';
+
+  @override
+  String get onboardingDriverApplicationsAreNotOpen =>
+      'Driver applications are not open right now. Choose another role or try later.';
+
+  @override
+  String get onboardingSomeDetailsAreNot =>
+      'Some details are not valid. Go back and check them.';
+
+  @override
+  String get authForgotPassword => 'Forgot password?';
+
+  @override
+  String get authEnterPhoneNumber7 =>
+      'Enter your phone number (7–32 characters).';
+
+  @override
   String get emailAlreadyRegistered =>
       'That email is already registered. Try signing in.';
 
@@ -662,6 +1006,123 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get parcelSize => 'Parcel size';
+
+  @override
+  String get handoverReceiverHandoverCode => 'Receiver handover code';
+
+  @override
+  String get handoverGiveCodePersonReceiving =>
+      'Give this code to the person receiving the parcel. The driver will ask for it at hand-over. Do not share it before the parcel arrives.';
+
+  @override
+  String get handoverCodeWasIssuedSafety =>
+      'A code was issued. For safety it is shown only once; get a new one if you need to read it again.';
+
+  @override
+  String get handoverNoHandoverCodeYet =>
+      'No handover code yet. Create one to give to the receiver.';
+
+  @override
+  String get handoverCreateHandoverCode => 'Create handover code';
+
+  @override
+  String get handoverGetNewCode => 'Get a new code';
+
+  @override
+  String get handoverTooManyWrongAttempts =>
+      'Too many wrong attempts. Get a new code to unlock the hand-over.';
+
+  @override
+  String get handoverCodeHasExpiredGet =>
+      'This code has expired. Get a new code.';
+
+  @override
+  String handoverWrongAttemptsLeft(Object count) {
+    return '$count wrong attempts left';
+  }
+
+  @override
+  String get handoverDeliveredReceiverConfirmedCode =>
+      'Delivered. The receiver confirmed with the code.';
+
+  @override
+  String get handoverDeliveredWithoutReceiverDriver =>
+      'Delivered without the receiver: the driver reported the receiver was unavailable.';
+
+  @override
+  String get handoverDeliveryWasClosedBy =>
+      'Delivery was closed by Darb support.';
+
+  @override
+  String handoverDriverNote(Object reason) {
+    return 'Driver note: $reason';
+  }
+
+  @override
+  String get handoverCouldNotLoadHandover =>
+      'Could not load the handover code. Pull to refresh and try again.';
+
+  @override
+  String get handoverConfirmHandOver => 'Confirm hand-over';
+
+  @override
+  String get handoverAskReceiverTheir6 =>
+      'Ask the receiver for their 6-digit code and enter it below.';
+
+  @override
+  String handoverCodeParcelOrder(Object index, Object total) {
+    return 'Code for parcel order $index of $total';
+  }
+
+  @override
+  String get handoverReceiverCode => 'Receiver code';
+
+  @override
+  String get handoverConfirmDelivery => 'Confirm delivery';
+
+  @override
+  String get handoverReceiverUnavailable => 'Receiver unavailable';
+
+  @override
+  String get handoverOnlyUseIfReceiver =>
+      'Only use this if the receiver cannot give the code. Your reason is recorded and Darb will review it.';
+
+  @override
+  String get handoverReasonAtLeast10 => 'Reason (at least 10 characters)';
+
+  @override
+  String get handoverCompleteWithoutReceiver => 'Complete without receiver';
+
+  @override
+  String get handoverEnter6DigitCode => 'Enter the 6-digit code.';
+
+  @override
+  String get handoverDescribeWhyReceiverWas =>
+      'Describe why the receiver was unavailable (at least 10 characters).';
+
+  @override
+  String get handoverThatCodeNotRight =>
+      'That code is not right. Check it with the receiver and try again.';
+
+  @override
+  String get handoverTooManyWrongCodes =>
+      'Too many wrong codes. The sender must issue a new code, or use \"Receiver unavailable\".';
+
+  @override
+  String get handoverCodeHasExpiredSender =>
+      'This code has expired. The sender must issue a new code, or use \"Receiver unavailable\".';
+
+  @override
+  String get handoverNoCodeWasIssued =>
+      'No code was issued for this parcel. Use \"Receiver unavailable\" or ask the sender to create one.';
+
+  @override
+  String get handoverReceiverMustConfirmBefore =>
+      'The receiver must confirm before the delivery can be completed.';
+
+  @override
+  String get handoverCouldNotConfirmDelivery =>
+      'Could not confirm the delivery. Try again.';
 
   @override
   String get priority => 'Priority';
@@ -1727,6 +2188,131 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountSettings => 'Settings';
+
+  @override
+  String get settingsMyProfile => 'My Profile';
+
+  @override
+  String get settingsChangePassword => 'Change Password';
+
+  @override
+  String get settingsRateOurApp => 'Rate Our App';
+
+  @override
+  String get settingsHelpSupport => 'Help & Support';
+
+  @override
+  String get profileEnterValidPhoneNumber => 'Enter a valid phone number.';
+
+  @override
+  String get profileProfileUpdated => 'Profile updated.';
+
+  @override
+  String get profileEdit => 'Edit';
+
+  @override
+  String get profileNotAdded => 'Not added';
+
+  @override
+  String get profileName => 'Name';
+
+  @override
+  String get profileVerifiedNumberCannotChanged =>
+      'Your verified number cannot be changed here.';
+
+  @override
+  String get profileSaveChanges => 'Save changes';
+
+  @override
+  String get changePasswordEnterCurrentPassword =>
+      'Enter your current password.';
+
+  @override
+  String get changePasswordChoosePasswordDifferentFrom =>
+      'Choose a password different from the current one.';
+
+  @override
+  String get changePasswordPasswordsDoNotMatch => 'Passwords do not match.';
+
+  @override
+  String get changePasswordPasswordChanged => 'Password changed';
+
+  @override
+  String get changePasswordSecurityPleaseSignAgain =>
+      'For your security, please sign in again with your new password.';
+
+  @override
+  String get changePasswordOk => 'OK';
+
+  @override
+  String get changePasswordCurrentPasswordIncorrect =>
+      'The current password is incorrect.';
+
+  @override
+  String get changePasswordConfirmNewPassword => 'Confirm new password';
+
+  @override
+  String get changePasswordUpdatePassword => 'Update password';
+
+  @override
+  String get changePasswordIDonTHave => 'I don\'t have a password';
+
+  @override
+  String get helpHowDoIRequest => 'How do I request a trip?';
+
+  @override
+  String get helpOpenHomeTapSearch =>
+      'Open Home, tap the search card, choose your route (for example Hebron to Bethlehem), type your exact pickup and drop-off places, then send the request. Drivers on that route will see it.';
+
+  @override
+  String get helpWhereISeeMy => 'Where can I see my trips?';
+
+  @override
+  String get helpTripsTabListsRequests =>
+      'The Trips tab lists your requests and their status, from pending to completed.';
+
+  @override
+  String get helpHowDoIFollow => 'How do I follow my driver?';
+
+  @override
+  String get helpOnceDriverAcceptsOpen =>
+      'Once a driver accepts, open the Maps tab to see the route, the driver’s latest location and checkpoint alerts.';
+
+  @override
+  String get helpIForgotMyPassword => 'I forgot my password';
+
+  @override
+  String get helpLoginScreenChooseForgot =>
+      'On the login screen choose “Forgot password” and we will email you a code to reset it.';
+
+  @override
+  String get helpAskDarbAssistant => 'Ask the Darb assistant';
+
+  @override
+  String get helpCommonQuestions => 'Common questions';
+
+  @override
+  String get rateAppThank => 'Thank you!';
+
+  @override
+  String get rateAppFeedbackHelpsUsImprove =>
+      'Your feedback helps us improve Darb.';
+
+  @override
+  String get rateAppDone => 'Done';
+
+  @override
+  String get rateAppHowExperienceDarb => 'How is your experience with Darb?';
+
+  @override
+  String get rateAppTellUsMoreOptional => 'Tell us more (optional)';
+
+  @override
+  String get rateAppRatingCouldNotSent =>
+      'Your rating could not be sent. Check your connection and try again.';
+
+  @override
+  String get rateAppSubmit => 'Submit';
 
   @override
   String get featureNotBackedNotice =>

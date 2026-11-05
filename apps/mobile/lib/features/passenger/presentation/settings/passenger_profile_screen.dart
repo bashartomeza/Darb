@@ -6,8 +6,9 @@ import '../../../../core/widgets/darb_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/domain/auth_models.dart';
 import '../../../auth/presentation/auth_completion_screen.dart'
-    show authFailure, authText;
+    show authFailure;
 import 'settings_widgets.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// The passenger's profile: name, email, phone and city, with an edit mode.
 ///
@@ -59,7 +60,7 @@ class _PassengerProfileScreenState
 
   String? _nameError(BuildContext context) =>
       _submitted && _name.text.trim().isEmpty
-      ? authText(context, 'Enter your name.', 'أدخل اسمك.')
+      ? AppLocalizations.of(context).nameRequired
       : null;
 
   String? _phoneError(BuildContext context) {
@@ -67,11 +68,7 @@ class _PassengerProfileScreenState
     if (!_submitted || !_phoneEditable || value.isEmpty) return null;
     return RegExp(r'^\+?[0-9 ()-]{7,32}$').hasMatch(value)
         ? null
-        : authText(
-            context,
-            'Enter a valid phone number.',
-            'أدخل رقم هاتف صحيحاً.',
-          );
+        : AppLocalizations.of(context).profileEnterValidPhoneNumber;
   }
 
   Future<void> _save() async {
@@ -93,9 +90,7 @@ class _PassengerProfileScreenState
       setState(() => _editing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            authText(context, 'Profile updated.', 'تم تحديث الملف.'),
-          ),
+          content: Text(AppLocalizations.of(context).profileProfileUpdated),
         ),
       );
     } catch (error) {
@@ -108,7 +103,7 @@ class _PassengerProfileScreenState
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider).value?.user;
-    final title = authText(context, 'My Profile', 'ملفي الشخصي');
+    final title = AppLocalizations.of(context).settingsMyProfile;
 
     return SettingsPage(
       title: title,
@@ -118,7 +113,7 @@ class _PassengerProfileScreenState
             key: const ValueKey('profileEdit'),
             onPressed: user == null ? null : _startEditing,
             icon: const Icon(Icons.edit_outlined, size: 18),
-            label: Text(authText(context, 'Edit', 'تعديل')),
+            label: Text(AppLocalizations.of(context).profileEdit),
           ),
         const SizedBox(width: 8),
       ],
@@ -131,29 +126,29 @@ class _PassengerProfileScreenState
   }
 
   List<Widget> _details(BuildContext context, AuthUser? user) {
-    final dash = authText(context, 'Not added', 'غير مضاف');
+    final dash = AppLocalizations.of(context).profileNotAdded;
     final phone = user?.phone ?? user?.contactPhone;
     return [
       _DetailTile(
         icon: Icons.person_outline_rounded,
-        label: authText(context, 'Name', 'الاسم'),
+        label: AppLocalizations.of(context).profileName,
         value: user?.name ?? dash,
       ),
       _DetailTile(
         icon: Icons.mail_outline_rounded,
-        label: authText(context, 'Email', 'البريد الإلكتروني'),
+        label: AppLocalizations.of(context).email,
         value: user?.email ?? dash,
         ltr: true,
       ),
       _DetailTile(
         icon: Icons.phone_outlined,
-        label: authText(context, 'Phone number', 'رقم الهاتف'),
+        label: AppLocalizations.of(context).phoneNumber,
         value: phone ?? dash,
         ltr: phone != null,
       ),
       _DetailTile(
         icon: Icons.location_city_rounded,
-        label: authText(context, 'City', 'المدينة'),
+        label: AppLocalizations.of(context).onboardingCity,
         value: user?.city ?? dash,
       ),
     ];
@@ -165,7 +160,7 @@ class _PassengerProfileScreenState
       DarbTextField(
         key: const ValueKey('profileName'),
         controller: _name,
-        label: authText(context, 'Name', 'الاسم'),
+        label: AppLocalizations.of(context).profileName,
         prefixIcon: Icons.person_outline_rounded,
         textInputAction: TextInputAction.next,
         errorText: _nameError(context),
@@ -175,7 +170,7 @@ class _PassengerProfileScreenState
       if (email != null) ...[
         _DetailTile(
           icon: Icons.mail_outline_rounded,
-          label: authText(context, 'Email', 'البريد الإلكتروني'),
+          label: AppLocalizations.of(context).email,
           value: email,
           ltr: true,
         ),
@@ -184,18 +179,14 @@ class _PassengerProfileScreenState
       DarbTextField(
         key: const ValueKey('profilePhone'),
         controller: _phone,
-        label: authText(context, 'Phone number', 'رقم الهاتف'),
+        label: AppLocalizations.of(context).phoneNumber,
         prefixIcon: Icons.phone_outlined,
         keyboardType: TextInputType.phone,
         textInputAction: TextInputAction.next,
         enabled: _phoneEditable,
         helper: _phoneEditable
             ? null
-            : authText(
-                context,
-                'Your verified number cannot be changed here.',
-                'لا يمكن تغيير رقمك الموثّق من هنا.',
-              ),
+            : AppLocalizations.of(context).profileVerifiedNumberCannotChanged,
         errorText: _phoneError(context),
         onChanged: (_) => setState(() {}),
       ),
@@ -203,7 +194,7 @@ class _PassengerProfileScreenState
       DarbTextField(
         key: const ValueKey('profileCity'),
         controller: _city,
-        label: authText(context, 'City', 'المدينة'),
+        label: AppLocalizations.of(context).onboardingCity,
         prefixIcon: Icons.location_city_rounded,
         textInputAction: TextInputAction.done,
         onSubmitted: (_) => _save(),
@@ -231,13 +222,13 @@ class _PassengerProfileScreenState
                   color: Colors.white,
                 ),
               )
-            : Text(authText(context, 'Save changes', 'حفظ التغييرات')),
+            : Text(AppLocalizations.of(context).profileSaveChanges),
       ),
       const SizedBox(height: 8),
       TextButton(
         key: const ValueKey('profileCancel'),
         onPressed: _saving ? null : () => setState(() => _editing = false),
-        child: Text(authText(context, 'Cancel', 'إلغاء')),
+        child: Text(AppLocalizations.of(context).cancel),
       ),
     ];
   }

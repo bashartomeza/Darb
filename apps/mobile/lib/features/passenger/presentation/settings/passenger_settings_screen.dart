@@ -9,7 +9,6 @@ import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/passenger_theme.dart';
 import '../../../../core/theme/semantic_colors.dart';
 import '../../../auth/application/auth_controller.dart';
-import '../../../auth/presentation/auth_completion_screen.dart' show authText;
 import '../../../security/presentation/security_actions.dart';
 import '../../../security/presentation/session_status_banner.dart';
 import 'rate_app_sheet.dart';
@@ -53,21 +52,21 @@ class PassengerSettingsScreen extends ConsumerWidget {
             SettingsRow(
               key: const ValueKey('settingsProfile'),
               icon: Icons.person_outline_rounded,
-              label: authText(context, 'My Profile', 'ملفي الشخصي'),
+              label: AppLocalizations.of(context).settingsMyProfile,
               onTap: () => context.go(passengerProfilePath),
             ),
             const SizedBox(height: 12),
             SettingsRow(
               key: const ValueKey('settingsPassword'),
               icon: Icons.lock_outline_rounded,
-              label: authText(context, 'Change Password', 'تغيير كلمة المرور'),
+              label: AppLocalizations.of(context).settingsChangePassword,
               onTap: () => context.go(passengerPasswordPath),
             ),
             const SizedBox(height: 12),
             SettingsRow(
               key: const ValueKey('settingsLanguage'),
               icon: Icons.language_rounded,
-              label: authText(context, 'Language', 'اللغة'),
+              label: AppLocalizations.of(context).language,
               value: languageName(l10n, locale.languageCode),
               onTap: () => _chooseLanguage(context, ref, locale),
             ),
@@ -75,14 +74,14 @@ class PassengerSettingsScreen extends ConsumerWidget {
             SettingsRow(
               key: const ValueKey('settingsRate'),
               icon: Icons.star_outline_rounded,
-              label: authText(context, 'Rate Our App', 'قيّم التطبيق'),
+              label: AppLocalizations.of(context).settingsRateOurApp,
               onTap: () => showRateAppSheet(context),
             ),
             const SizedBox(height: 12),
             SettingsRow(
               key: const ValueKey('settingsHelp'),
               icon: Icons.help_outline_rounded,
-              label: authText(context, 'Help & Support', 'المساعدة والدعم'),
+              label: AppLocalizations.of(context).settingsHelpSupport,
               onTap: () => context.go(passengerHelpPath),
             ),
             const SizedBox(height: 12),
@@ -124,7 +123,7 @@ class PassengerSettingsScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                authText(context, 'Language', 'اللغة'),
+                AppLocalizations.of(context).language,
                 style: PassengerStyle.sectionTitle,
               ),
               const SizedBox(height: 12),
