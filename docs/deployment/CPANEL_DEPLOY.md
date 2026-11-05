@@ -27,7 +27,7 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
 2. The owner opens cPanel > File Manager > `darb-app/.env` (enable "Show hidden files") and fills in, between
    the quotes, exactly as they are (no URL-encoding):
    - `DB_PASSWORD` — the password of the MySQL user `aynurzzx_Darb_User`
-   - `SMTP_PASSWORD` — the 16-character Gmail App Password of basharto30@gmail.com
+   - `SMTP_PASSWORD` — the 16-character Gmail App Password of darbapp9@gmail.com
 3. Run `pwsh -NoProfile -File deploy/cpanel/deploy.ps1` (without `-FirstTime`). It installs packages,
    checks the settings, applies migrations, restarts the app, installs the cron jobs and waits for
    `https://darb.aynur.ps/api/v1/health/ready`.
