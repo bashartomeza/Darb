@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { auditEvent } from "./audit.js";
+import { isTransactionConflict } from "./transactionConflict.js";
 
 export async function consumeAbuseCounter(
   db: PrismaClient,
@@ -29,16 +30,12 @@ export async function consumeAbuseCounter(
     try {
       return await countOnce(db, input, windowStart, expiresAt, nowMs);
     } catch (error) {
-      if (!isWriteConflict(error) || attempt === MAX_CONFLICT_RETRIES) throw error;
+      if (!isTransactionConflict(error) || attempt === MAX_CONFLICT_RETRIES) throw error;
     }
   }
 }
 
 const MAX_CONFLICT_RETRIES = 3;
-
-function isWriteConflict(error: unknown) {
-  return Boolean(error && typeof error === "object" && "code" in error && error.code === "P2034");
-}
 
 async function countOnce(
   db: PrismaClient,

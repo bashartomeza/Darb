@@ -32,6 +32,7 @@ vi.mock("../lib/otp.js", async () => ({
 
 const { createApp } = await import("../app.js");
 const { startInFlight } = await import("../modules/publicOnboarding.js");
+const { failIdempotency } = await import("../lib/idempotency.js");
 
 const secrets = {
   PHONE_DIGEST_PEPPER: "phone-test-secret-longer-than-thirty-two-characters",
@@ -233,6 +234,8 @@ describe("self-service registration start endpoint", () => {
     ]);
     const response = await start(createApp(config())).expect(409);
     expect(response.body.error).toBe("verification_temporarily_unavailable");
+    // The same idempotency key can retry: the claim is released, not marked failed.
+    expect(failIdempotency).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ retryAfter: expect.any(Date) }));
     expect(prismaMock.onboardingAttempt.updateMany).not.toHaveBeenCalled();
     expect(prismaMock.onboardingAttempt.create).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();

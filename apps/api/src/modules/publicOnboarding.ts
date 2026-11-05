@@ -35,6 +35,7 @@ import { consentDigestMatches } from "../lib/consentContent.js";
 import { missingDocumentKinds, requiredDocumentKinds } from "../lib/applicationReview.js";
 import { PASSWORD_RULE_ERROR_CODE, PASSWORD_MAX_UTF8_BYTES, PASSWORD_MIN_CHARACTERS, isValidNewPassword } from "../lib/passwordRule.js";
 import { prisma } from "../lib/prisma.js";
+import { isTransactionConflict } from "../lib/transactionConflict.js";
 import {
   requireOnboardingToken,
   type OnboardingAuthenticatedRequest
@@ -378,17 +379,13 @@ export function startInFlight(
   );
 }
 
-function isWriteConflict(error: unknown) {
-  return Boolean(error && typeof error === "object" && "code" in error && error.code === "P2034");
-}
-
 /** Runs the start transaction, retrying the loser of a lock conflict a few times. */
 async function serializableStart<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) {
   for (let attempt = 0; ; attempt += 1) {
     try {
       return await prisma.$transaction(operation, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     } catch (error) {
-      if (!isWriteConflict(error)) throw error;
+      if (!isTransactionConflict(error)) throw error;
       if (attempt === 3) throw new HttpError(409, "verification_temporarily_unavailable");
     }
   }
@@ -648,9 +645,13 @@ export function createPublicOnboardingRouter(
       await startOpenAttempt(req, res, input, phone, claim);
     } catch (error) {
       if (claim?.kind === "claimed") {
+        // "Try again shortly" must stay retryable with the same key, so that claim is released
+        // instead of being marked failed (a failed claim answers registration_conflict).
+        const retryable = error instanceof HttpError && error.message === "verification_temporarily_unavailable";
         await failIdempotency(prisma, {
           recordId: claim.record.id,
-          claimVersion: claim.record.claim_version
+          claimVersion: claim.record.claim_version,
+          ...(retryable ? { retryAfter: new Date() } : {})
         }).catch(() => undefined);
       }
       next(
