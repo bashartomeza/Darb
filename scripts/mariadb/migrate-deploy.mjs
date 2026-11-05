@@ -3,7 +3,6 @@
 // Supports a repo checkout and the cPanel release layout (prisma/, prisma.config.ts).
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { translateMigrationsFolder } from "./translate-migrations.mjs";
@@ -27,7 +26,9 @@ if (!process.env.DATABASE_URL) {
 
 if (!existsSync(config)) throw new Error(`Prisma config not found: ${config}`);
 if (!existsSync(join(prismaDir, "migrations"))) throw new Error(`Migrations not found under ${prismaDir}`);
-const work = mkdtempSync(join(tmpdir(), "darb-mariadb-migrate-"));
+// Keep the generated config beneath the app root so Node resolves dependencies in
+// the root node_modules (the system temp directory may be a separate module tree).
+const work = mkdtempSync(join(scriptRoot, ".mariadb-migrate-"));
 let result;
 try {
   cpSync(config, join(work, "prisma.config.ts"));
