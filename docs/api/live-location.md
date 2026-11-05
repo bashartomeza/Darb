@@ -9,9 +9,9 @@ point. Code: `apps/api/src/modules/liveLocation.ts`,
 ## Switch
 
 `LIVE_TRACKING_ENABLED` (`true` / `false`, anything else fails start-up).
-Default: on in `local`, `test` and `demo`; off in `staging` and `production`
-until the operator sets it to `true`, so a deploy never starts collecting
-driver positions unannounced. `GET /capabilities` reports it as
+Default: on everywhere (owner decision: production tracks by default; set `false` to
+switch it off). Drivers are still asked for permission in the app. Points are
+purged after `LOCATION_RETENTION_DAYS` (default 30, see `docs/operations/data-retention.md`). `GET /capabilities` reports it as
 `live_tracking_available`; the app only shares and shows live positions when it
 is true.
 

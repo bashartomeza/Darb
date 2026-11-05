@@ -98,12 +98,23 @@ describe("Admin user directory", () => {
     ["passenger", baseUser, { kind: "passenger" }],
     ["approved driver", { ...baseUser, id: "approved_driver", role: "driver", driver_profile: { id: "profile_1", vehicle_type: "sedan", seats_total: 4, parcel_capacity: 3, verified: true, trust_score: 80 }, driver_verification: { id: "verification_1", status: "approved", revision: 2, submitted_at: now, reviewed_at: now, reviewed_by: { id: admin.id, name: admin.name } } }, expect.objectContaining({ kind: "driver", driver_profile_verified: true, driver_verification_status: "approved" })],
     ["pending driver", { ...baseUser, id: "pending_driver", role: "driver", account_status: "pending", driver_verification: { id: "verification_2", status: "pending", revision: 1, submitted_at: now, reviewed_at: null, reviewed_by: null } }, expect.objectContaining({ kind: "driver", driver_profile_exists: false, driver_verification_status: "pending" })],
-    ["pending merchant", { ...baseUser, id: "pending_merchant", role: "merchant", account_status: "pending" }, { kind: "merchant", merchant_approval_connected: true, application_submitted: true }]
+    ["pending merchant", { ...baseUser, id: "pending_merchant", role: "merchant", account_status: "pending" }, { kind: "merchant", merchant_approval_connected: true, application_submitted: true, contact_unverified: true }]
   ])("returns safe %s detail with authoritative role context", async (_label, user, roleContext) => {
     prismaMock.user.findUnique.mockResolvedValue(user);
     const response = await request(createApp()).get(`/api/v1/admin/users/${user.id}`).set(authorization()).expect(200);
     expect(response.body.user).toEqual(expect.objectContaining({ id: user.id, role_context: roleContext, active_session_count: 0 }));
     expect(JSON.stringify(response.body)).not.toMatch(/password_hash|phone_digest|security_version|refresh_token|token_hash|otp|invitation|abuse|jwt/i);
+  });
+
+  it("flags a driver or shop owner whose contact was never verified, and only that one", async () => {
+    const unverified = { ...baseUser, id: "direct_driver", role: "driver", account_status: "pending", email_verified_at: null, phone_verified_at: null };
+    const verified = { ...unverified, id: "verified_driver", email_verified_at: now };
+    prismaMock.user.findUnique.mockResolvedValue(unverified);
+    const detail = await request(createApp()).get(`/api/v1/admin/users/${unverified.id}`).set(authorization()).expect(200);
+    expect(detail.body.user.role_context.contact_unverified).toBe(true);
+    prismaMock.user.findMany.mockResolvedValue([unverified, verified]);
+    const list = await request(createApp()).get("/api/v1/admin/users").set(authorization()).expect(200);
+    expect(list.body.users.map((entry: { role_context: { contact_unverified: boolean } }) => entry.role_context.contact_unverified)).toEqual([true, false]);
   });
 
   it("returns 404 without running relation summary queries", async () => {

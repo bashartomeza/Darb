@@ -129,7 +129,8 @@ test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secre
       "20261110120000_route_fare_driver_price",
       "20261111120000_push_devices",
       "20261111130000_reliability_indexes",
-      "20261112120000_cancellations"
+      "20261112120000_cancellations",
+      "20261113120000_data_retention"
     ]
   );
   rmSync(directory, { recursive: true, force: true });

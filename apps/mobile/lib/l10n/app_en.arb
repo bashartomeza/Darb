@@ -427,6 +427,7 @@
   "phoneNumber": "Phone number",
   "sendVerificationCode": "Send verification code",
   "emailForCode": "Email address (we send the code here)",
+  "onboardingNoCodeNote": "We do not send a code. Enter your real email and mobile number: Darb reviews your documents and approves your account before you can sign in.",
   "codeSentToEmail": "We emailed a six-digit code. Check your email, including the spam folder.",
   "enterVerificationCode": "Enter verification code",
   "resendCode": "Resend code",

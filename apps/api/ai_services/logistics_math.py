@@ -1,5 +1,5 @@
-"""Logistics math: modules 03 (batching), 04 (deviation), 07 (trust),
-08 (fare) and 09 (geofence). Pure Python, no I/O, no third-party imports.
+"""Logistics math: cargo batching, route deviation, trust score,
+fare control and geofence parity. Pure Python, no I/O, no third-party imports.
 
 All monetary / efficiency / ETA figures are SIMULATION estimates.
 """
@@ -16,7 +16,7 @@ def _finite(value: Any) -> bool:
 
 
 # =============================================================================
-# MODULE 03 - Combinatorial cargo batching
+# Combinatorial cargo batching
 # =============================================================================
 class ParcelOrder(TypedDict):
     order_id: str
@@ -186,7 +186,7 @@ def simulated_savings_percentage(batched_count: int, capacity_count: int) -> flo
 
 
 # =============================================================================
-# MODULE 04 - Polyline-aware route deviation
+# Polyline-aware route deviation
 # =============================================================================
 MAX_ALLOWED_DEVIATION_KM = 5.0
 DEVIATION_THRESHOLD_KM = MAX_ALLOWED_DEVIATION_KM  # legacy alias
@@ -243,7 +243,7 @@ def calculate_route_deviation(driver_gps: Coordinate, pickup_gps: Coordinate,
 
 
 # =============================================================================
-# MODULE 07 - Composite trust score
+# Composite trust score
 # =============================================================================
 WEIGHT_STARS = 0.40
 WEIGHT_DELAY = 0.30
@@ -293,30 +293,22 @@ def calculate_composite_trust(metrics: dict) -> dict:
 
 
 # =============================================================================
-# MODULE 08 - Route-based fare control
+# Route-based fare control
 # =============================================================================
-# ILLUSTRATIVE values: replace with the officially published tariff table
-# before any real use. Pricing is also gated OFF in production by the project.
-MINISTRY_BASE_FARES: dict[str, float] = {
-    "ramallah_to_nablus": 25.0,
-    "hebron_to_bethlehem": 15.0,
-    "jenin_to_ramallah": 40.0,
-}
-ROUTE_ALIASES: dict[str, str] = {
-    # canonical Darb corridor key -> tariff key
-    "hebron_ppu_bab_al_zawiya_to_bethlehem": "hebron_to_bethlehem",
-}
+# Fares are owned by the Node API / the operator and arrive here as INPUT for one
+# of Darb's predefined operating routes (key such as "hebron-to-bethlehem").
+# This module holds no tariff table and no route aliases.
 COMPENSATION_PER_MINUTE_MULTIPLIER = 0.50
 MAX_COMPENSATION_CAP = 30.0
+MAX_BASE_FARE = 1000.0
 
 
-def enforce_route_based_fare(route_name: str, live_checkpoint_delay_mins: float) -> dict:
-    key = str(route_name or "").strip().lower().replace(" ", "_").replace("-", "_")
-    key = ROUTE_ALIASES.get(key, key)
-    base_fare = MINISTRY_BASE_FARES.get(key)
-    if base_fare is None:
+def enforce_route_based_fare(route_key: str, base_fare: Any, live_checkpoint_delay_mins: float) -> dict:
+    """Lock a caller-supplied base fare for `route_key`, plus a capped delay premium."""
+    key = str(route_key or "").strip().lower().replace(" ", "-").replace("_", "-")
+    if not key or not _finite(base_fare) or isinstance(base_fare, bool) or not 0 < base_fare <= MAX_BASE_FARE:
         return {"route_status": "REJECTED_INVALID_ROUTE",
-                "error_log": f"Route '{route_name}' is not a registered tariff route."}
+                "error_log": "A route key and a base fare between 0 and 1000 are required."}
 
     note = None
     delay = live_checkpoint_delay_mins
@@ -329,11 +321,11 @@ def enforce_route_based_fare(route_name: str, live_checkpoint_delay_mins: float)
     premium = round(min(raw_premium, MAX_COMPENSATION_CAP), 2)
     result = {
         "route_status": "FARE_LOCKED",
-        "route_name_verified": key,
-        "ministry_standard_base_fare": base_fare,
+        "route_key_verified": key,
+        "base_fare": float(base_fare),
         "external_api_delay_minutes": live_checkpoint_delay_mins,
         "automated_checkpoint_premium_added": premium,
-        "final_non_negotiable_fare_simulation": round(base_fare + premium, 2),
+        "final_non_negotiable_fare_simulation": round(float(base_fare) + premium, 2),
         "billing_interface_mode": "FIXED_NON_NEGOTIABLE",
         "compensation_cap_triggered": raw_premium > MAX_COMPENSATION_CAP,
         "max_compensation_cap": MAX_COMPENSATION_CAP,
@@ -344,7 +336,7 @@ def enforce_route_based_fare(route_name: str, live_checkpoint_delay_mins: float)
 
 
 # =============================================================================
-# MODULE 09 - Zero-knowledge privacy geofencing
+# Zero-knowledge privacy geofencing
 # =============================================================================
 # ARCHITECTURE RULE: this function must run ON THE DEVICE (see
 # apps/mobile/lib/features/ai_directives/edge_geofence.dart for the shipped

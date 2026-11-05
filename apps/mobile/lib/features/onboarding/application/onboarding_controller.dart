@@ -219,6 +219,52 @@ class OnboardingController extends AsyncNotifier<OnboardingState> {
           idempotencyKey: key,
         );
         _ensureCurrent(generation);
+        if (result.nextAction == 'complete_registration') {
+          // No code is sent: the grant arrives with the start answer.
+          final grant = result.registrationGrant;
+          final grantExpiresAt = result.registrationGrantExpiresAt;
+          if (result.status != 'phone_verified' ||
+              grant == null ||
+              grantExpiresAt == null) {
+            throw const ApiException(
+              ApiErrorType.validation,
+              'invalid_response',
+            );
+          }
+          final granted = OnboardingBundle(
+            type: OnboardingBundleType.continuation,
+            safeStage: OnboardingStage.phoneVerified,
+            locale: locale,
+            selectedRole: role,
+            attemptId: result.attemptId,
+            continuationToken: result.onboardingToken,
+            continuationExpiresAt: result.onboardingTokenExpiresAt,
+            maskedPhone: result.maskedPhone,
+            registrationGrant: grant,
+            registrationGrantExpiresAt: grantExpiresAt,
+          );
+          await _persistBeforePublish(granted, generation);
+          _completeMutation('start');
+          final documents = await _repository.consents(locale);
+          _ensureCurrent(generation);
+          final ready = granted.copyWith(
+            safeStage: OnboardingStage.enteringAccountDetails,
+          );
+          await _persistBeforePublish(ready, generation);
+          state = AsyncData(
+            current.copyWith(
+              stage: OnboardingStage.enteringAccountDetails,
+              attemptId: result.attemptId,
+              maskedPhone: result.maskedPhone,
+              attemptExpiresAt: result.expiresAt,
+              documents: documents,
+              requestId: result.requestId,
+              ambiguousFailure: false,
+              clearError: true,
+            ),
+          );
+          return;
+        }
         if (!{
               'otp_sent',
               'otp_dispatching',

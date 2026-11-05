@@ -215,6 +215,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
   Widget _startStep(BuildContext context, OnboardingState state) {
     final l10n = AppLocalizations.of(context);
+    final codeFree = state.config?.codeRequired == false;
     return DarbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -252,9 +253,19 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
               autocorrect: false,
               enableSuggestions: false,
               inputFormatters: [LengthLimitingTextInputFormatter(191)],
-              decoration: InputDecoration(labelText: l10n.emailForCode),
+              decoration: InputDecoration(
+                labelText: codeFree ? l10n.email : l10n.emailForCode,
+              ),
             ),
           ),
+          if (codeFree) ...[
+            const SizedBox(height: AppTokens.spaceSmall),
+            Text(
+              l10n.onboardingNoCodeNote,
+              key: const ValueKey('onboardingNoCodeNote'),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           const SizedBox(height: AppTokens.spaceLarge),
           FilledButton(
             key: const ValueKey('sendVerificationCodeButton'),
@@ -264,7 +275,9 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                     dimension: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(l10n.sendVerificationCode),
+                : Text(
+                    codeFree ? l10n.continueAction : l10n.sendVerificationCode,
+                  ),
           ),
           TextButton(
             onPressed: state.busy

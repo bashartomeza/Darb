@@ -76,6 +76,83 @@ void main() {
     expect(find.byKey(const ValueKey('onboardingEmailField')), findsOneWidget);
   });
 
+  testWidgets(
+    'code-free sign-up goes from contact straight to account details',
+    (tester) async {
+      final future = DateTime.now().toUtc().add(const Duration(hours: 1));
+      var verifyCalls = 0;
+      await _pumpApp(
+        tester,
+        onboardingEnabled: true,
+        handler: (request) async {
+          final path = request.url.path;
+          if (path.endsWith('/onboarding/config')) {
+            return http.Response(
+              _enabledConfigBody.replaceFirst(
+                '"request_id":"req"',
+                '"code_required":false,"request_id":"req"',
+              ),
+              200,
+            );
+          }
+          if (path.endsWith('/onboarding/attempts')) {
+            return http.Response(
+              jsonEncode({
+                'attempt': {
+                  'id': 'attempt_1',
+                  'status': 'phone_verified',
+                  'phone': '+970*****01',
+                  'expires_at': future.toIso8601String(),
+                },
+                'onboarding_token': 'continuation-token',
+                'onboarding_token_expires_at': future.toIso8601String(),
+                'registration_grant': 'g' * 43,
+                'registration_grant_expires_at': future.toIso8601String(),
+                'next_action': 'complete_registration',
+                'request_id': 'req',
+              }),
+              201,
+            );
+          }
+          if (path.endsWith('/verify')) verifyCalls += 1;
+          if (path.endsWith('/onboarding/consents')) {
+            return http.Response(_consentBody('v1'), 200);
+          }
+          return http.Response('{"error":"not_found"}', 404);
+        },
+      );
+
+      await tester.tap(find.byKey(const ValueKey('goToSignUpButton')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('register-role-driver')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('onboardingNoCodeNote')),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('onboardingPhoneField')),
+        '+970590000001',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('onboardingEmailField')),
+        'driver@example.com',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('sendVerificationCodeButton')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('codeSentToEmail')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('onboardingPasswordField')),
+        findsOneWidget,
+      );
+      expect(verifyCalls, 0);
+    },
+  );
+
   testWidgets('disabled config hides the application status link', (
     tester,
   ) async {

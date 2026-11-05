@@ -443,8 +443,10 @@ export type UserRoleContextDriver = {
   driver_verification_status: DriverVerificationStatus | "none";
   /** False while an open-signup applicant has not sent the required documents for review. */
   application_submitted?: boolean;
+  /** True when neither the email nor the phone was proven by a code (direct sign-up). */
+  contact_unverified?: boolean;
 };
-export type UserRoleContextMerchant = { kind: "merchant"; merchant_approval_connected: boolean; application_submitted?: boolean };
+export type UserRoleContextMerchant = { kind: "merchant"; merchant_approval_connected: boolean; application_submitted?: boolean; contact_unverified?: boolean };
 export type UserRoleContextPassenger = { kind: "passenger" };
 export type UserRoleContextAdmin = { kind: "admin" };
 export type UserRoleContext = UserRoleContextDriver | UserRoleContextMerchant | UserRoleContextPassenger | UserRoleContextAdmin;
@@ -539,6 +541,8 @@ export type DriverVerification = {
   reviewed_at: string | null;
   reviewer: { id: string; name: string } | null;
   candidate: AdminUser;
+  /** True when the applicant's email and phone were never proven by a code. */
+  contact_unverified?: boolean;
   driver_profile: DriverProfile | null;
   history: DriverVerificationHistoryEntry[];
   evidence: DriverVerificationEvidence;

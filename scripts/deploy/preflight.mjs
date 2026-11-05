@@ -125,7 +125,17 @@ export function runPreflight(env, options = {}) {
   add("RATE_LIMIT_GLOBAL_MAX", intIn(val("RATE_LIMIT_GLOBAL_MAX"), 50, 1000) !== false, "RATE_LIMIT_GLOBAL_MAX must be 50-1000 when set");
   add("RATE_LIMIT_LOGIN_MAX", intIn(val("RATE_LIMIT_LOGIN_MAX"), 3, 50) !== false, "RATE_LIMIT_LOGIN_MAX must be 3-50 when set");
 
-  if (bool("PUBLIC_ONBOARDING_ENABLED")) add("PUBLIC_ONBOARDING_ENABLED", (val("OTP_PROVIDER") || "disabled") === "email", "PUBLIC_ONBOARDING_ENABLED requires OTP_PROVIDER=email in staging/production");
+  // Driver and shop-owner sign-up either emails a code (OTP_PROVIDER=email, needs SMTP) or, by the owner's decision,
+  // skips the code entirely (ONBOARDING_CODE_DISABLED + ALLOW_UNVERIFIED_ONBOARDING): then no SMTP or OTP provider is needed.
+  const codeFree = bool("ONBOARDING_CODE_DISABLED");
+  if (codeFree) {
+    add("ALLOW_UNVERIFIED_ONBOARDING", bool("ALLOW_UNVERIFIED_ONBOARDING"), "ONBOARDING_CODE_DISABLED in staging/production also needs ALLOW_UNVERIFIED_ONBOARDING=true");
+    add("ONBOARDING_CODE_DISABLED_EMAIL_SIGNIN", bool("EMAIL_VERIFICATION_DISABLED"), "ONBOARDING_CODE_DISABLED needs EMAIL_VERIFICATION_DISABLED=true so approved applicants can sign in with their unverified email");
+    add("ONBOARDING_CODE_DISABLED_REGISTRATION", bool("PUBLIC_ONBOARDING_ENABLED"), "ONBOARDING_CODE_DISABLED requires PUBLIC_ONBOARDING_ENABLED=true");
+  } else if (bool("ALLOW_UNVERIFIED_ONBOARDING")) {
+    add("ALLOW_UNVERIFIED_ONBOARDING", false, "ALLOW_UNVERIFIED_ONBOARDING only makes sense together with ONBOARDING_CODE_DISABLED=true");
+  }
+  if (bool("PUBLIC_ONBOARDING_ENABLED") && !codeFree) add("PUBLIC_ONBOARDING_ENABLED", (val("OTP_PROVIDER") || "disabled") === "email", "PUBLIC_ONBOARDING_ENABLED requires OTP_PROVIDER=email (or ONBOARDING_CODE_DISABLED=true with ALLOW_UNVERIFIED_ONBOARDING=true) in staging/production");
   const otpProvider = val("OTP_PROVIDER") || "disabled";
   add("OTP_PROVIDER", ["disabled", "email"].includes(otpProvider), "OTP_PROVIDER must be disabled or email (fake is forbidden; Darb sends no SMS, codes go by email)");
   if (otpProvider === "email") add("OTP_PROVIDER_EMAIL", val("EMAIL_DELIVERY") === "smtp", "OTP_PROVIDER=email requires EMAIL_DELIVERY=smtp");

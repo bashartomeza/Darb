@@ -55,6 +55,7 @@
     "test:integration:reset-matrix": "npm run test:integration:reset-matrix -w @darb/api",
     "test:integration:legacy-online": "npm run test:integration:legacy-online -w @darb/api",
     "test:integration:passenger-trip-association": "npm run test:integration:passenger-trip-association -w @darb/api",
+    "test:integration:test-drivers": "npm run test:integration:test-drivers -w @darb/api",
     "test:tooling": "node --test scripts/tests/*.test.mjs",
     "mysql:backup": "node scripts/mysql-backup.mjs",
     "mysql:restore:verify": "node scripts/mysql-restore-verify.mjs",
