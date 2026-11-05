@@ -1,11 +1,11 @@
 {
-    "name": "darb_mobile",
-    "short_name": "darb_mobile",
+    "name": "Darb",
+    "short_name": "Darb",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Darb: route sharing and parcel delivery.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
