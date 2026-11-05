@@ -165,6 +165,13 @@ describe("driver verification module", () => {
     expect(markup).toContain("Reject driver");
   });
 
+  it("flags a driver whose contact was never verified", () => {
+    const flagged = textOf(withLocale("en", <DriverReviewPanel verification={{ ...verification, contact_unverified: true }} {...panelProps} />));
+    expect(flagged).toContain("Contact not verified");
+    expect(textOf(withLocale("ar", <DriverReviewPanel verification={{ ...verification, contact_unverified: true }} {...panelProps} />))).toContain("جهة الاتصال غير موثّقة");
+    expect(textOf(withLocale("en", <DriverReviewPanel verification={verification} {...panelProps} />))).not.toContain("Contact not verified");
+  });
+
   it("lists recorded evidence and offers the form only while the review is pending", () => {
     const withEvidence = { ...verification, evidence: { status: "recorded" as const, items: [{ id: "e1", kind: "driver_licence" as const, note: "Valid to 2028", recorded_by: { id: "admin_1", name: "QA Admin" }, created_at: "2026-10-26T10:00:00.000Z" }], documents: [{ id: "doc_1", kind: "national_id" as const, mime_type: "image/jpeg", size_bytes: 2048, created_at: "2026-10-26T11:00:00.000Z" }] } };
     const pendingMarkup = textOf(withLocale("en", <DriverReviewPanel verification={{ ...withEvidence, status: "pending" }} {...panelProps} onRecordEvidence={() => undefined} onDownloadDocument={() => undefined} />));

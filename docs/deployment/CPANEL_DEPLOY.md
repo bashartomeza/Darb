@@ -62,7 +62,19 @@ Setup Node.js App > darb-app > Environment variables set both `EMAIL_VERIFICATIO
 `ALLOW_UNVERIFIED_EMAIL_SIGNUP=true` (the API refuses the first one alone in production). A rider then signs up
 with name, email, mobile number and password, accepts the legal texts and is signed in, with no code. Consequences:
 accounts can use any address; password reset and email codes need a working mailbox (`darb@aynur.ps` on
-`mail.aynur.ps:465`, see `ops/setup.sh`); driver and shop-owner sign-up still sends an email code.
+`mail.aynur.ps:465`, see `ops/setup.sh`).
+
+### Driver and shop-owner sign-up without a code
+
+Drivers and shop owners register the same way, with no emailed or texted code. In cPanel add, besides the two
+variables above, `PUBLIC_ONBOARDING_ENABLED=true`, `DRIVER_DOCUMENTS_ENABLED=true` (with
+`DRIVER_DOCUMENTS_DIR`), the onboarding peppers (see `.env.production.example`), and both of
+`ONBOARDING_CODE_DISABLED=true` and `ALLOW_UNVERIFIED_ONBOARDING=true` (the API refuses the first one alone in
+production). `OTP_PROVIDER` can stay `disabled`; no SMTP is needed for this flow. The applicant enters name, email,
+mobile number, password, role details and documents, accepts the legal texts and submits. Their email and phone stay
+unverified, which Admin sees as "contact not verified" in the driver and shop-owner review, and the application still
+waits for Admin approval. All start limits (per IP, phone, email and the hourly total) still apply.
+
 
 ## Test drivers
 

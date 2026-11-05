@@ -143,6 +143,15 @@ test("the smtp password never appears in preflight output", () => {
   }
 });
 
+test("code-free driver and shop sign-up needs both switches and email sign-in, but no SMTP or OTP provider", () => {
+  const peppers = Object.fromEntries(["PHONE_DIGEST_PEPPER", "OTP_CODE_PEPPER", "ONBOARDING_SESSION_PEPPER", "IDEMPOTENCY_KEY_PEPPER", "ABUSE_KEY_PEPPER"].map((name, i) => [name, String(i + 1).repeat(40)]));
+  const base = { ...goodEnv(), ...peppers, PUBLIC_ONBOARDING_ENABLED: "true", ONBOARDING_CODE_DISABLED: "true", EMAIL_VERIFICATION_DISABLED: "true" };
+  assert.deepEqual(failing(runPreflight({ ...base, ALLOW_UNVERIFIED_ONBOARDING: "true" })), []);
+  assert.ok(failing(runPreflight(base)).includes("ALLOW_UNVERIFIED_ONBOARDING"));
+  assert.ok(failing(runPreflight({ ...base, ALLOW_UNVERIFIED_ONBOARDING: "true", EMAIL_VERIFICATION_DISABLED: "false" })).includes("ONBOARDING_CODE_DISABLED_EMAIL_SIGNIN"));
+  assert.ok(failing(runPreflight({ ...goodEnv(), ALLOW_UNVERIFIED_ONBOARDING: "true" })).includes("ALLOW_UNVERIFIED_ONBOARDING"));
+});
+
 test("OTP_PROVIDER=email needs SMTP, fake is refused, and public onboarding needs the email provider", () => {
   const smtp = { EMAIL_DELIVERY: "smtp", SMTP_HOST: "smtp.mail.example.org", SMTP_USER: "svc-mailer", SMTP_PASSWORD: "x".repeat(24), EMAIL_FROM_ADDRESS: "no-reply@darb.aynur.ps" };
   const peppers = Object.fromEntries(["PHONE_DIGEST_PEPPER", "OTP_CODE_PEPPER", "ONBOARDING_SESSION_PEPPER", "IDEMPOTENCY_KEY_PEPPER", "ABUSE_KEY_PEPPER"].map((name, i) => [name, String(i + 1).repeat(40)]));

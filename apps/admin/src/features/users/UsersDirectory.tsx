@@ -50,6 +50,12 @@ const statusKey = (s: string) => `accountStatus_${s}` as any;
 const roleKey = (s: string) => `role_${s}` as any;
 
 function contextText(user: UserListItem, t: (key: any) => string) {
+  const unverified = (user.role_context.kind === "driver" || user.role_context.kind === "merchant") && user.role_context.contact_unverified === true;
+  const text = contextBase(user, t);
+  return unverified ? <span className="cell-stack__sub">{text}<br /><StatusBadge tone="warning">{t("contactNotVerified")}</StatusBadge></span> : text;
+}
+
+function contextBase(user: UserListItem, t: (key: any) => string) {
   if (user.role_context.kind === "driver") {
     const state = user.role_context.driver_verification_status === "none" ? t("verificationStatus_no") : t(`verificationStatus_${user.role_context.driver_verification_status}` as any);
     return <span className="cell-stack__sub">{t("driverReview")}: {state} · {user.role_context.driver_profile_exists ? t("yes") : t("no")}{user.role_context.application_submitted === false ? ` · ${t("applicationNotSubmitted")}` : ""}</span>;

@@ -1359,6 +1359,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emailForCode => 'Email address (we send the code here)';
 
   @override
+  String get onboardingNoCodeNote =>
+      'We do not send a code. Enter your real email and mobile number: Darb reviews your documents and approves your account before you can sign in.';
+
+  @override
   String get codeSentToEmail =>
       'We emailed a six-digit code. Check your email, including the spam folder.';
 
