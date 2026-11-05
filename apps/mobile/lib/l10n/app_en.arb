@@ -1565,6 +1565,60 @@
     }
   },
   "mapStraightLineNote": "Road route unavailable: showing a straight line",
+  "routeChangedClosed": "Route changed: checkpoint {names} is closed",
+  "@routeChangedClosed": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeChangedClosedExtra": "Route changed: checkpoint {names} is closed (about {minutes} min longer)",
+  "@routeChangedClosedExtra": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "routeChangedCongested": "Route changed to avoid congestion at {names}",
+  "@routeChangedCongested": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeAllClosed": "All known routes pass a closed checkpoint: {names}. Check before you go.",
+  "@routeAllClosed": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeCongestedWarning": "Your route passes a congested checkpoint: {names}. No reasonable alternative was found.",
+  "@routeCongestedWarning": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeCheckUnavailable": "Could not check this route against checkpoint status",
+  "routeStatusStale": "Checkpoint statuses are out of date, so the route was not changed",
+  "routePositionApproximate": "A checkpoint position on this route is approximate",
+  "routeCheckpointOnRoute": "On your route: {name}",
+  "@routeCheckpointOnRoute": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "mapCheckpointsUnavailable": "Checkpoint data unavailable",
   "mapCheckpointsLoadFailed": "Checkpoints could not be loaded",
   "checkpointOfficialUnknown": "Official status: not published",

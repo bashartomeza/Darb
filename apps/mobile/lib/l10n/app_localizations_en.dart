@@ -4188,6 +4188,48 @@ class AppLocalizationsEn extends AppLocalizations {
       'Road route unavailable: showing a straight line';
 
   @override
+  String routeChangedClosed(String names) {
+    return 'Route changed: checkpoint $names is closed';
+  }
+
+  @override
+  String routeChangedClosedExtra(String names, int minutes) {
+    return 'Route changed: checkpoint $names is closed (about $minutes min longer)';
+  }
+
+  @override
+  String routeChangedCongested(String names) {
+    return 'Route changed to avoid congestion at $names';
+  }
+
+  @override
+  String routeAllClosed(String names) {
+    return 'All known routes pass a closed checkpoint: $names. Check before you go.';
+  }
+
+  @override
+  String routeCongestedWarning(String names) {
+    return 'Your route passes a congested checkpoint: $names. No reasonable alternative was found.';
+  }
+
+  @override
+  String get routeCheckUnavailable =>
+      'Could not check this route against checkpoint status';
+
+  @override
+  String get routeStatusStale =>
+      'Checkpoint statuses are out of date, so the route was not changed';
+
+  @override
+  String get routePositionApproximate =>
+      'A checkpoint position on this route is approximate';
+
+  @override
+  String routeCheckpointOnRoute(String name) {
+    return 'On your route: $name';
+  }
+
+  @override
   String get mapCheckpointsUnavailable => 'Checkpoint data unavailable';
 
   @override

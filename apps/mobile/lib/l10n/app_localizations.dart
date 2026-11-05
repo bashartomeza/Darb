@@ -7502,6 +7502,60 @@ abstract class AppLocalizations {
   /// **'تعذر حساب الطريق: يظهر خط مستقيم'**
   String get mapStraightLineNote;
 
+  /// No description provided for @routeChangedClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير المسار: حاجز {names} مغلق'**
+  String routeChangedClosed(String names);
+
+  /// No description provided for @routeChangedClosedExtra.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير المسار: حاجز {names} مغلق (أطول بحوالي {minutes} دقيقة)'**
+  String routeChangedClosedExtra(String names, int minutes);
+
+  /// No description provided for @routeChangedCongested.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير المسار لتجنب الازدحام عند {names}'**
+  String routeChangedCongested(String names);
+
+  /// No description provided for @routeAllClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل المسارات المعروفة تمر بحاجز مغلق: {names}. تأكد قبل الانطلاق.'**
+  String routeAllClosed(String names);
+
+  /// No description provided for @routeCongestedWarning.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسارك يمر بحاجز مزدحم: {names}. لم يتوفر بديل معقول.'**
+  String routeCongestedWarning(String names);
+
+  /// No description provided for @routeCheckUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر فحص هذا المسار مقابل حالة الحواجز'**
+  String get routeCheckUnavailable;
+
+  /// No description provided for @routeStatusStale.
+  ///
+  /// In ar, this message translates to:
+  /// **'حالة الحواجز قديمة، لذلك لم يتم تغيير المسار'**
+  String get routeStatusStale;
+
+  /// No description provided for @routePositionApproximate.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقع أحد الحواجز على هذا المسار تقريبي'**
+  String get routePositionApproximate;
+
+  /// No description provided for @routeCheckpointOnRoute.
+  ///
+  /// In ar, this message translates to:
+  /// **'على مسارك: {name}'**
+  String routeCheckpointOnRoute(String name);
+
   /// No description provided for @mapCheckpointsUnavailable.
   ///
   /// In ar, this message translates to:

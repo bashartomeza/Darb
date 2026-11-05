@@ -8,6 +8,8 @@ import 'package:latlong2/latlong.dart';
 
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
 import '../api/api_client.dart';
+import 'route_plan_models.dart';
+import 'route_plan_service.dart';
 import 'service_area.dart';
 
 /// One routing service (and so one route cache) for the whole app.
@@ -240,6 +242,8 @@ class RoadRoute {
     required this.routed,
     this.durationSeconds,
     this.distanceMeters,
+    this.plan,
+    this.checkFailed = false,
   });
 
   /// Straight segments between the record's points, used when no road route
@@ -253,11 +257,35 @@ class RoadRoute {
   final bool routed;
   final double? durationSeconds;
   final double? distanceMeters;
+
+  /// How the route fared against live checkpoint status, when the server
+  /// planned it. Null for a plain road route.
+  final RoutePlan? plan;
+
+  /// Checkpoint-aware planning was expected but did not work (server or
+  /// routing engine down), so [points] is the plain road route and has not been
+  /// checked against checkpoints.
+  final bool checkFailed;
+
+  RoadRoute copyWith({bool? checkFailed}) => RoadRoute(
+    points: points,
+    routed: routed,
+    durationSeconds: durationSeconds,
+    distanceMeters: distanceMeters,
+    plan: plan,
+    checkFailed: checkFailed ?? this.checkFailed,
+  );
 }
 
 /// Road route between a record's points, never failing: when routing is not
 /// possible (offline, server down, a point outside the service area) it
 /// resolves to the straight fallback so the map still shows the trip.
+///
+/// When the server reports a checkpoint source, the route comes from the
+/// Darb API's route planner, which avoids closed checkpoints (and congested
+/// ones when a reasonable way round exists). The route is planned again when
+/// any checkpoint's status changes. If the planner cannot be reached the plain
+/// road route is used and flagged [RoadRoute.checkFailed].
 final roadRouteProvider = FutureProvider.autoDispose
     .family<RoadRoute, RoadRouteRequest>((ref, request) async {
       final waypoints = request.waypoints;
@@ -268,10 +296,37 @@ final roadRouteProvider = FutureProvider.autoDispose
           )) {
         return straight;
       }
+      final latLngs = [
+        for (final p in waypoints) LatLng(p.latitude, p.longitude),
+      ];
+
+      var checkFailed = false;
+      if (waypoints.length <= maxRoutePlanWaypoints &&
+          ref.watch(routePlanningEnabledProvider)) {
+        // Re-plan when a checkpoint changes status, and keep the feed fresh
+        // while a route is on screen.
+        ref.watch(checkpointStatusSignatureProvider);
+        ref.watch(routeCheckpointRefreshProvider);
+        try {
+          final plan = await ref.read(routePlanServiceProvider).plan(latLngs);
+          return RoadRoute(
+            points: plan.points,
+            routed: true,
+            durationSeconds: plan.durationSeconds,
+            distanceMeters: plan.distanceMeters,
+            plan: plan,
+          );
+        } on RoutePlanUnavailable {
+          // No checkpoint source for this account: an ordinary road route.
+        } catch (_) {
+          checkFailed = true;
+        }
+      }
+
       try {
-        final result = await ref.read(osrmRouteServiceProvider).getRouteThrough(
-          [for (final p in waypoints) LatLng(p.latitude, p.longitude)],
-        );
+        final result = await ref
+            .read(osrmRouteServiceProvider)
+            .getRouteThrough(latLngs);
         return RoadRoute(
           points: List.unmodifiable([
             for (final p in result.points) GeoPoint(p.latitude, p.longitude),
@@ -279,8 +334,9 @@ final roadRouteProvider = FutureProvider.autoDispose
           routed: true,
           durationSeconds: result.durationSeconds,
           distanceMeters: result.distanceMeters,
+          checkFailed: checkFailed,
         );
       } catch (_) {
-        return straight;
+        return straight.copyWith(checkFailed: checkFailed);
       }
     });

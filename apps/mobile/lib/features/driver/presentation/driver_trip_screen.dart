@@ -21,6 +21,7 @@ import '../../../core/cancellation/cancellation.dart';
 import '../../../core/location/locate_device.dart';
 import '../../../core/maps/darb_route_map.dart';
 import '../../../core/maps/osrm_route_service.dart';
+import '../../../core/maps/route_plan_service.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/theme/semantic_colors.dart';
 import '../../../core/widgets/language_switch.dart';
@@ -1665,6 +1666,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
       // --------------------------------------------------------
       // CHECKPOINTS AND COMMUNITY REPORTS
       // --------------------------------------------------------
+      ...roadRouteMarkers(widget.l10n, road),
       ..._markersFor(widget.snapshot, reports),
 
       // --------------------------------------------------------
@@ -1818,6 +1820,7 @@ class _DriverEtaCard extends ConsumerStatefulWidget {
 class _DriverEtaCardState extends ConsumerState<_DriverEtaCard> {
   Future<OsrmRouteResult>? _future;
   String? _key;
+  String? _statusSignature;
 
   @override
   void didChangeDependencies() {
@@ -1864,12 +1867,24 @@ class _DriverEtaCardState extends ConsumerState<_DriverEtaCard> {
     required LatLng end,
   }) async {
     try {
-      final result = await ref
-          .read(osrmRouteServiceProvider)
-          .getRoute(start: start, end: end);
-
-      if (result.points.length >= 2) {
-        return result;
+      // The same checkpoint-aware route the map draws, so the ETA and the line
+      // agree (and a closed checkpoint adds its detour to the time).
+      final road = await ref.read(
+        roadRouteProvider(
+          RoadRouteRequest([
+            GeoPoint(start.latitude, start.longitude),
+            GeoPoint(end.latitude, end.longitude),
+          ]),
+        ).future,
+      );
+      if (road.routed) {
+        return OsrmRouteResult(
+          points: [
+            for (final p in road.points) LatLng(p.latitude, p.longitude),
+          ],
+          durationSeconds: road.durationSeconds ?? 0,
+          distanceMeters: road.distanceMeters ?? 0,
+        );
       }
     } catch (_) {}
 
@@ -1882,6 +1897,13 @@ class _DriverEtaCardState extends ConsumerState<_DriverEtaCard> {
 
   @override
   Widget build(BuildContext context) {
+    // A checkpoint changing status re-plans the route, and so the ETA.
+    final signature = ref.watch(checkpointStatusSignatureProvider);
+    if (signature != _statusSignature) {
+      _statusSignature = signature;
+      _key = null;
+      _ensureRoute();
+    }
     return FutureBuilder<OsrmRouteResult>(
       key: ObjectKey(_future),
       future: _future,
