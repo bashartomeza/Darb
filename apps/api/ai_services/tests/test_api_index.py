@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from ai_services import nlp_engine, provider_pool
-from ai_services.api.index import handle_request
+from ai_services.api.index import MAX_JSON_BYTES as index_limit, handle_request
 
 SECRET = "unit-test-shared-secret-1234"
 AUTH = {"X-Internal-Secret": SECRET}
@@ -49,9 +49,9 @@ def test_analyze_emergency_routes_to_human_with_red_directives():
     assert d["theme"]["primary_color_hex"] == "#DC2626" and d["haptics"]["vibrate"] and d["requires_human_confirmation"]
 
 
-def test_analyze_logistics_end_to_end_with_spatial_correction():
+def test_analyze_logistics_end_to_end_keeps_typed_place():
     status, body = post("/v1/analyze", {"text": "بدنا تكتك قوام يسحب كرتونتين كبار من عند دوار المناررة وننزلهم بمكتب البريد المركزي والوضع مستعجل"})
-    assert status == 200 and body["dispatch"]["pickup_location"] == "دوار المنارة"
+    assert status == 200 and body["dispatch"]["pickup_location"] == "دوار المناررة"
     assert body["frontend_ai_ui_directives"]["logistics_progress"]["parcels_total"] == 2
     # heuristic confidence 0.55 passes the 0.5 hard gate but not the 0.85 soft target -> human
     assert body["routing"]["hard_gate"]["verdict"] == "CONFIDENCE_ACCEPTED"
@@ -69,7 +69,7 @@ def test_raw_gps_in_payload_is_banned_and_bad_json_is_400():
     assert post("/v1/analyze", {"text": "x", "driver": {"latitude": 31.9, "longitude": 35.2}}) == (400, {"error": "raw_gps_streaming_banned"})
     assert post("/v1/analyze", b"{not json")[1] == {"error": "invalid_json"}
     assert post("/v1/analyze", {"nope": 1})[1] == {"error": "text_required"}
-    assert post("/v1/analyze", b"x" * 9000)[0] == 413
+    assert post("/v1/analyze", b"x" * (index_limit + 1))[0] == 413
 
 
 def test_voice_pipeline_audio_to_transcript_to_verified_dispatch(monkeypatch):

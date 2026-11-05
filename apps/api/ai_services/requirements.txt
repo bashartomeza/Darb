@@ -1,2 +1,6 @@
-pydantic>=2.0
-pytest>=8.0     # dev only
+# Runtime dependencies of the AI service image (pinned).
+annotated-types==0.8.0
+pydantic==2.14.3
+pydantic_core==2.50.4
+typing-inspection==0.4.5
+typing_extensions==4.16.0

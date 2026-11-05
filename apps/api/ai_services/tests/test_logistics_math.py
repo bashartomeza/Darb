@@ -5,7 +5,6 @@ import random
 import pytest
 
 from ai_services import logistics_math as lm
-from ai_services.agent_orchestrator import generate_benchmark_matrix, run_simulator_benchmark
 
 
 def _order(i, w, v, zone="Z"):
@@ -93,19 +92,6 @@ def test_deviation_rejects_corrupt_coordinates():
     assert lm.calculate_route_deviation(HEBRON, (float("nan"), 1), ROUTE)["dispatch_status"] == "REJECTED_INVALID_COORDINATES"
 
 
-# ------------------------------------------------------------------ 05
-def test_simulator_floor_and_gain_math():
-    orders, drivers = generate_benchmark_matrix()
-    r = run_simulator_benchmark(orders, drivers, strict=True)
-    assert (r["processed_orders_count"], r["processed_drivers_count"]) == (10, 5)
-    assert r["high_urgency_orders_detected"] == 3 and r["ai_system_simulated_target_eta_mins"] == pytest.approx(7.1)
-    assert r["projected_time_saved_mins"] == pytest.approx(4.9) and r["simulated_efficiency_gain_percentage"] == pytest.approx(40.83)
-    flood = run_simulator_benchmark([{"order_id": str(i), "urgency": "High"} for i in range(30)], drivers)
-    assert flood["ai_system_simulated_target_eta_mins"] == 4.5 and flood["eta_floor_reached"]
-    with pytest.raises(ValueError):
-        run_simulator_benchmark(orders[:3], drivers, strict=True)
-
-
 # ------------------------------------------------------------------ 07
 def test_trust_weights_new_driver_and_clamping():
     perfect = lm.calculate_composite_trust({"driver_id": "a", "historical_stars": 5, "delay_rate": 0, "cancellation_rate": 0})
@@ -118,21 +104,23 @@ def test_trust_weights_new_driver_and_clamping():
     assert 0.0 <= dirty["composite_trust_score"] <= 100.0 and dirty["composite_trust_score"] == 100.0
 
 
-# ------------------------------------------------------------------ 08
-def test_fare_locked_premium_cap_and_negative_reset():
-    r = lm.enforce_route_based_fare("Ramallah To Nablus", 12.0)
+# ------------------------------------------------------------------ fare
+def test_fare_is_caller_supplied_premium_cap_and_negative_reset():
+    r = lm.enforce_route_based_fare("hebron-to-bethlehem", 25.0, 12.0)
+    assert r["base_fare"] == 25.0 and r["route_key_verified"] == "hebron-to-bethlehem"
     assert r["automated_checkpoint_premium_added"] == 6.0 and r["final_non_negotiable_fare_simulation"] == 31.0
-    capped = lm.enforce_route_based_fare("ramallah_to_nablus", 500.0)
+    capped = lm.enforce_route_based_fare("ramallah-to-nablus", 25.0, 500.0)
     assert capped["automated_checkpoint_premium_added"] == 30.0 and capped["compensation_cap_triggered"]
-    neg = lm.enforce_route_based_fare("ramallah_to_nablus", -15.0)
+    neg = lm.enforce_route_based_fare("ramallah-to-nablus", 25.0, -15.0)
     assert neg["automated_checkpoint_premium_added"] == 0.0 and "delay_anomaly_note" in neg
-    assert lm.enforce_route_based_fare("ramallah_to_nablus", float("inf"))["automated_checkpoint_premium_added"] == 0.0
-    assert lm.enforce_route_based_fare("Gaza_To_Jerusalem", 1)["route_status"] == "REJECTED_INVALID_ROUTE"
+    assert lm.enforce_route_based_fare("ramallah-to-nablus", 25.0, float("inf"))["automated_checkpoint_premium_added"] == 0.0
 
 
-def test_canonical_corridor_key_maps_to_tariff():
-    r = lm.enforce_route_based_fare("hebron-ppu-bab-al-zawiya-to-bethlehem", 0)
-    assert r["route_status"] == "FARE_LOCKED" and r["ministry_standard_base_fare"] == 15.0
+def test_fare_without_a_valid_supplied_base_fare_is_rejected_and_no_tariff_table_exists():
+    for bad in (None, 0, -5, float("nan"), True, "15", 10_000):
+        assert lm.enforce_route_based_fare("hebron-to-bethlehem", bad, 1)["route_status"] == "REJECTED_INVALID_ROUTE"
+    assert lm.enforce_route_based_fare("", 15.0, 1)["route_status"] == "REJECTED_INVALID_ROUTE"
+    assert not hasattr(lm, "MINISTRY_BASE_FARES") and not hasattr(lm, "ROUTE_ALIASES")
 
 
 # ------------------------------------------------------------------ 09

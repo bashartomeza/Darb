@@ -7,6 +7,7 @@ layer answered ("gemini" | "groq" | "heuristic").
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 
@@ -62,10 +63,14 @@ def _coerce(result: dict) -> dict:
         value = result.get(key)
         return value.strip()[:200] if isinstance(value, str) and value.strip() else "Unspecified"
 
-    try:
-        confidence = float(result.get("confidence", 0.5))
-    except (TypeError, ValueError):
-        confidence = 0.5
+    # json.loads accepts NaN/Infinity; a non-numeric or non-finite confidence is
+    # invalid and must land in human review (0.0), never pass a routing gate.
+    raw_confidence = result.get("confidence", 0.5)
+    if isinstance(raw_confidence, bool) or not isinstance(raw_confidence, (int, float)) \
+            or not math.isfinite(raw_confidence):
+        confidence = 0.0
+    else:
+        confidence = float(raw_confidence)
     capacity = result.get("capacity_requirements", 1)
     capacity = capacity if isinstance(capacity, int) and not isinstance(capacity, bool) and capacity >= 1 else 1
     vehicle = result.get("vehicle_class")

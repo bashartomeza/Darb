@@ -251,9 +251,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - name: Install pydantic and pytest
+      - name: Install pinned dependencies and pytest
         run: |
           python3 -m venv .venv-ai-services
-          .venv-ai-services/bin/python -m pip install --quiet -r apps/api/ai_services/requirements.txt
+          .venv-ai-services/bin/python -m pip install --quiet -r apps/api/ai_services/requirements-dev.txt
       - name: AI service tests and contract drift
         run: .venv-ai-services/bin/python -m pytest apps/api/ai_services/tests -q -p no:cacheprovider
+      - name: AI service image builds (only the service code is sent as build context)
+        working-directory: apps/api
+        run: docker build -q -t darb-ai-services:ci -f ai_services/Dockerfile .
