@@ -49,6 +49,11 @@ String? pickSpeechLocale(String languageCode, List<String> available) {
   return null;
 }
 
+/// How long silence ends an utterance. The platform default (and the old 3 s)
+/// made every voice turn wait for a pause; 1.4 s still tolerates a breath
+/// between a village name and the time.
+const speechPauseFor = Duration(milliseconds: 1400);
+
 class PlatformSpeechService implements SpeechService {
   PlatformSpeechService([stt.SpeechToText? engine])
     : _engine = engine ?? stt.SpeechToText();
@@ -56,11 +61,15 @@ class PlatformSpeechService implements SpeechService {
   final stt.SpeechToText _engine;
   bool _ready = false;
   bool _permanent = false;
+  List<String>? _localeCache;
   void Function(SpeechFailure)? _onFailure;
   void Function()? _onDone;
 
   @override
   Future<SpeechAvailability> initialize() async {
+    // Initialising the recogniser costs a platform round trip; once it is
+    // ready it stays ready, so the next mic tap starts listening at once.
+    if (_ready) return SpeechAvailability.available;
     _permanent = false;
     try {
       _ready = await _engine.initialize(
@@ -107,7 +116,9 @@ class PlatformSpeechService implements SpeechService {
   @override
   Future<List<String>> locales() async {
     if (!_ready) return const [];
-    return [for (final l in await _engine.locales()) l.localeId];
+    return _localeCache ??= [
+      for (final l in await _engine.locales()) l.localeId,
+    ];
   }
 
   @override
@@ -122,7 +133,7 @@ class PlatformSpeechService implements SpeechService {
     await _engine.listen(
       listenOptions: stt.SpeechListenOptions(
         localeId: localeId,
-        pauseFor: const Duration(seconds: 3),
+        pauseFor: speechPauseFor,
         listenFor: const Duration(seconds: 30),
         partialResults: true,
         cancelOnError: true,

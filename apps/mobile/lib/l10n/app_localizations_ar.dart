@@ -2592,6 +2592,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get assistantVoiceStop => 'إيقاف الاستماع';
 
   @override
+  String get assistantVoiceSettings => 'إعدادات الصوت';
+
+  @override
+  String get assistantVoiceSpeakReplies => 'قراءة الردود بصوت عالٍ عند التحدث';
+
+  @override
+  String get assistantVoiceAutoSend => 'إرسال الطلب عند التوقف عن الكلام';
+
+  @override
+  String get assistantVoiceSpeed => 'سرعة القراءة';
+
+  @override
+  String get assistantVoiceStopSpeaking => 'إيقاف القراءة';
+
+  @override
   String get assistantVoiceListening => 'جارٍ الاستماع…';
 
   @override

@@ -58,5 +58,9 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="tel"/>
         </intent>
+        <!-- Spoken assistant replies (text to speech) need to see the installed speech engines. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
     </queries>
 </manifest>

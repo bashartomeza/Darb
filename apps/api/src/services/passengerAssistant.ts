@@ -15,6 +15,12 @@ import {
   type ParsedPlace
 } from "./assistantParser.js";
 import { loadAssistantPlaces } from "./assistantPlaces.js";
+import {
+  answerKnowledge,
+  detectKnowledgeTopic,
+  isOnlySocial
+} from "./assistantKnowledge.js";
+import { exampleRoutePair } from "./assistantParser.js";
 
 export type PassengerAssistantHistoryItem = {
   role: "user" | "assistant";
@@ -76,7 +82,12 @@ type ServiceDependencies = {
   contextLoader?: ContextLoader;
   placesLoader?: () => Promise<{ places: AssistantPlace[]; routes: AssistantRoute[] }>;
   now?: () => Date;
+  /** How long the published stops/routes are reused between messages. 0 disables the cache. */
+  placesCacheMs?: number;
 };
+
+/** Stops and routes change rarely; a short reuse window saves a multi-join query on every message. */
+const DEFAULT_PLACES_CACHE_MS = 60_000;
 
 const providerIntentSchema = z.object({
   type: z.enum(["ride", "parcel", "unknown"]),
@@ -390,7 +401,7 @@ function parcelMessage(intent: ParsedIntent, locale: AssistantLocale) {
 /** Turns a parsed intent into the reply the app renders. Pure. */
 function replyForIntent(
   intent: ParsedIntent,
-  ctx: { now: Date; places: AssistantPlace[]; routes: AssistantRoute[]; locale: AssistantLocale },
+  ctx: { now: Date; places: AssistantPlace[]; routes: AssistantRoute[]; locale: AssistantLocale; repeated?: boolean },
   options: { providerMessage?: string; degraded?: PassengerAssistantDegradedReason } = {}
 ): PassengerAssistantReply {
   const { locale } = ctx;
@@ -398,7 +409,7 @@ function replyForIntent(
   const source = intent.source;
 
   const ask = (queue: boolean) => {
-    const clarification = buildClarification(intent, ctx, locale);
+    const clarification = buildClarification(intent, ctx, locale, { repeated: ctx.repeated });
     return {
       ...base,
       status: "clarification" as const,
@@ -527,11 +538,20 @@ export function createPassengerAssistantService(
   const contextLoader = dependencies.contextLoader ?? loadPassengerContext;
   const placesLoader = dependencies.placesLoader ?? loadAssistantPlaces;
   const now = dependencies.now ?? (() => new Date());
+  const cacheMs = dependencies.placesCacheMs ?? DEFAULT_PLACES_CACHE_MS;
+  let cached: { at: number; data: { places: AssistantPlace[]; routes: AssistantRoute[] } } | null = null;
+  const loadPlaces = async () => {
+    const at = Date.now();
+    if (cacheMs > 0 && cached && at - cached.at < cacheMs) return cached.data;
+    const data = await placesLoader();
+    if (cacheMs > 0) cached = { at, data };
+    return data;
+  };
 
   return {
     async answer(input) {
       const currentTime = now();
-      const { places, routes } = await placesLoader();
+      const { places, routes } = await loadPlaces();
       const parseContext: ParseContext = {
         now: currentTime,
         places,
@@ -539,8 +559,32 @@ export function createPassengerAssistantService(
         locale: input.locale,
         priorTurns: input.history.filter((item) => item.role === "user").map((item) => item.text)
       };
-      const replyContext = { now: currentTime, places, routes, locale: input.locale };
       const rules = parseRequest(input.message, parseContext);
+
+      // Small talk and app-help questions are answered from product facts: instant, no provider call.
+      // The message is read on its own so an earlier ride in the chat cannot hide "thanks" or "how do I cancel".
+      const alone = parseRequest(input.message, { ...parseContext, priorTurns: [] });
+      const topic = detectKnowledgeTopic(input.message);
+      // Trip-status questions go to the provider when one is configured: it sees the passenger's own requests.
+      const providerOwnsStatus = topic?.topic === "booking_status" && Boolean(appConfig.assistant.apiKey);
+      if (topic && !providerOwnsStatus && !alone.pickup && !alone.dropoff) {
+        const social = !topic.helpQuestion && !["capabilities", "how_to_book", "parcel_help", "booking_status"].includes(topic.topic);
+        const eligible = social ? alone.type === "unknown" && isOnlySocial(input.message) : alone.type === "unknown" || topic.helpQuestion || !alone.time;
+        if (eligible) {
+          const answer = answerKnowledge(topic.topic, input.locale, exampleRoutePair({ places, routes }, input.locale));
+          return { status: "result", message: answer.message, suggestions: answer.suggestions };
+        }
+      }
+
+      // A second dead end in a row stops asking the same question and hands the passenger a next step.
+      const priorUser = input.history.filter((item) => item.role === "user").map((item) => item.text);
+      const previous = priorUser[priorUser.length - 1];
+      const repeated = Boolean(
+        rules.type === "unknown" && previous &&
+        parseRequest(previous, { ...parseContext, priorTurns: [] }).type === "unknown" &&
+        !detectKnowledgeTopic(previous)
+      );
+      const replyContext = { now: currentTime, places, routes, locale: input.locale, repeated };
 
       // A named place that no active stop serves never needs a provider call.
       if (rules.unsupported_place && !rules.pickup && !rules.dropoff && places.length > 0) {

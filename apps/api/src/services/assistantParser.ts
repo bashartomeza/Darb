@@ -127,11 +127,11 @@ const alt = (words: string[]) => words.map(esc).join("|");
 // ---------------------------------------------------------------------------
 
 const SYNONYM_GROUPS: string[][] = [
-  ["بيت لحم", "bethlehem", "beit lahem", "beit lahm", "bayt lahm", "beitlahem", "bethlehm"],
-  ["الخليل", "hebron", "khalil", "al khalil", "alkhalil"],
+  ["بيت لحم", "bethlehem", "beit lahem", "beit lahm", "bayt lahm", "beitlahem", "bethlehm", "بيتلحم", "بيت لحيم", "betlahem", "bet lahem"],
+  ["الخليل", "hebron", "khalil", "al khalil", "alkhalil", "خليل الرحمن", "الخليل المدينه", "el khalil", "khaleel"],
   ["بوليتكنك", "بولي", "بوليتكنيك", "polytechnic", "ppu", "poly", "بوابه الجامعه", "جامعه البوليتكنك"],
   ["باب الزاويه", "bab al zawiya", "bab zawiya", "bab alzawya", "bab zawya", "bab el zawiya", "باب زاويه"],
-  ["رام الله", "ramallah", "ram allah"],
+  ["رام الله", "ramallah", "ram allah", "رامالله", "ramalla"],
   ["نابلس", "nablus", "nabulus"],
   ["القدس", "jerusalem", "quds", "al quds"],
   ["جنين", "jenin"],
@@ -144,7 +144,16 @@ const SYNONYM_GROUPS: string[][] = [
   ["يطا", "yatta"],
   ["حلحول", "halhul"],
   ["بيت جالا", "beit jala", "beit jalla"],
-  ["بيت ساحور", "beit sahour", "beit sahur"]
+  ["بيت ساحور", "beit sahour", "beit sahur", "bait sahour"],
+  ["دورا", "dura", "doura"],
+  ["الخضر", "al khader", "khader", "khadr"],
+  ["سعير", "sair", "sa ir"],
+  ["الشيوخ", "shuyukh", "al shuyukh", "shiyoukh"],
+  ["ترقوميا", "tarqumiya", "tarqoumiya"],
+  ["صوريف", "surif", "sourif"],
+  ["بيت اولا", "beit ula", "beit awwa", "بيت عوا"],
+  ["دير سامت", "deir samet"],
+  ["تقوع", "tuqu", "teqoa", "tekoa"]
 ].map((group) => group.map(normalizeText));
 
 const NAME_STOPWORDS = new Set(
@@ -155,11 +164,11 @@ const NAME_STOPWORDS = new Set(
   )
 );
 
-const FROM_MARKERS = new Set(kw("من", "from", "pickup", "leaving", "starting", "انطلاق", "استلام", "اخذني", "خدني", "اركب"));
+const FROM_MARKERS = new Set(kw("من", "from", "pickup", "leaving", "starting", "انطلاق", "استلام", "اخذني", "خدني", "اركب", "طالع", "طالعه", "طالعين", "منطلق", "بدايه"));
 const TO_MARKERS = new Set(
   kw(
     "الي", "على", "عا", "ع", "to", "towards", "toward", "لحد", "لغايه", "اروح", "روح", "رايح", "رايحه", "وصلني",
-    "وصلوني", "وديني", "going", "go", "head", "heading", "destination", "وجهتي", "into", "لوين"
+    "وصلوني", "وديني", "going", "go", "head", "heading", "destination", "وجهتي", "into", "لوين", "لعند", "باتجاه", "نحو", "ودني", "نازل", "نازله"
   )
 );
 
@@ -168,7 +177,7 @@ const RIDE_KW = new Set(
     "بدي", "بدنا", "اريد", "ودي", "محتاج", "محتاجه", "اروح", "روح", "رايح", "رايحه", "وصلني", "وصلوني", "وديني",
     "خدني", "مشوار", "رحله", "رحلات", "سياره", "سرفيس", "تاكسي", "توصيله", "ركوب", "مقعد", "مقاعد", "اركب", "سفر",
     "ride", "trip", "taxi", "cab", "lift", "seat", "seats", "book", "need", "want", "go", "going", "drive", "travel",
-    "commute", "pickup", "find", "get", "take", "passenger", "passengers", "ابحث", "دورلي", "لقيلي", "ركاب", "راكب"
+    "commute", "pickup", "find", "get", "take", "passenger", "passengers", "ابحث", "دورلي", "لقيلي", "ركاب", "راكب", "ودني", "اوصل", "ابغى"
   )
 );
 const PARCEL_STRICT = new Set(
@@ -813,14 +822,49 @@ function placeName(place: AssistantPlace | ParsedPlace, locale: AssistantLocale)
   return locale === "ar" ? place.label_ar : place.label_en;
 }
 
+/** A real "from X to Y" pair taken from the published routes, used in examples and as tap-to-send chips. */
+export function exampleRoutePair(
+  context: Pick<ParseContext, "places" | "routes">,
+  locale: AssistantLocale
+): { from: string; to: string } | null {
+  for (const route of context.routes ?? []) {
+    const pickups = route.stops.filter((s) => s.passenger_pickup);
+    const dropoffs = route.stops.filter((s) => s.passenger_dropoff);
+    for (const a of pickups) {
+      const b = [...dropoffs].reverse().find((d) => d.sequence > a.sequence);
+      const from = context.places.find((p) => p.key === a.stop_key);
+      const to = b ? context.places.find((p) => p.key === b.stop_key) : undefined;
+      if (from && to) return { from: placeName(from, locale), to: placeName(to, locale) };
+    }
+  }
+  return null;
+}
+
+export type ClarificationOptions = {
+  /** The passenger already hit a dead end on the previous turn: hand off to a concrete next step. */
+  repeated?: boolean;
+};
+
 export function buildClarification(
   intent: ParsedIntent,
   context: Pick<ParseContext, "places" | "routes">,
-  locale: AssistantLocale
+  locale: AssistantLocale,
+  options: ClarificationOptions = {}
 ): Clarification {
   const ar = locale === "ar";
   const names = (list: AssistantPlace[]) => list.slice(0, 4).map((p) => placeName(p, locale));
   const all = names(context.places);
+  const pair = exampleRoutePair(context, locale);
+  const exampleText = pair
+    ? ar ? `من ${pair.from} إلى ${pair.to}` : `From ${pair.from} to ${pair.to}`
+    : ar ? "من الخليل إلى بيت لحم" : "From Hebron to Bethlehem";
+  const understood = (ride: ParsedIntent) => {
+    const bits: string[] = [];
+    if (ride.pickup) bits.push(ar ? `من ${placeName(ride.pickup, locale)}` : `from ${placeName(ride.pickup, locale)}`);
+    if (ride.dropoff) bits.push(ar ? `إلى ${placeName(ride.dropoff, locale)}` : `to ${placeName(ride.dropoff, locale)}`);
+    if (ride.seats && ride.seats > 1) bits.push(ar ? `لـ ${ride.seats} ركاب` : `for ${ride.seats} people`);
+    return bits.length ? (ar ? `فهمت: ${bits.join(" ")}. ` : `So far: ${bits.join(" ")}. `) : "";
+  };
 
   if (context.places.length === 0) {
     return {
@@ -833,8 +877,8 @@ export function buildClarification(
     return {
       reason: "unsupported_place",
       message: ar
-        ? `هذا المكان غير مدعوم حالياً. الأماكن المتاحة: ${all.join("، ")}.`
-        : `That place isn't supported yet. Available places: ${all.join(", ")}.`,
+        ? `هذا المكان غير مدعوم حالياً. الأماكن المتاحة: ${all.join("، ")}. جرّب مثلاً «${exampleText}».`
+        : `That place isn't supported yet. Available places: ${all.join(", ")}. For example: "${exampleText}".`,
       suggestions: all
     };
   }
@@ -849,12 +893,24 @@ export function buildClarification(
     };
   }
   if (intent.type === "unknown") {
+    const helpChips = ar
+      ? ["كيف ألغي طلبي؟", "كيف أتواصل مع الدعم؟"]
+      : ["How do I cancel?", "How do I contact support?"];
+    if (options.repeated) {
+      return {
+        reason: "not_understood",
+        message: ar
+          ? `ما قدرت أفهم طلبك، وما بدي أضيع وقتك. جرّب هالخطوات: اكتب الطلب هيك «${exampleText} بكرا الساعة 8 صباحاً»، أو اختر من المقترحات تحت، أو تواصل مع الدعم من الإعدادات > المساعدة والدعم. وسجّلت رسالتك لنحسّن المساعد.`
+          : `I couldn't understand that, and I don't want to waste your time. You can write it like "${exampleText} tomorrow at 8 am", pick one of the options below, or reach support from Settings > Help & Support. I've logged your message so the assistant can improve.`,
+        suggestions: [exampleText, ...helpChips]
+      };
+    }
     return {
       reason: "not_understood",
       message: ar
-        ? "لم أفهم طلبك تماماً. أخبرني من أين وإلى أين وفي أي وقت، مثلاً: «من الخليل إلى بيت لحم بكرا الساعة 8 صباحاً»."
-        : "I didn't quite get that. Tell me where from, where to and when, for example: \"From Hebron to Bethlehem tomorrow at 8 am\".",
-      suggestions: []
+        ? `ما فهمت طلبك تماماً. لأجهّز لك مشوار أحتاج: من وين، لوين، ومتى. مثلاً «${exampleText} بكرا الساعة 8 صباحاً». وبقدر كمان أجاوب عن الإلغاء والحواجز والدعم.`
+        : `I didn't quite get that. To set up a ride I need where from, where to and when, for example "${exampleText} tomorrow at 8 am". I can also answer questions about cancelling, checkpoints and support.`,
+      suggestions: [exampleText, ...helpChips]
     };
   }
   if (intent.missing.includes("seats")) {
@@ -868,7 +924,7 @@ export function buildClarification(
     const options = intent.dropoff ? names(reachablePlaces(context, intent.dropoff.key, "pickup")) : [];
     return {
       reason: "missing_pickup",
-      message: ar ? "من أين تريد أن نقلّك؟" : "Where should we pick you up?",
+      message: `${understood(intent)}${ar ? "من أين تريد أن نقلّك؟" : "Where should we pick you up?"}`,
       suggestions: options.length ? options : all
     };
   }
@@ -876,15 +932,15 @@ export function buildClarification(
     const options = names(reachablePlaces(context, intent.pickup.key, "dropoff"));
     return {
       reason: "missing_dropoff",
-      message: ar ? "إلى أين تريد الذهاب؟" : "Where would you like to go?",
+      message: `${understood(intent)}${ar ? "إلى أين تريد الذهاب؟" : "Where would you like to go?"}`,
       suggestions: options.length ? options : all
     };
   }
   if (intent.missing.includes("time")) {
     return {
       reason: "missing_time",
-      message: ar ? "متى تريد الانطلاق؟" : "When would you like to leave?",
-      suggestions: ar ? ["بعد ساعة", "بكرا الساعة 8 صباحاً"] : ["In an hour", "Tomorrow at 8 am"]
+      message: `${understood(intent)}${ar ? "متى تريد الانطلاق؟" : "When would you like to leave?"}`,
+      suggestions: ar ? ["بعد ساعة", "اليوم الساعة 5 مساءً", "بكرا الساعة 8 صباحاً"] : ["In an hour", "Today at 5 pm", "Tomorrow at 8 am"]
     };
   }
   // Everything was read but the reading is shaky: ask the passenger to confirm.
