@@ -5,7 +5,7 @@ import { parse } from "yaml";
 const root = resolve(new URL("../", import.meta.url).pathname.replace(/^\/(\w:)/, "$1"));
 const workflowDir = resolve(root, ".github/workflows");
 const required = new Map([
-  ["ci-backend.yml", ["mysql", "npm ci", "npm run db:migrate", "npm run test:integration:mysql"]],
+  ["ci-backend.yml", ["mysql", "npm ci", "npm run db:migrate", "npm run test:integration:mysql", "-m pytest apps/api/ai_services/tests"]],
   ["ci-admin.yml", ["npm run typecheck:admin", "npm run test:admin", "npm run security:artifacts"]],
   ["ci-mobile.yml", ["flutter pub get", "flutter analyze", "flutter test", "flutter build apk"]],
   ["ci-security.yml", ["npm run security:scan", "npm run security:audit", "npm run test:tooling"]]

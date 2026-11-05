@@ -180,3 +180,18 @@ jobs:
           CANONICAL_SHARED_TRIPS_ENABLED: "true"
           MERCHANT_ORDER_INTEGRATION_CONFIRM_DISPOSABLE: "true"
         run: npm run test:integration:canonical-capacity
+
+  # The Python AI service the API calls for voice and parsing. Its tests include the
+  # contract-drift check on contracts/ui_directives.v1.json, which the API and the apps read.
+  ai-services-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Install pydantic and pytest
+        run: |
+          python3 -m venv .venv-ai-services
+          .venv-ai-services/bin/python -m pip install --quiet -r apps/api/ai_services/requirements.txt
+      - name: AI service tests and contract drift
+        run: .venv-ai-services/bin/python -m pytest apps/api/ai_services/tests -q -p no:cacheprovider
