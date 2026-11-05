@@ -435,7 +435,7 @@ merchantRouter.patch("/merchant/orders/:id/cancel", async (req: AuthenticatedReq
       }
       await auditEvent(tx, {
         userId: req.user!.id,
-        action: AuditAction.admin_action,
+        action: AuditAction.merchant_order_cancelled,
         entityType: "MerchantOrder",
         entityId: order.id,
         metadata: { action: "merchant_order_cancelled" }

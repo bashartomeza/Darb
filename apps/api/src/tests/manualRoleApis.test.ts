@@ -288,6 +288,10 @@ describe("manual role APIs", () => {
     expect(prismaMock.parcelBatchOrder.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: { active: false, active_membership_key: null }
     }));
+    // The owner's own cancellation is not an Admin action.
+    expect(prismaMock.auditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "merchant_order_cancelled", user_id: "merchant_1", entity_id: "order_1" })
+    }));
   });
 
   it("invalid cancel state is rejected", async () => {
