@@ -427,5 +427,3 @@ export function createDriverRouter(
 
   return driverRouter;
 }
-
-export const driverRouter = createDriverRouter();

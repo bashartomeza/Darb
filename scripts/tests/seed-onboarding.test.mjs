@@ -40,7 +40,7 @@ function run(env) {
   return new Promise((done) => child.once("exit", (code) => done({ code, output })));
 }
 
-const disposable = { DATABASE_URL: "mysql://user:pass@127.0.0.1:3306/darb_demo", DEMO_RESET_ALLOWED_DATABASES: "darb_demo" };
+const disposable = { DATABASE_URL: "mysql://127.0.0.1:3306/darb_demo", DEMO_RESET_ALLOWED_DATABASES: "darb_demo" };
 
 test("seed-onboarding refuses an API that does not report a disposable database, before writing", async () => {
   for (const demoResetAvailable of [false, undefined]) {
@@ -78,7 +78,7 @@ test("seed-onboarding refuses a local DATABASE_URL on the permanent database wit
   const { server, requests, port } = await fakeApi({ demoResetAvailable: true });
   try {
     const result = await run({
-      DATABASE_URL: "mysql://user:pass@127.0.0.1:3306/darb",
+      DATABASE_URL: "mysql://127.0.0.1:3306/darb",
       DEMO_RESET_ALLOWED_DATABASES: "darb",
       TEST_API_BASE_URL: `http://127.0.0.1:${port}`
     });

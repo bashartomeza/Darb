@@ -152,5 +152,3 @@ export function createDriverAvailabilityRouter(
   }
   return router;
 }
-
-export const driverAvailabilitySerializers = { serializeAvailability };

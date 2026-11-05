@@ -17,7 +17,7 @@ vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
 const { createApp } = await import("../app.js");
 const { createConfig } = await import("../config.js");
 const { signAuthToken } = await import("../middleware/auth.js");
-const { canonicalDemoSeedEnabled, resetDemoData } = await import("../modules/demoReset.js");
+const { canonicalDemoSeedEnabled, demoResetKeyMatches, resetDemoData } = await import("../modules/demoReset.js");
 
 function resetConfig(databaseUrl: string, allowedDatabases?: string) {
   return createConfig({
@@ -28,6 +28,17 @@ function resetConfig(databaseUrl: string, allowedDatabases?: string) {
     DEMO_RESET_ALLOWED_DATABASES: allowedDatabases
   });
 }
+
+describe("demo reset key comparison", () => {
+  it("matches only the exact configured key", () => {
+    expect(demoResetKeyMatches("test-reset-key", "test-reset-key")).toBe(true);
+    expect(demoResetKeyMatches("test-reset-kez", "test-reset-key")).toBe(false);
+    expect(demoResetKeyMatches("test-reset-key-longer", "test-reset-key")).toBe(false);
+    expect(demoResetKeyMatches("", "test-reset-key")).toBe(false);
+    expect(demoResetKeyMatches(undefined, "test-reset-key")).toBe(false);
+    expect(demoResetKeyMatches("anything", undefined)).toBe(false);
+  });
+});
 
 describe("demo reset", () => {
   beforeEach(() => {

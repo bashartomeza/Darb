@@ -135,10 +135,8 @@ export function createCanonicalSharedMatchingRouter(
   service: CanonicalSharedMatchingService = canonicalSharedMatchingService
 ) {
   const router = Router();
-  const paths = [
-    "/driver/canonical-shared-offers",
-    "/driver/canonical-shared-match-offers"
-  ] as const;
+  // The old "/driver/canonical-shared-match-offers" alias was removed: no client used it.
+  const paths = ["/driver/canonical-shared-offers"] as const;
   if (!appConfig.canonicalSharedTripMobileEnabled) {
     for (const path of paths) router.use(path, notFoundHandler);
     return router;
