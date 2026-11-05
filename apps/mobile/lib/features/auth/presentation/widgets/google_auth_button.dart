@@ -11,6 +11,10 @@ import 'auth_style.dart';
 import 'google_render_button_stub.dart'
     if (dart.library.js_interop) 'google_render_button_web.dart';
 
+/// How long a failed capabilities read waits before it is asked again while
+/// the Google button is on screen.
+const googleCapabilitiesRetryDelay = Duration(seconds: 15);
+
 /// "Continue with Google" affordance.
 ///
 /// On web this is the official Google Identity Services button and the ID
@@ -36,12 +40,21 @@ class GoogleAuthButton extends ConsumerStatefulWidget {
 class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
   StreamSubscription<GoogleSignInAuthenticationEvent>? _eventsSub;
   bool _busy = false;
+  Timer? _capabilitiesRetry;
 
   GoogleSignInService get _service => ref.read(googleSignInServiceProvider);
 
   @override
   void initState() {
     super.initState();
+    // A capabilities read that failed earlier in the session is asked again
+    // whenever a sign-in screen shows the button, instead of hiding Google
+    // until the app restarts.
+    if (ref.read(authCapabilitiesProvider).hasError) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.invalidate(authCapabilitiesProvider);
+      });
+    }
     if (!_service.isConfigured) return;
     _service.ensureInitialized().catchError((Object error) {
       if (mounted) widget.onError(error);
@@ -56,8 +69,16 @@ class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
 
   @override
   void dispose() {
+    _capabilitiesRetry?.cancel();
     _eventsSub?.cancel();
     super.dispose();
+  }
+
+  void _retryCapabilitiesLater() {
+    if (_capabilitiesRetry?.isActive ?? false) return;
+    _capabilitiesRetry = Timer(googleCapabilitiesRetryDelay, () {
+      if (mounted) ref.invalidate(authCapabilitiesProvider);
+    });
   }
 
   Future<void> _handleEvent(GoogleSignInAuthenticationEvent event) async {
@@ -90,6 +111,12 @@ class _GoogleAuthButtonState extends ConsumerState<GoogleAuthButton> {
   @override
   Widget build(BuildContext context) {
     final capabilities = ref.watch(authCapabilitiesProvider);
+    ref.listen(authCapabilitiesProvider, (_, next) {
+      if (next.hasError && !next.isLoading) _retryCapabilitiesLater();
+    });
+    if (capabilities.hasError && !capabilities.isLoading) {
+      _retryCapabilitiesLater();
+    }
     if (!_service.isConfigured ||
         capabilities.value?['google_mobile_login_available'] != true) {
       return const SizedBox.shrink();

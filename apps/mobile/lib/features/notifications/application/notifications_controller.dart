@@ -47,9 +47,11 @@ class NotificationsController extends AsyncNotifier<NotificationInbox> {
     });
     if (actorId == null) return const NotificationInbox.empty();
 
+    // Poll from the start, so a failed first load recovers on its own instead
+    // of leaving the inbox and badges empty for the rest of the session.
+    _timer = Timer.periodic(notificationsPollInterval, (_) => _poll());
     final initial = await ref.read(notificationRepositoryProvider).inbox();
     if (generation != _generation) return const NotificationInbox.empty();
-    _timer = Timer.periodic(notificationsPollInterval, (_) => _poll());
     return initial;
   }
 

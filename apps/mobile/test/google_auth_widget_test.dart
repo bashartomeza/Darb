@@ -46,6 +46,39 @@ void main() {
       );
     });
   }
+  testWidgets('a failed capability read is retried instead of hiding Google', (
+    tester,
+  ) async {
+    var reads = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          googleSignInServiceProvider.overrideWithValue(_ConfiguredGoogle()),
+          authCapabilitiesProvider.overrideWith((ref) async {
+            reads += 1;
+            if (reads == 1) throw Exception('offline');
+            return {'google_mobile_login_available': true};
+          }),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: GoogleAuthButton(onIdToken: (_) async {}, onError: (_) {}),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('googleSignInButton')), findsNothing);
+
+    await tester.pump(googleCapabilitiesRetryDelay);
+    await tester.pumpAndSettle();
+
+    expect(reads, 2);
+    expect(find.byKey(const ValueKey('googleSignInButton')), findsOneWidget);
+  });
+
   testWidgets('Google callback remains disabled until exchange finishes', (
     tester,
   ) async {

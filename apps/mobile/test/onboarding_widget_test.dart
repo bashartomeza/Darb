@@ -154,6 +154,32 @@ void main() {
     expect(find.byKey(const ValueKey('loginButton')), findsOneWidget);
   });
 
+  testWidgets('a failed sign-in still lets the user check an application', (
+    tester,
+  ) async {
+    await _pumpApp(tester, onboardingEnabled: true);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('emailField')),
+      'fixture@example.invalid',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('passwordField')),
+      'fixture-password',
+    );
+    await tester.tap(find.byKey(const ValueKey('loginButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('loginError')), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('checkApplicationStatusButton')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('loginButton')), findsNothing);
+    expect(find.byTooltip('رجوع'), findsOneWidget);
+  });
+
   testWidgets('consent version change clears all prior acceptance', (
     tester,
   ) async {
