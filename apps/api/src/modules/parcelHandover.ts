@@ -51,7 +51,7 @@ parcelHandoverRouter.post("/parcel-orders/:id/handover/regenerate", requireAuth,
       const result = await issueHandover(tx, order.id);
       await auditEvent(tx, {
         userId: req.user!.id,
-        action: AuditAction.admin_action,
+        action: AuditAction.delivery_handover_code_issued,
         entityType: "MerchantOrder",
         entityId: order.id,
         metadata: { action: "delivery_handover_code_issued" }

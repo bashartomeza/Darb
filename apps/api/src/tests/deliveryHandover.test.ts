@@ -122,6 +122,9 @@ describe("sender handover endpoints", () => {
     const response = await request(createApp()).post("/api/v1/parcel-orders/order_1/handover/regenerate").set(auth("merchant_1")).expect(200);
     expect(response.body.handover.code).toMatch(/^\d{6}$/);
     expect(response.body.handover.attempts_remaining).toBe(5);
+    expect(prismaMock.auditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "delivery_handover_code_issued", entity_id: "order_1" })
+    }));
   });
 
   it("closed orders cannot get a new code", async () => {

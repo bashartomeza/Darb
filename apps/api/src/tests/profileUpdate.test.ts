@@ -68,6 +68,13 @@ describe("PATCH /me", () => {
     expect(response.body.user).toMatchObject({ phone: "+970590000001", contact_phone: "+970591111111" });
   });
 
+  it("refuses a contact phone with control characters inside it", async () => {
+    for (const contact_phone of ["+97059\n1111111", "+970591111\u0000111", "+97059\t1111111", "+970591111111\u007f1"]) {
+      await request(createApp()).patch("/api/v1/me").set(bearer()).send({ contact_phone }).expect(400);
+    }
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+
   it("refuses identity and privilege fields, empty bodies and blank names", async () => {
     for (const body of [{ role: "admin" }, { phone: "+970599999999" }, { email: "x@example.com" }, {}, { name: "   " }]) {
       await request(createApp()).patch("/api/v1/me").set(bearer()).send(body).expect(400);

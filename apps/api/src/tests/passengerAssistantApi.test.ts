@@ -10,6 +10,8 @@ const prismaMock = vi.hoisted(() => ({
   uncertainAiRequest: { create: vi.fn(), deleteMany: vi.fn() }
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
+const consumeAbuseCounter = vi.hoisted(() => vi.fn());
+vi.mock("../lib/abuseCounters.js", () => ({ consumeAbuseCounter }));
 const { createApp: createAppWithDependencies } = await import("../app.js");
 const { ASSISTANT_HISTORY_LIMIT, createPrismaAssistantHistoryStore } = await import(
   "../services/passengerAssistantHistory.js"
@@ -58,6 +60,41 @@ beforeEach(() => {
     };
   });
   prismaMock.authSession.update.mockResolvedValue({});
+  consumeAbuseCounter.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 });
+});
+
+describe("passenger assistant rate limit", () => {
+  it("counts each message against the passenger's own hourly bucket", async () => {
+    const service = { answer: vi.fn().mockResolvedValue({ status: "result", message: "ok", suggestions: [] }) };
+    const app = createApp(appConfig, { passengerAssistantService: service });
+    await request(app).post("/api/v1/passenger/assistant/messages").set(auth("passenger_1", "passenger"))
+      .send({ message: "hello", locale: "en" }).expect(200);
+    await request(app).post("/api/v1/passenger/assistant/messages").set(auth("passenger_2", "passenger"))
+      .send({ message: "hello", locale: "en" }).expect(200);
+    const calls = consumeAbuseCounter.mock.calls.map((call) => call[1]);
+    expect(calls[0]).toMatchObject({ bucketType: "passenger_assistant_message", limit: 60, windowSeconds: 3_600 });
+    expect(calls[0].subjectDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(calls[0].subjectDigest).not.toBe(calls[1].subjectDigest);
+  });
+
+  it("answers 429 with Retry-After and never calls the model once the cap is reached", async () => {
+    consumeAbuseCounter.mockResolvedValue({ allowed: false, retryAfterSeconds: 1_234 });
+    const service = { answer: vi.fn() };
+    const app = createApp(appConfig, { passengerAssistantService: service });
+    const response = await request(app).post("/api/v1/passenger/assistant/messages").set(auth("passenger_1", "passenger"))
+      .send({ message: "hello", locale: "en" });
+    expect(response.status).toBe(429);
+    expect(response.headers["retry-after"]).toBe("1234");
+    expect(response.body).toMatchObject({ error: "assistant_rate_limited", retry_after_seconds: 1_234 });
+    expect(service.answer).not.toHaveBeenCalled();
+  });
+
+  it("does not count a malformed message", async () => {
+    const app = createApp(appConfig, { passengerAssistantService: { answer: vi.fn() } });
+    await request(app).post("/api/v1/passenger/assistant/messages").set(auth("passenger_1", "passenger"))
+      .send({ message: "", locale: "en" }).expect(400);
+    expect(consumeAbuseCounter).not.toHaveBeenCalled();
+  });
 });
 
 describe("passenger assistant API", () => {

@@ -84,7 +84,7 @@ try{
   check(s.orders.find(o=>o.id===far).status==='submitted'&&s.orders.find(o=>o.id===other).status==='submitted','incompatible and cross-owner orders remain eligible');
   check((await batch(a,ids[1])).status===409,'duplicate through secondary order rejected');check(await prisma.auditEvent.count({where:{action:'parcel_batch_created',entity_id:made.body.batch.id}})===1,'single batch audit');
   assert.equal((await cancel(a,ids[1])).status,200);const ended=await inspect('cancel-whole-batch',ids);check(ended.orders.every(o=>o.status==='cancelled')&&ended.parcels.every(p=>p.status==='cancelled')&&ended.members.every(m=>!m.active&&m.active_membership_key===null),'secondary cancellation cancels every member, preserves whole-batch rule');
-  check(await prisma.auditEvent.count({where:{user_id:a,action:'admin_action',entity_type:'MerchantOrder'}})===1,'whole-batch cancellation has exactly one cancellation audit');
+  check(await prisma.auditEvent.count({where:{user_id:a,action:'merchant_order_cancelled',entity_type:'MerchantOrder'}})===1,'whole-batch cancellation has exactly one cancellation audit');
  });
  await scenario('concurrent batching from different starting orders and double clicks',async()=>{
   const a=await actor(),ids=[await order(a,2),await order(a,1)];
@@ -138,7 +138,7 @@ try{
   const retry=await match(a,ids[1]);assert.equal(retry.status,201);check(retry.body.match.parcel_batch_id===s.batches[0].id,'secondary-order retry matches original batch');
   const cancelled=await Promise.all([cancel(a,ids[0]),cancel(a,ids[1])]);check(cancelled.filter(r=>r.status===200).length===1&&cancelled.every(r=>r.status===200||r.status===409),'competing whole-batch cancellations have one winner');
   s=await inspect('offered-batch-cancelled',ids,route);check(s.route.parcel_capacity_available===20&&s.orders.every(o=>o.status==='cancelled')&&s.parcels.every(p=>p.status==='cancelled')&&s.members.every(m=>!m.active)&&s.matches.every(m=>!m.legacy_capacity_held),'one release, all members cancelled, no held offers');
-  check(await prisma.auditEvent.count({where:{user_id:a,action:'admin_action',entity_type:'MerchantOrder'}})===1,'competing cancellations create exactly one cancellation audit');
+  check(await prisma.auditEvent.count({where:{user_id:a,action:'merchant_order_cancelled',entity_type:'MerchantOrder'}})===1,'competing cancellations create exactly one cancellation audit');
   check((await match(a,ids[0])).status===409,'invalidated batch cannot rematch');
  });
  await scenario('driver acceptance wins against secondary-member cancellation',async()=>{

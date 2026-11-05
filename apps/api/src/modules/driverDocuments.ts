@@ -478,7 +478,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
             await storage!.save(tx, { merchantDocumentId: row.id }, { bytes, contentType: mime, sha256: saved.sha256 });
             await auditEvent(tx, {
               userId,
-              action: AuditAction.account_status_changed,
+              action: AuditAction.application_document_uploaded,
               entityType: "User",
               entityId: userId,
               metadata: { action: "merchant_document_uploaded", kind, size_bytes: bytes.length, request_id: req.requestId }
@@ -508,7 +508,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
         await tx.merchantApplicationDocument.delete({ where: { id: document.id } });
         await auditEvent(tx, {
           userId,
-          action: AuditAction.account_status_changed,
+          action: AuditAction.application_document_deleted,
           entityType: "User",
           entityId: userId,
           metadata: { action: "merchant_document_deleted", kind: document.kind, request_id: req.requestId }
@@ -559,7 +559,7 @@ export function createDriverDocumentsRouter(appConfig: AppConfig) {
           }
           await auditEvent(tx, {
             userId,
-            action: AuditAction.account_status_changed,
+            action: AuditAction.application_submitted,
             entityType: "User",
             entityId: userId,
             metadata: { action: "application_submitted", role: user.role, request_id: req.requestId }

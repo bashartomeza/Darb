@@ -7,6 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Isolated from the database and real auth: only the assistant router is mounted.
 vi.mock("../lib/prisma.js", () => ({ prisma: {} }));
+const consumeAbuseCounter = vi.hoisted(() => vi.fn());
+vi.mock("../lib/abuseCounters.js", () => ({ consumeAbuseCounter }));
 vi.mock("../middleware/auth.js", () => ({
   requireAuth: (req: express.Request & { user?: unknown }, _res: express.Response, next: express.NextFunction) => {
     req.user = { id: "passenger_1", role: "passenger", sessionId: "session_passenger_1", securityVersion: 1 };
@@ -144,12 +146,28 @@ describe("POST /passenger/assistant/voice", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    consumeAbuseCounter.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 });
     service.answer.mockResolvedValue({
       status: "clarification",
       message: "من وين بدك تطلع؟",
       suggestions: ["بيت لحم"],
       intent: undefined
     });
+  });
+
+  it("caps voice messages per passenger and answers 429 before any transcription", async () => {
+    consumeAbuseCounter.mockResolvedValue({ allowed: false, retryAfterSeconds: 600 });
+    const analyzeVoice = vi.fn();
+    const response = await request(appWith({ analyzeVoice } as any))
+      .post("/passenger/assistant/voice")
+      .set("content-type", "audio/wav")
+      .send(Buffer.from("RIFF0000WAVEfmt "));
+    expect(response.status).toBe(429);
+    expect(response.headers["retry-after"]).toBe("600");
+    expect(response.body.error).toBe("assistant_rate_limited");
+    expect(consumeAbuseCounter.mock.calls[0][1]).toMatchObject({ bucketType: "passenger_assistant_voice", limit: 20, windowSeconds: 3_600 });
+    expect(analyzeVoice).not.toHaveBeenCalled();
+    expect(service.answer).not.toHaveBeenCalled();
   });
 
   it("audio -> Whisper analysis -> existing assistant, merged with UI directives", async () => {

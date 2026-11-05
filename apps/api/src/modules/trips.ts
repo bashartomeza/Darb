@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { pagedWhere, listPageOrderBy, listPageResult, parseListPage } from "../lib/pagination.js";
 import { auditEvent } from "../lib/audit.js";
 import { DEMO_ROUTE_POINTS } from "../lib/geo.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
@@ -432,17 +433,20 @@ tripsRouter.post("/matches/:id/reject", requireAuth, async (req: AuthenticatedRe
 
 tripsRouter.get("/trips", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
-    const trips = await prisma.trip.findMany({
-      where: tripWhereForUser(req),
+    const page = parseListPage(req.query);
+    const rows = await prisma.trip.findMany({
+      where: pagedWhere(tripWhereForUser(req), page),
       include: {
         driver_route: { include: { route_version: routeSummarySelect } },
         passenger_request: { include: { route_version: routeSummarySelect } },
         merchant_order: { include: { route_version: routeSummarySelect } },
         parcel_batch: true
       },
-      orderBy: { created_at: "desc" }
+      orderBy: listPageOrderBy,
+      take: page.limit + 1
     });
-    res.json({ trips: trips.map(serializeTrip) });
+    const { items: trips, nextCursor } = listPageResult(rows, page);
+    res.json({ trips: trips.map(serializeTrip), next_cursor: nextCursor });
   } catch (error) {
     next(error);
   }

@@ -310,6 +310,11 @@ enum AuditAction {
   canonical_manifest_invalidated
   canonical_manifest_regrouped
   canonical_shared_trip_created
+  merchant_order_cancelled
+  delivery_handover_code_issued
+  application_document_uploaded
+  application_document_deleted
+  application_submitted
 }
 
 enum OnboardingRole {
@@ -1117,6 +1122,8 @@ model PassengerRequest {
 
   @@index([route_version_id, requested_departure_from])
   @@index([selected_driver_route_id])
+  // The legacy dispatch worker's overdue-request scan.
+  @@index([operational_mode, status, preferred_time])
   @@unique([id, route_version_id], map: "passenger_requests_route_ownership_key")
   @@unique([id, operational_mode], map: "passenger_requests_mode_ownership_key")
   @@unique([id, route_version_id, operational_mode], map: "passenger_requests_route_mode_ownership_key")
@@ -1157,6 +1164,8 @@ model MerchantOrder {
   @@unique([id, operational_mode], map: "merchant_orders_mode_ownership_key")
   @@unique([id, route_version_id, operational_mode], map: "merchant_orders_route_mode_ownership_key")
   @@index([route_version_id, requested_departure_from])
+  // The legacy dispatch worker's overdue-order scan.
+  @@index([operational_mode, status, requested_departure_until], map: "merchant_orders_mode_status_departure_until_idx")
   @@map("merchant_orders")
 }
 
@@ -1187,6 +1196,7 @@ model Parcel {
   route_version ServiceRouteVersion? @relation(fields: [route_version_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([route_version_id, destination_stop_id])
+  @@index([batch_id])
   @@map("parcels")
 }
 
