@@ -3,6 +3,7 @@ import { AuditAction, ConsentReleaseStatus } from "../generated/prisma/enums.js"
 import {
   CONSENT_RELEASE_DOCUMENT_COUNT,
   canonicalConsentBundle,
+  defaultConsentMinCharacters,
   consentDigestMatches,
   type ConsentContentInput
 } from "../lib/consentContent.js";
@@ -46,7 +47,10 @@ async function lockAllReleases(tx: Prisma.TransactionClient) {
 }
 
 export class ConsentReleaseService {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly db: PrismaClient,
+    private readonly minContentCharacters: number = defaultConsentMinCharacters()
+  ) {}
 
   findByVersion(version: string, db: Db = this.db) {
     return db.consentRelease.findUnique({ where: { version }, include: releaseInclude });
@@ -86,7 +90,7 @@ export class ConsentReleaseService {
   async create(input: ConsentReleaseDraftInput, actorId: string) {
     let documents;
     try {
-      documents = canonicalConsentBundle(input.documents);
+      documents = canonicalConsentBundle(input.documents, this.minContentCharacters);
     } catch (error) {
       const message = error instanceof Error ? error.message : "consent_release_invalid";
       throw new HttpError(400, message);
@@ -137,7 +141,7 @@ export class ConsentReleaseService {
   async updateDraft(version: string, expectedRevision: number, input: Omit<ConsentReleaseDraftInput, "version">, actorId: string) {
     let documents;
     try {
-      documents = canonicalConsentBundle(input.documents);
+      documents = canonicalConsentBundle(input.documents, this.minContentCharacters);
     } catch (error) {
       const message = error instanceof Error ? error.message : "consent_release_invalid";
       throw new HttpError(400, message);

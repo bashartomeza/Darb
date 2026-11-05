@@ -5,6 +5,13 @@ export const CONSENT_LOCALES = ["ar", "en"] as const;
 export const CONSENT_RELEASE_DOCUMENT_COUNT = CONSENT_DOCUMENT_TYPES.length * CONSENT_LOCALES.length;
 export const CONSENT_CONTENT_MAX_BYTES = 32_000;
 export const CONSENT_CONTENT_MAX_CHARACTERS = 30_000;
+// Real legal text is never this short. Enforced outside local/test/demo so a placeholder such as "1"
+// can never be published as consent content.
+export const CONSENT_CONTENT_MIN_CHARACTERS_LIVE = 200;
+
+export function defaultConsentMinCharacters(appEnv = process.env.APP_ENV) {
+  return appEnv === "production" || appEnv === "staging" ? CONSENT_CONTENT_MIN_CHARACTERS_LIVE : 0;
+}
 
 export type ConsentDocumentTypeValue = (typeof CONSENT_DOCUMENT_TYPES)[number];
 export type ConsentLocaleValue = (typeof CONSENT_LOCALES)[number];
@@ -19,7 +26,7 @@ export function consentIdentity(type: ConsentDocumentTypeValue, locale: ConsentL
   return `${type}:${locale}`;
 }
 
-export function canonicalConsentContent(value: string) {
+export function canonicalConsentContent(value: string, minCharacters = 0) {
   const canonical = value.normalize("NFC").replace(/\r\n?/g, "\n");
   const bytes = Buffer.byteLength(canonical, "utf8");
   if (
@@ -30,6 +37,7 @@ export function canonicalConsentContent(value: string) {
   ) {
     throw new Error("consent_content_invalid");
   }
+  if (canonical.trim().length < minCharacters) throw new Error("consent_content_too_short");
   return canonical;
 }
 
@@ -44,14 +52,14 @@ export function consentDigestMatches(content: string, expected: string) {
   return actual.length === stored.length && timingSafeEqual(actual, stored);
 }
 
-export function canonicalConsentBundle(documents: ConsentContentInput[]) {
+export function canonicalConsentBundle(documents: ConsentContentInput[], minCharacters = 0) {
   if (documents.length !== CONSENT_RELEASE_DOCUMENT_COUNT) throw new Error("consent_release_incomplete");
   const identities = new Set<string>();
   const canonical = documents.map((document) => {
     const identity = consentIdentity(document.type, document.locale);
     if (identities.has(identity)) throw new Error("consent_release_duplicate_document");
     identities.add(identity);
-    const content = canonicalConsentContent(document.content);
+    const content = canonicalConsentContent(document.content, minCharacters);
     return { ...document, content, digest: consentContentDigest(content) };
   });
   for (const type of CONSENT_DOCUMENT_TYPES) {

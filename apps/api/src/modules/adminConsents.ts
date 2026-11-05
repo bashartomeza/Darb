@@ -12,7 +12,7 @@ const documentInput = z.strictObject({
   locale: z.enum(["ar", "en"]),
   content: z.string()
 });
-const draftInput = z.strictObject({
+export const consentReleaseDraftSchema = z.strictObject({
   version,
   intended_effective_at: instant,
   documents: z.array(documentInput).length(6)
@@ -114,7 +114,7 @@ export function createAdminConsentRouter(service = new ConsentReleaseService(pri
 
   router.post("/admin/consent-releases", async (req: AuthenticatedRequest, res, next) => {
     try {
-      const input = draftInput.parse(req.body);
+      const input = consentReleaseDraftSchema.parse(req.body);
       const release = await service.create({
         version: input.version,
         intendedEffectiveAt: input.intended_effective_at,
