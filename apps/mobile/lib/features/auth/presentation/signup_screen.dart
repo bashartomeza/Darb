@@ -7,6 +7,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/validation/password_rule.dart';
+import '../../../core/validation/phone_rule.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../application/auth_controller.dart';
 import 'auth_completion_screen.dart';
@@ -256,12 +257,10 @@ String? _validateEmail(AppLocalizations l10n, String? value) {
 }
 
 /// The phone is an extra contact detail: only its length is checked.
-String? _validatePhone(BuildContext context, String? value) {
-  final length = value?.trim().length ?? 0;
-  return length >= 7 && length <= 32
-      ? null
-      : AppLocalizations.of(context).authEnterPhoneNumber7;
-}
+String? _validatePhone(BuildContext context, String? value) =>
+    isValidMobileNumber(value)
+    ? null
+    : AppLocalizations.of(context).authEnterPhoneNumber7;
 
 String _errorMessage(AppLocalizations l10n, Object error) {
   if (error is! ApiException) return l10n.requestFailed;

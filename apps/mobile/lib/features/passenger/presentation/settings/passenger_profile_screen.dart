@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/validation/phone_rule.dart';
 import '../../../../core/theme/passenger_theme.dart';
 import '../../../../core/widgets/darb_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -66,7 +67,7 @@ class _PassengerProfileScreenState
   String? _phoneError(BuildContext context) {
     final value = _phone.text.trim();
     if (!_submitted || !_phoneEditable || value.isEmpty) return null;
-    return RegExp(r'^\+?[0-9 ()-]{7,32}$').hasMatch(value)
+    return isValidMobileNumber(value)
         ? null
         : AppLocalizations.of(context).profileEnterValidPhoneNumber;
   }

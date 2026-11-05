@@ -28,7 +28,7 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
 2. The owner opens cPanel > Setup Node.js App > darb-app > Environment variables and adds two variables
    (name left, value right, exactly as they are):
    - `DB_PASSWORD` - the password of the MySQL user `aynurzzx_Darb_User`
-   - `SMTP_PASSWORD` - the 16-character Gmail App Password of darbapp9@gmail.com
+   - `SMTP_PASSWORD` - the 16-character password of the cPanel mailbox darb@aynur.ps
    Passenger gives them to the web app; `ops/env.mjs` also reads them from CloudLinux's
    `~/.cl.selector/node-selector.json` for migrations, backups and cron. If that file does not contain
    them on your account, put the two values in `~/darb-app/.env` instead (the scripts read both).

@@ -39,14 +39,14 @@ DB_NAME="aynurzzx_Darb"
 DB_USER="aynurzzx_Darb_User"
 DB_PASSWORD=""   # leave empty: set it in cPanel > Setup Node.js App > Environment variables
 
-# Email (Gmail SMTP with an App Password, from darbapp9@gmail.com)
+# Email: the cPanel mailbox darb@aynur.ps on this host (outbound Gmail SMTP is blocked here)
 EMAIL_DELIVERY="smtp"
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_SECURE="starttls"
-SMTP_USER="darbapp9@gmail.com"
+SMTP_HOST="mail.aynur.ps"
+SMTP_PORT="465"
+SMTP_SECURE="tls"
+SMTP_USER="darb@aynur.ps"
 SMTP_PASSWORD=""   # leave empty: set it in cPanel > Setup Node.js App > Environment variables
-EMAIL_FROM_ADDRESS="darbapp9@gmail.com"
+EMAIL_FROM_ADDRESS="darb@aynur.ps"
 EMAIL_FROM_NAME="Darb"
 OTP_PROVIDER="email"
 

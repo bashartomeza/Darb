@@ -173,7 +173,7 @@
   "onboardingDriverApplicationsAreNotOpen": "طلبات السائقين غير متاحة حالياً. اختر دوراً آخر أو حاول لاحقاً.",
   "onboardingSomeDetailsAreNot": "بعض البيانات غير صحيحة. ارجع وتحقق منها.",
   "authForgotPassword": "نسيت كلمة المرور؟",
-  "authEnterPhoneNumber7": "أدخل رقم هاتفك (من 7 إلى 32 حرفاً).",
+  "authEnterPhoneNumber7": "أدخل رقم جوال صحيح، مثل 0599123456.",
   "emailAlreadyRegistered": "هذا البريد الإلكتروني مسجّل بالفعل. حاول تسجيل الدخول.",
   "googleSignInFailed": "فشل تسجيل الدخول عبر Google. حاول مرة أخرى.",
   "googleSignInUnavailable": "تسجيل الدخول عبر Google غير متاح حالياً.",

@@ -536,7 +536,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get authForgotPassword => 'نسيت كلمة المرور؟';
 
   @override
-  String get authEnterPhoneNumber7 => 'أدخل رقم هاتفك (من 7 إلى 32 حرفاً).';
+  String get authEnterPhoneNumber7 => 'أدخل رقم جوال صحيح، مثل 0599123456.';
 
   @override
   String get emailAlreadyRegistered =>

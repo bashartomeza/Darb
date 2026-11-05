@@ -7,6 +7,7 @@ import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { AuthActionError, checkAuthActionCode, consumeAuthAction, consumeCheckedAuthAction, issueAuthAction, revokeAuthActions } from "../lib/authActionTokens.js";
 import { normalizeEmailForAbuse } from "../lib/contactEmail.js";
 import { newPassword } from "../lib/passwordRule.js";
+import { normalizeContactPhone, PhoneNormalizationError } from "../lib/phone.js";
 import { abuseSubjectDigest, hexDigestMatches, keyedDigest, type VersionedKey } from "../lib/keyedDigest.js";
 import { revokeAllUserSessions } from "../lib/refreshTokens.js";
 import { HttpError } from "../middleware/error.js";
@@ -21,9 +22,17 @@ const locale = z.enum(["ar", "en"]);
 const actionToken = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 const registrationToken = z.string().min(1).max(2048);
 const consentInput = z.strictObject({ id: z.string().min(1).max(191), type: z.enum(["terms", "privacy", "adult_self_attestation"]), content_hash: z.string().regex(/^[a-f0-9]{64}$/) });
-// The phone is an extra contact detail, not an identifier: only its length is checked and it is stored as entered.
-export const contactPhone = z.string().trim().min(7).max(32);
-export const emailStartSchema = z.strictObject({ name: z.string().trim().min(1).max(120), email: canonicalEmail, phone: contactPhone.optional(), password: newPassword, locale });
+// The mobile number is required contact detail, not an identifier: it must be a valid number (local Palestinian
+// format or international) and is stored normalised (E.164). It is not verified and not used to sign in.
+export const contactPhone = z.string().trim().min(7).max(32).transform((value, ctx) => {
+  try { return normalizeContactPhone(value); }
+  catch (error) {
+    if (!(error instanceof PhoneNormalizationError)) throw error;
+    ctx.addIssue({ code: "custom", message: "invalid_phone" });
+    return z.NEVER;
+  }
+});
+export const emailStartSchema = z.strictObject({ name: z.string().trim().min(1).max(120), email: canonicalEmail, phone: contactPhone, password: newPassword, locale });
 const emailCode = z.string().regex(/^\d{6}$/);
 // A registration is proven either by the 6-digit code from the email or by the longer token that
 // verify/confirm hands back; at most one of the two. Neither is accepted only for a registration

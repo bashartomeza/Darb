@@ -163,7 +163,7 @@
   "onboardingDriverApplicationsAreNotOpen": "Driver applications are not open right now. Choose another role or try later.",
   "onboardingSomeDetailsAreNot": "Some details are not valid. Go back and check them.",
   "authForgotPassword": "Forgot password?",
-  "authEnterPhoneNumber7": "Enter your phone number (7–32 characters).",
+  "authEnterPhoneNumber7": "Enter a valid mobile number, for example 0599123456.",
   "emailAlreadyRegistered": "That email is already registered. Try signing in.",
   "googleSignInFailed": "Google sign-in failed. Please try again.",
   "googleSignInUnavailable": "Google sign-in is not available right now.",
