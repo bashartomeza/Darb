@@ -16,7 +16,7 @@ Use an isolated MySQL 8.0.46 database. Enable canonical entry, matching, Trip cr
 
 ## API 36 device matrix
 
-- Arabic opened by default with RTL and the correct `مساري` spelling. English switched to LTR. Shared navigation was capability-gated and remained separate from the individual-offer path.
+- Arabic opened by default with RTL and the correct `درب` spelling. English switched to LTR. Shared navigation was capability-gated and remained separate from the individual-offer path.
 - Passenger-only: the driver saw one request/one seat, zero merchant orders/parcels, and two ordered aggregate stop events; whole-manifest acceptance produced one shared Trip with no lifecycle, map, ETA, tracking, or movement control.
 - Merchant-only: the driver saw zero passenger counts, one order/two parcels, and aggregate parcel stop events; categorical `schedule_conflict` rejection produced one rejected offer/manifest, one released reservation, one rejected attempt, zero Trip, and exactly restored parcel capacity.
 - Mixed: the driver saw one passenger request/two seats plus one merchant order/three parcels, accepted the entire manifest, and received one shared Trip summary. Persistent MySQL state proved one accepted manifest, offer, confirmed reservation, Trip, and snapshot; two member dispatches referenced the same Trip; remaining capacity changed once from three seats/five parcels to one seat/two parcels.
