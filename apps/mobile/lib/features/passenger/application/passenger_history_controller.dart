@@ -89,6 +89,13 @@ class PassengerHistoryController extends AsyncNotifier<PassengerHistoryState> {
     state = await AsyncValue.guard(_load);
   }
 
+  /// Background refresh while My trips is on screen: only a successful read
+  /// replaces the list, so a dropped poll never blanks it.
+  Future<void> poll() async {
+    final next = await _load();
+    state = AsyncData(next);
+  }
+
   Future<PassengerHistoryState> _load() async {
     final requests = await ref.read(passengerRepositoryProvider).listRequests();
     final trips = await ref.read(tripRepositoryProvider).listTrips();

@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../theme/passenger_theme.dart';
 import '../theme/merchant_theme.dart';
 import 'merchant_bottom_nav.dart';
+import '../../features/push/presentation/push_permission_prompt.dart';
 
 /// A bottom-nav destination. The branch it selects is its index in the list, so
 /// the order here must match the order of the shell's branches.
@@ -59,7 +60,10 @@ class RoleShellScaffold extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      PushPermissionPrompt(child: _shell(context));
+
+  Widget _shell(BuildContext context) {
     final passenger = passengerItems;
     if (passenger != null) return _passengerShell(context, passenger);
     if (merchant) return _merchantShell(context);
@@ -231,7 +235,7 @@ class RoleShellScaffold extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        arabic ? 'درب' : 'Darb',
+                        AppLocalizations.of(context).appTitle,
                         style: const TextStyle(
                           color: AppTheme.onSurface,
                           fontSize: 26,
@@ -251,7 +255,7 @@ class RoleShellScaffold extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               Text(
-                arabic ? 'القائمة الرئيسية' : 'MAIN MENU',
+                AppLocalizations.of(context).navMainMenu.toUpperCase(),
                 style: const TextStyle(
                   color: AppTheme.onSurfaceVariant,
                   fontSize: 12,
@@ -321,7 +325,7 @@ class RoleShellScaffold extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            arabic ? 'رحلتك بأمان' : 'Travel with confidence',
+                            AppLocalizations.of(context).navSidebarTitle,
                             style: const TextStyle(
                               color: AppTheme.onSurface,
                               fontWeight: FontWeight.w600,
@@ -330,9 +334,7 @@ class RoleShellScaffold extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            arabic
-                                ? 'تابع رحلاتك وراجع جلسات حسابك.'
-                                : 'Follow your trips and manage your account sessions.',
+                            AppLocalizations.of(context).navSidebarBody,
                             style: const TextStyle(
                               color: AppTheme.onSurfaceVariant,
                               fontSize: 11,

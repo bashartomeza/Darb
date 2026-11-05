@@ -34,3 +34,31 @@ String localizedCorridorPlace(BuildContext context, String label) {
     _ => label,
   };
 }
+
+/// A road travel time such as "25 min" or "1 h 5 min", in the reading
+/// language.
+String formatRouteDuration(AppLocalizations l10n, int totalMinutes) {
+  if (totalMinutes < 60) return l10n.durationMinutesValue(totalMinutes);
+  final hours = totalMinutes ~/ 60;
+  final minutes = totalMinutes % 60;
+  return minutes == 0
+      ? l10n.durationHoursValue(hours)
+      : l10n.durationHoursMinutesValue(hours, minutes);
+}
+
+/// The localized name of a trip status. Unknown values are shown as sent.
+String tripStatusLabel(AppLocalizations l10n, String status) =>
+    switch (status.toLowerCase()) {
+      'created' => l10n.statusCreated,
+      'pending' => l10n.statusPending,
+      'matched' => l10n.statusMatched,
+      'accepted' => l10n.statusAccepted,
+      'pickup_started' => l10n.statusPickupStarted,
+      'picked_up' => l10n.statusPickedUp,
+      'in_transit' => l10n.statusInTransit,
+      'delivered' => l10n.statusDelivered,
+      'completed' => l10n.statusCompleted,
+      'cancelled' => l10n.statusCancelled,
+      'failed' => l10n.statusFailed,
+      _ => status,
+    };

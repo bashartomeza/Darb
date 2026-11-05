@@ -9,64 +9,38 @@ import '../../../core/widgets/darb_page.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
-
-String authText(BuildContext context, String en, String ar) =>
-    Localizations.localeOf(context).languageCode == 'ar' ? ar : en;
+import '../../../l10n/app_localizations.dart';
 
 String authFailure(BuildContext context, Object? error) {
   final code = error is ApiException ? error.message : '';
   return switch (code) {
-    'explicit_link_required' || 'email_taken' => authText(
+    'explicit_link_required' ||
+    'email_taken' => AppLocalizations.of(context).authSignExistingAccountThen,
+    'phone_already_in_use' => AppLocalizations.of(
       context,
-      'Sign in to your existing account, then link Google in account security.',
-      'سجل الدخول إلى حسابك الحالي ثم اربط Google من إعدادات أمان الحساب.',
-    ),
-    'phone_already_in_use' => authText(
+    ).authPhoneBelongsAnotherAccount,
+    'email_verification_required' => AppLocalizations.of(
       context,
-      'This phone belongs to another account. Recover that account or contact support.',
-      'هذا الرقم مرتبط بحساب آخر. استعد ذلك الحساب أو تواصل مع الدعم.',
-    ),
-    'email_verification_required' => authText(
-      context,
-      'Verify your email using the email verification option below.',
-      'تحقق من بريدك باستخدام خيار التحقق أدناه.',
-    ),
-    'auth_action_invalid' || 'phone_verification_invalid' => authText(
-      context,
-      'The proof is incorrect or expired. Request a new code, or restart email registration.',
-      'الإثبات غير صحيح أو منتهي. اطلب رمزاً جديداً أو أعد بدء التسجيل بالبريد.',
-    ),
+    ).authVerifyEmailUsingEmail,
+    'auth_action_invalid' || 'phone_verification_invalid' =>
+      AppLocalizations.of(context).authProofIncorrectExpiredRequest,
     'invalid_password' => passwordRuleHint(context),
-    'consent_version_changed' => authText(
+    'consent_version_changed' => AppLocalizations.of(
       context,
-      'The documents changed. Read and accept the latest versions.',
-      'تغيرت المستندات. اقرأ أحدث الإصدارات ووافق عليها.',
-    ),
-    'reauthentication_required' => authText(
+    ).authDocumentsChangedReadAccept,
+    'reauthentication_required' => AppLocalizations.of(
       context,
-      'Confirm your current password or request a fresh email proof.',
-      'أكد كلمة المرور الحالية أو اطلب إثبات بريد جديداً.',
-    ),
-    'google_identity_conflict' => authText(
+    ).authConfirmCurrentPasswordRequest,
+    'google_identity_conflict' => AppLocalizations.of(
       context,
-      'This Google identity is already linked. Use account recovery or contact support.',
-      'هوية Google مرتبطة بالفعل. استخدم استعادة الحساب أو تواصل مع الدعم.',
-    ),
-    'invalid_phone' => authText(
+    ).authGoogleIdentityAlreadyLinked,
+    'invalid_phone' => AppLocalizations.of(
       context,
-      'Enter a valid international phone number beginning with +.',
-      'أدخل رقم هاتف دولياً صحيحاً يبدأ بعلامة +.',
-    ),
-    'google_signup_unavailable' => authText(
+    ).authEnterValidInternationalPhone,
+    'google_signup_unavailable' => AppLocalizations.of(
       context,
-      'Google passenger registration is not available for this account yet.',
-      'التسجيل كراكب باستخدام Google غير متاح لهذا الحساب بعد.',
-    ),
-    _ => authText(
-      context,
-      'Unable to complete the request. Check your connection and try again.',
-      'تعذر إكمال الطلب. تحقق من الاتصال وحاول مجدداً.',
-    ),
+    ).authGooglePassengerRegistrationNot,
+    _ => AppLocalizations.of(context).authUnableCompleteRequestCheck,
   };
 }
 
@@ -162,7 +136,7 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
     // No emailed code when the API skips verification (local development).
     final needsCode = nextAction == 'verify_email';
     final error = _error ?? state?.error;
-    final title = authText(context, 'Complete registration', 'إكمال التسجيل');
+    final title = AppLocalizations.of(context).authCompleteRegistration;
     return Scaffold(
       key: const ValueKey('registrationCompletionScreen'),
       appBar: AppBar(
@@ -173,18 +147,14 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
       body: DarbFormPage(
         icon: Icons.verified_user_outlined,
         title: title,
-        subtitle: authText(
-          context,
-          'Read and accept all required documents to create your passenger account.',
-          'اقرأ ووافق على المستندات المطلوبة لإنشاء حساب الراكب.',
-        ),
+        subtitle: AppLocalizations.of(context).authReadAcceptAllRequired,
         children: [
           if (!email) ...[
             TextField(
               controller: _name,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                labelText: authText(context, 'Full name', 'الاسم الكامل'),
+                labelText: AppLocalizations.of(context).fullName,
               ),
               onChanged: (_) => setState(() {}),
             ),
@@ -207,21 +177,17 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                     ExpansionTile(
                       shape: const Border(),
                       collapsedShape: const Border(),
-                      title: Text(
-                        authText(
+                      title: Text(switch (document['type']) {
+                        'terms' => AppLocalizations.of(
                           context,
-                          switch (document['type']) {
-                            'terms' => 'Terms of service',
-                            'privacy' => 'Privacy policy',
-                            _ => 'Adult self-attestation',
-                          },
-                          switch (document['type']) {
-                            'terms' => 'شروط الخدمة',
-                            'privacy' => 'سياسة الخصوصية',
-                            _ => 'الإقرار ببلوغ السن القانوني',
-                          },
-                        ),
-                      ),
+                        ).onboardingTermsService,
+                        'privacy' => AppLocalizations.of(
+                          context,
+                        ).onboardingPrivacyPolicy,
+                        _ => AppLocalizations.of(
+                          context,
+                        ).authAdultSelfAttestation,
+                      }),
                       children: [
                         Padding(
                           padding: const EdgeInsets.all(12),
@@ -239,11 +205,7 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                                   : _accepted.remove(document['id']);
                             }),
                       title: Text(
-                        authText(
-                          context,
-                          'I have read and accept this document',
-                          'قرأت هذا المستند وأوافق عليه',
-                        ),
+                        AppLocalizations.of(context).authIHaveReadAccept,
                       ),
                     ),
                   ],
@@ -254,7 +216,7 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
           if (_error != null && _documents == null)
             TextButton(
               onPressed: () => _loadConsents(_locale!),
-              child: Text(authText(context, 'Retry', 'إعادة المحاولة')),
+              child: Text(AppLocalizations.of(context).retry),
             ),
           if (needsCode) ...[
             const SizedBox(height: AppTokens.spaceSmall),
@@ -287,7 +249,7 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                     dimension: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : Text(authText(context, 'Continue', 'متابعة')),
+                : Text(AppLocalizations.of(context).continueAction),
           ),
           TextButton(
             onPressed: _busy
@@ -295,9 +257,7 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
                 : () => ref
                       .read(authControllerProvider.notifier)
                       .cancelRegistration(),
-            child: Text(
-              authText(context, 'Cancel registration', 'إلغاء التسجيل'),
-            ),
+            child: Text(AppLocalizations.of(context).authCancelRegistration),
           ),
         ],
       ),
@@ -321,11 +281,7 @@ class _AuthCompletionScreenState extends ConsumerState<AuthCompletionScreen> {
     onSubmitted: (_) => _busy ? null : _confirm(),
     decoration: InputDecoration(
       prefixIcon: const Icon(Icons.pin_outlined),
-      labelText: authText(
-        context,
-        'Six-digit code from your email',
-        'الرمز المكون من ستة أرقام من بريدك الإلكتروني',
-      ),
+      labelText: AppLocalizations.of(context).authSixDigitCodeFrom,
     ),
   );
 }

@@ -1,4 +1,23 @@
-import type { RouteStopDraft, RouteVersionDraft, ServiceRoute } from "../../api";
+import type { CanonicalStop, RouteStopDraft, RouteVersionDraft, ServiceRoute, StopPage } from "../../api";
+
+/** The API's largest stop page. */
+export const STOP_PAGE_SIZE = 50;
+/** A safety stop for a runaway loop; far above any real catalog. */
+const MAX_STOP_PAGES = 200;
+
+/**
+ * Every stop in the catalog, read page by page, so the stop picker never
+ * silently drops stops beyond the first page.
+ */
+export async function loadAllCanonicalStops(fetchPage: (query: string) => Promise<StopPage>): Promise<CanonicalStop[]> {
+  const stops: CanonicalStop[] = [];
+  for (let page = 1; page <= MAX_STOP_PAGES; page += 1) {
+    const result = await fetchPage(`?page=${page}&limit=${STOP_PAGE_SIZE}`);
+    stops.push(...result.stops);
+    if (result.stops.length === 0 || stops.length >= result.total) break;
+  }
+  return stops;
+}
 
 export type RouteWorkspaceTab = "overview" | "versions" | "stops" | "fares";
 export type RouteStopPermission = keyof Pick<

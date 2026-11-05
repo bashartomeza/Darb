@@ -501,12 +501,25 @@ async function main() {
     request(app).post("/api/v1/onboarding/attempts").set("idempotency-key", key("start-race-b"))
       .send({ role: "driver", phone: concurrentPhone, email: contactEmail(concurrentPhone), region: "PS", locale: "ar" })
   ]);
-  check(concurrentStarts.every((response) => [200, 201].includes(response.status)), "concurrent starts both answer safely");
-  // Known gap: two simultaneous starts with different keys can both stay live (the supersede step is not
-  // atomic). That cannot create two accounts: completion re-checks the phone in a serializable transaction.
+  // The supersede step locks the phone's attempts, and a start never cancels an attempt another request
+  // is still starting: the later request either supersedes a fully started attempt (201) or is told to
+  // retry (409 verification_temporarily_unavailable). It used to cancel the other request's attempt
+  // mid-start, which made that request fail its code dispatch and answer 404.
   check(
-    await prisma.onboardingAttempt.count({ where: { phone_e164: concurrentPhone, status: { in: ["created", "otp_dispatching", "otp_sent", "phone_verified"] } } }) >= 1,
-    "concurrent starts leave a live attempt for the phone"
+    concurrentStarts.some((response) => response.status === 201) &&
+      concurrentStarts.every((response) =>
+        response.status === 201 ||
+        (response.status === 409 && response.body.error === "verification_temporarily_unavailable")),
+    "concurrent starts both answer safely"
+  );
+  const liveRaceAttempts = await prisma.onboardingAttempt.findMany({
+    where: { phone_e164: concurrentPhone, status: { in: ["created", "otp_dispatching", "otp_sent", "phone_verified"] } },
+    select: { id: true }
+  });
+  check(
+    liveRaceAttempts.length === 1 &&
+      concurrentStarts.some((response) => response.status === 201 && response.body.attempt.id === liveRaceAttempts[0].id),
+    "concurrent starts leave exactly one live attempt, owned by a successful start"
   );
 
   const driverPassword = "driver secure pass 2026";

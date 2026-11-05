@@ -388,7 +388,7 @@ function parcelMessage(intent: ParsedIntent, locale: AssistantLocale) {
 }
 
 /** Turns a parsed intent into the reply the app renders. Pure. */
-export function replyForIntent(
+function replyForIntent(
   intent: ParsedIntent,
   ctx: { now: Date; places: AssistantPlace[]; routes: AssistantRoute[]; locale: AssistantLocale },
   options: { providerMessage?: string; degraded?: PassengerAssistantDegradedReason } = {}

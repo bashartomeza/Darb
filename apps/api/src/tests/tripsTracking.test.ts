@@ -651,7 +651,7 @@ describe("trip acceptance, status, and tracking", () => {
         canonical_trip_version: null,
         passenger_request: { passenger_id: "passenger_1" }
       }),
-      orderBy: { created_at: "desc" }
+      orderBy: [{ created_at: "desc" }, { id: "desc" }]
     }));
 
     prismaMock.trip.findMany.mockResolvedValue([tripA, tripB]);

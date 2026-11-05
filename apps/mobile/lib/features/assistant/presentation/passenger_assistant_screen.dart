@@ -898,7 +898,10 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
 
 String _dateTimeLabel(BuildContext context, DateTime value) {
   final material = MaterialLocalizations.of(context);
-  return '${material.formatMediumDate(value)}، ${material.formatTimeOfDay(TimeOfDay.fromDateTime(value))}';
+  return AppLocalizations.of(context).dateTimeValue(
+    material.formatMediumDate(value),
+    material.formatTimeOfDay(TimeOfDay.fromDateTime(value)),
+  );
 }
 
 class _MessageBubble extends StatelessWidget {

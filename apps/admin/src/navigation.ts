@@ -1,7 +1,7 @@
 import type { IconName } from "./ui/Icon";
 import type { TranslationKey } from "./i18n/translations";
 
-/** The ten operational destinations owned by the Admin dashboard. */
+/** The operational destinations owned by the Admin dashboard, in sidebar order. */
 export const MODULE_IDS = [
   "overview",
   "users",
@@ -9,10 +9,13 @@ export const MODULE_IDS = [
   "invitations",
   "trips",
   "routes",
+  "checkpointPositions",
   "deliveries",
   "matchingBatching",
   "incidentsSafety",
+  "communityReports",
   "reports",
+  "appRatings",
   "settings"
 ] as const;
 
@@ -32,14 +35,6 @@ export type NavItem = {
   icon: IconName;
   labelKey: TranslationKey;
   group: NavGroupId;
-  /**
-   * What the module needs in order to show real data:
-   * - "api"  — a production endpoint exists today
-   * - "demo" — existing tools are available only in demo builds
-   * - "flag" — existing tools are gated behind a build flag
-   * - "none" — no backing endpoint yet; renders an honest empty state
-   */
-  backing: "api" | "demo" | "flag" | "none";
 };
 
 export const NAV_GROUPS: Array<{ id: NavGroupId; labelKey: TranslationKey }> = [
@@ -52,29 +47,20 @@ export const NAV_GROUPS: Array<{ id: NavGroupId; labelKey: TranslationKey }> = [
 ];
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: "overview", icon: "dashboard", labelKey: "navOverview", group: "main", backing: "api" },
-  { id: "users", icon: "account_circle", labelKey: "navUsers", group: "people", backing: "api" },
-  { id: "drivers", icon: "verified_user", labelKey: "navDrivers", group: "people", backing: "api" },
-  { id: "invitations", icon: "person_pin_circle", labelKey: "navInvitations", group: "people", backing: "api" },
-  { id: "trips", icon: "local_shipping", labelKey: "navTrips", group: "operations", backing: "api" },
-  { id: "routes", icon: "edit_road", labelKey: "navRoutes", group: "operations", backing: "api" },
-  { id: "deliveries", icon: "inventory_2", labelKey: "navDeliveries", group: "operations", backing: "api" },
-  {
-    id: "matchingBatching",
-    icon: "alt_route",
-    labelKey: "navMatchingBatching",
-    group: "operations",
-    backing: "api"
-  },
-  {
-    id: "incidentsSafety",
-    icon: "emergency",
-    labelKey: "navIncidentsSafety",
-    group: "safety",
-    backing: "api"
-  },
-  { id: "reports", icon: "assessment", labelKey: "navReports", group: "insights", backing: "api" },
-  { id: "settings", icon: "settings", labelKey: "navSettings", group: "system", backing: "api" }
+  { id: "overview", icon: "dashboard", labelKey: "navOverview", group: "main" },
+  { id: "users", icon: "account_circle", labelKey: "navUsers", group: "people" },
+  { id: "drivers", icon: "verified_user", labelKey: "navDrivers", group: "people" },
+  { id: "invitations", icon: "person_pin_circle", labelKey: "navInvitations", group: "people" },
+  { id: "trips", icon: "local_shipping", labelKey: "navTrips", group: "operations" },
+  { id: "routes", icon: "edit_road", labelKey: "navRoutes", group: "operations" },
+  { id: "checkpointPositions", icon: "location_on", labelKey: "navCheckpointPositions", group: "operations" },
+  { id: "deliveries", icon: "inventory_2", labelKey: "navDeliveries", group: "operations" },
+  { id: "matchingBatching", icon: "alt_route", labelKey: "navMatchingBatching", group: "operations" },
+  { id: "incidentsSafety", icon: "emergency", labelKey: "navIncidentsSafety", group: "safety" },
+  { id: "communityReports", icon: "flag", labelKey: "navCommunityReports", group: "safety" },
+  { id: "reports", icon: "assessment", labelKey: "navReports", group: "insights" },
+  { id: "appRatings", icon: "star", labelKey: "navAppRatings", group: "insights" },
+  { id: "settings", icon: "settings", labelKey: "navSettings", group: "system" }
 ];
 
 export type ModuleFlags = { demoEnabled: boolean; routeManagementEnabled: boolean };
@@ -82,14 +68,6 @@ export type ModuleFlags = { demoEnabled: boolean; routeManagementEnabled: boolea
 /** Keep the information architecture stable across environments. */
 export function visibleNavItems(_flags: ModuleFlags): NavItem[] {
   return NAV_ITEMS;
-}
-
-export function isModuleAvailable(id: ModuleId, flags: ModuleFlags): boolean {
-  const item = NAV_ITEMS.find((candidate) => candidate.id === id);
-  if (!item) return false;
-  if (item.backing === "demo") return flags.demoEnabled;
-  if (item.backing === "flag") return flags.routeManagementEnabled;
-  return item.backing === "api";
 }
 
 export function resolveActiveModule(active: AdminRouteId, flags: ModuleFlags): AdminRouteId {
@@ -112,10 +90,13 @@ const HASH_BY_MODULE: Record<AdminRouteId, string> = {
   trips: "#/trips",
   routes: "#/routes",
   routeWorkspace: "#/routes/advanced",
+  checkpointPositions: "#/checkpoint-positions",
   deliveries: "#/deliveries-orders",
   matchingBatching: "#/matching-batching",
   incidentsSafety: "#/incidents-safety",
+  communityReports: "#/community-reports",
   reports: "#/reports",
+  appRatings: "#/app-ratings",
   settings: "#/settings",
   profile: "#/profile"
 };

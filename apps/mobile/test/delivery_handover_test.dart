@@ -43,7 +43,10 @@ Widget _host(Widget child, {Locale locale = const Locale('en')}) {
   return MaterialApp(
     locale: locale,
     supportedLocales: const [Locale('en'), Locale('ar')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      ...GlobalMaterialLocalizations.delegates,
+    ],
     home: Scaffold(body: child),
   );
 }

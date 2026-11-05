@@ -81,6 +81,20 @@ class _DriverDocumentsCardState extends ConsumerState<DriverDocumentsCard> {
       } else {
         setState(() => _error = 'request_failed');
       }
+    } catch (_) {
+      if (mounted) setState(() => _error = 'request_failed');
+    }
+  }
+
+  Future<void> _retryLoad() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await _load();
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -175,6 +189,17 @@ class _DriverDocumentsCardState extends ConsumerState<DriverDocumentsCard> {
           const SizedBox(height: AppTokens.spaceMedium),
           if (list == null && _error == null)
             const Center(child: CircularProgressIndicator())
+          else if (_list == null)
+            // The list itself failed to load: offer another try.
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                key: const ValueKey('driverDocumentsRetry'),
+                onPressed: _busy ? null : _retryLoad,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.retry),
+              ),
+            )
           else ...[
             for (final document in list?.documents ?? const <DriverDocument>[])
               ListTile(

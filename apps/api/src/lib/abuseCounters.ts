@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { auditEvent } from "./audit.js";
+import { isTransactionConflict } from "./transactionConflict.js";
 
 export async function consumeAbuseCounter(
   db: PrismaClient,
@@ -22,6 +23,27 @@ export async function consumeAbuseCounter(
   const windowMs = input.windowSeconds * 1000;
   const windowStart = new Date(Math.floor(nowMs / windowMs) * windowMs);
   const expiresAt = new Date(windowStart.getTime() + windowMs);
+  // Concurrent first hits on the same counter (for example right after the row was deleted) can make
+  // MySQL pick a deadlock victim for the upsert. The transaction is rolled back whole, so retrying it
+  // counts the request exactly once.
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await countOnce(db, input, windowStart, expiresAt, nowMs);
+    } catch (error) {
+      if (!isTransactionConflict(error) || attempt === MAX_CONFLICT_RETRIES) throw error;
+    }
+  }
+}
+
+const MAX_CONFLICT_RETRIES = 3;
+
+async function countOnce(
+  db: PrismaClient,
+  input: { bucketType: string; subjectDigest: string; digestVersion: number; windowSeconds: number; limit: number },
+  windowStart: Date,
+  expiresAt: Date,
+  nowMs: number
+) {
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`
       INSERT INTO abuse_counters

@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { compareRankedRoutes, scoreDriverRoute } from "../lib/routeScoring.js";
+import { toNumber } from "../lib/geo.js";
+import { pagedWhere, listPageOrderBy, listPageResult, parseListPage } from "../lib/pagination.js";
 
 import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
@@ -343,6 +345,8 @@ export function sameServiceRouteWhere(serviceRouteId: string | null): Prisma.Dri
 async function rankDriverRoutes(input: {
   serviceRouteId: string | null;
   passengerRequest?: PassengerDemand | null;
+  /** Pickup point of parcel-only demand (the merchant order's own pickup). */
+  pickupPoint?: { lat: number; lng: number } | null;
   parcelCount: number;
   excludeRouteIds?: ReadonlySet<string>;
 }) {
@@ -377,8 +381,10 @@ async function rankDriverRoutes(input: {
       breakdown: scoreDriverRoute({
         route,
         passengerRequest: input.passengerRequest,
+        pickupPoint: input.pickupPoint,
         parcelCount: input.parcelCount,
-        sameRoute: true
+        sameRoute: true,
+        now
       })
     }))
     .sort(compareRankedRoutes);
@@ -456,6 +462,7 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
   const candidates = await rankDriverRoutes({
     serviceRouteId,
     passengerRequest,
+    pickupPoint: merchantOrder ? { lat: toNumber(merchantOrder.pickup_lat), lng: toNumber(merchantOrder.pickup_lng) } : null,
     parcelCount,
     excludeRouteIds: new Set(rejectedRoutes.map((item) => item.driver_route_id))
   });
@@ -700,13 +707,24 @@ matchingRouter.post("/matches/run", requireAuth, async (req: AuthenticatedReques
 matchingRouter.get("/matches", requireAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const { status } = listMatchesQuerySchema.parse(req.query);
-    const matches = await prisma.match.findMany({
-      where: { ...matchWhereForUser(req), ...(status ? { status } : {}) },
+    const page = parseListPage(req.query);
+    const rows = await prisma.match.findMany({
+      where: pagedWhere<Prisma.MatchWhereInput>({
+        ...matchWhereForUser(req),
+        ...(status ? { status } : {}),
+        // Only legacy matches belong in this list (filtered in the query so pages stay full).
+        operational_mode: "legacy",
+        canonical_match_version: null,
+        route_version_id: null
+      }, page),
       select: matchSummarySelect,
-      orderBy: { created_at: "desc" }
+      orderBy: listPageOrderBy,
+      take: page.limit + 1
     });
+    const { items: matches, nextCursor } = listPageResult(rows, page);
 
     res.json({
+      next_cursor: nextCursor,
       matches: matches
         .filter((match) => {
           const mode = match as MatchSummaryRecord & {

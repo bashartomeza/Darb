@@ -218,6 +218,18 @@ abstract class AppLocalizations {
   /// **'إلى أين تريد الذهاب؟'**
   String get whereToGo;
 
+  /// No description provided for @newRideLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'رحلة جديدة'**
+  String get newRideLabel;
+
+  /// No description provided for @newRideBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدد نقطة الانطلاق والوجهة، لنساعدك في إيجاد الرحلة المناسبة.'**
+  String get newRideBody;
+
   /// No description provided for @selectPickupLocation.
   ///
   /// In ar, this message translates to:
@@ -446,6 +458,630 @@ abstract class AppLocalizations {
   /// **'8 أحرف أو أكثر، تتضمن حرفاً ورقماً'**
   String get passwordRuleHint;
 
+  /// No description provided for @authSignExistingAccountThen.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل الدخول إلى حسابك الحالي ثم اربط Google من إعدادات أمان الحساب.'**
+  String get authSignExistingAccountThen;
+
+  /// No description provided for @authPhoneBelongsAnotherAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الرقم مرتبط بحساب آخر. استعد ذلك الحساب أو تواصل مع الدعم.'**
+  String get authPhoneBelongsAnotherAccount;
+
+  /// No description provided for @authVerifyEmailUsingEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحقق من بريدك باستخدام خيار التحقق أدناه.'**
+  String get authVerifyEmailUsingEmail;
+
+  /// No description provided for @authProofIncorrectExpiredRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإثبات غير صحيح أو منتهي. اطلب رمزاً جديداً أو أعد بدء التسجيل بالبريد.'**
+  String get authProofIncorrectExpiredRequest;
+
+  /// No description provided for @authDocumentsChangedReadAccept.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيرت المستندات. اقرأ أحدث الإصدارات ووافق عليها.'**
+  String get authDocumentsChangedReadAccept;
+
+  /// No description provided for @authConfirmCurrentPasswordRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'أكد كلمة المرور الحالية أو اطلب إثبات بريد جديداً.'**
+  String get authConfirmCurrentPasswordRequest;
+
+  /// No description provided for @authGoogleIdentityAlreadyLinked.
+  ///
+  /// In ar, this message translates to:
+  /// **'هوية Google مرتبطة بالفعل. استخدم استعادة الحساب أو تواصل مع الدعم.'**
+  String get authGoogleIdentityAlreadyLinked;
+
+  /// No description provided for @authEnterValidInternationalPhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رقم هاتف دولياً صحيحاً يبدأ بعلامة +.'**
+  String get authEnterValidInternationalPhone;
+
+  /// No description provided for @authGooglePassengerRegistrationNot.
+  ///
+  /// In ar, this message translates to:
+  /// **'التسجيل كراكب باستخدام Google غير متاح لهذا الحساب بعد.'**
+  String get authGooglePassengerRegistrationNot;
+
+  /// No description provided for @authUnableCompleteRequestCheck.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر إكمال الطلب. تحقق من الاتصال وحاول مجدداً.'**
+  String get authUnableCompleteRequestCheck;
+
+  /// No description provided for @authCompleteRegistration.
+  ///
+  /// In ar, this message translates to:
+  /// **'إكمال التسجيل'**
+  String get authCompleteRegistration;
+
+  /// No description provided for @authReadAcceptAllRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'اقرأ ووافق على المستندات المطلوبة لإنشاء حساب الراكب.'**
+  String get authReadAcceptAllRequired;
+
+  /// No description provided for @authIHaveReadAccept.
+  ///
+  /// In ar, this message translates to:
+  /// **'قرأت هذا المستند وأوافق عليه'**
+  String get authIHaveReadAccept;
+
+  /// No description provided for @authCancelRegistration.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء التسجيل'**
+  String get authCancelRegistration;
+
+  /// No description provided for @authSixDigitCodeFrom.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرمز المكون من ستة أرقام من بريدك الإلكتروني'**
+  String get authSixDigitCodeFrom;
+
+  /// No description provided for @authSetChangePassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعيين أو تغيير كلمة المرور'**
+  String get authSetChangePassword;
+
+  /// No description provided for @authLinkGoogleExplicitly.
+  ///
+  /// In ar, this message translates to:
+  /// **'ربط حساب Google'**
+  String get authLinkGoogleExplicitly;
+
+  /// No description provided for @authVerifyEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحقق من البريد الإلكتروني'**
+  String get authVerifyEmail;
+
+  /// No description provided for @authResetPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة تعيين كلمة المرور'**
+  String get authResetPassword;
+
+  /// No description provided for @authCompletedSignAgainIf.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتمل الطلب. سجل الدخول مجدداً عند الحاجة.'**
+  String get authCompletedSignAgainIf;
+
+  /// No description provided for @authEnterCurrentPasswordIf.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل كلمة المرور الحالية. إذا لم تكن لديك كلمة مرور، اطلب إثباتاً عبر البريد الإلكتروني.'**
+  String get authEnterCurrentPasswordIf;
+
+  /// No description provided for @authCurrentPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور الحالية'**
+  String get authCurrentPassword;
+
+  /// No description provided for @authSendEmailProof.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال إثبات البريد'**
+  String get authSendEmailProof;
+
+  /// No description provided for @authIfEligibleEmailHas.
+  ///
+  /// In ar, this message translates to:
+  /// **'إذا كان الحساب مؤهلاً، أُرسلت رسالة. تحقق من الوارد والبريد غير المرغوب.'**
+  String get authIfEligibleEmailHas;
+
+  /// No description provided for @authNewPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور الجديدة'**
+  String get authNewPassword;
+
+  /// No description provided for @authSelectingGoogleConfirmsLinking.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختيار Google يؤكد ربط تلك الهوية بهذا الحساب المسجل دخوله.'**
+  String get authSelectingGoogleConfirmsLinking;
+
+  /// No description provided for @authClose.
+  ///
+  /// In ar, this message translates to:
+  /// **'إغلاق'**
+  String get authClose;
+
+  /// No description provided for @authConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد'**
+  String get authConfirm;
+
+  /// No description provided for @authLinkGoogleAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'ربط حساب Google'**
+  String get authLinkGoogleAccount;
+
+  /// No description provided for @onboardingSetUpAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعداد حسابك'**
+  String get onboardingSetUpAccount;
+
+  /// No description provided for @onboardingGetStarted.
+  ///
+  /// In ar, this message translates to:
+  /// **'لنبدأ'**
+  String get onboardingGetStarted;
+
+  /// No description provided for @onboardingStep.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخطوة {value} من {stepsLength}'**
+  String onboardingStep(Object value, Object stepsLength);
+
+  /// No description provided for @onboardingBack.
+  ///
+  /// In ar, this message translates to:
+  /// **'رجوع'**
+  String get onboardingBack;
+
+  /// No description provided for @onboardingSubmitApplication.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الطلب'**
+  String get onboardingSubmitApplication;
+
+  /// No description provided for @onboardingChooseOneSetsUp.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر واحداً، وسنجهز لك التجربة المناسبة.'**
+  String get onboardingChooseOneSetsUp;
+
+  /// No description provided for @onboardingPassenger.
+  ///
+  /// In ar, this message translates to:
+  /// **'راكب'**
+  String get onboardingPassenger;
+
+  /// No description provided for @onboardingBookRidesSendParcels.
+  ///
+  /// In ar, this message translates to:
+  /// **'احجز رحلات وأرسل طروداً. جاهز فوراً.'**
+  String get onboardingBookRidesSendParcels;
+
+  /// No description provided for @onboardingDriveDarbRoutesNeeds.
+  ///
+  /// In ar, this message translates to:
+  /// **'قُد على مسارات درب. يتطلب موافقة الإدارة أولاً.'**
+  String get onboardingDriveDarbRoutesNeeds;
+
+  /// No description provided for @onboardingDriverApplicationsAreNot.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات السائقين غير متاحة حالياً.'**
+  String get onboardingDriverApplicationsAreNot;
+
+  /// No description provided for @onboardingSendOrdersCustomersReady.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرسل الطلبات إلى زبائنك. جاهز فوراً.'**
+  String get onboardingSendOrdersCustomersReady;
+
+  /// No description provided for @onboardingAbout.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلوماتك'**
+  String get onboardingAbout;
+
+  /// No description provided for @onboardingFilledNameFromGoogle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أخذنا اسمك من Google، ويمكنك تعديله.'**
+  String get onboardingFilledNameFromGoogle;
+
+  /// No description provided for @onboardingWhereAre.
+  ///
+  /// In ar, this message translates to:
+  /// **'أين أنت؟'**
+  String get onboardingWhereAre;
+
+  /// No description provided for @onboardingCityHelpsUsShow.
+  ///
+  /// In ar, this message translates to:
+  /// **'تساعدنا مدينتك على عرض المسارات القريبة منك.'**
+  String get onboardingCityHelpsUsShow;
+
+  /// No description provided for @onboardingIdentityLicence.
+  ///
+  /// In ar, this message translates to:
+  /// **'الهوية والرخصة'**
+  String get onboardingIdentityLicence;
+
+  /// No description provided for @onboardingAdminChecksTheseAgainst.
+  ///
+  /// In ar, this message translates to:
+  /// **'تطابق الإدارة هذه البيانات مع المستندات التي سترفعها لاحقاً.'**
+  String get onboardingAdminChecksTheseAgainst;
+
+  /// No description provided for @onboardingNationalIdNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم الهوية الوطنية'**
+  String get onboardingNationalIdNumber;
+
+  /// No description provided for @onboardingEnterIdNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رقم هويتك'**
+  String get onboardingEnterIdNumber;
+
+  /// No description provided for @onboardingDrivingLicenceNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم رخصة القيادة'**
+  String get onboardingDrivingLicenceNumber;
+
+  /// No description provided for @onboardingEnterLicenceNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رقم الرخصة'**
+  String get onboardingEnterLicenceNumber;
+
+  /// No description provided for @onboardingLicenceExpiryDate.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ انتهاء الرخصة'**
+  String get onboardingLicenceExpiryDate;
+
+  /// No description provided for @onboardingPickExpiryDate.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر تاريخ الانتهاء'**
+  String get onboardingPickExpiryDate;
+
+  /// No description provided for @onboardingVehicle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مركبتك'**
+  String get onboardingVehicle;
+
+  /// No description provided for @onboardingCarDriveDarb.
+  ///
+  /// In ar, this message translates to:
+  /// **'السيارة التي ستقودها على درب.'**
+  String get onboardingCarDriveDarb;
+
+  /// No description provided for @onboardingMakeModelEG.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشركة والطراز (مثل كيا أوبتيما)'**
+  String get onboardingMakeModelEG;
+
+  /// No description provided for @onboardingEnterMakeModel.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل الشركة والطراز'**
+  String get onboardingEnterMakeModel;
+
+  /// No description provided for @onboardingColour.
+  ///
+  /// In ar, this message translates to:
+  /// **'اللون'**
+  String get onboardingColour;
+
+  /// No description provided for @onboardingEnterColour.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل اللون'**
+  String get onboardingEnterColour;
+
+  /// No description provided for @onboardingPlateNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم اللوحة'**
+  String get onboardingPlateNumber;
+
+  /// No description provided for @onboardingEnterPlate.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل اللوحة'**
+  String get onboardingEnterPlate;
+
+  /// No description provided for @onboardingParcelsCarry.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطرود التي يمكنك حملها'**
+  String get onboardingParcelsCarry;
+
+  /// No description provided for @onboardingSedan.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيدان'**
+  String get onboardingSedan;
+
+  /// No description provided for @onboardingSuv.
+  ///
+  /// In ar, this message translates to:
+  /// **'دفع رباعي'**
+  String get onboardingSuv;
+
+  /// No description provided for @onboardingVan.
+  ///
+  /// In ar, this message translates to:
+  /// **'فان'**
+  String get onboardingVan;
+
+  /// No description provided for @onboardingMinibus.
+  ///
+  /// In ar, this message translates to:
+  /// **'ميني باص'**
+  String get onboardingMinibus;
+
+  /// No description provided for @onboardingStore.
+  ///
+  /// In ar, this message translates to:
+  /// **'متجرك'**
+  String get onboardingStore;
+
+  /// No description provided for @onboardingTellCustomersWhoAre.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرّف زبائنك بمتجرك.'**
+  String get onboardingTellCustomersWhoAre;
+
+  /// No description provided for @onboardingStoreName.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المتجر'**
+  String get onboardingStoreName;
+
+  /// No description provided for @onboardingEnterStoreName.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل اسم المتجر'**
+  String get onboardingEnterStoreName;
+
+  /// No description provided for @onboardingOwnerFullName.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المالك الكامل'**
+  String get onboardingOwnerFullName;
+
+  /// No description provided for @onboardingStoreType.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع المتجر'**
+  String get onboardingStoreType;
+
+  /// No description provided for @onboardingChooseStoreType.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر نوع المتجر'**
+  String get onboardingChooseStoreType;
+
+  /// No description provided for @onboardingGrocery.
+  ///
+  /// In ar, this message translates to:
+  /// **'بقالة'**
+  String get onboardingGrocery;
+
+  /// No description provided for @onboardingRestaurant.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطعم'**
+  String get onboardingRestaurant;
+
+  /// No description provided for @onboardingPharmacy.
+  ///
+  /// In ar, this message translates to:
+  /// **'صيدلية'**
+  String get onboardingPharmacy;
+
+  /// No description provided for @onboardingClothing.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملابس'**
+  String get onboardingClothing;
+
+  /// No description provided for @onboardingElectronics.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلكترونيات'**
+  String get onboardingElectronics;
+
+  /// No description provided for @onboardingBakery.
+  ///
+  /// In ar, this message translates to:
+  /// **'مخبز'**
+  String get onboardingBakery;
+
+  /// No description provided for @onboardingContactLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'التواصل والموقع'**
+  String get onboardingContactLocation;
+
+  /// No description provided for @onboardingHowCustomersDriversReach.
+  ///
+  /// In ar, this message translates to:
+  /// **'كيف يصل إليك الزبائن والسائقون.'**
+  String get onboardingHowCustomersDriversReach;
+
+  /// No description provided for @onboardingWhereDoSell.
+  ///
+  /// In ar, this message translates to:
+  /// **'أين تبيع؟'**
+  String get onboardingWhereDoSell;
+
+  /// No description provided for @onboardingShop.
+  ///
+  /// In ar, this message translates to:
+  /// **'في محل'**
+  String get onboardingShop;
+
+  /// No description provided for @onboardingOnline.
+  ///
+  /// In ar, this message translates to:
+  /// **'عبر الإنترنت'**
+  String get onboardingOnline;
+
+  /// No description provided for @onboardingBoth.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلاهما'**
+  String get onboardingBoth;
+
+  /// No description provided for @onboardingShopAddress.
+  ///
+  /// In ar, this message translates to:
+  /// **'عنوان المحل'**
+  String get onboardingShopAddress;
+
+  /// No description provided for @onboardingEnterShopAddress.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل عنوان المحل'**
+  String get onboardingEnterShopAddress;
+
+  /// No description provided for @onboardingAlmostDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'اقتربت من الانتهاء'**
+  String get onboardingAlmostDone;
+
+  /// No description provided for @onboardingAcceptTermsSendDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'وافق على الشروط لإرسال بياناتك. بعدها ترفع رخصة القيادة ورخصة المركبة والهوية لمراجعة الإدارة.'**
+  String get onboardingAcceptTermsSendDetails;
+
+  /// No description provided for @onboardingReadAcceptTheseCreate.
+  ///
+  /// In ar, this message translates to:
+  /// **'اقرأ هذه المستندات ووافق عليها لإنشاء حسابك.'**
+  String get onboardingReadAcceptTheseCreate;
+
+  /// No description provided for @onboardingIHaveReadAccept.
+  ///
+  /// In ar, this message translates to:
+  /// **'قرأت هذا وأوافق عليه'**
+  String get onboardingIHaveReadAccept;
+
+  /// No description provided for @onboardingTermsService.
+  ///
+  /// In ar, this message translates to:
+  /// **'شروط الخدمة'**
+  String get onboardingTermsService;
+
+  /// No description provided for @onboardingPrivacyPolicy.
+  ///
+  /// In ar, this message translates to:
+  /// **'سياسة الخصوصية'**
+  String get onboardingPrivacyPolicy;
+
+  /// No description provided for @authAdultSelfAttestation.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإقرار ببلوغ السن القانوني'**
+  String get authAdultSelfAttestation;
+
+  /// No description provided for @onboardingIAm18Older.
+  ///
+  /// In ar, this message translates to:
+  /// **'عمري 18 عاماً أو أكثر'**
+  String get onboardingIAm18Older;
+
+  /// No description provided for @onboardingEnterFullName.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل اسمك الكامل'**
+  String get onboardingEnterFullName;
+
+  /// No description provided for @onboardingPhoneEG970599123456.
+  ///
+  /// In ar, this message translates to:
+  /// **'الهاتف، مثل ‎+970599123456'**
+  String get onboardingPhoneEG970599123456;
+
+  /// No description provided for @onboardingUseInternationalFormatStarting.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدم الصيغة الدولية التي تبدأ بـ +'**
+  String get onboardingUseInternationalFormatStarting;
+
+  /// No description provided for @onboardingCity.
+  ///
+  /// In ar, this message translates to:
+  /// **'المدينة'**
+  String get onboardingCity;
+
+  /// No description provided for @onboardingEnterCity.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل مدينتك'**
+  String get onboardingEnterCity;
+
+  /// No description provided for @onboardingDrivingLicenceHasExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'رخصة القيادة منتهية. جددها قبل التقديم.'**
+  String get onboardingDrivingLicenceHasExpired;
+
+  /// No description provided for @onboardingDriverApplicationsAreNotOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات السائقين غير متاحة حالياً. اختر دوراً آخر أو حاول لاحقاً.'**
+  String get onboardingDriverApplicationsAreNotOpen;
+
+  /// No description provided for @onboardingSomeDetailsAreNot.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعض البيانات غير صحيحة. ارجع وتحقق منها.'**
+  String get onboardingSomeDetailsAreNot;
+
+  /// No description provided for @authForgotPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسيت كلمة المرور؟'**
+  String get authForgotPassword;
+
+  /// No description provided for @authEnterPhoneNumber7.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رقم هاتفك (من 7 إلى 32 حرفاً).'**
+  String get authEnterPhoneNumber7;
+
   /// No description provided for @emailAlreadyRegistered.
   ///
   /// In ar, this message translates to:
@@ -668,6 +1304,12 @@ abstract class AppLocalizations {
   /// **'الوقت المفضل'**
   String get preferredTime;
 
+  /// No description provided for @dateTimeValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{date}، {time}'**
+  String dateTimeValue(String date, String time);
+
   /// No description provided for @passengerCount.
   ///
   /// In ar, this message translates to:
@@ -697,6 +1339,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'إلغاء الطلب'**
   String get cancelRequest;
+
+  /// No description provided for @cancelRequestConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد إلغاء هذا الطلب؟'**
+  String get cancelRequestConfirm;
 
   /// No description provided for @requestCancelled.
   ///
@@ -955,6 +1603,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'ملغاة'**
   String get statusCancelled;
+
+  /// No description provided for @statusFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشلت'**
+  String get statusFailed;
 
   /// No description provided for @driverDashboard.
   ///
@@ -1369,6 +2023,192 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'حجم الطرد'**
   String get parcelSize;
+
+  /// No description provided for @handoverReceiverHandoverCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'رمز تسليم المستلم'**
+  String get handoverReceiverHandoverCode;
+
+  /// No description provided for @handoverGiveCodePersonReceiving.
+  ///
+  /// In ar, this message translates to:
+  /// **'أعطِ هذا الرمز للشخص الذي سيستلم الطرد. سيطلبه السائق عند التسليم. لا تشاركه قبل وصول الطرد.'**
+  String get handoverGiveCodePersonReceiving;
+
+  /// No description provided for @handoverCodeWasIssuedSafety.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إصدار رمز. يظهر مرة واحدة فقط لأسباب أمنية؛ اطلب رمزاً جديداً إذا احتجت لقراءته مجدداً.'**
+  String get handoverCodeWasIssuedSafety;
+
+  /// No description provided for @handoverNoHandoverCodeYet.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد رمز تسليم بعد. أنشئ رمزاً لتعطيه للمستلم.'**
+  String get handoverNoHandoverCodeYet;
+
+  /// No description provided for @handoverCreateHandoverCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء رمز التسليم'**
+  String get handoverCreateHandoverCode;
+
+  /// No description provided for @handoverGetNewCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحصول على رمز جديد'**
+  String get handoverGetNewCode;
+
+  /// No description provided for @handoverTooManyWrongAttempts.
+  ///
+  /// In ar, this message translates to:
+  /// **'محاولات خاطئة كثيرة. احصل على رمز جديد لفتح التسليم.'**
+  String get handoverTooManyWrongAttempts;
+
+  /// No description provided for @handoverCodeHasExpiredGet.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية هذا الرمز. احصل على رمز جديد.'**
+  String get handoverCodeHasExpiredGet;
+
+  /// No description provided for @handoverWrongAttemptsLeft.
+  ///
+  /// In ar, this message translates to:
+  /// **'تبقّت {count} محاولات خاطئة'**
+  String handoverWrongAttemptsLeft(Object count);
+
+  /// No description provided for @handoverDeliveredReceiverConfirmedCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التسليم. أكّد المستلم بالرمز.'**
+  String get handoverDeliveredReceiverConfirmedCode;
+
+  /// No description provided for @handoverDeliveredWithoutReceiverDriver.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التسليم دون المستلم: أبلغ السائق أن المستلم غير متوفر.'**
+  String get handoverDeliveredWithoutReceiverDriver;
+
+  /// No description provided for @handoverDeliveryWasClosedBy.
+  ///
+  /// In ar, this message translates to:
+  /// **'أغلق دعم درب عملية التسليم.'**
+  String get handoverDeliveryWasClosedBy;
+
+  /// No description provided for @handoverDriverNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة السائق: {reason}'**
+  String handoverDriverNote(Object reason);
+
+  /// No description provided for @handoverCouldNotLoadHandover.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل رمز التسليم. اسحب للتحديث وحاول مجدداً.'**
+  String get handoverCouldNotLoadHandover;
+
+  /// No description provided for @handoverConfirmHandOver.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد التسليم'**
+  String get handoverConfirmHandOver;
+
+  /// No description provided for @handoverAskReceiverTheir6.
+  ///
+  /// In ar, this message translates to:
+  /// **'اطلب من المستلم رمزه المكوّن من 6 أرقام وأدخله أدناه.'**
+  String get handoverAskReceiverTheir6;
+
+  /// No description provided for @handoverCodeParcelOrder.
+  ///
+  /// In ar, this message translates to:
+  /// **'رمز الطلب {index} من {total}'**
+  String handoverCodeParcelOrder(Object index, Object total);
+
+  /// No description provided for @handoverReceiverCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'رمز المستلم'**
+  String get handoverReceiverCode;
+
+  /// No description provided for @handoverConfirmDelivery.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد التسليم'**
+  String get handoverConfirmDelivery;
+
+  /// No description provided for @handoverReceiverUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستلم غير متوفر'**
+  String get handoverReceiverUnavailable;
+
+  /// No description provided for @handoverOnlyUseIfReceiver.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدم هذا فقط إذا تعذّر على المستلم إعطاء الرمز. يُسجَّل سببك وستراجعه درب.'**
+  String get handoverOnlyUseIfReceiver;
+
+  /// No description provided for @handoverReasonAtLeast10.
+  ///
+  /// In ar, this message translates to:
+  /// **'السبب (10 أحرف على الأقل)'**
+  String get handoverReasonAtLeast10;
+
+  /// No description provided for @handoverCompleteWithoutReceiver.
+  ///
+  /// In ar, this message translates to:
+  /// **'إتمام دون المستلم'**
+  String get handoverCompleteWithoutReceiver;
+
+  /// No description provided for @handoverEnter6DigitCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل الرمز المكوّن من 6 أرقام.'**
+  String get handoverEnter6DigitCode;
+
+  /// No description provided for @handoverDescribeWhyReceiverWas.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشرح سبب عدم توفر المستلم (10 أحرف على الأقل).'**
+  String get handoverDescribeWhyReceiverWas;
+
+  /// No description provided for @handoverThatCodeNotRight.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الرمز غير صحيح. تحقق منه مع المستلم وحاول مجدداً.'**
+  String get handoverThatCodeNotRight;
+
+  /// No description provided for @handoverTooManyWrongCodes.
+  ///
+  /// In ar, this message translates to:
+  /// **'رموز خاطئة كثيرة. على المرسل إصدار رمز جديد، أو استخدم «المستلم غير متوفر».'**
+  String get handoverTooManyWrongCodes;
+
+  /// No description provided for @handoverCodeHasExpiredSender.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية الرمز. على المرسل إصدار رمز جديد، أو استخدم «المستلم غير متوفر».'**
+  String get handoverCodeHasExpiredSender;
+
+  /// No description provided for @handoverNoCodeWasIssued.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يُصدر رمز لهذا الطرد. استخدم «المستلم غير متوفر» أو اطلب من المرسل إنشاء رمز.'**
+  String get handoverNoCodeWasIssued;
+
+  /// No description provided for @handoverReceiverMustConfirmBefore.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب أن يؤكد المستلم قبل إتمام التسليم.'**
+  String get handoverReceiverMustConfirmBefore;
+
+  /// No description provided for @handoverCouldNotConfirmDelivery.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تأكيد التسليم. حاول مجدداً.'**
+  String get handoverCouldNotConfirmDelivery;
 
   /// No description provided for @priority.
   ///
@@ -3194,11 +4034,65 @@ abstract class AppLocalizations {
   /// **'التقارير'**
   String get navReports;
 
+  /// No description provided for @navMyOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلباتي'**
+  String get navMyOrders;
+
+  /// No description provided for @navMainMenu.
+  ///
+  /// In ar, this message translates to:
+  /// **'القائمة الرئيسية'**
+  String get navMainMenu;
+
+  /// No description provided for @navSidebarTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'رحلتك بأمان'**
+  String get navSidebarTitle;
+
+  /// No description provided for @navSidebarBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'تابع رحلاتك وراجع جلسات حسابك.'**
+  String get navSidebarBody;
+
   /// No description provided for @myTrips.
   ///
   /// In ar, this message translates to:
   /// **'رحلاتي'**
   String get myTrips;
+
+  /// No description provided for @myTripsSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل رحلاتك في مكان واحد'**
+  String get myTripsSubtitle;
+
+  /// No description provided for @myTripsCurrentTrip.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرحلة الحالية'**
+  String get myTripsCurrentTrip;
+
+  /// No description provided for @myTripsFilterEmptyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد رحلات هنا'**
+  String get myTripsFilterEmptyTitle;
+
+  /// No description provided for @myTripsFilterEmptyBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد رحلات في هذه الفئة بعد.'**
+  String get myTripsFilterEmptyBody;
+
+  /// No description provided for @myTripsShowAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض كل الرحلات'**
+  String get myTripsShowAll;
 
   /// No description provided for @tripsActiveSection.
   ///
@@ -3379,6 +4273,234 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الإعدادات'**
   String get accountSettings;
+
+  /// No description provided for @settingsMyProfile.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملفي الشخصي'**
+  String get settingsMyProfile;
+
+  /// No description provided for @settingsChangePassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير كلمة المرور'**
+  String get settingsChangePassword;
+
+  /// No description provided for @settingsRateOurApp.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيّم التطبيق'**
+  String get settingsRateOurApp;
+
+  /// No description provided for @settingsHelpSupport.
+  ///
+  /// In ar, this message translates to:
+  /// **'المساعدة والدعم'**
+  String get settingsHelpSupport;
+
+  /// No description provided for @profileEnterValidPhoneNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رقم هاتف صحيحاً.'**
+  String get profileEnterValidPhoneNumber;
+
+  /// No description provided for @profileProfileUpdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديث الملف.'**
+  String get profileProfileUpdated;
+
+  /// No description provided for @profileEdit.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل'**
+  String get profileEdit;
+
+  /// No description provided for @profileNotAdded.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير مضاف'**
+  String get profileNotAdded;
+
+  /// No description provided for @profileName.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم'**
+  String get profileName;
+
+  /// No description provided for @profileVerifiedNumberCannotChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يمكن تغيير رقمك الموثّق من هنا.'**
+  String get profileVerifiedNumberCannotChanged;
+
+  /// No description provided for @profileSaveChanges.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ التغييرات'**
+  String get profileSaveChanges;
+
+  /// No description provided for @changePasswordEnterCurrentPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل كلمة المرور الحالية.'**
+  String get changePasswordEnterCurrentPassword;
+
+  /// No description provided for @changePasswordChoosePasswordDifferentFrom.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر كلمة مرور مختلفة عن الحالية.'**
+  String get changePasswordChoosePasswordDifferentFrom;
+
+  /// No description provided for @changePasswordPasswordsDoNotMatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمتا المرور غير متطابقتين.'**
+  String get changePasswordPasswordsDoNotMatch;
+
+  /// No description provided for @changePasswordPasswordChanged.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تغيير كلمة المرور'**
+  String get changePasswordPasswordChanged;
+
+  /// No description provided for @changePasswordSecurityPleaseSignAgain.
+  ///
+  /// In ar, this message translates to:
+  /// **'لأمانك، سجّل الدخول من جديد بكلمة المرور الجديدة.'**
+  String get changePasswordSecurityPleaseSignAgain;
+
+  /// No description provided for @changePasswordOk.
+  ///
+  /// In ar, this message translates to:
+  /// **'حسناً'**
+  String get changePasswordOk;
+
+  /// No description provided for @changePasswordCurrentPasswordIncorrect.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور الحالية غير صحيحة.'**
+  String get changePasswordCurrentPasswordIncorrect;
+
+  /// No description provided for @changePasswordConfirmNewPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد كلمة المرور الجديدة'**
+  String get changePasswordConfirmNewPassword;
+
+  /// No description provided for @changePasswordUpdatePassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث كلمة المرور'**
+  String get changePasswordUpdatePassword;
+
+  /// No description provided for @changePasswordIDonTHave.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليس لديّ كلمة مرور'**
+  String get changePasswordIDonTHave;
+
+  /// No description provided for @helpHowDoIRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'كيف أطلب رحلة؟'**
+  String get helpHowDoIRequest;
+
+  /// No description provided for @helpOpenHomeTapSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'افتح الرئيسية واضغط على بطاقة البحث، اختر خط الرحلة (مثل الخليل إلى بيت لحم)، واكتب مكان الانطلاق والوصول بالتفصيل ثم أرسل الطلب. سيراه السائقون على هذا الخط.'**
+  String get helpOpenHomeTapSearch;
+
+  /// No description provided for @helpWhereISeeMy.
+  ///
+  /// In ar, this message translates to:
+  /// **'أين أجد رحلاتي؟'**
+  String get helpWhereISeeMy;
+
+  /// No description provided for @helpTripsTabListsRequests.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعرض لك صفحة الرحلات طلباتك وحالتها، من قيد الانتظار حتى الاكتمال.'**
+  String get helpTripsTabListsRequests;
+
+  /// No description provided for @helpHowDoIFollow.
+  ///
+  /// In ar, this message translates to:
+  /// **'كيف أتابع السائق؟'**
+  String get helpHowDoIFollow;
+
+  /// No description provided for @helpOnceDriverAcceptsOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعد قبول السائق افتح صفحة الخرائط لترى المسار وآخر موقع للسائق وتنبيهات الحواجز.'**
+  String get helpOnceDriverAcceptsOpen;
+
+  /// No description provided for @helpIForgotMyPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسيت كلمة المرور'**
+  String get helpIForgotMyPassword;
+
+  /// No description provided for @helpLoginScreenChooseForgot.
+  ///
+  /// In ar, this message translates to:
+  /// **'من شاشة تسجيل الدخول اختر «نسيت كلمة المرور» وسنرسل لك رمزاً عبر البريد لإعادة تعيينها.'**
+  String get helpLoginScreenChooseForgot;
+
+  /// No description provided for @helpAskDarbAssistant.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسأل مساعد درب'**
+  String get helpAskDarbAssistant;
+
+  /// No description provided for @helpCommonQuestions.
+  ///
+  /// In ar, this message translates to:
+  /// **'أسئلة شائعة'**
+  String get helpCommonQuestions;
+
+  /// No description provided for @rateAppThank.
+  ///
+  /// In ar, this message translates to:
+  /// **'شكراً لك!'**
+  String get rateAppThank;
+
+  /// No description provided for @rateAppFeedbackHelpsUsImprove.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظاتك تساعدنا على تحسين درب.'**
+  String get rateAppFeedbackHelpsUsImprove;
+
+  /// No description provided for @rateAppDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم'**
+  String get rateAppDone;
+
+  /// No description provided for @rateAppHowExperienceDarb.
+  ///
+  /// In ar, this message translates to:
+  /// **'كيف تجد تجربتك مع درب؟'**
+  String get rateAppHowExperienceDarb;
+
+  /// No description provided for @rateAppTellUsMoreOptional.
+  ///
+  /// In ar, this message translates to:
+  /// **'أخبرنا المزيد (اختياري)'**
+  String get rateAppTellUsMoreOptional;
+
+  /// No description provided for @rateAppRatingCouldNotSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر إرسال تقييمك. تحقّق من الاتصال وحاول مرة أخرى.'**
+  String get rateAppRatingCouldNotSent;
+
+  /// No description provided for @rateAppSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال'**
+  String get rateAppSubmit;
 
   /// No description provided for @featureNotBackedNotice.
   ///
@@ -4183,6 +5305,174 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الحالة غير معروفة'**
   String get checkpointUnknown;
+
+  /// No description provided for @checkpointStatusOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'سالك'**
+  String get checkpointStatusOpen;
+
+  /// No description provided for @checkpointStatusCongested.
+  ///
+  /// In ar, this message translates to:
+  /// **'أزمة'**
+  String get checkpointStatusCongested;
+
+  /// No description provided for @checkpointStatusClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلق'**
+  String get checkpointStatusClosed;
+
+  /// No description provided for @checkpointStatusUnknown.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير معروف'**
+  String get checkpointStatusUnknown;
+
+  /// No description provided for @checkpointStatusNotAvailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة غير متوفرة'**
+  String get checkpointStatusNotAvailable;
+
+  /// No description provided for @checkpointEnteringStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'دخول: {status}'**
+  String checkpointEnteringStatus(String status);
+
+  /// No description provided for @checkpointLeavingStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'خروج: {status}'**
+  String checkpointLeavingStatus(String status);
+
+  /// No description provided for @checkpointDirectionStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة'**
+  String get checkpointDirectionStatus;
+
+  /// No description provided for @checkpointDirectionEntering.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدخول'**
+  String get checkpointDirectionEntering;
+
+  /// No description provided for @checkpointDirectionLeaving.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخروج'**
+  String get checkpointDirectionLeaving;
+
+  /// No description provided for @checkpointUpdatedAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحديث: {time}'**
+  String checkpointUpdatedAt(String time);
+
+  /// No description provided for @checkpointUpdatedUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحديث: غير متوفر'**
+  String get checkpointUpdatedUnavailable;
+
+  /// No description provided for @checkpointLastUpdatedAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث: {time}'**
+  String checkpointLastUpdatedAt(String time);
+
+  /// No description provided for @checkpointLastUpdatedUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث غير متوفر'**
+  String get checkpointLastUpdatedUnavailable;
+
+  /// No description provided for @checkpointTimeUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير متوفر'**
+  String get checkpointTimeUnavailable;
+
+  /// No description provided for @checkpointCityUnspecified.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدينة غير محددة'**
+  String get checkpointCityUnspecified;
+
+  /// No description provided for @checkpointCityHasCongestion.
+  ///
+  /// In ar, this message translates to:
+  /// **'يوجد أزمة'**
+  String get checkpointCityHasCongestion;
+
+  /// No description provided for @checkpointsOnRoad.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحواجز على الطريق'**
+  String get checkpointsOnRoad;
+
+  /// No description provided for @checkpointsCityCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{checkpoints} حاجز · {cities} مدينة'**
+  String checkpointsCityCount(int checkpoints, int cities);
+
+  /// No description provided for @checkpointsCitiesLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المدن'**
+  String get checkpointsCitiesLabel;
+
+  /// No description provided for @checkpointsCongestedLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'حواجز عليها ازدحام'**
+  String get checkpointsCongestedLabel;
+
+  /// No description provided for @checkpointsViewDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض تفاصيل الحواجز وحالتها'**
+  String get checkpointsViewDetails;
+
+  /// No description provided for @checkpointsDataUpdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث للبيانات: {time}'**
+  String checkpointsDataUpdated(String time);
+
+  /// No description provided for @checkpointsRefreshData.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث بيانات الحواجز'**
+  String get checkpointsRefreshData;
+
+  /// No description provided for @checkpointsByCity.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحواجز حسب المدينة'**
+  String get checkpointsByCity;
+
+  /// No description provided for @checkpointsRefreshing.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري تحديث الحواجز...'**
+  String get checkpointsRefreshing;
+
+  /// No description provided for @checkpointsNoData.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد بيانات حواجز متاحة حالياً.'**
+  String get checkpointsNoData;
+
+  /// No description provided for @checkpointsPickCity.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المدينة لعرض حواجزها'**
+  String get checkpointsPickCity;
 
   /// No description provided for @checkpointLabel.
   ///
@@ -5252,6 +6542,30 @@ abstract class AppLocalizations {
   /// **'سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.'**
   String get notifDriverApproachingBody;
 
+  /// No description provided for @pushSettingTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات الفورية'**
+  String get pushSettingTitle;
+
+  /// No description provided for @pushSettingSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيهات على هذا الهاتف للعروض والرحلات وتحديثات الحساب.'**
+  String get pushSettingSubtitle;
+
+  /// No description provided for @pushSettingBlocked.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات متوقفة لتطبيق درب في إعدادات الهاتف.'**
+  String get pushSettingBlocked;
+
+  /// No description provided for @pushSettingFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر حفظ إعداد الإشعارات. يرجى المحاولة مرة أخرى.'**
+  String get pushSettingFailed;
+
   /// No description provided for @ratingPromptTitle.
   ///
   /// In ar, this message translates to:
@@ -5959,6 +7273,258 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'المسار'**
   String get mapRouteLabel;
+
+  /// No description provided for @mapDriverLocationFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحديث موقع السائق حاليًا.'**
+  String get mapDriverLocationFailed;
+
+  /// No description provided for @mapWaitingDriverLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار آخر موقع مسجل للسائق.'**
+  String get mapWaitingDriverLocation;
+
+  /// No description provided for @mapTimeRemaining.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت المتبقي: {duration}'**
+  String mapTimeRemaining(String duration);
+
+  /// No description provided for @mapRouteFollowsDriver.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار يتحدث حسب موقع السائق الحالي'**
+  String get mapRouteFollowsDriver;
+
+  /// No description provided for @mapRouteIsPlanned.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار المعروض هو المسار المحدد للرحلة'**
+  String get mapRouteIsPlanned;
+
+  /// No description provided for @mapYourTripRoute.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسار رحلتك'**
+  String get mapYourTripRoute;
+
+  /// No description provided for @mapPickupPoint.
+  ///
+  /// In ar, this message translates to:
+  /// **'نقطة الالتقاء'**
+  String get mapPickupPoint;
+
+  /// No description provided for @mapZoomIn.
+  ///
+  /// In ar, this message translates to:
+  /// **'تكبير الخريطة'**
+  String get mapZoomIn;
+
+  /// No description provided for @mapZoomOut.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصغير الخريطة'**
+  String get mapZoomOut;
+
+  /// No description provided for @mapShowRoute.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار المسار'**
+  String get mapShowRoute;
+
+  /// No description provided for @mapMarkerDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'التفاصيل'**
+  String get mapMarkerDetails;
+
+  /// No description provided for @mapMyLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعي'**
+  String get mapMyLocation;
+
+  /// No description provided for @mapYouAreHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت هنا'**
+  String get mapYouAreHere;
+
+  /// No description provided for @mapLocationOutsideArea.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعك خارج منطقة خدمة درب.'**
+  String get mapLocationOutsideArea;
+
+  /// No description provided for @driverArrivalTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'السائق في الطريق إليك'**
+  String get driverArrivalTitle;
+
+  /// No description provided for @driverArrivalSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسافة والوقت المتبقي للوصول إلى نقطة الالتقاء'**
+  String get driverArrivalSubtitle;
+
+  /// No description provided for @driverArrivalDistance.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسافة المتبقية'**
+  String get driverArrivalDistance;
+
+  /// No description provided for @driverArrivalEta.
+  ///
+  /// In ar, this message translates to:
+  /// **'وقت الوصول التقريبي'**
+  String get driverArrivalEta;
+
+  /// No description provided for @driverArrivalDisclaimer.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت تقديري وقد يتغير حسب حركة الطريق.'**
+  String get driverArrivalDisclaimer;
+
+  /// No description provided for @distanceKmValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{km} كم'**
+  String distanceKmValue(String km);
+
+  /// No description provided for @distanceMetersValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{meters} م'**
+  String distanceMetersValue(int meters);
+
+  /// No description provided for @durationMinutesValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{minutes} د'**
+  String durationMinutesValue(int minutes);
+
+  /// No description provided for @durationHoursValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{hours} س'**
+  String durationHoursValue(int hours);
+
+  /// No description provided for @durationHoursMinutesValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{hours} س {minutes} د'**
+  String durationHoursMinutesValue(int hours, int minutes);
+
+  /// No description provided for @tripInProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرحلة جارية'**
+  String get tripInProgress;
+
+  /// No description provided for @tripLiveTracking.
+  ///
+  /// In ar, this message translates to:
+  /// **'تتبع مباشر'**
+  String get tripLiveTracking;
+
+  /// No description provided for @tripWaitingForLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار الموقع'**
+  String get tripWaitingForLocation;
+
+  /// No description provided for @tripStartLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'البداية'**
+  String get tripStartLabel;
+
+  /// No description provided for @tripArrivalLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوصول'**
+  String get tripArrivalLabel;
+
+  /// No description provided for @tripLocationLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع'**
+  String get tripLocationLabel;
+
+  /// No description provided for @tripLive.
+  ///
+  /// In ar, this message translates to:
+  /// **'مباشر'**
+  String get tripLive;
+
+  /// No description provided for @tripEstimatedArrival.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوصول المتوقع'**
+  String get tripEstimatedArrival;
+
+  /// No description provided for @tripDistance.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسافة'**
+  String get tripDistance;
+
+  /// No description provided for @tripRemainingTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت المتبقي'**
+  String get tripRemainingTime;
+
+  /// No description provided for @tripCalculatingRoute.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري حساب المسار...'**
+  String get tripCalculatingRoute;
+
+  /// No description provided for @tripVehicleLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقع المركبة'**
+  String get tripVehicleLocation;
+
+  /// No description provided for @tripRefreshLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث الموقع'**
+  String get tripRefreshLocation;
+
+  /// No description provided for @driverFailDeliveryAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل فشل التوصيل'**
+  String get driverFailDeliveryAction;
+
+  /// No description provided for @driverFailDeliveryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل التوصيل'**
+  String get driverFailDeliveryTitle;
+
+  /// No description provided for @driverFailDeliveryMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد تسجيل الرحلة كتوصيل فاشل؟'**
+  String get driverFailDeliveryMessage;
+
+  /// No description provided for @driverCancelTripTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الرحلة'**
+  String get driverCancelTripTitle;
+
+  /// No description provided for @driverCancelTripMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد من إلغاء الرحلة الحالية؟'**
+  String get driverCancelTripMessage;
 
   /// No description provided for @merchantOrderMapTitle.
   ///

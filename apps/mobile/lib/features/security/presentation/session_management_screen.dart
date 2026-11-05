@@ -11,6 +11,7 @@ import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../auth/domain/auth_models.dart';
 import '../../auth/presentation/credential_actions.dart';
+import '../../push/presentation/push_settings_tile.dart';
 import '../application/session_controller.dart';
 import 'security_actions.dart';
 import 'session_status_banner.dart';
@@ -65,7 +66,12 @@ class _SessionManagementScreenState
                   side: const BorderSide(color: AppTheme.outlineVariant),
                 ),
                 child: const Column(
-                  children: [CredentialSettings(), MapCacheTile()],
+                  children: [
+                    CredentialSettings(),
+                    // Renders nothing on builds without push.
+                    PushSettingsTile(),
+                    MapCacheTile(),
+                  ],
                 ),
               ),
               if (_actionFailed) ...[

@@ -15,7 +15,7 @@ const prismaMock = vi.hoisted(() => ({
   parcelBatchOrder: { findMany: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   merchantOrder: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), count: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
-  trip: { findFirst: vi.fn() },
+  trip: { findFirst: vi.fn(), groupBy: vi.fn(async () => []), findMany: vi.fn(async () => []) },
   driverProfile: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
   driverRoute: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn(), groupBy: vi.fn() },
   driverVerification: { count: vi.fn() },
@@ -136,6 +136,23 @@ describe("manual role APIs", () => {
 
     expect(response.body.request.status).toBe("pending");
     expect(prismaMock.passengerRequest.create).toHaveBeenCalledOnce();
+  });
+
+  it("answers 400, not a database error, for place names longer than their 191-character columns", async () => {
+    prismaMock.passengerRequest.create.mockResolvedValue({ id: "must_not_exist", status: "pending" });
+    prismaMock.merchantOrder.create.mockResolvedValue({ id: "must_not_exist", status: "submitted", parcels: [] });
+    const long = "x".repeat(192);
+    for (const body of [{ ...passengerBody, pickup_label: long }, { ...passengerBody, destination_label: long }]) {
+      await request(createApp()).post("/api/v1/passenger/requests").set(auth("passenger_1")).send(body).expect(400);
+    }
+    for (const body of [
+      { ...merchantBody, pickup_label: long },
+      { ...merchantBody, parcels: [{ ...merchantBody.parcels[0], destination_label: long }] }
+    ]) {
+      await request(createApp()).post("/api/v1/merchant/orders").set(auth("merchant_1")).send(body).expect(400);
+    }
+    expect(prismaMock.passengerRequest.create).not.toHaveBeenCalled();
+    expect(prismaMock.merchantOrder.create).not.toHaveBeenCalled();
   });
 
   it("rejects a past passenger departure before inserting a request", async () => {
@@ -348,6 +365,10 @@ describe("manual role APIs", () => {
     });
     expect(prismaMock.parcel.updateMany).toHaveBeenCalledWith({ where: { batch_id: "batch_1" }, data: { status: "cancelled" } });
     expect(prismaMock.parcelBatchOrder.deleteMany).not.toHaveBeenCalled();
+    // The owner's own cancellation is not an Admin action.
+    expect(prismaMock.auditEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "merchant_order_cancelled", user_id: "merchant_1", entity_id: "order_1" })
+    }));
   });
 
   it("cancellation loses to a concurrent state change", async () => {
@@ -478,6 +499,43 @@ describe("manual role APIs", () => {
     expect(prismaMock.merchantOrder.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ canonical_entry_version: null }) })
     );
+  });
+
+  it("passenger requests and merchant orders page newest first with a generous default", async () => {
+    const row = (id: string, at: string) => ({ id, created_at: new Date(at) });
+    prismaMock.passengerRequest.findMany.mockResolvedValue([]);
+    prismaMock.merchantOrder.findMany.mockResolvedValue([]);
+
+    const passenger = await request(createApp()).get("/api/v1/passenger/requests").set(auth("passenger_1")).expect(200);
+    expect(passenger.body.next_cursor).toBeNull();
+    expect(prismaMock.passengerRequest.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { passenger_id: "passenger_1", canonical_entry_version: null },
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: 201
+    }));
+
+    prismaMock.merchantOrder.findMany.mockResolvedValue([
+      row("order_3", "2026-07-02T10:00:00.000Z"),
+      row("order_2", "2026-07-02T09:00:00.000Z"),
+      row("order_1", "2026-07-02T08:00:00.000Z")
+    ]);
+    const merchant = await request(createApp()).get("/api/v1/merchant/orders?limit=2").set(auth("merchant_1")).expect(200);
+    expect(merchant.body.orders.map((order: { id: string }) => order.id)).toEqual(["order_3", "order_2"]);
+    expect(merchant.body.next_cursor).toEqual(expect.any(String));
+    await request(createApp()).get(`/api/v1/merchant/orders?limit=2&cursor=${merchant.body.next_cursor}`).set(auth("merchant_1")).expect(200);
+    expect(prismaMock.merchantOrder.findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: {
+        AND: [
+          { merchant_id: "merchant_1", canonical_entry_version: null },
+          { OR: [
+            { created_at: { lt: new Date("2026-07-02T09:00:00.000Z") } },
+            { created_at: new Date("2026-07-02T09:00:00.000Z"), id: { lt: "order_2" } }
+          ] }
+        ]
+      },
+      take: 3
+    }));
+    await request(createApp()).get("/api/v1/passenger/requests?limit=abc").set(auth("passenger_1")).expect(400);
   });
 
   it("legacy serializers do not expose canonical routing internals", async () => {

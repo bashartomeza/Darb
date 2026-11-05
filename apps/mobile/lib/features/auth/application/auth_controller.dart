@@ -15,6 +15,7 @@ import '../../onboarding/data/onboarding_storage.dart';
 import '../../onboarding/domain/onboarding_models.dart';
 import '../../passenger/application/passenger_controller.dart';
 import '../../passenger/application/passenger_history_controller.dart';
+import '../../push/application/push_controller.dart';
 import '../../security/data/session_repository.dart';
 import '../../shared_trips/application/shared_trip_controller.dart';
 import '../../trips/application/passenger_trip_controller.dart';
@@ -111,6 +112,12 @@ class AuthController extends AsyncNotifier<AuthState> {
       _authAttempt++;
       _coordinator.setListener(null);
     });
+    return _restore();
+  }
+
+  /// Reads the stored session. Every failure settles in a state the splash or
+  /// login screen can act on, never in an endless "authenticating".
+  Future<AuthState> _restore() async {
     try {
       final bundle = await _coordinator.restoreBundle();
       if (bundle == null) return const AuthState.unauthenticated();
@@ -130,12 +137,7 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   Future<void> retryRestore() async {
     state = const AsyncData(AuthState.authenticating());
-    final bundle = await _coordinator.restoreBundle();
-    if (bundle == null) {
-      state = const AsyncData(AuthState.unauthenticated());
-      return;
-    }
-    state = AsyncData(await _restoreLoadedSession());
+    state = AsyncData(await _restore());
   }
 
   Future<void> login({required String email, required String password}) {
@@ -428,6 +430,7 @@ class AuthController extends AsyncNotifier<AuthState> {
   Future<void> logout() async {
     _authAttempt++;
     _registrationGrant = null;
+    await ref.read(pushRegistrationProvider).unregisterBeforeSignOut();
     try {
       await _sessionRepository.logout();
     } catch (_) {
@@ -440,6 +443,7 @@ class AuthController extends AsyncNotifier<AuthState> {
   Future<void> logoutAll() async {
     _authAttempt++;
     _registrationGrant = null;
+    await ref.read(pushRegistrationProvider).unregisterBeforeSignOut();
     await _sessionRepository.logoutAll();
     await _clearLocalSession();
   }

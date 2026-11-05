@@ -6,6 +6,7 @@ import 'package:darb_mobile/core/config/app_config.dart';
 import 'package:darb_mobile/features/auth/application/auth_controller.dart';
 import 'package:darb_mobile/features/auth/data/auth_repository.dart';
 import 'package:darb_mobile/features/auth/domain/auth_models.dart';
+import 'package:darb_mobile/features/auth/presentation/credential_actions.dart';
 import 'package:darb_mobile/features/auth/presentation/login_screen.dart';
 import 'package:darb_mobile/features/onboarding/application/onboarding_controller.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
@@ -69,6 +70,40 @@ void main() {
       expect(container.read(authControllerProvider).hasError, isFalse);
     },
   );
+
+  testWidgets('an unverified email offers the verification option it names', (
+    tester,
+  ) async {
+    final repo = _FailingRepo(
+      const ApiException(
+        ApiErrorType.forbidden,
+        'email_verification_required',
+        statusCode: 403,
+      ),
+    );
+    await _pumpReal(tester, repo);
+    expect(find.byKey(const ValueKey('loginVerifyEmail')), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('emailField')),
+      'fixture@example.invalid',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('passwordField')),
+      'fixture-password',
+    );
+    await tester.tap(find.byKey(const ValueKey('loginButton')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Verify your email using the email verification option below.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('loginVerifyEmail')));
+    await tester.pumpAndSettle();
+    expect(find.byType(CredentialActionDialog), findsOneWidget);
+    expect(find.text('Verify email'), findsWidgets);
+  });
 
   testWidgets(
     'opening login does not display another screen stale authentication error',

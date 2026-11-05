@@ -7,7 +7,7 @@ const db = vi.hoisted(() => ({
   $transaction: vi.fn(), user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   authActionToken: { create: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
   authSession: { create: vi.fn(), findMany: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
-  refreshToken: { create: vi.fn(), updateMany: vi.fn() }, userConsent: { createMany: vi.fn() }, auditEvent: { create: vi.fn() }, trip: { findMany: vi.fn() }
+  refreshToken: { create: vi.fn(), updateMany: vi.fn() }, pushDevice: { updateMany: vi.fn() }, userConsent: { createMany: vi.fn() }, auditEvent: { create: vi.fn() }, trip: { findMany: vi.fn() }
 }));
 vi.mock("../lib/prisma.js", () => ({ prisma: db }));
 const { createApp } = await import("../app.js");

@@ -124,11 +124,13 @@ describe("role-filtered match inbox", () => {
     expect(prismaMock.match.findMany).not.toHaveBeenCalled();
   });
 
+  const legacyOnly = { operational_mode: "legacy", canonical_match_version: null, route_version_id: null };
+
   it("filters a driver inbox to matches on the driver's routes", async () => {
     await request(createApp()).get("/api/v1/matches").set(auth("driver_1")).expect(200);
 
     expect(prismaMock.match.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { driver_route: { driver: { user_id: "driver_1" } } } })
+      expect.objectContaining({ where: { driver_route: { driver: { user_id: "driver_1" } }, ...legacyOnly } })
     );
   });
 
@@ -136,7 +138,7 @@ describe("role-filtered match inbox", () => {
     await request(createApp()).get("/api/v1/matches").set(auth("passenger_1")).expect(200);
 
     expect(prismaMock.match.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { passenger_request: { passenger_id: "passenger_1" } } })
+      expect.objectContaining({ where: { passenger_request: { passenger_id: "passenger_1" }, ...legacyOnly } })
     );
   });
 
@@ -144,7 +146,7 @@ describe("role-filtered match inbox", () => {
     await request(createApp()).get("/api/v1/matches").set(auth("merchant_1")).expect(200);
 
     expect(prismaMock.match.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { merchant_order: { merchant_id: "merchant_1" } } })
+      expect.objectContaining({ where: { merchant_order: { merchant_id: "merchant_1" }, ...legacyOnly } })
     );
   });
 
@@ -157,9 +159,46 @@ describe("role-filtered match inbox", () => {
     const response = await request(createApp()).get("/api/v1/matches").set(auth("admin_1")).expect(200);
 
     expect(prismaMock.match.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: {}, orderBy: { created_at: "desc" } })
+      expect.objectContaining({ where: legacyOnly, orderBy: [{ created_at: "desc" }, { id: "desc" }], take: 201 })
     );
     expect(response.body.matches.map((match: { id: string }) => match.id)).toEqual(["match_new", "match_old"]);
+    expect(response.body.next_cursor).toBeNull();
+  });
+
+  it("pages with limit and an opaque next_cursor", async () => {
+    prismaMock.match.findMany.mockResolvedValue([
+      matchRecord("match_new", "2026-07-02T10:00:00.000Z"),
+      matchRecord("match_old", "2026-07-02T09:00:00.000Z")
+    ]);
+    const first = await request(createApp()).get("/api/v1/matches?limit=1").set(auth("driver_1")).expect(200);
+    expect(prismaMock.match.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 2 }));
+    expect(first.body.matches.map((match: { id: string }) => match.id)).toEqual(["match_new"]);
+    expect(first.body.next_cursor).toEqual(expect.any(String));
+
+    prismaMock.match.findMany.mockClear();
+    prismaMock.match.findMany.mockResolvedValue([matchRecord("match_old", "2026-07-02T09:00:00.000Z")]);
+    const second = await request(createApp())
+      .get(`/api/v1/matches?limit=1&cursor=${first.body.next_cursor}`)
+      .set(auth("driver_1"))
+      .expect(200);
+    expect(second.body.next_cursor).toBeNull();
+    const cursorAt = new Date("2026-07-02T10:00:00.000Z");
+    expect(prismaMock.match.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        AND: [
+          { driver_route: { driver: { user_id: "driver_1" } }, ...legacyOnly },
+          { OR: [{ created_at: { lt: cursorAt } }, { created_at: cursorAt, id: { lt: "match_new" } }] }
+        ]
+      }
+    }));
+  });
+
+  it("rejects a bad page size or a forged cursor", async () => {
+    await request(createApp()).get("/api/v1/matches?limit=0").set(auth("driver_1")).expect(400);
+    await request(createApp()).get("/api/v1/matches?limit=501").set(auth("driver_1")).expect(400);
+    const forged = await request(createApp()).get("/api/v1/matches?cursor=not-a-cursor").set(auth("driver_1")).expect(400);
+    expect(forged.body.error).toBe("invalid_cursor");
+    expect(prismaMock.match.findMany).not.toHaveBeenCalled();
   });
 
   it("returns scoring and safe related summaries without sensitive fields", async () => {
@@ -200,7 +239,7 @@ describe("role-filtered match inbox", () => {
 
     expect(prismaMock.match.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { driver_route: { driver: { user_id: "driver_1" } }, status: "proposed" }
+        where: { driver_route: { driver: { user_id: "driver_1" } }, status: "proposed", ...legacyOnly }
       })
     );
   });

@@ -6,6 +6,7 @@ import { createApp } from "./app.js";
 import { config } from "./config.js";
 import { startCanonicalDispatchWorker } from "./lib/canonicalDispatchWorker.js";
 import { startLegacyDispatchWorker } from "./lib/legacyDispatchWorker.js";
+import { startPushWorker } from "./lib/pushWorker.js";
 import { createOperationalLogger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
 import { ensurePredefinedRoutes } from "./services/operatingRoutes.js";
@@ -23,6 +24,8 @@ logger.info({ event: "email_delivery_configured", delivery: config.email.deliver
 const app = createApp(config, { logger, emailDelivery });
 const canonicalDispatchWorker = startCanonicalDispatchWorker(config, logger);
 const legacyDispatchWorker = startLegacyDispatchWorker(logger);
+// Off unless PUSH_NOTIFICATIONS_ENABLED=true with Firebase credentials (docs/notifications/push-setup.md).
+const pushWorker = startPushWorker(config, logger);
 let shuttingDown = false;
 
 const server = app.listen(config.port, () => {
@@ -60,6 +63,7 @@ async function shutdown(signal: NodeJS.Signals) {
   shuttingDown = true;
   canonicalDispatchWorker?.stop();
   legacyDispatchWorker.stop();
+  pushWorker?.stop();
   logger.info({ event: "shutdown_started", signal }, "Darb API shutdown started");
 
   const forcedExit = setTimeout(() => {

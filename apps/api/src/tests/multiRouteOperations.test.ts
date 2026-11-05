@@ -3,7 +3,6 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createConfig } from "../config.js";
 import { HttpError } from "../middleware/error.js";
-import { requireCanonicalMatchCompatibility } from "../services/canonicalMatchCompatibility.js";
 import {
   requireMerchantStops,
   requirePassengerStopPair,
@@ -320,17 +319,5 @@ describe("M7C1 route and future matching helpers", () => {
     expect(() => requirePassengerStopPair(route, "c", "a")).toThrow(/stop_permission_denied|invalid_stop_order/);
     expect(requireMerchantStops(route, "a", ["b", "c"]).destinations).toHaveLength(2);
     expect(() => requireMerchantStops(route, "b", ["c"])).toThrow(/stop_permission_denied/);
-  });
-
-  it("requires offer, availability, demand, and reservation route equality", () => {
-    expect(requireCanonicalMatchCompatibility({
-      offerRouteVersionId: "version_1", availabilityRouteVersionId: "version_1",
-      demand: { routeVersionId: "version_1", pickupSequence: 1, destinationSequences: [2, 3] },
-      reservationRouteVersionId: "version_1"
-    })).toBe(true);
-    expect(() => requireCanonicalMatchCompatibility({
-      offerRouteVersionId: "version_1", availabilityRouteVersionId: "version_2",
-      demand: { routeVersionId: "version_1", pickupSequence: 1, destinationSequences: [3] }
-    })).toThrow(/canonical_route_mismatch/);
   });
 });

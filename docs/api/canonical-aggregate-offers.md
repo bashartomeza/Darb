@@ -3,10 +3,10 @@
 These backend-only driver endpoints exist only when the shared-trip gate and its dependencies
 are enabled:
 
-- `GET /api/v1/driver/canonical-shared-match-offers?limit=25`
-- `GET /api/v1/driver/canonical-shared-match-offers/:id`
-- `POST /api/v1/driver/canonical-shared-match-offers/:id/accept`
-- `POST /api/v1/driver/canonical-shared-match-offers/:id/reject`
+- `GET /api/v1/driver/canonical-shared-offers?limit=25`
+- `GET /api/v1/driver/canonical-shared-offers/:id`
+- `POST /api/v1/driver/canonical-shared-offers/:id/accept`
+- `POST /api/v1/driver/canonical-shared-offers/:id/reject`
 
 All endpoints require an authenticated active driver and return only offers owned by that
 driver's verified profile and DriverRoute. The limit is bounded to 1–50. Mutations require an

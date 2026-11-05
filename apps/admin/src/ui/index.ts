@@ -5,7 +5,6 @@ export { KpiCard } from "./KpiCard";
 export { StatusBadge, toneForStatus, type Tone } from "./StatusBadge";
 export { DataTable, type Column } from "./DataTable";
 export { EmptyState, Skeleton } from "./EmptyState";
-export { Timeline, StatusRail, type TimelineStep } from "./Timeline";
 export { MeterBar, BarChart } from "./MeterBar";
 export { AlertItem, Notice } from "./AlertItem";
 export { RouteChip, TechnicalValue } from "./RouteChip";

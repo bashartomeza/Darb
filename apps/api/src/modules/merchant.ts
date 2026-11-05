@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { pagedWhere, listPageOrderBy, listPageResult, parseListPage } from "../lib/pagination.js";
 import { auditEvent } from "../lib/audit.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
@@ -14,7 +15,7 @@ import {
   merchantCreateDigest,
   type RouteOrderInput
 } from "../services/legacyMerchantOrders.js";
-import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
+import { latitudeSchema, legacyLabelSchema, longitudeSchema } from "../lib/validation.js";
 import { BATCHING_LIMITS } from "../lib/batchingConfig.js";
 import { maskPhone, normalizePhoneToE164, PhoneNormalizationError } from "../lib/phone.js";
 import {
@@ -28,7 +29,7 @@ import { orderFareResponse, parcelFareResponse } from "../services/routeFares.js
 
 /** Older app builds: a place name and coordinates per parcel; mapped to the Hebron → Bethlehem route. */
 export const parcelSchema = z.object({
-  destination_label: z.string().min(1),
+  destination_label: legacyLabelSchema,
   destination_lat: latitudeSchema,
   destination_lng: longitudeSchema,
   size: z.enum(["S", "M", "L"]),
@@ -36,7 +37,7 @@ export const parcelSchema = z.object({
 });
 
 export const createOrderSchema = z.object({
-  pickup_label: z.string().min(1),
+  pickup_label: legacyLabelSchema,
   pickup_lat: latitudeSchema,
   pickup_lng: longitudeSchema,
   parcels: z.array(parcelSchema).min(1).max(BATCHING_LIMITS.maxParcelsPerOrder)
@@ -382,7 +383,7 @@ merchantRouter.patch("/merchant/orders/:id/cancel", async (req: AuthenticatedReq
       if (!closed) throw new HttpError(409, "order_cannot_be_cancelled");
       await auditEvent(tx, {
         userId: req.user!.id,
-        action: AuditAction.admin_action,
+        action: AuditAction.merchant_order_cancelled,
         entityType: "MerchantOrder",
         entityId: order.id,
         metadata: {
@@ -410,12 +411,18 @@ merchantRouter.patch("/merchant/orders/:id/cancel", async (req: AuthenticatedReq
 
 merchantRouter.get("/merchant/orders", async (req: AuthenticatedRequest, res, next) => {
   try {
-    const orders = await prisma.merchantOrder.findMany({
-      where: { merchant_id: req.user!.id, canonical_entry_version: null },
+    const page = parseListPage(req.query);
+    const rows = await prisma.merchantOrder.findMany({
+      where: pagedWhere({ merchant_id: req.user!.id, canonical_entry_version: null }, page),
       include: merchantOrderInclude,
-      orderBy: { created_at: "desc" }
+      orderBy: listPageOrderBy,
+      take: page.limit + 1
     });
-    res.json({ orders: orders.map((order) => serializeLegacyMerchantOrder(order as unknown as Record<string, unknown>)) });
+    const { items: orders, nextCursor } = listPageResult(rows, page);
+    res.json({
+      orders: orders.map((order) => serializeLegacyMerchantOrder(order as unknown as Record<string, unknown>)),
+      next_cursor: nextCursor
+    });
   } catch (error) {
     next(error);
   }

@@ -39,6 +39,7 @@ class _FakeRepository implements NotificationRepository {
   int markAllCalls = 0;
   int inboxCalls = 0;
   Object? failMarkRead;
+  Object? inboxError;
 
   @override
   // The real client is never touched by this fake.
@@ -47,6 +48,8 @@ class _FakeRepository implements NotificationRepository {
   @override
   Future<NotificationInbox> inbox({int limit = 50}) async {
     inboxCalls += 1;
+    final error = inboxError;
+    if (error != null) throw error;
     return NotificationInbox(
       items: List.of(items),
       unreadCount: items.where((item) => !item.isRead).length,
@@ -233,6 +236,34 @@ void main() {
           .markRead(inbox.items.single);
 
       expect(container.read(unreadNotificationCountProvider), 1);
+    });
+
+    testWidgets('a failed first load keeps polling and recovers', (
+      tester,
+    ) async {
+      final repo = _FakeRepository([_note('a', 'match_offered')])
+        ..inboxError = Exception('offline');
+      // Riverpod's own retry is off, so only the inbox poll can recover.
+      final container = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [
+          authControllerProvider.overrideWith(() => _FakeAuth('user_1')),
+          notificationRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      final sub = container.listen(unreadNotificationCountProvider, (_, _) {});
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(container.read(notificationsControllerProvider).hasError, isTrue);
+      expect(container.read(unreadNotificationCountProvider), 0);
+
+      repo.inboxError = null;
+      await tester.pump(notificationsPollInterval);
+      await tester.pump();
+
+      expect(container.read(unreadNotificationCountProvider), 1);
+      sub.close();
+      container.dispose();
     });
 
     test('signed-out users get an empty inbox without any request', () async {

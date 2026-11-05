@@ -46,6 +46,7 @@ import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/onboarding/presentation/onboarding_flow_screen.dart';
 import '../../features/onboarding/presentation/pending_status_recovery_screen.dart';
 import '../../features/passenger/presentation/create_request_screen.dart';
+import '../../features/push/application/push_tap_target.dart';
 import '../../features/passenger/presentation/passenger_home_screen.dart';
 import '../../features/passenger/presentation/passenger_map_alerts_screen.dart';
 import '../../features/passenger/presentation/passenger_trips_screen.dart';
@@ -214,6 +215,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: driverRenewalPath,
         builder: (context, state) => const DriverRenewalScreen(),
+      ),
+      // The driver shell has no inbox tab; a tapped push opens it full screen.
+      GoRoute(
+        path: driverNotificationsPath,
+        builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         path: '/driver/trip/:id',
@@ -600,7 +606,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return path == '/splash' ? null : '/splash';
       }
       if (auth.hasError) {
-        return (path == '/login' || path == '/register' || path == '/signup')
+        // A failed sign-in still lets the user check an application status.
+        return (path == '/login' ||
+                path == '/register' ||
+                path == '/signup' ||
+                path.startsWith('/onboarding'))
             ? null
             : '/login';
       }

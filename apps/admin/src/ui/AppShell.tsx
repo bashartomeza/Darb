@@ -149,7 +149,6 @@ export function TopBar({
   onSearch,
   searchPlaceholder,
   searchLabel,
-  helpLabel,
   notificationsLabel,
   notificationsTitle,
   notificationsDescription,
@@ -161,7 +160,6 @@ export function TopBar({
   onSearch: (value: string) => void;
   searchPlaceholder: string;
   searchLabel: string;
-  helpLabel: string;
   notificationsLabel: string;
   notificationsTitle: string;
   notificationsDescription: string;
@@ -185,7 +183,6 @@ export function TopBar({
       </div>
 
       <div className="topbar__end">
-        <IconButton icon="help" label={helpLabel} />
         <NotificationControl
           label={notificationsLabel}
           title={notificationsTitle}

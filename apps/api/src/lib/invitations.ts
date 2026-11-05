@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import type { OnboardingRole } from "../generated/prisma/enums.js";
-import { invitationCodeDigest, keyedDigestMatches, phoneDigest, type VersionedKey } from "./keyedDigest.js";
+import { invitationCodeDigest, phoneDigest, type VersionedKey } from "./keyedDigest.js";
 import { normalizePhoneToE164, phoneLast4 } from "./phone.js";
 import { AuditAction } from "../generated/prisma/enums.js";
 import { auditEvent } from "./audit.js";
@@ -147,23 +147,4 @@ export async function revokeInvitation(
     if (updated.count !== 1) return { kind: "race_lost" as const };
     return { kind: "revoked" as const, invitation: await tx.invitation.findUniqueOrThrow({ where: { id: current.id } }) };
   });
-}
-
-export async function findUsableInvitationByCode(
-  db: PrismaClient,
-  input: { code: string; key: VersionedKey; phoneE164?: string; phoneKey?: VersionedKey; now?: Date }
-) {
-  const normalized = normalizeInvitationCode(input.code);
-  const invitation = await db.invitation.findUnique({
-    where: { code_digest: invitationCodeDigest(normalized, input.key) }
-  });
-  const now = input.now ?? new Date();
-  if (!invitation || invitation.code_key_version !== input.key.version || invitation.revoked_at || invitation.expires_at <= now || invitation.used_count >= invitation.max_uses) {
-    return null;
-  }
-  if (invitation.intended_phone_digest) {
-    if (!input.phoneE164 || !input.phoneKey || invitation.phone_digest_version !== input.phoneKey.version) return null;
-    if (!keyedDigestMatches(invitation.intended_phone_digest, "darb:phone", input.phoneE164, input.phoneKey)) return null;
-  }
-  return invitation;
 }
