@@ -462,14 +462,16 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                                 ? TextDirection.rtl
                                 : TextDirection.ltr,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.circle,
                                 size: 7,
-                                color: _success,
+                                color: data.hasLiveLocation
+                                    ? _success
+                                    : _orange,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                data.location != null
+                                data.hasLiveLocation
                                     ? (isArabic
                                           ? 'تتبع مباشر'
                                           : 'Live tracking')
@@ -477,7 +479,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                                           ? 'بانتظار الموقع'
                                           : 'Waiting for location'),
                                 style: TextStyle(
-                                  color: data.location != null
+                                  color: data.hasLiveLocation
                                       ? _success
                                       : _orange,
                                   fontSize: 10,
@@ -961,7 +963,8 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
               ],
             ),
           ),
-          if (location != null)
+          // Only a recent point is live; an old one is the last known place.
+          if (data.hasLiveLocation)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
               decoration: BoxDecoration(

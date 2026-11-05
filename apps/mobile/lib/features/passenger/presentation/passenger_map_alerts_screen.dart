@@ -16,6 +16,7 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_card.dart';
 import '../../../core/widgets/darb_map.dart';
 import '../../../core/widgets/darb_section.dart';
+import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../community_reports/application/community_reports_controller.dart';
 import '../../community_reports/presentation/community_reports_section.dart';
@@ -41,27 +42,40 @@ class PassengerMapAlertsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final view = ref.watch(passengerMapViewProvider);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
-      appBar: _buildAppBar(context, l10n),
-      body: SafeArea(
-        child: view.when(
-          // A dependency refresh (e.g. the 5-second trip poll) keeps the map
-          // on screen instead of rebuilding it empty.
-          skipLoadingOnReload: true,
-          loading: () => const _MapBody(
-            view: PassengerMapView(
-              mapsAvailable: true,
-              checkpointsAvailable: true,
+    return ForegroundRefresh(
+      // The 5-second trip poll: the driver's latest point while the tab is
+      // shown, and a trip that starts or ends meanwhile.
+      refresh: () async {
+        ref.invalidate(passengerActiveTripsProvider);
+        final tripId = ref.read(passengerMapViewProvider).value?.tripId;
+        if (tripId != null) {
+          await ref
+              .read(passengerTripControllerProvider(tripId).notifier)
+              .refresh();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFFFFF),
+        appBar: _buildAppBar(context, l10n),
+        body: SafeArea(
+          child: view.when(
+            // A dependency refresh (e.g. the 5-second trip poll) keeps the map
+            // on screen instead of rebuilding it empty.
+            skipLoadingOnReload: true,
+            loading: () => const _MapBody(
+              view: PassengerMapView(
+                mapsAvailable: true,
+                checkpointsAvailable: true,
+              ),
             ),
+            error: (_, _) => ErrorStateView(
+              title: l10n.mapLoadFailed,
+              message: l10n.mapLoadFailedBody,
+              retryLabel: l10n.retry,
+              onRetry: () => ref.invalidate(passengerMapViewProvider),
+            ),
+            data: (data) => _MapBody(view: data),
           ),
-          error: (_, _) => ErrorStateView(
-            title: l10n.mapLoadFailed,
-            message: l10n.mapLoadFailedBody,
-            retryLabel: l10n.retry,
-            onRetry: () => ref.invalidate(passengerMapViewProvider),
-          ),
-          data: (data) => _MapBody(view: data),
         ),
       ),
     );
@@ -138,7 +152,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
     // Accepted trip / driver location.
     // ----------------------------------------------------------------------
 
-    final tripId = widget.view.assignment?.trip?.id;
+    final tripId = widget.view.tripId;
 
     final tripState = tripId == null
         ? null
@@ -186,6 +200,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
 
     return RefreshIndicator(
       onRefresh: () async {
+        ref.invalidate(passengerActiveTripsProvider);
         ref.invalidate(passengerMapViewProvider);
 
         await Future.wait([
@@ -439,17 +454,22 @@ class _MapBodyState extends ConsumerState<_MapBody> {
     required bool arabic,
     required String Function(CanonicalStop) stopName,
   }) {
-    final destination = route?.destinationStop?.position;
+    final destination = widget.view.destination;
+    final tripOrigin = widget.view.tripOrigin;
+    final normalTrip = widget.view.activeTrip;
     // With a vehicle position: the road from it to the destination. Otherwise
-    // the selected route itself, through its own stops.
+    // the selected route itself, through its own stops, or a normal trip's
+    // two ends.
     final road = driverLocation != null && destination != null
         ? watchRoadRoute(ref, [
             GeoPoint(driverLocation.lat, driverLocation.lng),
             destination,
           ])
-        : route == null
-        ? null
-        : watchCanonicalRoute(ref, route);
+        : route != null
+        ? watchCanonicalRoute(ref, route)
+        : tripOrigin != null && destination != null
+        ? watchRoadRoute(ref, [tripOrigin, destination])
+        : null;
     final here = position.value;
 
     return _ModernCard(
@@ -505,7 +525,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 DarbMap(
-                  emptyLabel: route == null
+                  emptyLabel: route == null && normalTrip == null
                       ? l10n.mapSelectRoute
                       : l10n.noLocationYet,
                   attributionLabel: l10n.mapAttribution,
@@ -522,6 +542,36 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                       for (final stop in route.stops)
                         if (stop.position != null)
                           _stopMarker(l10n, stop, stopName(stop), route),
+
+                    // A normal trip has no stops of its own: its two ends.
+                    if (route == null && normalTrip != null) ...[
+                      if (tripOrigin != null)
+                        DarbMapMarker(
+                          position: tripOrigin,
+                          icon: Icons.trip_origin_rounded,
+                          color: SemanticColors.parcel,
+                          label: l10n.mapOriginLabel(
+                            localizedCorridorPlace(
+                              context,
+                              normalTrip.originDisplayLabel,
+                            ),
+                          ),
+                          size: 34,
+                        ),
+                      if (destination != null)
+                        DarbMapMarker(
+                          position: destination,
+                          icon: Icons.flag_rounded,
+                          color: SemanticColors.completedRoute,
+                          label: l10n.mapDestinationLabel(
+                            localizedCorridorPlace(
+                              context,
+                              normalTrip.destinationDisplayLabel,
+                            ),
+                          ),
+                          size: 34,
+                        ),
+                    ],
 
                     if (here != null)
                       DarbMapMarker(
@@ -543,7 +593,7 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                         color: _orange,
                         type: DarbMapMarkerType.driver,
                         label:
-                            '${l10n.latestLocation} — '
+                            '${driverLocation.isStaleAt(DateTime.now()) ? l10n.locationIsStale : l10n.latestLocation} — '
                             '${l10n.recordedTime}: '
                             '${driverLocation.recordedAt}',
                         size: 50,

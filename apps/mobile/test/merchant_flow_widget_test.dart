@@ -584,6 +584,21 @@ void main() {
       find.byKey(const ValueKey('tripAction-pickup_started')),
       findsNothing,
     );
+    // Progress follows the in-transit status (4 of 6 steps), not the
+    // location feed's sequence number.
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.byKey(const ValueKey('merchantRouteProgress')),
+          )
+          .value,
+      closeTo(4 / 6, 1e-9),
+    );
+    // The fixture's point is months old: shown as stale, not as live.
+    final l10n = AppLocalizations.of(
+      tester.element(find.byKey(const ValueKey('merchantTripStatus'))),
+    );
+    expect(find.textContaining(l10n.locationIsStale), findsOneWidget);
     // No driver phone in the trip, so nothing to call.
     expect(find.byKey(const ValueKey('driverCallCard')), findsNothing);
     expect(find.byKey(const ValueKey('callDriverButton')), findsNothing);

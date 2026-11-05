@@ -4040,6 +4040,84 @@ abstract class AppLocalizations {
   /// **'تفعيل الموقع'**
   String get locationEnable;
 
+  /// No description provided for @locationSharingConsentTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة موقعك في هذه الرحلة؟'**
+  String get locationSharingConsentTitle;
+
+  /// No description provided for @locationSharingConsentBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'أثناء فتح شاشة الرحلة، يرسل درب موقعك إلى الركاب والمرسلين في هذه الرحلة ليعرفوا مكانك وموعد وصولك. تتوقف المشاركة عند انتهاء الرحلة أو مغادرة هذه الشاشة أو انتقال التطبيق إلى الخلفية.'**
+  String get locationSharingConsentBody;
+
+  /// No description provided for @locationSharingAllow.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة موقعي'**
+  String get locationSharingAllow;
+
+  /// No description provided for @locationSharingNotNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليس الآن'**
+  String get locationSharingNotNow;
+
+  /// No description provided for @locationSharingActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعك مُشارك مع هذه الرحلة ما دامت هذه الشاشة مفتوحة.'**
+  String get locationSharingActive;
+
+  /// No description provided for @locationSharingDeclined.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعك غير مُشارك، لذلك لا يرى الركاب مكانك.'**
+  String get locationSharingDeclined;
+
+  /// No description provided for @locationSharingDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يُسمح بالوصول إلى الموقع، لذلك لا يرى الركاب مكانك.'**
+  String get locationSharingDenied;
+
+  /// No description provided for @locationSharingPermanentlyDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوصول إلى الموقع محظور لتطبيق درب. اسمح به من إعدادات الهاتف ليرى الركاب مكانك.'**
+  String get locationSharingPermanentlyDenied;
+
+  /// No description provided for @locationSharingServiceDisabled.
+  ///
+  /// In ar, this message translates to:
+  /// **'خدمات الموقع متوقفة على هذا الهاتف. شغّلها لمشاركة موقعك.'**
+  String get locationSharingServiceDisabled;
+
+  /// No description provided for @locationSharingUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعك غير متاح الآن. يواصل درب المحاولة ما دامت هذه الشاشة مفتوحة.'**
+  String get locationSharingUnavailable;
+
+  /// No description provided for @locationSharingTurnOn.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة الموقع'**
+  String get locationSharingTurnOn;
+
+  /// No description provided for @locationSharingOpenSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح الإعدادات'**
+  String get locationSharingOpenSettings;
+
+  /// No description provided for @liveLocationBadge.
+  ///
+  /// In ar, this message translates to:
+  /// **'مباشر'**
+  String get liveLocationBadge;
+
   /// No description provided for @checkpoints.
   ///
   /// In ar, this message translates to:
@@ -5137,6 +5215,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.'**
   String get notifDriverApproachingBody;
+
+  /// No description provided for @notifDriverOnTheWayBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'انطلق سائقك إلى نقطة الانطلاق. يرجى الاستعداد.'**
+  String get notifDriverOnTheWayBody;
 
   /// No description provided for @ratingPromptTitle.
   ///

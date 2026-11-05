@@ -6,6 +6,7 @@ import '../../canonical_routes/application/canonical_route_controller.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../trips/application/passenger_trip_controller.dart';
 import '../../trips/data/trip_models.dart';
+import '../../trips/data/trip_repository.dart';
 
 /// What the passenger map has to draw, resolved from the passenger's own data.
 ///
@@ -19,6 +20,7 @@ class PassengerMapView {
     this.pickup,
     this.dropoff,
     this.assignment,
+    this.activeTrip,
     this.location,
   });
 
@@ -41,6 +43,10 @@ class PassengerMapView {
   /// Present once a driver route is serving the request.
   final CanonicalAssignment? assignment;
 
+  /// The passenger's running normal (route or legacy) trip, when no canonical
+  /// assignment is serving them.
+  final PassengerTrip? activeTrip;
+
   /// Latest known location of the driver/trip.
   ///
   /// This is optional because the location API may be unavailable
@@ -50,7 +56,22 @@ class PassengerMapView {
   /// The actual trip ID serving this passenger.
   ///
   /// This is used to load the driver's latest location.
-  String? get tripId => assignment?.trip?.id;
+  String? get tripId => assignment?.trip?.id ?? activeTrip?.id;
+
+  /// Where the passenger is heading: the canonical route's last stop, else
+  /// the normal trip's destination.
+  GeoPoint? get destination =>
+      route?.destinationStop?.position ?? _tripPoint(activeTrip, end: true);
+
+  /// The normal trip's start, drawn when there is no canonical route.
+  GeoPoint? get tripOrigin => _tripPoint(activeTrip, end: false);
+
+  static GeoPoint? _tripPoint(PassengerTrip? trip, {required bool end}) {
+    if (trip == null || !trip.hasRouteCoordinates) return null;
+    return end
+        ? GeoPoint(trip.destinationLat!, trip.destinationLng!)
+        : GeoPoint(trip.originLat!, trip.originLng!);
+  }
 
   /// Whether a driver location is currently available.
   bool get hasDriverLocation => location != null;
@@ -103,6 +124,7 @@ final passengerMapViewProvider = FutureProvider<PassengerMapView>((ref) async {
   CanonicalStop? pickup;
   CanonicalStop? dropoff;
   CanonicalAssignment? assignment;
+  PassengerTrip? activeTrip;
   TripLocation? location;
 
   // ------------------------------------------------------------
@@ -159,31 +181,6 @@ final passengerMapViewProvider = FutureProvider<PassengerMapView>((ref) async {
             .firstOrNull;
       }
     }
-
-    // ----------------------------------------------------------
-    // OPTIONAL DRIVER / TRIP LOCATION
-    // ----------------------------------------------------------
-    //
-    // Once an assignment has a serving trip, use its trip ID
-    // to load the latest known driver location.
-    //
-    // If the location API fails, the route/map still works.
-    // ----------------------------------------------------------
-
-    final tripId = assignment?.trip?.id;
-
-    if (tripId != null && tripId.isNotEmpty) {
-      try {
-        final tripState = await ref.watch(
-          passengerTripControllerProvider(tripId).future,
-        );
-
-        location = tripState.location;
-      } catch (_) {
-        // Driver location is optional.
-        location = null;
-      }
-    }
   } catch (_) {
     // Route/assignment data is OPTIONAL.
     //
@@ -193,7 +190,51 @@ final passengerMapViewProvider = FutureProvider<PassengerMapView>((ref) async {
     pickup = null;
     dropoff = null;
     assignment = null;
-    location = null;
+  }
+
+  // ------------------------------------------------------------
+  // OPTIONAL NORMAL TRIP
+  // ------------------------------------------------------------
+  //
+  // Route and legacy bookings run as normal trips, which canonical
+  // assignments never list. Without a canonical trip, show the newest
+  // running one. Independent of the canonical catalog, which is off
+  // where only normal trips run.
+  // ------------------------------------------------------------
+
+  if (assignment?.trip?.id == null) {
+    try {
+      activeTrip = activePassengerTrip(
+        await ref.watch(passengerActiveTripsProvider.future),
+      );
+    } catch (_) {
+      activeTrip = null;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // OPTIONAL DRIVER / TRIP LOCATION
+  // ------------------------------------------------------------
+  //
+  // Once a trip serves the passenger, use its ID to load the latest
+  // known driver location.
+  //
+  // If the location API fails, the route/map still works.
+  // ------------------------------------------------------------
+
+  final tripId = assignment?.trip?.id ?? activeTrip?.id;
+
+  if (tripId != null && tripId.isNotEmpty) {
+    try {
+      final tripState = await ref.watch(
+        passengerTripControllerProvider(tripId).future,
+      );
+
+      location = tripState.location;
+    } catch (_) {
+      // Driver location is optional.
+      location = null;
+    }
   }
 
   // ------------------------------------------------------------
@@ -210,6 +251,32 @@ final passengerMapViewProvider = FutureProvider<PassengerMapView>((ref) async {
     pickup: pickup,
     dropoff: dropoff,
     assignment: assignment,
+    activeTrip: activeTrip,
     location: location,
   );
 });
+
+/// Trip statuses a passenger is travelling in, from acceptance to drop-off.
+const _runningTripStatuses = {
+  'accepted',
+  'pickup_started',
+  'picked_up',
+  'in_transit',
+};
+
+/// The passenger's trips, read for the map. Refreshed with the map.
+final passengerActiveTripsProvider = FutureProvider<List<PassengerTrip>>(
+  (ref) => ref.watch(tripRepositoryProvider).listTrips(),
+);
+
+/// The newest running trip, or null when none is running.
+PassengerTrip? activePassengerTrip(List<PassengerTrip> trips) {
+  PassengerTrip? newest;
+  for (final trip in trips) {
+    if (!_runningTripStatuses.contains(trip.status)) continue;
+    if (newest == null || trip.createdAt.isAfter(newest.createdAt)) {
+      newest = trip;
+    }
+  }
+  return newest;
+}

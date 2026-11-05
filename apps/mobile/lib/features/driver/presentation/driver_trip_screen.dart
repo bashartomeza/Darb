@@ -34,6 +34,7 @@ import '../../checkpoint_directory/presentation/checkpoint_directory_screen.dart
 import '../../incidents/presentation/report_incident_sheet.dart';
 import '../application/driver_controller.dart';
 import '../data/driver_models.dart';
+import 'driver_location_sharing_scope.dart';
 
 // ============================================================
 // DARB DRIVER MAP COLORS
@@ -113,7 +114,12 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
             child: CircularProgressIndicator(color: orange, strokeWidth: 2.5),
           ),
           error: (error, _) => _buildErrorState(context, l10n),
-          data: (state) => _buildImmersiveContent(context, l10n, state),
+          // The phone shares its position only while this trip is shown.
+          data: (state) => DriverLocationSharing(
+            tripId: widget.tripId,
+            tripStatus: state.trip.status,
+            child: _buildImmersiveContent(context, l10n, state),
+          ),
         ),
       ),
     );
@@ -380,7 +386,8 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
     bool isArabic,
   ) {
     final trip = state.trip;
-    final location = state.location;
+    // "Live" only while the latest point is recent.
+    final location = state.freshLocation;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.29,
@@ -553,7 +560,9 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
 
                 const SizedBox(height: 9),
 
-                _buildCurrentLocationCard(context, l10n, location),
+                _buildCurrentLocationCard(context, l10n, state.location),
+
+                const DriverLocationSharingNote(),
 
                 const SizedBox(height: 9),
 
@@ -1092,16 +1101,17 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
             ),
           ),
 
-          if (location != null)
+          // An old point is the last known place, not a live one.
+          if (location != null && !location.isStaleAt(DateTime.now()))
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
               decoration: BoxDecoration(
                 color: successSoft,
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: const Text(
-                'LIVE',
-                style: TextStyle(
+              child: Text(
+                l10n.liveLocationBadge,
+                style: const TextStyle(
                   color: success,
                   fontSize: 7,
                   fontWeight: FontWeight.w900,

@@ -461,6 +461,14 @@ class DriverTripState {
   final TripLocation? location;
   final bool actionInProgress;
 
+  /// [location] while it is recent enough to call live, else null.
+  TripLocation? get freshLocation {
+    final current = location;
+    return current == null || current.isStaleAt(DateTime.now())
+        ? null
+        : current;
+  }
+
   DriverTripState copyWith({
     DriverTrip? trip,
     TripLocation? location,
