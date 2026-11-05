@@ -5138,6 +5138,30 @@ abstract class AppLocalizations {
   /// **'سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.'**
   String get notifDriverApproachingBody;
 
+  /// No description provided for @pushSettingTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات الفورية'**
+  String get pushSettingTitle;
+
+  /// No description provided for @pushSettingSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيهات على هذا الهاتف للعروض والرحلات وتحديثات الحساب.'**
+  String get pushSettingSubtitle;
+
+  /// No description provided for @pushSettingBlocked.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات متوقفة لتطبيق درب في إعدادات الهاتف.'**
+  String get pushSettingBlocked;
+
+  /// No description provided for @pushSettingFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر حفظ إعداد الإشعارات. يرجى المحاولة مرة أخرى.'**
+  String get pushSettingFailed;
+
   /// No description provided for @ratingPromptTitle.
   ///
   /// In ar, this message translates to:

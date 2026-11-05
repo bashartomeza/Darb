@@ -459,6 +459,8 @@ model User {
   trip_ratings                     TripRating[]
   assistant_conversations          PassengerAssistantConversation[]
   app_rating                       AppRating?
+  push_devices                     PushDevice[]
+  notification_preference          NotificationPreference?
 
   @@map("users")
 }
@@ -765,6 +767,7 @@ model AuthSession {
 
   user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
   refresh_tokens RefreshToken[]
+  push_devices   PushDevice[]
 
   @@index([user_id, revoked_at, expires_at])
   @@index([expires_at])
@@ -1635,12 +1638,16 @@ model Notification {
   params      Json?
   read_at     DateTime?
   created_at  DateTime  @default(now())
+  /// Set when the push sender claimed this row (whether or not a device received it), so each
+  /// notification is pushed at most once even with several API instances.
+  push_attempted_at DateTime?
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, dedupe_key])
   @@index([user_id, created_at])
   @@index([user_id, read_at])
+  @@index([push_attempted_at, created_at])
   @@map("notifications")
 }
 
@@ -2025,4 +2032,48 @@ enum CheckpointPositionConfidence {
   medium
   low
   unverified
+}
+
+enum PushPlatform {
+  android
+  ios
+  web
+}
+
+/// A phone (or browser) that can receive push notifications for one signed-in account.
+/// A token belongs to exactly one account: registering it again from another account moves it.
+/// Revoked on logout and session revocation, or when the push service reports it invalid.
+model PushDevice {
+  id            String       @id @default(cuid())
+  user_id       String
+  /// The sign-in session that registered the token; pushes stop when it ends.
+  session_id    String?
+  platform      PushPlatform
+  token         String       @unique @db.VarChar(512)
+  app_version   String?      @db.VarChar(40)
+  /// App language when the token was registered; push text is written in it.
+  locale        String?      @db.VarChar(10)
+  created_at    DateTime     @default(now())
+  last_seen_at  DateTime     @default(now())
+  revoked_at    DateTime?
+  revoke_reason String?      @db.VarChar(60)
+
+  user    User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  session AuthSession? @relation(fields: [session_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, revoked_at])
+  @@index([session_id, revoked_at])
+  @@map("push_devices")
+}
+
+/// Per-account notification choices. No row means the defaults (push on).
+model NotificationPreference {
+  user_id      String   @id
+  push_enabled Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
