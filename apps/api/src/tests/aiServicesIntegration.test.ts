@@ -85,7 +85,7 @@ describe("shared UI-directives contract (Python == Node == Flutter fixture)", ()
 
 describe("ai_services client", () => {
   it("sends the shared secret and parses a verified analysis", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, okBody()));
+    const fetchImpl = vi.fn().mockImplementation(async () => jsonResponse(200, okBody()));
     const client = createAiServicesClient({ baseUrl: "http://ai:8765/", sharedSecret: SECRET, fetchImpl });
     const result = await client.analyzeText("بدي سيرفيس");
     expect(result.kind).toBe("ok");
@@ -116,6 +116,65 @@ describe("ai_services client", () => {
     await expect(client.analyzeText("x")).rejects.toMatchObject({ category: "timeout" });
     const down = createAiServicesClient({ baseUrl: "http://ai", sharedSecret: SECRET, fetchImpl: vi.fn().mockRejectedValue(new Error("ECONNREFUSED 10.0.0.5")) });
     await expect(down.analyzeText("x")).rejects.toMatchObject({ category: "unavailable", message: "ai_services_unavailable" });
+  });
+
+  it("gives voice a larger time budget than text, and keeps both above the Python budgets", async () => {
+    const answersAfter = (ms: number) =>
+      vi.fn((_u: string, init: RequestInit) => new Promise<Response>((resolve, reject) => {
+        const timer = setTimeout(() => resolve(jsonResponse(200, okBody())), ms);
+        init.signal!.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        });
+      }));
+    const client = createAiServicesClient({
+      baseUrl: "http://ai", sharedSecret: SECRET, timeoutMs: 30, voiceTimeoutMs: 600, fetchImpl: answersAfter(150) as any
+    });
+    await expect(client.analyzeText("x")).rejects.toMatchObject({ category: "timeout" });
+    await expect(client.analyzeVoice(WAV, "audio/wav")).resolves.toMatchObject({ kind: "ok" });
+
+    const { DEFAULT_TEXT_TIMEOUT_MS, DEFAULT_VOICE_TIMEOUT_MS } = await import("../services/aiServicesClient.js");
+    expect(DEFAULT_TEXT_TIMEOUT_MS).toBeGreaterThan(12_000); // Python text budget default
+    expect(DEFAULT_VOICE_TIMEOUT_MS).toBeGreaterThan(45_000); // Python voice budget default
+    expect(DEFAULT_VOICE_TIMEOUT_MS).toBeGreaterThan(DEFAULT_TEXT_TIMEOUT_MS);
+  });
+
+  it("reads text and voice timeouts from the environment and ignores bad values", async () => {
+    const seen: number[] = [];
+    const spy = vi.spyOn(globalThis, "setTimeout");
+    const fetchImpl = vi.fn().mockImplementation(async () => jsonResponse(200, okBody()));
+    const base = { AI_SERVICES_URL: "http://ai", AI_SERVICES_SHARED_SECRET: SECRET };
+    const clientFrom = (extra: Record<string, string>) => {
+      const original = globalThis.fetch;
+      globalThis.fetch = fetchImpl as any;
+      try {
+        return createAiServicesClientFromEnv({ ...base, ...extra })!;
+      } finally {
+        globalThis.fetch = original;
+      }
+    };
+    const timers = async (client: ReturnType<typeof clientFrom>) => {
+      spy.mockClear();
+      await client.analyzeText("x");
+      await client.analyzeVoice(WAV, "audio/wav");
+      return spy.mock.calls.map((call) => call[1]).filter((ms): ms is number => typeof ms === "number" && ms >= 1_000);
+    };
+    seen.push(...(await timers(clientFrom({ AI_SERVICES_TIMEOUT_MS: "15000", AI_SERVICES_VOICE_TIMEOUT_MS: "70000" }))));
+    expect(seen).toEqual([15_000, 70_000]);
+    expect(await timers(clientFrom({ AI_SERVICES_TIMEOUT_MS: "banana", AI_SERVICES_VOICE_TIMEOUT_MS: "5" }))).toEqual([20_000, 55_000]);
+    spy.mockRestore();
+  });
+
+  it("sends the optional operating routes as hints and omits them when empty", async () => {
+    const fetchImpl = vi.fn().mockImplementation(async () => jsonResponse(200, okBody()));
+    const client = createAiServicesClient({ baseUrl: "http://ai", sharedSecret: SECRET, fetchImpl: fetchImpl as any });
+    await client.analyzeText("x", [{ key: "hebron-to-bethlehem", origin_ar: "الخليل", destination_ar: "بيت لحم" }]);
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      text: "x",
+      routes: [{ key: "hebron-to-bethlehem", origin_ar: "الخليل", destination_ar: "بيت لحم" }]
+    });
+    await client.analyzeText("x", []);
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toEqual({ text: "x" });
   });
 
   it("is disabled (null) unless URL and a long secret are configured", () => {

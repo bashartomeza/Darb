@@ -1,18 +1,15 @@
-"""Spatial auto-correction of vernacular place names.
+"""Optional landmark HINTS for the places a user typed.
 
-* Landmarks come from the OpenStreetMap Overpass API (mirror loop, cached on
-  disk, refreshed at most once per TTL, failure back-off) with a static seed so
-  the engine still works offline.
-* Matching is a local Levenshtein distance on Arabic-normalised strings.
+Darb rule: the user types exact places and the app never rewrites them. This
+module therefore only produces a *hint* (a possible landmark name that looks
+similar) next to the untouched text; nothing here is ever written back into
+the dispatch request.
 
-Design guard-rails (the original README forbids silent "semantic drift"):
-  - a correction is only applied when the best match clears MIN_SIMILARITY AND
-    beats the runner-up by AMBIGUITY_MARGIN;
-  - the original text is always returned next to the corrected one.
-
-NOTE ON "98%": that figure is an accuracy *target* to be measured with the
-evaluation harness, not a similarity threshold. MIN_SIMILARITY is a tunable
-(default 0.80: one wrong letter in a 5-8 letter name still matches).
+* Landmark names come only from the OpenStreetMap Overpass API (mirror loop,
+  disk cache, failure back-off) and only when AI_SERVICES_LANDMARK_HINTS=overpass.
+  There is no built-in place list: with the default configuration no hint is made.
+* Matching is a local Levenshtein distance on Arabic-normalised strings; a hint
+  needs MIN_SIMILARITY and a clear lead (AMBIGUITY_MARGIN) over the runner-up.
 """
 from __future__ import annotations
 
@@ -39,22 +36,6 @@ OVERPASS_MIRRORS = (
 )
 # West Bank / corridor bounding box (south, west, north, east).
 OVERPASS_BBOX = (31.20, 34.85, 32.60, 35.60)
-
-# Offline seed only. Real coverage comes from Overpass; curate this list
-# with the operations team before relying on it.
-SEED_LANDMARKS: tuple[str, ...] = (
-    "دوار المنارة",
-    "دوار الساعة",
-    "دوار الشهداء",
-    "باب الزاوية",
-    "جامعة بوليتكنك فلسطين",
-    "جامعة بيت لحم",
-    "شارع المهد",
-    "دوار بيت جالا",
-    "مجمع بيت لحم",
-    "مجمع الخليل",
-    "مكتب البريد المركزي",
-)
 
 _PREFIX_WORDS = ("دوار", "ميدان", "محطة", "مجمع", "شارع", "مستشفى", "جامعة", "مكتب", "بوابة")
 _TASHKEEL = re.compile(r"[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]")
@@ -97,24 +78,28 @@ def similarity(a: str, b: str) -> float:
 
 
 @dataclass(frozen=True)
-class Correction:
+class LandmarkHint:
+    """`original` is what the user typed (never changed); `suggested` is only a hint."""
     original: str
-    corrected: str
-    applied: bool
+    suggested: str | None
     similarity: float
     reason: str
 
     def as_dict(self) -> dict:
-        return {"original": self.original, "corrected": self.corrected, "applied": self.applied,
+        return {"original": self.original, "suggested": self.suggested,
                 "similarity": round(self.similarity, 4), "reason": self.reason}
 
 
-def correct_location(text: str, landmarks: list[str],
-                     min_similarity: float | None = None) -> Correction:
+def landmark_hints_enabled() -> bool:
+    return os.environ.get("AI_SERVICES_LANDMARK_HINTS", "").strip().lower() == "overpass"
+
+
+def suggest_landmark(text: str, landmarks: list[str],
+                     min_similarity: float | None = None) -> LandmarkHint:
     threshold = MIN_SIMILARITY if min_similarity is None else min_similarity
     original = text
     if not text or text == "Unspecified" or not landmarks:
-        return Correction(original, original, False, 0.0, "not_applicable")
+        return LandmarkHint(original, None, 0.0, "not_applicable")
 
     query = strip_prefix(normalize_ar(text))
     scored: list[tuple[float, str]] = []
@@ -126,13 +111,12 @@ def correct_location(text: str, landmarks: list[str],
     best_score, best_name = scored[0]
 
     if best_score >= 0.9999:
-        return Correction(original, best_name if normalize_ar(best_name) == normalize_ar(text) else original,
-                          False, best_score, "exact_match")
+        return LandmarkHint(original, None, best_score, "exact_match")
     if best_score < threshold:
-        return Correction(original, original, False, best_score, "below_threshold")
+        return LandmarkHint(original, None, best_score, "below_threshold")
     if len(scored) > 1 and best_score - scored[1][0] < AMBIGUITY_MARGIN and scored[1][1] != best_name:
-        return Correction(original, original, False, best_score, "ambiguous")
-    return Correction(original, best_name, True, best_score, "levenshtein_corrected")
+        return LandmarkHint(original, None, best_score, "ambiguous")
+    return LandmarkHint(original, best_name, best_score, "similar_landmark")
 
 
 # --------------------------------------------------------------------------
@@ -180,7 +164,7 @@ class LandmarkProvider:
         self._names: list[str] | None = None
         self._loaded_at = 0.0
         self._failed_at = -FAILURE_BACKOFF_SECONDS
-        self.source = "seed"
+        self.source = "none"
 
     def _load_disk(self) -> bool:
         try:
@@ -220,7 +204,7 @@ class LandmarkProvider:
             self._refreshing = False
 
     def get(self) -> list[str]:
-        """Landmarks (seed + OSM). With background=True a stale cache never blocks a request."""
+        """Landmark names from OSM. With background=True a stale cache never blocks a request."""
         start = False
         with self._lock:
             now = self._clock()
@@ -235,11 +219,12 @@ class LandmarkProvider:
                 self._refresh_blocking()
         with self._lock:
             names = list(self._names) if self._names else []
-        return list(SEED_LANDMARKS) + [n for n in names if n not in SEED_LANDMARKS]
+        return names
 
 
 _DEFAULT_PROVIDER = LandmarkProvider(background=True)
 
 
 def default_landmarks() -> list[str]:
-    return _DEFAULT_PROVIDER.get()
+    """Empty unless AI_SERVICES_LANDMARK_HINTS=overpass (no outbound calls by default)."""
+    return _DEFAULT_PROVIDER.get() if landmark_hints_enabled() else []

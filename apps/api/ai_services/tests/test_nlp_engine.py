@@ -45,18 +45,30 @@ def test_success_output_has_six_contract_keys_and_validates_against_schema():
     assert result["temporal_element"] == "16:00" and result["vehicle_class"] == "Public"
 
 
-def test_spatial_autocorrection_manara_example():
+def test_typed_places_are_kept_verbatim_and_landmarks_are_only_a_hint():
     detailed = process_and_verify_request_detailed(
         "بدنا تكتك قوام يسحب كرتونتين كبار من عند دوار المناررة وننزلهم بمكتب البريد المركزي والوضع مستعجل")
-    assert detailed["request"]["pickup_location"] == "دوار المنارة"
-    corr = detailed["meta"]["spatial_corrections"]["pickup_location"]
-    assert corr["applied"] and corr["original"] == "دوار المناررة"       # original preserved for audit
+    assert detailed["request"]["pickup_location"] == "دوار المناررة"      # exactly as typed, never overwritten
+    hint = detailed["meta"]["landmark_hints"]["pickup_location"]
+    assert hint["suggested"] == "دوار المنارة" and hint["original"] == "دوار المناررة"
+    assert "spatial_corrections" not in detailed["meta"]
 
 
-def test_ambiguous_or_far_names_are_not_rewritten():
-    assert spatial.correct_location("حاجة غريبة", LANDMARKS).applied is False
-    assert spatial.correct_location("Unspecified", LANDMARKS).applied is False
-    assert spatial.correct_location("دوار", ["دوار المنارة", "دوار الساعة"]).applied is False
+def test_no_landmark_list_by_default_means_no_hint_and_no_network(monkeypatch):
+    monkeypatch.delenv("AI_SERVICES_LANDMARK_HINTS", raising=False)
+    assert spatial.default_landmarks() == []
+    assert not hasattr(spatial, "SEED_LANDMARKS")
+
+
+def test_route_hint_uses_caller_supplied_routes_and_never_rewrites_text():
+    routes = [{"key": "hebron-to-bethlehem", "origin_ar": "الخليل", "destination_ar": "بيت لحم"},
+              {"key": "ramallah-to-nablus", "origin_ar": "رام الله", "destination_ar": "نابلس"}]
+    detailed = process_and_verify_request_detailed("بدي سيرفيس من الخليل الى بيت لحم الساعة 16:00", routes=routes)
+    assert detailed["meta"]["route_hint"]["route_key"] == "hebron-to-bethlehem"
+    assert detailed["request"]["pickup_location"] == "الخليل"
+    none = process_and_verify_request_detailed("بدي سيرفيس من الخليل الى نابلس", routes=routes)
+    assert none["meta"]["route_hint"] is None
+    assert process_and_verify_request_detailed("بدي سيرفيس من الخليل الى بيت لحم")["meta"]["route_hint"] is None
 
 
 def test_levenshtein_reference_values():
@@ -80,11 +92,11 @@ def test_overpass_loop_falls_through_mirrors_then_caches(tmp_path):
     assert "دوار الجامعة" in second.get() and second.source == "cache"
 
 
-def test_overpass_outage_uses_seed_and_backs_off(tmp_path):
+def test_overpass_outage_gives_no_names_and_backs_off(tmp_path):
     calls = []
     provider = spatial.LandmarkProvider(fetch=lambda u: calls.append(u) or (_ for _ in ()).throw(spatial.ProviderError("x")),
                                         cache_path=tmp_path / "none.json")
-    assert provider.get() == list(spatial.SEED_LANDMARKS)
+    assert provider.get() == []
     n = len(calls)
     provider.get()
     assert len(calls) == n                           # failure back-off: no retry storm

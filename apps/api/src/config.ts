@@ -125,6 +125,14 @@ const rawSchema = z.object({
   DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
   ADMIN_STATIC_DIR: z.string().min(1).optional(),
   DRIVER_DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
+  // Data retention (docs/operations/data-retention.md). Windows in days; the purge jobs run from cron.
+  LOCATION_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  SESSION_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  AUTH_TOKEN_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(7),
+  IDEMPOTENCY_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(7),
+  ABUSE_COUNTER_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(1),
+  PUSH_DEVICE_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  NOTIFICATION_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(180),
   // Unmatched legacy merchant orders without their own departure window expire after this many hours.
   MERCHANT_ORDER_MAX_AGE_HOURS: z.coerce.number().int().min(1).max(720).default(72),
   OTP_PROVIDER: z.enum(["disabled", "fake", "email"]).default("disabled"),
@@ -259,12 +267,12 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     raw.ONBOARDING_TEST_LEGAL_FIXTURES_ENABLED
   );
   const limitedCheckpointDirectoryEnabled = parseBoolean("AWEENRAYEH_LIMITED_DIRECTORY_ENABLED", raw.AWEENRAYEH_LIMITED_DIRECTORY_ENABLED);
-  // Real driver GPS sharing during a trip. On by default where data is disposable
-  // (local, test, demo); staging and production collect driver positions only once
-  // the operator sets it to true, so a deploy never starts tracking unannounced.
+  // Real driver GPS sharing during a trip. On by default everywhere (owner decision);
+  // set LIVE_TRACKING_ENABLED=false to turn it off. Points are purged after
+  // LOCATION_RETENTION_DAYS (docs/operations/data-retention.md).
   const liveTrackingEnabled =
     raw.LIVE_TRACKING_ENABLED === undefined || raw.LIVE_TRACKING_ENABLED === ""
-      ? !productionLike
+      ? true
       : parseBoolean("LIVE_TRACKING_ENABLED", raw.LIVE_TRACKING_ENABLED);
   const problems: string[] = [];
   if (limitedCheckpointDirectoryEnabled && (!raw.AWEENRAYEH_PARTNER_API_KEY || isUnsafeRouteProviderSecret(raw.AWEENRAYEH_PARTNER_API_KEY))) {
@@ -730,6 +738,15 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     },
     mapsEnabled,
     liveTrackingEnabled,
+    retention: {
+      locationDays: raw.LOCATION_RETENTION_DAYS,
+      sessionDays: raw.SESSION_RETENTION_DAYS,
+      authTokenDays: raw.AUTH_TOKEN_RETENTION_DAYS,
+      idempotencyDays: raw.IDEMPOTENCY_RETENTION_DAYS,
+      abuseCounterDays: raw.ABUSE_COUNTER_RETENTION_DAYS,
+      pushDeviceDays: raw.PUSH_DEVICE_RETENTION_DAYS,
+      notificationDays: raw.NOTIFICATION_RETENTION_DAYS
+    },
     checkpointsEnabled,
     limitedCheckpointDirectoryEnabled,
     partnerCheckpointMapEnabled,
