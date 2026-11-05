@@ -68,7 +68,7 @@ class PassengerSettingsScreen extends ConsumerWidget {
               icon: Icons.language_rounded,
               label: AppLocalizations.of(context).language,
               value: languageName(l10n, locale.languageCode),
-              onTap: () => _chooseLanguage(context, ref, locale),
+              onTap: () => showPassengerLanguagePicker(context, ref, locale),
             ),
             const SizedBox(height: 12),
             SettingsRow(
@@ -106,59 +106,6 @@ class PassengerSettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _chooseLanguage(
-    BuildContext context,
-    WidgetRef ref,
-    Locale current,
-  ) async {
-    final l10n = AppLocalizations.of(context);
-    final chosen = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                AppLocalizations.of(context).language,
-                style: PassengerStyle.sectionTitle,
-              ),
-              const SizedBox(height: 12),
-              for (final code in const ['en', 'ar'])
-                ListTile(
-                  key: ValueKey('language-$code'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    code == 'ar' ? 'العربية' : 'English',
-                    style: PassengerStyle.inter(size: 16, height: 20),
-                  ),
-                  subtitle: Text(languageName(l10n, code)),
-                  trailing: current.languageCode == code
-                      ? const Icon(
-                          Icons.check_circle_rounded,
-                          color: PassengerStyle.orange,
-                        )
-                      : const Icon(
-                          Icons.radio_button_unchecked_rounded,
-                          color: PassengerStyle.iconMuted,
-                        ),
-                  onTap: () => Navigator.of(sheetContext).pop(code),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (chosen != null && chosen != current.languageCode) {
-      await ref
-          .read(localeControllerProvider.notifier)
-          .setLocale(Locale(chosen));
-    }
-  }
-
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await confirmSecurityAction(
@@ -168,6 +115,59 @@ class PassengerSettingsScreen extends ConsumerWidget {
       confirmLabel: l10n.logout,
     );
     if (confirmed) await ref.read(authControllerProvider.notifier).logout();
+  }
+}
+
+/// The passenger language sheet; choosing a language applies it at once and
+/// is remembered across restarts. Shared by settings and My trips.
+Future<void> showPassengerLanguagePicker(
+  BuildContext context,
+  WidgetRef ref,
+  Locale current,
+) async {
+  final l10n = AppLocalizations.of(context);
+  final chosen = await showModalBottomSheet<String>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              AppLocalizations.of(context).language,
+              style: PassengerStyle.sectionTitle,
+            ),
+            const SizedBox(height: 12),
+            for (final code in const ['en', 'ar'])
+              ListTile(
+                key: ValueKey('language-$code'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  code == 'ar' ? 'العربية' : 'English',
+                  style: PassengerStyle.inter(size: 16, height: 20),
+                ),
+                subtitle: Text(languageName(l10n, code)),
+                trailing: current.languageCode == code
+                    ? const Icon(
+                        Icons.check_circle_rounded,
+                        color: PassengerStyle.orange,
+                      )
+                    : const Icon(
+                        Icons.radio_button_unchecked_rounded,
+                        color: PassengerStyle.iconMuted,
+                      ),
+                onTap: () => Navigator.of(sheetContext).pop(code),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+  if (chosen != null && chosen != current.languageCode) {
+    await ref.read(localeControllerProvider.notifier).setLocale(Locale(chosen));
   }
 }
 

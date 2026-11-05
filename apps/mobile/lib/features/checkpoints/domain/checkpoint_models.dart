@@ -1,3 +1,4 @@
+import '../../../l10n/app_localizations.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 
 enum CheckpointStatus { open, congested, closed, unknown }
@@ -36,13 +37,16 @@ CheckpointStatus parseCheckpointStatus(String? value) {
   }
 }
 
-String checkpointStatusLabel(CheckpointStatus status) => switch (status) {
-  CheckpointStatus.open => 'سالك',
+String checkpointStatusLabel(
+  AppLocalizations l10n,
+  CheckpointStatus status,
+) => switch (status) {
+  CheckpointStatus.open => l10n.checkpointStatusOpen,
   // Covers both "أزمة متوسطة" and "أزمة خانقة"; the provider's own wording is
   // shown per direction.
-  CheckpointStatus.congested => 'أزمة',
-  CheckpointStatus.closed => 'مغلق',
-  CheckpointStatus.unknown => 'غير معروف',
+  CheckpointStatus.congested => l10n.checkpointStatusCongested,
+  CheckpointStatus.closed => l10n.checkpointStatusClosed,
+  CheckpointStatus.unknown => l10n.checkpointStatusUnknown,
 };
 
 /// Canonical API data. Optional directional fields are never inferred from an
@@ -182,6 +186,18 @@ class UnplacedCheckpoint {
       leavingLastChangedText: _text(value['leaving_status_last_updated']),
     );
   }
+}
+
+/// A checkpoint time for display as "yyyy-MM-dd HH:mm".
+///
+/// A timestamp that carried a timezone (`Z` or an offset, parsed as UTC) is
+/// shown in the device's own time zone, so daylight saving is followed. A
+/// provider time published without a timezone is shown exactly as given.
+String formatCheckpointTime(DateTime value) {
+  final shown = value.isUtc ? value.toLocal() : value;
+  String two(int part) => part.toString().padLeft(2, '0');
+  return '${shown.year.toString().padLeft(4, '0')}-${two(shown.month)}-'
+      '${two(shown.day)} ${two(shown.hour)}:${two(shown.minute)}';
 }
 
 /// "2026-11-01T09:30:00" -> "2026-11-01 09:30", without any timezone change.

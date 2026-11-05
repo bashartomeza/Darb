@@ -93,6 +93,8 @@ DarbMapMarker checkpointTrafficMarker(
 }) {
   // The official state colours the pin; the community only colours its ring.
   final status = checkpoint.status;
+  final title = checkpoint.displayName;
+  final details = _buildDetails(checkpoint, l10n: l10n, community: community);
 
   return DarbMapMarker(
     position: GeoPoint(
@@ -110,44 +112,78 @@ DarbMapMarker checkpointTrafficMarker(
         : community.wellSupported
         ? Icons.verified_rounded
         : Icons.groups_rounded,
-    label: _buildLabel(checkpoint, l10n: l10n, community: community),
+    label: [title, for (final detail in details) detail.text].join('\n'),
+    details: details,
   );
 }
 
-String _buildLabel(
+/// The lines under a checkpoint's name in its callout. Entering and leaving
+/// lines are tagged as such, so the map picks their icons from data.
+List<DarbMapDetail> _buildDetails(
   Checkpoint checkpoint, {
   AppLocalizations? l10n,
   CheckpointCommunityNote? community,
 }) {
-  final name = checkpoint.displayName;
+  // Callers without a context (tests, background builders) keep Arabic, the
+  // app's default language.
+  final strings = l10n ?? lookupAppLocalizations(const Locale('ar'));
   final city = checkpoint.city.trim();
   final entering = checkpoint.enteringStatus?.trim();
   final leaving = checkpoint.leavingStatus?.trim();
   final enteringChanged = checkpoint.enteringLastChangedText;
   final leavingChanged = checkpoint.leavingLastChangedText;
   return [
-    name,
-    if (city.isNotEmpty) city,
+    if (city.isNotEmpty) DarbMapDetail(city),
     if (l10n != null && checkpoint.status == CheckpointStatus.unknown)
-      l10n.checkpointOfficialUnknown
+      DarbMapDetail(
+        l10n.checkpointOfficialUnknown,
+        status: CheckpointStatus.unknown,
+      )
     else
-      checkpointStatusLabel(checkpoint.status),
+      DarbMapDetail(
+        checkpointStatusLabel(strings, checkpoint.status),
+        status: checkpoint.status,
+      ),
     if (entering != null && entering.isNotEmpty)
-      'دخول: $entering'
+      DarbMapDetail(
+        strings.checkpointEnteringStatus(entering),
+        kind: DarbMapDetailKind.entering,
+        status: parseCheckpointStatus(entering),
+      )
     else if (l10n != null && enteringChanged != null)
-      l10n.checkpointEnteringChanged(formatProviderTime(enteringChanged))
+      DarbMapDetail(
+        l10n.checkpointEnteringChanged(formatProviderTime(enteringChanged)),
+        kind: DarbMapDetailKind.entering,
+        status: CheckpointStatus.unknown,
+      )
     else
-      'دخول: غير معروف',
+      DarbMapDetail(
+        strings.checkpointEnteringStatus(strings.checkpointStatusUnknown),
+        kind: DarbMapDetailKind.entering,
+        status: CheckpointStatus.unknown,
+      ),
     if (leaving != null && leaving.isNotEmpty)
-      'خروج: $leaving'
+      DarbMapDetail(
+        strings.checkpointLeavingStatus(leaving),
+        kind: DarbMapDetailKind.leaving,
+        status: parseCheckpointStatus(leaving),
+      )
     else if (l10n != null && leavingChanged != null)
-      l10n.checkpointLeavingChanged(formatProviderTime(leavingChanged))
+      DarbMapDetail(
+        l10n.checkpointLeavingChanged(formatProviderTime(leavingChanged)),
+        kind: DarbMapDetailKind.leaving,
+        status: CheckpointStatus.unknown,
+      )
     else
-      'خروج: غير معروف',
-    if (l10n != null && community != null) community.text(l10n),
+      DarbMapDetail(
+        strings.checkpointLeavingStatus(strings.checkpointStatusUnknown),
+        kind: DarbMapDetailKind.leaving,
+        status: CheckpointStatus.unknown,
+      ),
+    if (l10n != null && community != null) DarbMapDetail(community.text(l10n)),
     if (l10n != null && checkpoint.positionFromOpenStreetMap)
-      l10n.checkpointPositionOsm,
+      DarbMapDetail(l10n.checkpointPositionOsm),
     if (l10n != null && checkpoint.positionApproximate)
-      l10n.checkpointPositionApproximate,
-  ].join('\n');
+      DarbMapDetail(l10n.checkpointPositionApproximate),
+  ];
 }

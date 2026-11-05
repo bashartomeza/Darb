@@ -650,6 +650,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get preferredTime => 'Preferred time';
 
   @override
+  String dateTimeValue(String date, String time) {
+    return '$date, $time';
+  }
+
+  @override
   String get passengerCount => 'Passenger count';
 
   @override
@@ -663,6 +668,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancelRequest => 'Cancel request';
+
+  @override
+  String get cancelRequestConfirm => 'Would you like to cancel this request?';
 
   @override
   String get requestCancelled => 'Request cancelled';
@@ -796,6 +804,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statusCancelled => 'Cancelled';
+
+  @override
+  String get statusFailed => 'Failed';
 
   @override
   String get driverDashboard => 'Driver dashboard';
@@ -2088,7 +2099,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navReports => 'Reports';
 
   @override
+  String get navMyOrders => 'My orders';
+
+  @override
+  String get navMainMenu => 'Main menu';
+
+  @override
+  String get navSidebarTitle => 'Travel with confidence';
+
+  @override
+  String get navSidebarBody =>
+      'Follow your trips and manage your account sessions.';
+
+  @override
   String get myTrips => 'My trips';
+
+  @override
+  String get myTripsSubtitle => 'Your journeys in one place';
+
+  @override
+  String get myTripsCurrentTrip => 'Current trip';
+
+  @override
+  String get myTripsFilterEmptyTitle => 'No trips here';
+
+  @override
+  String get myTripsFilterEmptyBody =>
+      'There are no trips in this category yet.';
+
+  @override
+  String get myTripsShowAll => 'Show all trips';
 
   @override
   String get tripsActiveSection => 'Active trip';
@@ -2785,6 +2825,102 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get checkpointUnknown => 'Status unknown';
+
+  @override
+  String get checkpointStatusOpen => 'Open';
+
+  @override
+  String get checkpointStatusCongested => 'Congested';
+
+  @override
+  String get checkpointStatusClosed => 'Closed';
+
+  @override
+  String get checkpointStatusUnknown => 'Unknown';
+
+  @override
+  String get checkpointStatusNotAvailable => 'Status not available';
+
+  @override
+  String checkpointEnteringStatus(String status) {
+    return 'Entering: $status';
+  }
+
+  @override
+  String checkpointLeavingStatus(String status) {
+    return 'Leaving: $status';
+  }
+
+  @override
+  String get checkpointDirectionStatus => 'Status';
+
+  @override
+  String get checkpointDirectionEntering => 'Entering';
+
+  @override
+  String get checkpointDirectionLeaving => 'Leaving';
+
+  @override
+  String checkpointUpdatedAt(String time) {
+    return 'Updated: $time';
+  }
+
+  @override
+  String get checkpointUpdatedUnavailable => 'Updated: not available';
+
+  @override
+  String checkpointLastUpdatedAt(String time) {
+    return 'Last updated: $time';
+  }
+
+  @override
+  String get checkpointLastUpdatedUnavailable => 'Last update not available';
+
+  @override
+  String get checkpointTimeUnavailable => 'Not available';
+
+  @override
+  String get checkpointCityUnspecified => 'Unspecified city';
+
+  @override
+  String get checkpointCityHasCongestion => 'Congestion';
+
+  @override
+  String get checkpointsOnRoad => 'Checkpoints on the road';
+
+  @override
+  String checkpointsCityCount(int checkpoints, int cities) {
+    return '$checkpoints checkpoints · $cities cities';
+  }
+
+  @override
+  String get checkpointsCitiesLabel => 'Cities';
+
+  @override
+  String get checkpointsCongestedLabel => 'Congested checkpoints';
+
+  @override
+  String get checkpointsViewDetails => 'View checkpoint details and status';
+
+  @override
+  String checkpointsDataUpdated(String time) {
+    return 'Data last updated: $time';
+  }
+
+  @override
+  String get checkpointsRefreshData => 'Refresh checkpoint data';
+
+  @override
+  String get checkpointsByCity => 'Checkpoints by city';
+
+  @override
+  String get checkpointsRefreshing => 'Updating checkpoints...';
+
+  @override
+  String get checkpointsNoData => 'No checkpoint data is available right now.';
+
+  @override
+  String get checkpointsPickCity => 'Choose a city to see its checkpoints';
 
   @override
   String checkpointLabel(String name, String status) {
@@ -3787,6 +3923,152 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapRouteLabel => 'Route';
+
+  @override
+  String get mapDriverLocationFailed =>
+      'Couldn\'t update the driver\'s location right now.';
+
+  @override
+  String get mapWaitingDriverLocation =>
+      'Waiting for the driver\'s latest recorded location.';
+
+  @override
+  String mapTimeRemaining(String duration) {
+    return 'Time remaining: $duration';
+  }
+
+  @override
+  String get mapRouteFollowsDriver =>
+      'The route updates with the driver\'s current location';
+
+  @override
+  String get mapRouteIsPlanned => 'This is the trip\'s planned route';
+
+  @override
+  String get mapYourTripRoute => 'Your trip route';
+
+  @override
+  String get mapPickupPoint => 'Pickup point';
+
+  @override
+  String get mapZoomIn => 'Zoom in';
+
+  @override
+  String get mapZoomOut => 'Zoom out';
+
+  @override
+  String get mapShowRoute => 'Show route';
+
+  @override
+  String get mapMarkerDetails => 'Details';
+
+  @override
+  String get mapMyLocation => 'My location';
+
+  @override
+  String get mapYouAreHere => 'You are here';
+
+  @override
+  String get mapLocationOutsideArea =>
+      'Your location is outside the Darb service area.';
+
+  @override
+  String get driverArrivalTitle => 'Your driver is on the way';
+
+  @override
+  String get driverArrivalSubtitle =>
+      'Distance and time left to reach the pickup point';
+
+  @override
+  String get driverArrivalDistance => 'Distance left';
+
+  @override
+  String get driverArrivalEta => 'Estimated arrival';
+
+  @override
+  String get driverArrivalDisclaimer =>
+      'This is an estimate and may change with traffic.';
+
+  @override
+  String distanceKmValue(String km) {
+    return '$km km';
+  }
+
+  @override
+  String distanceMetersValue(int meters) {
+    return '$meters m';
+  }
+
+  @override
+  String durationMinutesValue(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String durationHoursValue(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String durationHoursMinutesValue(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
+  String get tripInProgress => 'Trip in progress';
+
+  @override
+  String get tripLiveTracking => 'Live tracking';
+
+  @override
+  String get tripWaitingForLocation => 'Waiting for location';
+
+  @override
+  String get tripStartLabel => 'Origin';
+
+  @override
+  String get tripArrivalLabel => 'Destination';
+
+  @override
+  String get tripLocationLabel => 'Location';
+
+  @override
+  String get tripLive => 'Live';
+
+  @override
+  String get tripEstimatedArrival => 'Estimated arrival';
+
+  @override
+  String get tripDistance => 'Distance';
+
+  @override
+  String get tripRemainingTime => 'Remaining time';
+
+  @override
+  String get tripCalculatingRoute => 'Calculating route...';
+
+  @override
+  String get tripVehicleLocation => 'Vehicle location';
+
+  @override
+  String get tripRefreshLocation => 'Refresh location';
+
+  @override
+  String get driverFailDeliveryAction => 'Mark delivery failed';
+
+  @override
+  String get driverFailDeliveryTitle => 'Delivery failed';
+
+  @override
+  String get driverFailDeliveryMessage =>
+      'Are you sure you want to mark this delivery as failed?';
+
+  @override
+  String get driverCancelTripTitle => 'Cancel trip';
+
+  @override
+  String get driverCancelTripMessage =>
+      'Are you sure you want to cancel this trip?';
 
   @override
   String get merchantOrderMapTitle => 'Order route';

@@ -651,6 +651,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get preferredTime => 'الوقت المفضل';
 
   @override
+  String dateTimeValue(String date, String time) {
+    return '$date، $time';
+  }
+
+  @override
   String get passengerCount => 'عدد الركاب';
 
   @override
@@ -664,6 +669,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cancelRequest => 'إلغاء الطلب';
+
+  @override
+  String get cancelRequestConfirm => 'هل تريد إلغاء هذا الطلب؟';
 
   @override
   String get requestCancelled => 'تم إلغاء الطلب';
@@ -796,6 +804,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get statusCancelled => 'ملغاة';
+
+  @override
+  String get statusFailed => 'فشلت';
 
   @override
   String get driverDashboard => 'لوحة السائق';
@@ -2076,7 +2087,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navReports => 'التقارير';
 
   @override
+  String get navMyOrders => 'طلباتي';
+
+  @override
+  String get navMainMenu => 'القائمة الرئيسية';
+
+  @override
+  String get navSidebarTitle => 'رحلتك بأمان';
+
+  @override
+  String get navSidebarBody => 'تابع رحلاتك وراجع جلسات حسابك.';
+
+  @override
   String get myTrips => 'رحلاتي';
+
+  @override
+  String get myTripsSubtitle => 'كل رحلاتك في مكان واحد';
+
+  @override
+  String get myTripsCurrentTrip => 'الرحلة الحالية';
+
+  @override
+  String get myTripsFilterEmptyTitle => 'لا توجد رحلات هنا';
+
+  @override
+  String get myTripsFilterEmptyBody => 'لا توجد رحلات في هذه الفئة بعد.';
+
+  @override
+  String get myTripsShowAll => 'عرض كل الرحلات';
 
   @override
   String get tripsActiveSection => 'الرحلة النشطة';
@@ -2765,6 +2803,102 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get checkpointUnknown => 'الحالة غير معروفة';
+
+  @override
+  String get checkpointStatusOpen => 'سالك';
+
+  @override
+  String get checkpointStatusCongested => 'أزمة';
+
+  @override
+  String get checkpointStatusClosed => 'مغلق';
+
+  @override
+  String get checkpointStatusUnknown => 'غير معروف';
+
+  @override
+  String get checkpointStatusNotAvailable => 'الحالة غير متوفرة';
+
+  @override
+  String checkpointEnteringStatus(String status) {
+    return 'دخول: $status';
+  }
+
+  @override
+  String checkpointLeavingStatus(String status) {
+    return 'خروج: $status';
+  }
+
+  @override
+  String get checkpointDirectionStatus => 'الحالة';
+
+  @override
+  String get checkpointDirectionEntering => 'الدخول';
+
+  @override
+  String get checkpointDirectionLeaving => 'الخروج';
+
+  @override
+  String checkpointUpdatedAt(String time) {
+    return 'التحديث: $time';
+  }
+
+  @override
+  String get checkpointUpdatedUnavailable => 'التحديث: غير متوفر';
+
+  @override
+  String checkpointLastUpdatedAt(String time) {
+    return 'آخر تحديث: $time';
+  }
+
+  @override
+  String get checkpointLastUpdatedUnavailable => 'آخر تحديث غير متوفر';
+
+  @override
+  String get checkpointTimeUnavailable => 'غير متوفر';
+
+  @override
+  String get checkpointCityUnspecified => 'مدينة غير محددة';
+
+  @override
+  String get checkpointCityHasCongestion => 'يوجد أزمة';
+
+  @override
+  String get checkpointsOnRoad => 'الحواجز على الطريق';
+
+  @override
+  String checkpointsCityCount(int checkpoints, int cities) {
+    return '$checkpoints حاجز · $cities مدينة';
+  }
+
+  @override
+  String get checkpointsCitiesLabel => 'المدن';
+
+  @override
+  String get checkpointsCongestedLabel => 'حواجز عليها ازدحام';
+
+  @override
+  String get checkpointsViewDetails => 'عرض تفاصيل الحواجز وحالتها';
+
+  @override
+  String checkpointsDataUpdated(String time) {
+    return 'آخر تحديث للبيانات: $time';
+  }
+
+  @override
+  String get checkpointsRefreshData => 'تحديث بيانات الحواجز';
+
+  @override
+  String get checkpointsByCity => 'الحواجز حسب المدينة';
+
+  @override
+  String get checkpointsRefreshing => 'جاري تحديث الحواجز...';
+
+  @override
+  String get checkpointsNoData => 'لا توجد بيانات حواجز متاحة حالياً.';
+
+  @override
+  String get checkpointsPickCity => 'اختر المدينة لعرض حواجزها';
 
   @override
   String checkpointLabel(String name, String status) {
@@ -3757,6 +3891,146 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get mapRouteLabel => 'المسار';
+
+  @override
+  String get mapDriverLocationFailed => 'تعذر تحديث موقع السائق حاليًا.';
+
+  @override
+  String get mapWaitingDriverLocation => 'بانتظار آخر موقع مسجل للسائق.';
+
+  @override
+  String mapTimeRemaining(String duration) {
+    return 'الوقت المتبقي: $duration';
+  }
+
+  @override
+  String get mapRouteFollowsDriver => 'المسار يتحدث حسب موقع السائق الحالي';
+
+  @override
+  String get mapRouteIsPlanned => 'المسار المعروض هو المسار المحدد للرحلة';
+
+  @override
+  String get mapYourTripRoute => 'مسار رحلتك';
+
+  @override
+  String get mapPickupPoint => 'نقطة الالتقاء';
+
+  @override
+  String get mapZoomIn => 'تكبير الخريطة';
+
+  @override
+  String get mapZoomOut => 'تصغير الخريطة';
+
+  @override
+  String get mapShowRoute => 'إظهار المسار';
+
+  @override
+  String get mapMarkerDetails => 'التفاصيل';
+
+  @override
+  String get mapMyLocation => 'موقعي';
+
+  @override
+  String get mapYouAreHere => 'أنت هنا';
+
+  @override
+  String get mapLocationOutsideArea => 'موقعك خارج منطقة خدمة درب.';
+
+  @override
+  String get driverArrivalTitle => 'السائق في الطريق إليك';
+
+  @override
+  String get driverArrivalSubtitle =>
+      'المسافة والوقت المتبقي للوصول إلى نقطة الالتقاء';
+
+  @override
+  String get driverArrivalDistance => 'المسافة المتبقية';
+
+  @override
+  String get driverArrivalEta => 'وقت الوصول التقريبي';
+
+  @override
+  String get driverArrivalDisclaimer =>
+      'الوقت تقديري وقد يتغير حسب حركة الطريق.';
+
+  @override
+  String distanceKmValue(String km) {
+    return '$km كم';
+  }
+
+  @override
+  String distanceMetersValue(int meters) {
+    return '$meters م';
+  }
+
+  @override
+  String durationMinutesValue(int minutes) {
+    return '$minutes د';
+  }
+
+  @override
+  String durationHoursValue(int hours) {
+    return '$hours س';
+  }
+
+  @override
+  String durationHoursMinutesValue(int hours, int minutes) {
+    return '$hours س $minutes د';
+  }
+
+  @override
+  String get tripInProgress => 'الرحلة جارية';
+
+  @override
+  String get tripLiveTracking => 'تتبع مباشر';
+
+  @override
+  String get tripWaitingForLocation => 'بانتظار الموقع';
+
+  @override
+  String get tripStartLabel => 'البداية';
+
+  @override
+  String get tripArrivalLabel => 'الوصول';
+
+  @override
+  String get tripLocationLabel => 'الموقع';
+
+  @override
+  String get tripLive => 'مباشر';
+
+  @override
+  String get tripEstimatedArrival => 'الوصول المتوقع';
+
+  @override
+  String get tripDistance => 'المسافة';
+
+  @override
+  String get tripRemainingTime => 'الوقت المتبقي';
+
+  @override
+  String get tripCalculatingRoute => 'جاري حساب المسار...';
+
+  @override
+  String get tripVehicleLocation => 'موقع المركبة';
+
+  @override
+  String get tripRefreshLocation => 'تحديث الموقع';
+
+  @override
+  String get driverFailDeliveryAction => 'تسجيل فشل التوصيل';
+
+  @override
+  String get driverFailDeliveryTitle => 'فشل التوصيل';
+
+  @override
+  String get driverFailDeliveryMessage => 'هل تريد تسجيل الرحلة كتوصيل فاشل؟';
+
+  @override
+  String get driverCancelTripTitle => 'إلغاء الرحلة';
+
+  @override
+  String get driverCancelTripMessage => 'هل أنت متأكد من إلغاء الرحلة الحالية؟';
 
   @override
   String get merchantOrderMapTitle => 'مسار الطلب';

@@ -15,6 +15,8 @@ import '../application/passenger_history_controller.dart';
 import '../data/passenger_models.dart';
 import 'passenger_home_screen.dart' show passengerStatusLabel;
 import 'passenger_request_labels.dart';
+import 'settings/passenger_settings_screen.dart'
+    show showPassengerLanguagePicker;
 
 /// Passenger "My Trips" screen.
 ///
@@ -318,101 +320,12 @@ class _PassengerTripsScreenState extends ConsumerState<PassengerTripsScreen> {
   // LANGUAGE PICKER
   // --------------------------------------------------------------------------
 
-  Future<void> _showLanguagePicker(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      builder: (context) {
-        final theme = Theme.of(context);
-        final scheme = theme.colorScheme;
-
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-            child: Container(
-              decoration: BoxDecoration(
-                color: scheme.surface.withValues(alpha: 0.78),
-                border: Border(
-                  top: BorderSide(
-                    color: scheme.onSurface.withValues(alpha: 0.10),
-                  ),
-                ),
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppTokens.marginMobile,
-                    0,
-                    AppTokens.marginMobile,
-                    AppTokens.spaceLarge,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: scheme.primary.withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.language_rounded,
-                                color: scheme.primary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Language',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: AppTokens.spaceMedium),
-
-                      _LanguageOption(
-                        title: 'العربية',
-                        selected:
-                            Localizations.localeOf(context).languageCode ==
-                            'ar',
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-
-                      const SizedBox(height: AppTokens.spaceSmall),
-
-                      _LanguageOption(
-                        title: 'English',
-                        selected:
-                            Localizations.localeOf(context).languageCode ==
-                            'en',
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  Future<void> _showLanguagePicker(BuildContext context) =>
+      showPassengerLanguagePicker(
+        context,
+        ref,
+        Localizations.localeOf(context),
+      );
 
   static const _pagePadding = EdgeInsets.fromLTRB(
     AppTokens.marginMobile,
@@ -553,9 +466,7 @@ class _TopHeader extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                Localizations.localeOf(context).languageCode == 'ar'
-                    ? 'كل رحلاتك في مكان واحد'
-                    : 'Your journeys in one place',
+                AppLocalizations.of(context).myTripsSubtitle,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
@@ -1083,7 +994,9 @@ class _TripCard extends StatelessWidget {
                     const SizedBox(height: 3),
 
                     Text(
-                      active ? 'Current trip' : request.pickupText(context),
+                      active
+                          ? AppLocalizations.of(context).myTripsCurrentTrip
+                          : request.pickupText(context),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -1518,94 +1431,6 @@ class _CanonicalCard extends StatelessWidget {
 // LANGUAGE
 // =============================================================================
 
-class _LanguageOption extends StatelessWidget {
-  const _LanguageOption({
-    required this.title,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String title;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Material(
-          color: selected
-              ? scheme.primary.withValues(alpha: 0.10)
-              : scheme.surface.withValues(alpha: 0.35),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: selected
-                      ? scheme.primary.withValues(alpha: 0.20)
-                      : scheme.onSurface.withValues(alpha: 0.07),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 35,
-                    height: 35,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? scheme.primary.withValues(alpha: 0.12)
-                          : scheme.surfaceContainerHighest.withValues(
-                              alpha: 0.45,
-                            ),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Icon(
-                      title == 'العربية'
-                          ? Icons.translate_rounded
-                          : Icons.language_rounded,
-                      size: 17,
-                      color: selected
-                          ? scheme.primary
-                          : scheme.onSurfaceVariant,
-                    ),
-                  ),
-
-                  const SizedBox(width: 10),
-
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ),
-
-                  if (selected)
-                    Icon(
-                      Icons.check_circle_rounded,
-                      color: scheme.primary,
-                      size: 21,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // =============================================================================
 // EMPTY
 // =============================================================================
@@ -1734,7 +1559,7 @@ class _FilterEmptyState extends StatelessWidget {
           const SizedBox(height: 12),
 
           Text(
-            'No trips here',
+            AppLocalizations.of(context).myTripsFilterEmptyTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w900,
             ),
@@ -1743,7 +1568,7 @@ class _FilterEmptyState extends StatelessWidget {
           const SizedBox(height: 5),
 
           Text(
-            'There are no trips in this category yet.',
+            AppLocalizations.of(context).myTripsFilterEmptyBody,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
@@ -1761,7 +1586,7 @@ class _FilterEmptyState extends StatelessWidget {
               ),
             ),
             child: Text(
-              'Show all trips',
+              AppLocalizations.of(context).myTripsShowAll,
               style: TextStyle(
                 fontWeight: FontWeight.w900,
                 color: scheme.primary,

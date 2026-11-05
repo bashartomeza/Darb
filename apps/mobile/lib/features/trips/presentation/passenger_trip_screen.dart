@@ -84,53 +84,25 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   // LOCALIZATION
   // ============================================================
 
-  String _originCity(PassengerTripState data) {
+  // Trips always carry their endpoint labels as stored; an empty one (a trip
+  // without a driver route) falls back to the generic word.
+  String _originCity(BuildContext context, PassengerTripState data) {
     final label = data.trip.originDisplayLabel;
-    return label.trim().isEmpty ? 'Origin' : label;
+    return label.trim().isEmpty ? AppLocalizations.of(context).origin : label;
   }
 
-  String _destinationCity(PassengerTripState data) {
+  String _destinationCity(BuildContext context, PassengerTripState data) {
     final label = data.trip.destinationDisplayLabel;
-    return label.trim().isEmpty ? 'Destination' : label;
+    return label.trim().isEmpty
+        ? AppLocalizations.of(context).destination
+        : label;
   }
 
-  String _localizedPlace(String value, String languageCode) {
-    if (languageCode != 'ar') {
-      return value;
-    }
+  String _displayOrigin(BuildContext context, PassengerTripState data) =>
+      _originCity(context, data);
 
-    final normalized = value.trim();
-
-    const translations = {
-      'Hebron': 'الخليل',
-      'Bethlehem': 'بيت لحم',
-      'Ramallah': 'رام الله',
-      'Nablus': 'نابلس',
-      'Jenin': 'جنين',
-      'Tulkarm': 'طولكرم',
-      'Qalqilya': 'قلقيلية',
-      'Jericho': 'أريحا',
-      'Jerusalem': 'القدس',
-      'PPU': 'PPU',
-      'Bab Al-Zawiya': 'باب الزاوية',
-    };
-
-    return translations[normalized] ?? normalized;
-  }
-
-  String _displayOrigin(BuildContext context, PassengerTripState data) {
-    if (data.trip.originLabel != null) return _originCity(data);
-    final language = Localizations.localeOf(context).languageCode;
-
-    return _localizedPlace(_originCity(data), language);
-  }
-
-  String _displayDestination(BuildContext context, PassengerTripState data) {
-    if (data.trip.destinationLabel != null) return _destinationCity(data);
-    final language = Localizations.localeOf(context).languageCode;
-
-    return _localizedPlace(_destinationCity(data), language);
-  }
+  String _displayDestination(BuildContext context, PassengerTripState data) =>
+      _destinationCity(context, data);
 
   // ============================================================
   // BUILD
@@ -370,7 +342,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
           const SizedBox(width: 7),
           Text(
             isActive
-                ? (isArabic ? 'الرحلة جارية' : 'TRIP IN PROGRESS')
+                ? AppLocalizations.of(context).tripInProgress
                 : _statusLabel(AppLocalizations.of(context), data.trip.status),
             style: TextStyle(
               color: isActive ? _success : _orangeDark,
@@ -436,18 +408,14 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                   children: [
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: isArabic
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             data.trip.routeName(arabic: isArabic) ??
                                 '${_displayOrigin(context, data)}  →  ${_displayDestination(context, data)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            textAlign: isArabic
-                                ? TextAlign.right
-                                : TextAlign.left,
+                            textAlign: TextAlign.start,
                             style: const TextStyle(
                               color: _text,
                               fontSize: 18,
@@ -470,12 +438,8 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                               const SizedBox(width: 6),
                               Text(
                                 data.location != null
-                                    ? (isArabic
-                                          ? 'تتبع مباشر'
-                                          : 'Live tracking')
-                                    : (isArabic
-                                          ? 'بانتظار الموقع'
-                                          : 'Waiting for location'),
+                                    ? l10n.tripLiveTracking
+                                    : l10n.tripWaitingForLocation,
                                 style: TextStyle(
                                   color: data.location != null
                                       ? _success
@@ -505,7 +469,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                       child: _quickInfoItem(
                         icon: Icons.route_rounded,
                         value: _displayOrigin(context, data),
-                        label: isArabic ? 'البداية' : 'Origin',
+                        label: l10n.tripStartLabel,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -513,17 +477,15 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                       child: _quickInfoItem(
                         icon: Icons.flag_rounded,
                         value: _displayDestination(context, data),
-                        label: isArabic ? 'الوصول' : 'Destination',
+                        label: l10n.tripArrivalLabel,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: _quickInfoItem(
                         icon: Icons.location_on_rounded,
-                        value: data.location != null
-                            ? (isArabic ? 'مباشر' : 'Live')
-                            : '--',
-                        label: isArabic ? 'الموقع' : 'Location',
+                        value: data.location != null ? l10n.tripLive : '--',
+                        label: l10n.tripLocationLabel,
                         iconColor: data.location != null ? _success : _muted,
                       ),
                     ),
@@ -794,12 +756,10 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
               const SizedBox(width: 9),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: isArabic
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic ? 'الوصول المتوقع' : 'Estimated arrival',
+                      l10n.tripEstimatedArrival,
                       style: const TextStyle(
                         color: _secondary,
                         fontSize: 8,
@@ -808,7 +768,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      route.formattedDuration,
+                      formatRouteDuration(l10n, route.durationMinutes),
                       style: const TextStyle(
                         color: _text,
                         fontSize: 14,
@@ -825,12 +785,10 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
               ),
               const SizedBox(width: 10),
               Column(
-                crossAxisAlignment: isArabic
-                    ? CrossAxisAlignment.start
-                    : CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    isArabic ? 'المسافة' : 'Distance',
+                    l10n.tripDistance,
                     style: const TextStyle(
                       color: _secondary,
                       fontSize: 8,
@@ -839,7 +797,9 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${route.distanceKilometers.toStringAsFixed(1)} km',
+                    l10n.distanceKmValue(
+                      route.distanceKilometers.toStringAsFixed(1),
+                    ),
                     style: const TextStyle(
                       color: _text,
                       fontSize: 12,
@@ -879,7 +839,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
           ),
           const SizedBox(width: 10),
           Text(
-            isArabic ? 'جاري حساب المسار...' : 'Calculating route...',
+            AppLocalizations.of(context).tripCalculatingRoute,
             style: const TextStyle(
               color: _secondary,
               fontSize: 10,
@@ -933,12 +893,10 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
           const SizedBox(width: 9),
           Expanded(
             child: Column(
-              crossAxisAlignment: isArabic
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isArabic ? 'موقع المركبة' : 'Vehicle location',
+                  l10n.tripVehicleLocation,
                   style: const TextStyle(
                     color: _secondary,
                     fontSize: 8,
@@ -969,7 +927,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                 borderRadius: BorderRadius.circular(9),
               ),
               child: Text(
-                isArabic ? 'مباشر' : 'LIVE',
+                l10n.tripLive,
                 style: const TextStyle(
                   color: _success,
                   fontSize: 7,
@@ -987,8 +945,6 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   // ============================================================
 
   Widget _buildRefreshButton(BuildContext context, AppLocalizations l10n) {
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
-
     return SizedBox(
       width: double.infinity,
       height: 40,
@@ -1002,7 +958,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
         },
         icon: const Icon(Icons.refresh_rounded, size: 16),
         label: Text(
-          isArabic ? 'تحديث الموقع' : l10n.refresh,
+          l10n.tripRefreshLocation,
           style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
         ),
         style: OutlinedButton.styleFrom(
@@ -1072,7 +1028,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                 position: origin,
                 icon: Icons.trip_origin_rounded,
                 color: _orange,
-                label: l10n.mapOriginLabel(_originCity(data)),
+                label: l10n.mapOriginLabel(_originCity(context, data)),
                 size: 42,
               ),
 
@@ -1084,7 +1040,9 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                 position: destination,
                 icon: Icons.flag_rounded,
                 color: _orangeDark,
-                label: l10n.mapDestinationLabel(_destinationCity(data)),
+                label: l10n.mapDestinationLabel(
+                  _destinationCity(context, data),
+                ),
                 size: 42,
                 type: DarbMapMarkerType.destination,
               ),
@@ -1200,9 +1158,8 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
     }
   }
 
-  String _statusLabel(AppLocalizations l10n, String status) {
-    return status.toUpperCase();
-  }
+  String _statusLabel(AppLocalizations l10n, String status) =>
+      tripStatusLabel(l10n, status);
 }
 
 // ============================================================================

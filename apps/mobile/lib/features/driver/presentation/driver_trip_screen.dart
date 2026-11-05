@@ -349,7 +349,7 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
           const SizedBox(width: 7),
           Text(
             isActive
-                ? (isArabic ? 'الرحلة جارية' : 'TRIP IN PROGRESS')
+                ? AppLocalizations.of(context).tripInProgress
                 : driverStatusLabel(
                     AppLocalizations.of(context),
                     state.trip.status,
@@ -427,9 +427,7 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                   children: [
                     Expanded(
                       child: Column(
-                        crossAxisAlignment: isArabic
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             trip.route.routeName(arabic: isArabic) ??
@@ -437,9 +435,7 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                             key: const ValueKey('driverTripRouteTitle'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            textAlign: isArabic
-                                ? TextAlign.right
-                                : TextAlign.left,
+                            textAlign: TextAlign.start,
                             style: const TextStyle(
                               color: textDark,
                               fontSize: 18,
@@ -462,12 +458,12 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                               const SizedBox(width: 6),
                               Text(
                                 location != null
-                                    ? (isArabic
-                                          ? 'تتبع مباشر'
-                                          : 'Live tracking')
-                                    : (isArabic
-                                          ? 'بانتظار الموقع'
-                                          : 'Waiting for location'),
+                                    ? AppLocalizations.of(
+                                        context,
+                                      ).tripLiveTracking
+                                    : AppLocalizations.of(
+                                        context,
+                                      ).tripWaitingForLocation,
                                 style: TextStyle(
                                   color: location != null ? success : orange,
                                   fontSize: 10,
@@ -686,17 +682,20 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        builder: (_) => const SafeArea(
+        builder: (sheetContext) => SafeArea(
           child: Padding(
-            padding: EdgeInsets.all(30),
+            padding: const EdgeInsets.all(30),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(color: orange, strokeWidth: 2.5),
-                SizedBox(height: 14),
+                const CircularProgressIndicator(
+                  color: orange,
+                  strokeWidth: 2.5,
+                ),
+                const SizedBox(height: 14),
                 Text(
-                  'جاري تحديث الحواجز...',
-                  style: TextStyle(
+                  AppLocalizations.of(sheetContext).checkpointsRefreshing,
+                  style: const TextStyle(
                     color: textDark,
                     fontWeight: FontWeight.w800,
                   ),
@@ -754,7 +753,7 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                 Text(
                   hasError
                       ? l10n.checkpointsUnavailableBody
-                      : 'لا توجد بيانات حواجز متاحة حالياً.',
+                      : l10n.checkpointsNoData,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: textSecondary,
@@ -777,7 +776,7 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
 
     for (final checkpoint in snapshot.checkpoints) {
       final city = checkpoint.city.trim().isEmpty
-          ? 'مدينة غير محددة'
+          ? l10n.checkpointCityUnspecified
           : checkpoint.city.trim();
 
       grouped.putIfAbsent(city, () => <Checkpoint>[]);
@@ -826,22 +825,22 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
 
                       const SizedBox(width: 11),
 
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'الحواجز',
-                              style: TextStyle(
+                              l10n.checkpoints,
+                              style: const TextStyle(
                                 color: textDark,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
-                              'اختر المدينة لعرض حواجزها',
-                              style: TextStyle(
+                              l10n.checkpointsPickCity,
+                              style: const TextStyle(
                                 color: textSecondary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -987,7 +986,9 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${checkpoints.length} حواجز',
+                              AppLocalizations.of(
+                                context,
+                              ).checkpointCount(checkpoints.length),
                               style: const TextStyle(
                                 color: textSecondary,
                                 fontSize: 11,
@@ -1063,12 +1064,10 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
 
           Expanded(
             child: Column(
-              crossAxisAlignment: isArabic
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isArabic ? 'موقع المركبة' : 'Vehicle location',
+                  AppLocalizations.of(context).tripVehicleLocation,
                   style: const TextStyle(
                     color: textSecondary,
                     fontSize: 8,
@@ -1099,9 +1098,9 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                 color: successSoft,
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: const Text(
-                'LIVE',
-                style: TextStyle(
+              child: Text(
+                AppLocalizations.of(context).tripLive,
+                style: const TextStyle(
                   color: success,
                   fontSize: 7,
                   fontWeight: FontWeight.w900,
@@ -1345,19 +1344,13 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
   }
 
   String l10nFailDelivery(BuildContext context) =>
-      Localizations.localeOf(context).languageCode == 'ar'
-      ? 'تسجيل فشل التوصيل'
-      : 'Mark delivery failed';
+      AppLocalizations.of(context).driverFailDeliveryAction;
 
   String l10nFailDeliveryTitle(BuildContext context) =>
-      Localizations.localeOf(context).languageCode == 'ar'
-      ? 'فشل التوصيل'
-      : 'Delivery failed';
+      AppLocalizations.of(context).driverFailDeliveryTitle;
 
   String l10nFailDeliveryMessage(BuildContext context) =>
-      Localizations.localeOf(context).languageCode == 'ar'
-      ? 'هل تريد تسجيل الرحلة كتوصيل فاشل'
-      : 'Are you sure you want to mark this delivery as failed';
+      AppLocalizations.of(context).driverFailDeliveryMessage;
 
   Future<void> _cancelTrip() async {
     final confirmed = await showDialog<bool>(
@@ -1386,14 +1379,10 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
   }
 
   String l10nCancelTripTitle(BuildContext context) =>
-      Localizations.localeOf(context).languageCode == 'ar'
-      ? 'إلغاء الرحلة'
-      : 'Cancel trip';
+      AppLocalizations.of(context).driverCancelTripTitle;
 
   String l10nCancelTripMessage(BuildContext context) =>
-      Localizations.localeOf(context).languageCode == 'ar'
-      ? 'هل أنت متأكد من إلغاء الرحلة الحالية'
-      : 'Are you sure you want to cancel this trip';
+      AppLocalizations.of(context).driverCancelTripMessage;
 
   Future<void> _action(Future<void> Function() action) async {
     if (!mounted) return;
@@ -1836,12 +1825,10 @@ class _DriverEtaCardState extends ConsumerState<_DriverEtaCard> {
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment: isArabic
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic ? 'الوقت المتبقي' : 'Remaining time',
+                      AppLocalizations.of(context).tripRemainingTime,
                       style: const TextStyle(
                         color: textSecondary,
                         fontSize: 8,
@@ -1850,7 +1837,10 @@ class _DriverEtaCardState extends ConsumerState<_DriverEtaCard> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      result.formattedDuration,
+                      formatRouteDuration(
+                        AppLocalizations.of(context),
+                        result.durationMinutes,
+                      ),
                       style: const TextStyle(
                         color: textDark,
                         fontSize: 14,
@@ -1870,12 +1860,10 @@ class _DriverEtaCardState extends ConsumerState<_DriverEtaCard> {
               const SizedBox(width: 10),
 
               Column(
-                crossAxisAlignment: isArabic
-                    ? CrossAxisAlignment.start
-                    : CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    isArabic ? 'المسافة' : 'Distance',
+                    AppLocalizations.of(context).tripDistance,
                     style: const TextStyle(
                       color: textSecondary,
                       fontSize: 8,
@@ -1884,7 +1872,9 @@ class _DriverEtaCardState extends ConsumerState<_DriverEtaCard> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${result.distanceKilometers.toStringAsFixed(1)} km',
+                    AppLocalizations.of(context).distanceKmValue(
+                      result.distanceKilometers.toStringAsFixed(1),
+                    ),
                     style: const TextStyle(
                       color: textDark,
                       fontSize: 12,
@@ -1947,9 +1937,9 @@ class _RemainingRouteCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'الوقت المتبقي',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context).tripRemainingTime,
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 8,
                     fontWeight: FontWeight.w600,
@@ -1957,7 +1947,10 @@ class _RemainingRouteCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  result.formattedDuration,
+                  formatRouteDuration(
+                    AppLocalizations.of(context),
+                    result.durationMinutes,
+                  ),
                   style: const TextStyle(
                     color: white,
                     fontSize: 14,
@@ -1975,9 +1968,9 @@ class _RemainingRouteCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
-                'المسافة',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context).tripDistance,
+                style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 8,
                   fontWeight: FontWeight.w600,
@@ -1985,7 +1978,9 @@ class _RemainingRouteCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                '${result.distanceKilometers.toStringAsFixed(1)} km',
+                AppLocalizations.of(
+                  context,
+                ).distanceKmValue(result.distanceKilometers.toStringAsFixed(1)),
                 style: const TextStyle(
                   color: white,
                   fontSize: 12,
@@ -2146,7 +2141,7 @@ class _CityCheckpointTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '$count حواجز',
+                      AppLocalizations.of(context).checkpointCount(count),
                       style: const TextStyle(
                         color: textSecondary,
                         fontSize: 10,
@@ -2168,7 +2163,9 @@ class _CityCheckpointTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Text(
-                    hasClosedRoad ? 'مغلق' : 'ازدحام',
+                    hasClosedRoad
+                        ? AppLocalizations.of(context).checkpointStatusClosed
+                        : AppLocalizations.of(context).checkpointCongested,
                     style: const TextStyle(
                       color: orangeDark,
                       fontSize: 9,
@@ -2203,6 +2200,7 @@ class _CheckpointCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -2276,15 +2274,15 @@ class _CheckpointCard extends StatelessWidget {
           // --------------------------------------------------------
           _CheckpointDirectionCard(
             icon: Icons.traffic_rounded,
-            title: 'الحالة',
-            status: checkpointStatusLabel(checkpoint.status),
+            title: l10n.checkpointDirectionStatus,
+            status: checkpointStatusLabel(l10n, checkpoint.status),
             updatedAt: checkpoint.updatedAt,
           ),
           const SizedBox(height: 8),
           _CheckpointDirectionCard(
             icon: Icons.login_rounded,
-            title: 'الدخول',
-            status: _checkpointStatusLabel(checkpoint.enteringStatus),
+            title: l10n.checkpointDirectionEntering,
+            status: _checkpointStatusLabel(l10n, checkpoint.enteringStatus),
             updatedAt: checkpoint.enteringStatusLastUpdated,
           ),
 
@@ -2295,8 +2293,8 @@ class _CheckpointCard extends StatelessWidget {
           // --------------------------------------------------------
           _CheckpointDirectionCard(
             icon: Icons.logout_rounded,
-            title: 'الخروج',
-            status: _checkpointStatusLabel(checkpoint.leavingStatus),
+            title: l10n.checkpointDirectionLeaving,
+            status: _checkpointStatusLabel(l10n, checkpoint.leavingStatus),
             updatedAt: checkpoint.leavingStatusLastUpdated,
           ),
         ],
@@ -2375,8 +2373,12 @@ class _CheckpointDirectionCard extends StatelessWidget {
 
                 Text(
                   updatedAt == null
-                      ? 'آخر تحديث غير متوفر'
-                      : 'آخر تحديث: ${_formatCheckpointTime(context, updatedAt!)}',
+                      ? AppLocalizations.of(
+                          context,
+                        ).checkpointLastUpdatedUnavailable
+                      : AppLocalizations.of(context).checkpointLastUpdatedAt(
+                          _formatCheckpointTime(context, updatedAt!),
+                        ),
                   style: const TextStyle(
                     color: textSecondary,
                     fontSize: 8,
@@ -2451,22 +2453,24 @@ _CheckpointStatusStyle _checkpointStatusStyle(
 
 /// The provider's own Arabic wording when it is a known state ("أزمة خانقة"),
 /// otherwise the shared label.
-String _checkpointStatusLabel(String? status) {
+String _checkpointStatusLabel(AppLocalizations l10n, String? status) {
   final parsed = parseCheckpointStatus(status);
   final text = status?.trim() ?? '';
   return parsed != CheckpointStatus.unknown && RegExp('[؀-ۿ]').hasMatch(text)
       ? text
-      : checkpointStatusLabel(parsed);
+      : checkpointStatusLabel(l10n, parsed);
 }
 
 // ============================================================================
 // CHECKPOINT TIME
 // ============================================================================
 
+/// Real timestamps (with a timezone) in the device's time zone; provider
+/// times published without one exactly as given.
 String _formatCheckpointTime(BuildContext context, DateTime value) {
   final material = MaterialLocalizations.of(context);
 
-  final local = value.toLocal();
+  final local = value.isUtc ? value.toLocal() : value;
 
   return '${material.formatCompactDate(local)} '
       '${material.formatTimeOfDay(TimeOfDay.fromDateTime(local))}';

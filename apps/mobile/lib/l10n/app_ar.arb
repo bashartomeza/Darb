@@ -209,11 +209,23 @@
   "destination": "الوجهة",
   "bethlehem": "بيت لحم",
   "preferredTime": "الوقت المفضل",
+  "dateTimeValue": "{date}، {time}",
+  "@dateTimeValue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "passengerCount": "عدد الركاب",
   "submitRequest": "إرسال الطلب",
   "requestCreated": "تم إنشاء الطلب",
   "requestDetails": "تفاصيل الطلب",
   "cancelRequest": "إلغاء الطلب",
+  "cancelRequestConfirm": "هل تريد إلغاء هذا الطلب؟",
   "requestCancelled": "تم إلغاء الطلب",
   "requestCannotBeCancelled": "لا يمكن إلغاء هذا الطلب الآن.",
   "findCompatibleRoute": "البحث عن مسار متوافق",
@@ -257,6 +269,7 @@
   "statusDelivered": "تم التسليم",
   "statusCompleted": "مكتملة",
   "statusCancelled": "ملغاة",
+  "statusFailed": "فشلت",
   "driverDashboard": "لوحة السائق",
   "activeRoute": "المسار النشط",
   "noActiveRoute": "لا يوجد مسار نشط حالياً.",
@@ -783,7 +796,16 @@
   "navMapAlerts": "الخرائط والبلاغات",
   "navShipments": "الشحنات",
   "navReports": "التقارير",
+  "navMyOrders": "طلباتي",
+  "navMainMenu": "القائمة الرئيسية",
+  "navSidebarTitle": "رحلتك بأمان",
+  "navSidebarBody": "تابع رحلاتك وراجع جلسات حسابك.",
   "myTrips": "رحلاتي",
+  "myTripsSubtitle": "كل رحلاتك في مكان واحد",
+  "myTripsCurrentTrip": "الرحلة الحالية",
+  "myTripsFilterEmptyTitle": "لا توجد رحلات هنا",
+  "myTripsFilterEmptyBody": "لا توجد رحلات في هذه الفئة بعد.",
+  "myTripsShowAll": "عرض كل الرحلات",
   "tripsActiveSection": "الرحلة النشطة",
   "tripsUpcomingSection": "الرحلات القادمة",
   "tripsPastSection": "الرحلات السابقة",
@@ -1028,6 +1050,79 @@
   "checkpointCongested": "ازدحام",
   "checkpointClosed": "مغلق",
   "checkpointUnknown": "الحالة غير معروفة",
+  "checkpointStatusOpen": "سالك",
+  "checkpointStatusCongested": "أزمة",
+  "checkpointStatusClosed": "مغلق",
+  "checkpointStatusUnknown": "غير معروف",
+  "checkpointStatusNotAvailable": "الحالة غير متوفرة",
+  "checkpointEnteringStatus": "دخول: {status}",
+  "@checkpointEnteringStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLeavingStatus": "خروج: {status}",
+  "@checkpointLeavingStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointDirectionStatus": "الحالة",
+  "checkpointDirectionEntering": "الدخول",
+  "checkpointDirectionLeaving": "الخروج",
+  "checkpointUpdatedAt": "التحديث: {time}",
+  "@checkpointUpdatedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointUpdatedUnavailable": "التحديث: غير متوفر",
+  "checkpointLastUpdatedAt": "آخر تحديث: {time}",
+  "@checkpointLastUpdatedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLastUpdatedUnavailable": "آخر تحديث غير متوفر",
+  "checkpointTimeUnavailable": "غير متوفر",
+  "checkpointCityUnspecified": "مدينة غير محددة",
+  "checkpointCityHasCongestion": "يوجد أزمة",
+  "checkpointsOnRoad": "الحواجز على الطريق",
+  "checkpointsCityCount": "{checkpoints} حاجز · {cities} مدينة",
+  "@checkpointsCityCount": {
+    "placeholders": {
+      "checkpoints": {
+        "type": "int"
+      },
+      "cities": {
+        "type": "int"
+      }
+    }
+  },
+  "checkpointsCitiesLabel": "المدن",
+  "checkpointsCongestedLabel": "حواجز عليها ازدحام",
+  "checkpointsViewDetails": "عرض تفاصيل الحواجز وحالتها",
+  "checkpointsDataUpdated": "آخر تحديث للبيانات: {time}",
+  "@checkpointsDataUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointsRefreshData": "تحديث بيانات الحواجز",
+  "checkpointsByCity": "الحواجز حسب المدينة",
+  "checkpointsRefreshing": "جاري تحديث الحواجز...",
+  "checkpointsNoData": "لا توجد بيانات حواجز متاحة حالياً.",
+  "checkpointsPickCity": "اختر المدينة لعرض حواجزها",
   "checkpointLabel": "{name} — {status}",
   "@checkpointLabel": {
     "placeholders": {
@@ -1524,6 +1619,93 @@
   "communityLocationSet": "تم تحديد المكان على الخريطة",
   "communityClearLocation": "إزالة المكان",
   "mapRouteLabel": "المسار",
+  "mapDriverLocationFailed": "تعذر تحديث موقع السائق حاليًا.",
+  "mapWaitingDriverLocation": "بانتظار آخر موقع مسجل للسائق.",
+  "mapTimeRemaining": "الوقت المتبقي: {duration}",
+  "@mapTimeRemaining": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "mapRouteFollowsDriver": "المسار يتحدث حسب موقع السائق الحالي",
+  "mapRouteIsPlanned": "المسار المعروض هو المسار المحدد للرحلة",
+  "mapYourTripRoute": "مسار رحلتك",
+  "mapPickupPoint": "نقطة الالتقاء",
+  "mapZoomIn": "تكبير الخريطة",
+  "mapZoomOut": "تصغير الخريطة",
+  "mapShowRoute": "إظهار المسار",
+  "mapMarkerDetails": "التفاصيل",
+  "mapMyLocation": "موقعي",
+  "mapYouAreHere": "أنت هنا",
+  "mapLocationOutsideArea": "موقعك خارج منطقة خدمة درب.",
+  "driverArrivalTitle": "السائق في الطريق إليك",
+  "driverArrivalSubtitle": "المسافة والوقت المتبقي للوصول إلى نقطة الالتقاء",
+  "driverArrivalDistance": "المسافة المتبقية",
+  "driverArrivalEta": "وقت الوصول التقريبي",
+  "driverArrivalDisclaimer": "الوقت تقديري وقد يتغير حسب حركة الطريق.",
+  "distanceKmValue": "{km} كم",
+  "@distanceKmValue": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "distanceMetersValue": "{meters} م",
+  "@distanceMetersValue": {
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "durationMinutesValue": "{minutes} د",
+  "@durationMinutesValue": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHoursValue": "{hours} س",
+  "@durationHoursValue": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHoursMinutesValue": "{hours} س {minutes} د",
+  "@durationHoursMinutesValue": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "tripInProgress": "الرحلة جارية",
+  "tripLiveTracking": "تتبع مباشر",
+  "tripWaitingForLocation": "بانتظار الموقع",
+  "tripStartLabel": "البداية",
+  "tripArrivalLabel": "الوصول",
+  "tripLocationLabel": "الموقع",
+  "tripLive": "مباشر",
+  "tripEstimatedArrival": "الوصول المتوقع",
+  "tripDistance": "المسافة",
+  "tripRemainingTime": "الوقت المتبقي",
+  "tripCalculatingRoute": "جاري حساب المسار...",
+  "tripVehicleLocation": "موقع المركبة",
+  "tripRefreshLocation": "تحديث الموقع",
+  "driverFailDeliveryAction": "تسجيل فشل التوصيل",
+  "driverFailDeliveryTitle": "فشل التوصيل",
+  "driverFailDeliveryMessage": "هل تريد تسجيل الرحلة كتوصيل فاشل؟",
+  "driverCancelTripTitle": "إلغاء الرحلة",
+  "driverCancelTripMessage": "هل أنت متأكد من إلغاء الرحلة الحالية؟",
   "merchantOrderMapTitle": "مسار الطلب",
   "driverPhoneLabel": "هاتف السائق",
   "callDriver": "اتصل بالسائق",

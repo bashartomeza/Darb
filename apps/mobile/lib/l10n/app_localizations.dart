@@ -1292,6 +1292,12 @@ abstract class AppLocalizations {
   /// **'الوقت المفضل'**
   String get preferredTime;
 
+  /// No description provided for @dateTimeValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{date}، {time}'**
+  String dateTimeValue(String date, String time);
+
   /// No description provided for @passengerCount.
   ///
   /// In ar, this message translates to:
@@ -1321,6 +1327,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'إلغاء الطلب'**
   String get cancelRequest;
+
+  /// No description provided for @cancelRequestConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد إلغاء هذا الطلب؟'**
+  String get cancelRequestConfirm;
 
   /// No description provided for @requestCancelled.
   ///
@@ -1579,6 +1591,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'ملغاة'**
   String get statusCancelled;
+
+  /// No description provided for @statusFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشلت'**
+  String get statusFailed;
 
   /// No description provided for @driverDashboard.
   ///
@@ -3926,11 +3944,65 @@ abstract class AppLocalizations {
   /// **'التقارير'**
   String get navReports;
 
+  /// No description provided for @navMyOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلباتي'**
+  String get navMyOrders;
+
+  /// No description provided for @navMainMenu.
+  ///
+  /// In ar, this message translates to:
+  /// **'القائمة الرئيسية'**
+  String get navMainMenu;
+
+  /// No description provided for @navSidebarTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'رحلتك بأمان'**
+  String get navSidebarTitle;
+
+  /// No description provided for @navSidebarBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'تابع رحلاتك وراجع جلسات حسابك.'**
+  String get navSidebarBody;
+
   /// No description provided for @myTrips.
   ///
   /// In ar, this message translates to:
   /// **'رحلاتي'**
   String get myTrips;
+
+  /// No description provided for @myTripsSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل رحلاتك في مكان واحد'**
+  String get myTripsSubtitle;
+
+  /// No description provided for @myTripsCurrentTrip.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرحلة الحالية'**
+  String get myTripsCurrentTrip;
+
+  /// No description provided for @myTripsFilterEmptyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد رحلات هنا'**
+  String get myTripsFilterEmptyTitle;
+
+  /// No description provided for @myTripsFilterEmptyBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد رحلات في هذه الفئة بعد.'**
+  String get myTripsFilterEmptyBody;
+
+  /// No description provided for @myTripsShowAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض كل الرحلات'**
+  String get myTripsShowAll;
 
   /// No description provided for @tripsActiveSection.
   ///
@@ -5143,6 +5215,174 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'الحالة غير معروفة'**
   String get checkpointUnknown;
+
+  /// No description provided for @checkpointStatusOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'سالك'**
+  String get checkpointStatusOpen;
+
+  /// No description provided for @checkpointStatusCongested.
+  ///
+  /// In ar, this message translates to:
+  /// **'أزمة'**
+  String get checkpointStatusCongested;
+
+  /// No description provided for @checkpointStatusClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلق'**
+  String get checkpointStatusClosed;
+
+  /// No description provided for @checkpointStatusUnknown.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير معروف'**
+  String get checkpointStatusUnknown;
+
+  /// No description provided for @checkpointStatusNotAvailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة غير متوفرة'**
+  String get checkpointStatusNotAvailable;
+
+  /// No description provided for @checkpointEnteringStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'دخول: {status}'**
+  String checkpointEnteringStatus(String status);
+
+  /// No description provided for @checkpointLeavingStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'خروج: {status}'**
+  String checkpointLeavingStatus(String status);
+
+  /// No description provided for @checkpointDirectionStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة'**
+  String get checkpointDirectionStatus;
+
+  /// No description provided for @checkpointDirectionEntering.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدخول'**
+  String get checkpointDirectionEntering;
+
+  /// No description provided for @checkpointDirectionLeaving.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخروج'**
+  String get checkpointDirectionLeaving;
+
+  /// No description provided for @checkpointUpdatedAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحديث: {time}'**
+  String checkpointUpdatedAt(String time);
+
+  /// No description provided for @checkpointUpdatedUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحديث: غير متوفر'**
+  String get checkpointUpdatedUnavailable;
+
+  /// No description provided for @checkpointLastUpdatedAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث: {time}'**
+  String checkpointLastUpdatedAt(String time);
+
+  /// No description provided for @checkpointLastUpdatedUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث غير متوفر'**
+  String get checkpointLastUpdatedUnavailable;
+
+  /// No description provided for @checkpointTimeUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير متوفر'**
+  String get checkpointTimeUnavailable;
+
+  /// No description provided for @checkpointCityUnspecified.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدينة غير محددة'**
+  String get checkpointCityUnspecified;
+
+  /// No description provided for @checkpointCityHasCongestion.
+  ///
+  /// In ar, this message translates to:
+  /// **'يوجد أزمة'**
+  String get checkpointCityHasCongestion;
+
+  /// No description provided for @checkpointsOnRoad.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحواجز على الطريق'**
+  String get checkpointsOnRoad;
+
+  /// No description provided for @checkpointsCityCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{checkpoints} حاجز · {cities} مدينة'**
+  String checkpointsCityCount(int checkpoints, int cities);
+
+  /// No description provided for @checkpointsCitiesLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المدن'**
+  String get checkpointsCitiesLabel;
+
+  /// No description provided for @checkpointsCongestedLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'حواجز عليها ازدحام'**
+  String get checkpointsCongestedLabel;
+
+  /// No description provided for @checkpointsViewDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض تفاصيل الحواجز وحالتها'**
+  String get checkpointsViewDetails;
+
+  /// No description provided for @checkpointsDataUpdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث للبيانات: {time}'**
+  String checkpointsDataUpdated(String time);
+
+  /// No description provided for @checkpointsRefreshData.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث بيانات الحواجز'**
+  String get checkpointsRefreshData;
+
+  /// No description provided for @checkpointsByCity.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحواجز حسب المدينة'**
+  String get checkpointsByCity;
+
+  /// No description provided for @checkpointsRefreshing.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري تحديث الحواجز...'**
+  String get checkpointsRefreshing;
+
+  /// No description provided for @checkpointsNoData.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد بيانات حواجز متاحة حالياً.'**
+  String get checkpointsNoData;
+
+  /// No description provided for @checkpointsPickCity.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر المدينة لعرض حواجزها'**
+  String get checkpointsPickCity;
 
   /// No description provided for @checkpointLabel.
   ///
@@ -6865,6 +7105,258 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'المسار'**
   String get mapRouteLabel;
+
+  /// No description provided for @mapDriverLocationFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحديث موقع السائق حاليًا.'**
+  String get mapDriverLocationFailed;
+
+  /// No description provided for @mapWaitingDriverLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار آخر موقع مسجل للسائق.'**
+  String get mapWaitingDriverLocation;
+
+  /// No description provided for @mapTimeRemaining.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت المتبقي: {duration}'**
+  String mapTimeRemaining(String duration);
+
+  /// No description provided for @mapRouteFollowsDriver.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار يتحدث حسب موقع السائق الحالي'**
+  String get mapRouteFollowsDriver;
+
+  /// No description provided for @mapRouteIsPlanned.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسار المعروض هو المسار المحدد للرحلة'**
+  String get mapRouteIsPlanned;
+
+  /// No description provided for @mapYourTripRoute.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسار رحلتك'**
+  String get mapYourTripRoute;
+
+  /// No description provided for @mapPickupPoint.
+  ///
+  /// In ar, this message translates to:
+  /// **'نقطة الالتقاء'**
+  String get mapPickupPoint;
+
+  /// No description provided for @mapZoomIn.
+  ///
+  /// In ar, this message translates to:
+  /// **'تكبير الخريطة'**
+  String get mapZoomIn;
+
+  /// No description provided for @mapZoomOut.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصغير الخريطة'**
+  String get mapZoomOut;
+
+  /// No description provided for @mapShowRoute.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار المسار'**
+  String get mapShowRoute;
+
+  /// No description provided for @mapMarkerDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'التفاصيل'**
+  String get mapMarkerDetails;
+
+  /// No description provided for @mapMyLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعي'**
+  String get mapMyLocation;
+
+  /// No description provided for @mapYouAreHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت هنا'**
+  String get mapYouAreHere;
+
+  /// No description provided for @mapLocationOutsideArea.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقعك خارج منطقة خدمة درب.'**
+  String get mapLocationOutsideArea;
+
+  /// No description provided for @driverArrivalTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'السائق في الطريق إليك'**
+  String get driverArrivalTitle;
+
+  /// No description provided for @driverArrivalSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسافة والوقت المتبقي للوصول إلى نقطة الالتقاء'**
+  String get driverArrivalSubtitle;
+
+  /// No description provided for @driverArrivalDistance.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسافة المتبقية'**
+  String get driverArrivalDistance;
+
+  /// No description provided for @driverArrivalEta.
+  ///
+  /// In ar, this message translates to:
+  /// **'وقت الوصول التقريبي'**
+  String get driverArrivalEta;
+
+  /// No description provided for @driverArrivalDisclaimer.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت تقديري وقد يتغير حسب حركة الطريق.'**
+  String get driverArrivalDisclaimer;
+
+  /// No description provided for @distanceKmValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{km} كم'**
+  String distanceKmValue(String km);
+
+  /// No description provided for @distanceMetersValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{meters} م'**
+  String distanceMetersValue(int meters);
+
+  /// No description provided for @durationMinutesValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{minutes} د'**
+  String durationMinutesValue(int minutes);
+
+  /// No description provided for @durationHoursValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{hours} س'**
+  String durationHoursValue(int hours);
+
+  /// No description provided for @durationHoursMinutesValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'{hours} س {minutes} د'**
+  String durationHoursMinutesValue(int hours, int minutes);
+
+  /// No description provided for @tripInProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرحلة جارية'**
+  String get tripInProgress;
+
+  /// No description provided for @tripLiveTracking.
+  ///
+  /// In ar, this message translates to:
+  /// **'تتبع مباشر'**
+  String get tripLiveTracking;
+
+  /// No description provided for @tripWaitingForLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار الموقع'**
+  String get tripWaitingForLocation;
+
+  /// No description provided for @tripStartLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'البداية'**
+  String get tripStartLabel;
+
+  /// No description provided for @tripArrivalLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوصول'**
+  String get tripArrivalLabel;
+
+  /// No description provided for @tripLocationLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع'**
+  String get tripLocationLabel;
+
+  /// No description provided for @tripLive.
+  ///
+  /// In ar, this message translates to:
+  /// **'مباشر'**
+  String get tripLive;
+
+  /// No description provided for @tripEstimatedArrival.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوصول المتوقع'**
+  String get tripEstimatedArrival;
+
+  /// No description provided for @tripDistance.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسافة'**
+  String get tripDistance;
+
+  /// No description provided for @tripRemainingTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوقت المتبقي'**
+  String get tripRemainingTime;
+
+  /// No description provided for @tripCalculatingRoute.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري حساب المسار...'**
+  String get tripCalculatingRoute;
+
+  /// No description provided for @tripVehicleLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقع المركبة'**
+  String get tripVehicleLocation;
+
+  /// No description provided for @tripRefreshLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث الموقع'**
+  String get tripRefreshLocation;
+
+  /// No description provided for @driverFailDeliveryAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل فشل التوصيل'**
+  String get driverFailDeliveryAction;
+
+  /// No description provided for @driverFailDeliveryTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل التوصيل'**
+  String get driverFailDeliveryTitle;
+
+  /// No description provided for @driverFailDeliveryMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد تسجيل الرحلة كتوصيل فاشل؟'**
+  String get driverFailDeliveryMessage;
+
+  /// No description provided for @driverCancelTripTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الرحلة'**
+  String get driverCancelTripTitle;
+
+  /// No description provided for @driverCancelTripMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد من إلغاء الرحلة الحالية؟'**
+  String get driverCancelTripMessage;
 
   /// No description provided for @merchantOrderMapTitle.
   ///
