@@ -17,6 +17,7 @@ import 'package:darb_mobile/features/trips/data/trip_models.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/location/locate_device.dart';
 import '../../../core/maps/darb_route_map.dart';
 import '../../../core/maps/osrm_route_service.dart';
@@ -509,6 +510,13 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
                     _buildStatusPill(context, trip.status),
                   ],
                 ),
+
+                // Who cancelled the trip and why.
+                if (trip.status == 'cancelled')
+                  CancellationReasonNote(
+                    info: trip.cancellation,
+                    viewerIsDriver: true,
+                  ),
 
                 const SizedBox(height: 12),
 
@@ -1393,6 +1401,30 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
       AppLocalizations.of(context).driverFailDeliveryMessage;
 
   Future<void> _cancelTrip() async {
+    final trip = ref
+        .read(driverTripControllerProvider(widget.tripId))
+        .value
+        ?.trip;
+    if (trip != null && trip.cancelsWithReason) {
+      // Before pickup: ask why. The request goes back to waiting, and the
+      // cancellation counts against the trust score and is limited per day.
+      final l10n = AppLocalizations.of(context);
+      final choice = await showCancelReasonDialog(
+        context,
+        role: CancelRole.driver,
+        title: l10nCancelTripTitle(context),
+        message:
+            '${l10nCancelTripMessage(context)}\n\n${l10n.driverCancelTripWarning}',
+        confirmLabel: l10n.cancelRequest,
+      );
+      if (choice == null || !mounted) return;
+      await _action(
+        () => ref
+            .read(driverTripControllerProvider(widget.tripId).notifier)
+            .cancelTrip(choice: choice),
+      );
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

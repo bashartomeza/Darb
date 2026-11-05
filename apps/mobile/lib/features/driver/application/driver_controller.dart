@@ -4,6 +4,7 @@ import '../../../core/api/authoritative_refresh.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/cancellation/cancellation.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/domain/auth_models.dart';
@@ -597,7 +598,9 @@ class DriverTripController extends AsyncNotifier<DriverTripState> {
     if (ref.mounted) ref.invalidate(driverDashboardProvider);
   }
 
-  Future<void> cancelTrip() async {
+  /// [choice] is the reason the driver gave; it is required before pickup
+  /// (the request goes back to waiting) and ignored once the trip is under way.
+  Future<void> cancelTrip({CancelChoice? choice}) async {
     final current = state.value;
     if (current == null ||
         _actionRunning ||
@@ -609,10 +612,11 @@ class DriverTripController extends AsyncNotifier<DriverTripState> {
         }.contains(current.trip.status)) {
       return;
     }
+    final repository = ref.read(driverRepositoryProvider);
     await _runAction(
-      () => ref
-          .read(driverRepositoryProvider)
-          .updateTripStatus(_tripId, 'cancelled'),
+      () => current.trip.cancelsWithReason && choice != null
+          ? repository.cancelAcceptedTrip(_tripId, choice)
+          : repository.updateTripStatus(_tripId, 'cancelled'),
     );
     if (ref.mounted) ref.invalidate(driverDashboardProvider);
   }

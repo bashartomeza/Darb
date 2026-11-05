@@ -4,6 +4,10 @@ import { createServer } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 import request from "supertest";
 import type { Prisma } from "../generated/prisma/client.js";
+import { config } from "../config.js";
+
+// A ride request stays open to drivers until ORDER_AUTO_CANCEL_MINUTES after its booked time.
+const autoCancelWindowMs = config.orderAutoCancelMinutes * 60_000;
 
 assert(process.env.CI_MYSQL_LOOPBACK_QA === "true", "disposable_harness_required");
 let url: URL;
@@ -221,7 +225,7 @@ try {
     const expires = scenario.deadline !== "future";
     const deadline = new Date(Date.now() + (expires ? 2_500 : 60_000));
     if (scenario.deadline === "demand") {
-      await prisma.passengerRequest.update({ where: { id: demandId }, data: { preferred_time: deadline } });
+      await prisma.passengerRequest.update({ where: { id: demandId }, data: { preferred_time: new Date(deadline.getTime() - autoCancelWindowMs) } });
     } else if (scenario.deadline === "departure" || scenario.deadline === "window") {
       await prisma.driverRoute.update({ where: { id: routeId }, data: scenario.deadline === "departure"
         ? { departure_at: deadline } : { availability_window_end: deadline } });
@@ -321,7 +325,7 @@ try {
   // Keep HTTP fixture setup outside the short real lock-wait deadline, which
   // must fit within the application's normal interactive transaction timeout.
   deadline = new Date(Date.now() + 2_500);
-  await prisma.passengerRequest.update({ where: { id: barrierRequestId }, data: { preferred_time: deadline } });
+  await prisma.passengerRequest.update({ where: { id: barrierRequestId }, data: { preferred_time: new Date(deadline.getTime() - autoCancelWindowMs) } });
   let releaseLock!: () => void;
   let signalLocked!: () => void;
   const lockRelease = new Promise<void>(resolve => { releaseLock = resolve; });

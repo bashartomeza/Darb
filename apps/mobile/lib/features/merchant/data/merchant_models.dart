@@ -1,3 +1,4 @@
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/fares/fare.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../delivery_handover/data/delivery_handover_models.dart';
@@ -332,10 +333,18 @@ class MerchantOrder {
     this.routeNameEn,
     this.pickupDetails,
     this.fare,
+    this.tripStatus,
+    this.cancellation,
   });
 
   final String id;
   final String pickupLabel;
+
+  /// The status of the trip carrying the order, once a driver accepted it.
+  final String? tripStatus;
+
+  /// Who cancelled the order and why; null while it is not cancelled.
+  final CancellationInfo? cancellation;
 
   /// The order's fare frozen at creation (the sum of its parcels' size
   /// fares); null when the route had no fare for every parcel.
@@ -362,8 +371,18 @@ class MerchantOrder {
   final HandoverStatus? handover;
 
   bool get canBatch => status == 'submitted' && batches.isEmpty;
+
+  /// An order can be cancelled any time before pickup: while it waits for a
+  /// driver, and after one accepted it until the parcel is picked up.
   bool get canCancel =>
-      const {'submitted', 'batched', 'matched'}.contains(status);
+      const {'submitted', 'batched', 'matched'}.contains(status) ||
+      (status == 'assigned' &&
+          (tripStatus == null ||
+              tripStatus == 'accepted' ||
+              tripStatus == 'pickup_started'));
+
+  /// A driver already accepted: cancelling tells that driver.
+  bool get hasAcceptedDriver => status == 'assigned';
   MerchantBatch? get latestBatch => batches.isEmpty ? null : batches.first;
 
   /// The order's route from its own record: pickup, then each distinct parcel
@@ -422,6 +441,8 @@ class MerchantOrder {
       routeNameEn: _text(json['route_name_en']),
       pickupDetails: _text(json['pickup_details']),
       fare: FareSnapshot.tryParse(json['fare']),
+      tripStatus: _text(json['trip_status']),
+      cancellation: CancellationInfo.tryParse(json['cancellation']),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
@@ -219,6 +220,7 @@ class _NotificationTile extends StatelessWidget {
     'driver_approaching' => Icons.directions_car_outlined,
     'merchant_order_expired' => Icons.timer_off_outlined,
     'match_withdrawn' => Icons.remove_circle_outline,
+    'cancelled' => Icons.event_busy_outlined,
     _ => Icons.notifications_none_outlined,
   };
 
@@ -323,12 +325,16 @@ bool opensDriverRenewal(String type) =>
             ? l10n.notifOrderExpiredMaxAgeBody(hours.toInt())
             : null,
       );
+    case 'cancelled':
+      return _cancelledText(l10n, notification.params);
     case 'match_withdrawn':
       return (
         title: l10n.notifOfferWithdrawnTitle,
-        body: notification.params['reason'] == 'expired'
-            ? l10n.notifOfferWithdrawnExpiredBody
-            : l10n.notifOfferWithdrawnCancelledBody,
+        body: switch (notification.params['reason']) {
+          'expired' => l10n.notifOfferWithdrawnExpiredBody,
+          'request_cancelled' => l10n.notifOfferWithdrawnRequestCancelledBody,
+          _ => l10n.notifOfferWithdrawnCancelledBody,
+        },
       );
     case 'incident_updated':
       return (
@@ -342,4 +348,49 @@ bool opensDriverRenewal(String type) =>
     default:
       return (title: l10n.notifUnknownTitle, body: null);
   }
+}
+
+/// Wording of the `cancelled` notification. The same words go out as the
+/// push banner (apps/api/src/services/pushText.ts).
+({String title, String? body}) _cancelledText(
+  AppLocalizations l10n,
+  Map<String, dynamic> params,
+) {
+  final reason = cancelReasonLabel(l10n, '${params['reason'] ?? 'other'}');
+  final by = params['by'];
+  final kind = params['kind'];
+  if (params['audience'] == 'driver') {
+    if (params['partial'] == true) {
+      return (
+        title: l10n.notifCancelledPartialTitle,
+        body: l10n.notifCancelledPartialBody(reason),
+      );
+    }
+    return (
+      title: l10n.notifCancelledDriverTitle,
+      body: switch (by) {
+        'admin' => l10n.notifCancelledDriverByAdminBody(reason),
+        'passenger' => l10n.notifCancelledDriverByPassengerBody(reason),
+        _ => l10n.notifCancelledDriverBySenderBody(reason),
+      },
+    );
+  }
+  if (params['waiting'] == true) {
+    return (
+      title: l10n.notifCancelledWaitingTitle,
+      body: l10n.notifCancelledWaitingBody,
+    );
+  }
+  final title = switch (kind) {
+    'ride' => l10n.notifCancelledRideTitle,
+    'parcel' => l10n.notifCancelledParcelTitle,
+    _ => l10n.notifCancelledOrderTitle,
+  };
+  if (params['automatic'] == true) {
+    return (title: title, body: l10n.notifCancelledAutomaticBody);
+  }
+  return (
+    title: title,
+    body: by == 'admin' ? l10n.notifCancelledByAdminBody(reason) : reason,
+  );
 }

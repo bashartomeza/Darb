@@ -1,3 +1,5 @@
+import '../../../core/cancellation/cancellation.dart';
+
 class PassengerTrip {
   const PassengerTrip({
     required this.id,
@@ -16,6 +18,7 @@ class PassengerTrip {
     this.pickupDetails,
     this.dropoffDetails,
     this.driverPhone,
+    this.cancellation,
   });
 
   final String id;
@@ -63,6 +66,14 @@ class PassengerTrip {
   /// The driver's phone, sent only from the driver's acceptance until drop-off.
   /// Null whenever the server leaves it out: the call action hides with it.
   final String? driverPhone;
+
+  /// Who cancelled the trip and why; null while it is not cancelled.
+  final CancellationInfo? cancellation;
+
+  /// Before pickup the passenger can still cancel (the driver is told).
+  bool get passengerCanCancel =>
+      passengerRequestId != null &&
+      (status == 'accepted' || status == 'pickup_started');
 
   /// The route's name in the reading language, or null for older trips.
   String? routeName({required bool arabic}) {
@@ -117,6 +128,7 @@ class PassengerTrip {
       pickupDetails: _optionalString(request, 'pickup_details'),
       dropoffDetails: _optionalString(request, 'dropoff_details'),
       driverPhone: tripDriverPhone(json),
+      cancellation: CancellationInfo.tryParse(json['cancellation']),
     );
   }
 }

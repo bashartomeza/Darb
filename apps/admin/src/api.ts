@@ -350,6 +350,21 @@ return {
       token,
       body: { status, expected_status: expectedStatus },
     }),
+  /** Cancels a trip that is not finished; the driver and every rider or sender on it are told why. */
+  cancelAdminTrip: (token: string, id: string, body: CancellationBody) =>
+    apiRequest<{ cancelled: true }>(`/admin/trips/${encodeURIComponent(id)}/cancel`, { method: "POST", token, body }),
+  /** Cancels a ride request (and its trip, if a driver accepted it). */
+  cancelPassengerRequest: (token: string, id: string, body: CancellationBody) =>
+    apiRequest<{ cancelled: true }>(`/admin/requests/${encodeURIComponent(id)}/cancel`, { method: "POST", token, body }),
+  /** Cancels one merchant order or passenger parcel; on a shared trip only this order leaves it. */
+  cancelMerchantOrder: (token: string, id: string, body: CancellationBody) =>
+    apiRequest<{ cancelled: true }>(
+      `/admin/orders/${encodeURIComponent(id)}/cancel`,
+      { method: "POST", token, body }
+    ),
+  /** The cancellation history, newest first; pass `next_cursor` back as `cursor` for the next page. */
+  cancellations: (token: string, query: CancellationQuery = {}) =>
+    apiRequest<CancellationPage>(withQuery("/admin/cancellations", query), { token }),
   serviceRoutes: (token: string, query = "") => apiRequest<RoutePage>(`/admin/service-routes${query}`, { token }),
   serviceRoute: (token: string, id: string) => apiRequest<{ route: ServiceRoute }>(`/admin/service-routes/${id}`, { token }),
   createServiceRoute: (token: string, body: RouteIdentityDraft, key: string) => apiRequest<{ route: ServiceRoute }>("/admin/service-routes", { method: "POST", token, body, idempotencyKey: key }),
@@ -798,6 +813,37 @@ export type OrderRouteFields = {
   service_route_id?: string | null;
   route_name_ar?: string | null;
   route_name_en?: string | null;
+};
+
+/** The reasons an Admin can give when cancelling (the API's `admin` list). */
+export const ADMIN_CANCELLATION_REASONS = ["customer_request", "driver_unavailable", "safety_concern", "duplicate", "policy_violation", "other"] as const;
+export type AdminCancellationReason = (typeof ADMIN_CANCELLATION_REASONS)[number];
+export type CancellationBody = { reason: AdminCancellationReason; note?: string };
+export type CancellationKind = "automatic" | "manual";
+export type CancellationRole = "system" | "passenger" | "merchant" | "driver" | "admin";
+export type CancellationOutcome = "cancelled" | "requeued" | "removed";
+export type CancellationOrderType = "ride" | "merchant_order" | "parcel";
+export type CancellationRecord = {
+  id: string;
+  created_at: string;
+  kind: CancellationKind;
+  by_role: CancellationRole;
+  by: { id: string; name: string } | null;
+  reason: string;
+  note: string | null;
+  outcome: CancellationOutcome;
+  trip_id: string | null;
+  order: { type: CancellationOrderType; id: string; status: string; owner: { id: string; name: string } } | null;
+};
+export type CancellationPage = { cancellations: CancellationRecord[]; next_cursor: string | null; reasons: Record<string, string[]> };
+export type CancellationQuery = {
+  from?: string;
+  to?: string;
+  kind?: CancellationKind;
+  role?: CancellationRole;
+  reason?: string;
+  cursor?: string;
+  limit?: number;
 };
 
 export type PassengerRequest = OrderRouteFields & {

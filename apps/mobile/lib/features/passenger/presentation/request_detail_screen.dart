@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_card.dart';
@@ -11,7 +12,6 @@ import '../../../core/widgets/darb_section.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import '../../canonical_routes/presentation/canonical_route_widgets.dart';
-import '../../security/presentation/security_actions.dart';
 import '../../matching/data/matching_repository.dart';
 import '../application/passenger_controller.dart';
 import '../data/passenger_repository.dart';
@@ -50,18 +50,21 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
     final l10n = AppLocalizations.of(context);
     setState(() => _cancelling = true);
     try {
-      final confirmed = await confirmSecurityAction(
+      final choice = await showCancelReasonDialog(
         context,
+        role: CancelRole.rider,
         title: l10n.cancelRequest,
-        message: l10n.cancelRequestConfirm,
+        message: request.hasAcceptedDriver
+            ? l10n.cancelAcceptedRideConfirm
+            : l10n.cancelRequestConfirm,
         confirmLabel: l10n.cancelRequest,
       );
-      if (!confirmed || !currentActor()) return;
+      if (choice == null || !currentActor()) return;
       Object? mutationError;
       try {
         await ref
             .read(passengerRepositoryProvider)
-            .cancelRequest(request.id, beforeSend: requireCurrent);
+            .cancelRequest(request.id, choice, beforeSend: requireCurrent);
       } catch (error) {
         mutationError = error;
       }
@@ -151,6 +154,9 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                           tone: statusToneFor(request.status),
                         ),
                       ),
+                      // Who cancelled and why, once the request is cancelled.
+                      if (request.status == 'cancelled')
+                        CancellationReasonNote(info: request.cancellation),
                       const SizedBox(height: 24),
                       // The route, then the exact places the passenger typed;
                       // older requests show their saved place names instead.

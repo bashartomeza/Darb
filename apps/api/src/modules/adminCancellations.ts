@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import { recomputeTrustForTrip } from "../services/driverTrust.js";
-import { CANCEL_ACTOR_ROLES, ALL_CANCEL_REASON_CODES, cancelBodySchema } from "../services/cancellationReasons.js";
+import { CANCEL_ACTOR_ROLES, ALL_CANCEL_REASON_CODES, CANCEL_REASONS, cancelBodySchema } from "../services/cancellationReasons.js";
 import { adminCancelTrip, cancelMerchantOrder, cancelPassengerRequest } from "../services/cancellations.js";
 
 /**
@@ -82,11 +82,11 @@ adminCancellationsRouter.post("/admin/trips/:id/cancel", async (req: Authenticat
 });
 
 const listQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
+  cursor: z.string().min(1).max(191).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
-  kind: z.enum(["auto", "manual"]).optional(),
+  kind: z.enum(["automatic", "manual"]).optional(),
   role: z.enum(CANCEL_ACTOR_ROLES).optional(),
   reason: z.string().refine((value) => ALL_CANCEL_REASON_CODES.includes(value)).optional(),
 });
@@ -96,37 +96,57 @@ adminCancellationsRouter.get("/admin/cancellations", async (req, res, next) => {
     const query = listQuerySchema.parse(req.query);
     const where: Prisma.CancellationWhereInput = {
       ...(query.from || query.to ? { created_at: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}) } } : {}),
-      ...(query.kind ? { automatic: query.kind === "auto" } : {}),
+      ...(query.kind ? { automatic: query.kind === "automatic" } : {}),
       ...(query.role ? { actor_role: query.role } : {}),
       ...(query.reason ? { reason_code: query.reason } : {}),
     };
-    const [total, rows] = await Promise.all([
-      prisma.cancellation.count({ where }),
-      prisma.cancellation.findMany({
-        where,
-        orderBy: [{ created_at: "desc" }, { id: "desc" }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-        select: {
-          id: true,
-          actor_role: true,
-          actor: { select: { id: true, name: true } },
-          passenger_request_id: true,
-          merchant_order_id: true,
-          trip_id: true,
-          reason_code: true,
-          note: true,
-          automatic: true,
-          ends_order: true,
-          created_at: true,
+    const rows = await prisma.cancellation.findMany({
+      where,
+      orderBy: [{ created_at: "desc" }, { id: "desc" }],
+      take: query.limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        actor_role: true,
+        actor: { select: { id: true, name: true } },
+        trip_id: true,
+        reason_code: true,
+        note: true,
+        automatic: true,
+        ends_order: true,
+        created_at: true,
+        passenger_request: { select: { id: true, status: true, passenger: { select: { id: true, name: true } } } },
+        merchant_order: {
+          select: { id: true, status: true, merchant: { select: { id: true, name: true } }, passenger_parcel: { select: { order_id: true } } }
         },
-      }),
-    ]);
+      },
+    });
+    const page = rows.slice(0, query.limit);
     res.json({
-      cancellations: rows,
-      page: query.page,
-      limit: query.limit,
-      total,
+      cancellations: page.map((row) => ({
+        id: row.id,
+        created_at: row.created_at,
+        kind: row.automatic ? "automatic" : "manual",
+        by_role: row.actor_role,
+        by: row.actor,
+        reason: row.reason_code,
+        note: row.note,
+        // "requeued": only the trip was cancelled and the order went back to waiting for another driver.
+        outcome: row.ends_order ? "cancelled" : "requeued",
+        trip_id: row.trip_id,
+        order: row.passenger_request
+          ? { type: "ride", id: row.passenger_request.id, status: row.passenger_request.status, owner: row.passenger_request.passenger }
+          : row.merchant_order
+            ? {
+                type: row.merchant_order.passenger_parcel ? "parcel" : "merchant_order",
+                id: row.merchant_order.id,
+                status: row.merchant_order.status,
+                owner: row.merchant_order.merchant,
+              }
+            : null,
+      })),
+      next_cursor: rows.length > query.limit ? page[page.length - 1]!.id : null,
+      reasons: CANCEL_REASONS,
     });
   } catch (error) {
     next(error);

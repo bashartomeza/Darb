@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/presentation/localized_labels.dart';
 import '../../../core/widgets/discard_saved_request_button.dart';
 import '../data/merchant_models.dart';
@@ -63,59 +64,80 @@ bool _arabic(BuildContext context) =>
 /// Asks before cancelling [order], naming exactly what is cancelled: this
 /// order and its parcels only. When it is grouped with other orders for one
 /// driver, it says those stay grouped (and that a pending driver offer for
-/// the group is withdrawn). True when the merchant confirms.
-Future<bool> showMerchantCancelOrderDialog(
+/// the group is withdrawn), and asks why. Returns the merchant's reason, or
+/// null when they keep the order.
+Future<CancelChoice?> showMerchantCancelOrderDialog(
   BuildContext context,
   MerchantOrder order,
-) async {
+) {
   final l10n = AppLocalizations.of(context);
   final batch = order.latestBatch;
   final others = batch != null && batch.isOpen ? batch.orderCount - 1 : 0;
   final reference = merchantReference(order.id);
-  final confirmed = await showDialog<bool>(
+  return showDialog<CancelChoice>(
     context: context,
-    builder: (context) => AlertDialog(
-      key: const ValueKey('merchantCancelOrderDialog'),
-      title: Text(l10n.merchantCancelOrderTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.merchantCancelOrderBody(reference, order.parcels.length),
-            key: const ValueKey('merchantCancelOrderBody'),
+    builder: (dialogContext) {
+      CancelChoice? choice;
+      return StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          key: const ValueKey('merchantCancelOrderDialog'),
+          title: Text(l10n.merchantCancelOrderTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.merchantCancelOrderBody(reference, order.parcels.length),
+                  key: const ValueKey('merchantCancelOrderBody'),
+                ),
+                if (order.hasAcceptedDriver) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.cancelAcceptedOrderNote,
+                    key: const ValueKey('merchantCancelAcceptedNote'),
+                  ),
+                ],
+                if (others > 0) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.merchantCancelBatchNote(others),
+                    key: const ValueKey('merchantCancelBatchNote'),
+                  ),
+                ],
+                if (others > 0 && order.status == 'matched') ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.merchantCancelOfferNote,
+                    key: const ValueKey('merchantCancelOfferNote'),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                CancelReasonPicker(
+                  role: CancelRole.sender,
+                  onChanged: (value) => setState(() => choice = value),
+                ),
+              ],
+            ),
           ),
-          if (others > 0) ...[
-            const SizedBox(height: 12),
-            Text(
-              l10n.merchantCancelBatchNote(others),
-              key: const ValueKey('merchantCancelBatchNote'),
+          actions: [
+            TextButton(
+              key: const ValueKey('merchantCancelOrderKeep'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.merchantCancelKeep),
+            ),
+            FilledButton(
+              key: const ValueKey('merchantCancelOrderConfirm'),
+              onPressed: choice == null
+                  ? null
+                  : () => Navigator.of(dialogContext).pop(choice),
+              child: Text(l10n.merchantCancelConfirm),
             ),
           ],
-          if (others > 0 && order.status == 'matched') ...[
-            const SizedBox(height: 12),
-            Text(
-              l10n.merchantCancelOfferNote,
-              key: const ValueKey('merchantCancelOfferNote'),
-            ),
-          ],
-        ],
-      ),
-      actions: [
-        TextButton(
-          key: const ValueKey('merchantCancelOrderKeep'),
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.merchantCancelKeep),
         ),
-        FilledButton(
-          key: const ValueKey('merchantCancelOrderConfirm'),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l10n.merchantCancelConfirm),
-        ),
-      ],
-    ),
+      );
+    },
   );
-  return confirmed ?? false;
 }
 
 /// The order's route ("Hebron → Bethlehem"), or for orders created before

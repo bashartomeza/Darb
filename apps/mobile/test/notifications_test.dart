@@ -168,6 +168,79 @@ void main() {
       );
       expect(notificationText(en, expired).body, contains('expired'));
       expect(notificationText(ar, expired).title, 'تم سحب العرض');
+      final requestCancelled = _note(
+        'c',
+        'match_withdrawn',
+        params: {'reason': 'request_cancelled'},
+      );
+      expect(
+        notificationText(en, requestCancelled).body,
+        contains('The passenger cancelled this request'),
+      );
+    });
+
+    test('a cancellation is worded for whoever it affects, in both languages', () {
+      String text(Map<String, Object?> params, AppLocalizations l10n) {
+        final note = notificationText(
+          l10n,
+          _note('c', 'cancelled', params: params),
+        );
+        return '${note.title} | ${note.body}';
+      }
+
+      const automatic = {
+        'audience': 'owner',
+        'kind': 'ride',
+        'by': 'system',
+        'automatic': true,
+        'reason': 'no_driver_in_time',
+      };
+      expect(
+        text(automatic, en),
+        'Ride request cancelled | No driver accepted it in time, so it was cancelled.',
+      );
+      expect(
+        text(automatic, ar),
+        'تم إلغاء طلب الرحلة | لم يقبله أي سائق في الوقت المحدد، لذلك أُلغي تلقائياً.',
+      );
+      expect(
+        text(const {
+          'audience': 'owner',
+          'kind': 'order',
+          'by': 'driver',
+          'waiting': true,
+          'reason': 'vehicle_problem',
+        }, en),
+        'Your driver cancelled | Your request is waiting for another driver.',
+      );
+      expect(
+        text(const {
+          'audience': 'owner',
+          'kind': 'parcel',
+          'by': 'admin',
+          'reason': 'safety_concern',
+        }, en),
+        'Parcel cancelled | Cancelled by the Darb team: Safety concern.',
+      );
+      expect(
+        text(const {
+          'audience': 'driver',
+          'kind': 'ride',
+          'by': 'passenger',
+          'reason': 'changed_plans',
+        }, en),
+        'Trip cancelled | The passenger cancelled this trip: Changed plans.',
+      );
+      expect(
+        text(const {
+          'audience': 'driver',
+          'kind': 'order',
+          'by': 'merchant',
+          'reason': 'wrong_details',
+          'partial': true,
+        }, ar),
+        'تمت إزالة طلب من رحلتك | أُلغي طلب: إدخال بيانات خاطئة. تستمر بقية الرحلة.',
+      );
     });
   });
 

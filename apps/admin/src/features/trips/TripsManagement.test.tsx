@@ -7,6 +7,7 @@ import type { Locale } from "../../i18n/translations";
 import {
   createLatestRequestGate,
   createTripStatusIntent,
+  isAdminCancellableTrip,
   executeTripStatusMutation,
   TripsManagementView,
   type TripsManagementViewProps,
@@ -212,12 +213,15 @@ describe("Admin Trips Management", () => {
     expect(merchantMarkup).toContain("No stored location exists for this trip.");
   });
 
-  it("shows only the safe legacy forward action and explains disabled cancellation", () => {
-    const markup = render("en", <TripsManagementView {...props()} />);
+  it("shows the safe legacy forward action and a cancel action for an unfinished legacy trip", () => {
+    const markup = render("en", <TripsManagementView {...props({ onBeginCancel: () => undefined })} />);
     expect(markup).toContain("Move to Pickup started");
-    expect(markup).not.toContain("Cancel trip");
-    expect(markup).toContain("Admin cancellation is unavailable until related operational state can be rolled back safely and transactionally.");
+    expect(markup).toContain("Cancel trip");
+    expect(render("en", <TripsManagementView {...props()} />)).not.toContain("Cancel trip");
     expect(createTripStatusIntent(legacy)).toEqual({ trip: legacy, expectedStatus: "accepted", nextStatus: "pickup_started" });
+    expect(isAdminCancellableTrip({ kind: "legacy", status: "in_transit" })).toBe(true);
+    expect(isAdminCancellableTrip({ kind: "legacy", status: "delivered" })).toBe(false);
+    expect(isAdminCancellableTrip({ kind: "shared", status: "accepted" })).toBe(false);
   });
 
   it("renders created and canonical/shared trips as honest read-only states", () => {
@@ -252,7 +256,6 @@ describe("Admin Trips Management", () => {
     expect(en).toContain("Confirm trip transition");
     expect(en).toContain("Confirm");
     expect(ar).toContain("تأكيد انتقال الرحلة");
-    expect(ar).toContain("إلغاء المسؤول للرحلة غير متاح");
   });
 
   it("reloads authoritative list/detail after a stale 409 without reporting success", async () => {

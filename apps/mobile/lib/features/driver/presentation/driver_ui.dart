@@ -59,6 +59,8 @@ String driverErrorLabel(AppLocalizations l10n, Object error) {
     'route_required' => l10n.orderRouteRequired,
     'driver_price_out_of_range' => l10n.driverPriceOutOfRange,
     'driver_price_fixed' => l10n.driverPriceFixedError,
+    'driver_cancellation_limit_reached' => l10n.driverCancelLimitReached,
+    'trip_cannot_be_cancelled' => l10n.tripTransitionConflict,
     _ => l10n.requestFailed,
   };
 }

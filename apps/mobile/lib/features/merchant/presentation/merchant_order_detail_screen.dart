@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/state_views.dart';
@@ -156,6 +157,9 @@ class _MerchantOrderDetailScreenState
           value:
               '${_formatDate(context, order.createdAt)} · ${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(order.createdAt))}',
         ),
+        // Who cancelled the order and why.
+        if (order.status == 'cancelled')
+          CancellationReasonNote(info: order.cancellation),
         // The fare frozen at creation; absent when the route had no fare.
         if (order.fare != null) ...[
           const SizedBox(height: 4),
@@ -217,12 +221,12 @@ class _MerchantOrderDetailScreenState
   Future<void> _cancelOrder() async {
     final order = ref.read(merchantOrderProvider(widget.orderId)).value?.order;
     if (order == null) return;
-    final confirmed = await showMerchantCancelOrderDialog(context, order);
-    if (!confirmed || !mounted) return;
+    final choice = await showMerchantCancelOrderDialog(context, order);
+    if (choice == null || !mounted) return;
     await _action(() async {
       await ref
           .read(merchantOrderProvider(widget.orderId).notifier)
-          .cancelOrder();
+          .cancelOrder(choice);
     });
   }
 

@@ -366,13 +366,18 @@ try {
     await capacity(r, 2, 5, "capacity is freed again");
 
     const history = await call("admin", "GET", "/admin/cancellations?limit=100");
-    check(history.status === 200 && history.body.total >= 6, "the history lists cancellations");
+    check(history.status === 200 && history.body.cancellations.length >= 6, "the history lists cancellations");
+    const newest = history.body.cancellations[0];
+    check(newest.by?.name === "SYNTHETIC Cancel" && newest.order?.owner?.name !== undefined && ["ride", "merchant_order", "parcel"].includes(newest.order?.type), "each row names who cancelled and the order and its owner");
     const manual = await call("admin", "GET", "/admin/cancellations?kind=manual&role=admin&limit=100");
-    check(manual.body.cancellations.length >= 4 && manual.body.cancellations.every((c: any) => c.actor_role === "admin" && c.automatic === false), "filter by manual and role");
-    const auto = await call("admin", "GET", "/admin/cancellations?kind=auto&reason=no_driver_in_time&limit=100");
-    check(auto.body.cancellations.length >= 3 && auto.body.cancellations.every((c: any) => c.automatic && c.reason_code === "no_driver_in_time"), "filter by automatic and reason");
+    check(manual.body.cancellations.length >= 4 && manual.body.cancellations.every((c: any) => c.by_role === "admin" && c.kind === "manual"), "filter by manual and role");
+    const auto = await call("admin", "GET", "/admin/cancellations?kind=automatic&reason=no_driver_in_time&limit=100");
+    check(auto.body.cancellations.length >= 3 && auto.body.cancellations.every((c: any) => c.kind === "automatic" && c.reason === "no_driver_in_time"), "filter by automatic and reason");
+    const pageOne = await call("admin", "GET", "/admin/cancellations?limit=2");
+    const pageTwo = await call("admin", "GET", `/admin/cancellations?limit=2&cursor=${pageOne.body.next_cursor}`);
+    check(pageOne.body.cancellations.length === 2 && pageOne.body.next_cursor && pageTwo.body.cancellations[0].id !== pageOne.body.cancellations[0].id && pageTwo.body.cancellations[0].id !== pageOne.body.cancellations[1].id, "the history pages with a cursor");
     const none = await call("admin", "GET", `/admin/cancellations?from=${encodeURIComponent(new Date(Date.now() + 60_000).toISOString())}`);
-    check(none.status === 200 && none.body.total === 0, "filter by date");
+    check(none.status === 200 && none.body.cancellations.length === 0 && none.body.next_cursor === null, "filter by date");
     check((await call("p1", "GET", "/admin/cancellations")).status === 403, "the history is for administrators");
   }
 

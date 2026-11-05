@@ -1,3 +1,4 @@
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/fares/fare.dart';
 
 class PassengerRequest {
@@ -20,6 +21,7 @@ class PassengerRequest {
     this.pickupDetails,
     this.dropoffDetails,
     this.fare,
+    this.cancellation,
   });
 
   final String id;
@@ -54,6 +56,10 @@ class PassengerRequest {
   /// the whole party); null when the route had no fare.
   final FareSnapshot? fare;
 
+  /// Who cancelled the request and why; null while it is not cancelled (and
+  /// for requests cancelled before reasons were recorded).
+  final CancellationInfo? cancellation;
+
   /// The route's name in the reading language, or null for older requests.
   String? routeName({required bool arabic}) {
     final ar = routeNameAr;
@@ -62,8 +68,13 @@ class PassengerRequest {
     return en ?? ar;
   }
 
+  /// A request can be cancelled until the passenger is picked up, also after
+  /// a driver accepted it.
   bool get canCancel =>
       status == 'pending' || status == 'matched' || status == 'accepted';
+
+  /// A driver already accepted: cancelling tells that driver.
+  bool get hasAcceptedDriver => status == 'accepted';
 
   bool get canMatch => status == 'pending';
 
@@ -94,6 +105,7 @@ class PassengerRequest {
       pickupDetails: _optionalString(json, 'pickup_details'),
       dropoffDetails: _optionalString(json, 'dropoff_details'),
       fare: FareSnapshot.tryParse(json['fare']),
+      cancellation: CancellationInfo.tryParse(json['cancellation']),
     );
   }
 }

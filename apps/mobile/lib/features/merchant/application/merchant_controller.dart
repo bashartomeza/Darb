@@ -1,4 +1,5 @@
 import '../../../core/api/authoritative_refresh.dart';
+import '../../../core/cancellation/cancellation.dart';
 import '../../auth/application/auth_actor_binding.dart';
 import 'dart:async';
 
@@ -216,8 +217,8 @@ class MerchantOrderController extends AsyncNotifier<MerchantOrderViewState> {
     ref.invalidate(merchantDashboardProvider);
   }
 
-  Future<void> cancelOrder() async {
-    await ref.read(merchantRepositoryProvider).cancelOrder(_orderId);
+  Future<void> cancelOrder(CancelChoice choice) async {
+    await ref.read(merchantRepositoryProvider).cancelOrder(_orderId, choice);
     await refresh();
     ref.invalidate(merchantDashboardProvider);
     ref.invalidate(merchantMatchInboxProvider);

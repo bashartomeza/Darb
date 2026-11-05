@@ -18,6 +18,7 @@ import {
 import { RequestsBoard } from "./features/requests/RequestsBoard";
 import { PassengerParcelsPanel } from "./features/requests/PassengerParcelsPanel";
 import { TripsManagement } from "./features/trips/TripsManagement";
+import { CancellationsPage } from "./features/cancellations/CancellationsPage";
 import { MatchingBatchingMonitoring } from "./features/monitoring/MatchingBatchingMonitoring";
 import { InvitationsPage } from "./features/invitations/InvitationsPage";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
@@ -459,10 +460,13 @@ export function App({
       case "deliveries":
         return (
           <>
-            <RequestsBoard api={api} token={token} search={search} />
-            <PassengerParcelsPanel api={api} token={token} search={search} />
+            <RequestsBoard api={api} token={token} search={search} canAct={canAct} />
+            <PassengerParcelsPanel api={api} token={token} search={search} canAct={canAct} />
           </>
         );
+
+      case "cancellations":
+        return <CancellationsPage api={api} token={token} />;
 
       case "matchingBatching":
         return <MatchingBatchingMonitoring api={api} token={token} />;
@@ -546,6 +550,7 @@ export function App({
     overview: t("overviewDescription"),
     deliveries: t("requestsDescription"),
     matchingBatching: t("matchingDescription"),
+    cancellations: t("cancellationsDescription"),
     trips: t("tripsDescription"),
     routes: t("operatingRoutesDescription"),
     checkpointPositions: t("checkpointPositionsDescription"),

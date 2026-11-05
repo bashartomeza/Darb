@@ -7,6 +7,7 @@ import type {
   AdminTripPage,
   ApiClient,
   ApiError,
+  CancellationBody,
   TripStatus,
 } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
@@ -24,6 +25,8 @@ import {
   type Column,
 } from "../../ui";
 import { OrderRouteDetails, orderRouteName } from "../operatingRoutes/OrderRouteDetails";
+import { CancelDialog } from "../cancellations/CancelDialog";
+import { ADMIN_CANCELLABLE_TRIP_STATUSES, isOneOf } from "../cancellations/cancellationModel";
 
 type Props = { api: ApiClient; token: string; search: string; canAct?: boolean };
 export type TripStatusIntent = {
@@ -85,6 +88,7 @@ export function TripsManagement({ api, token, search, canAct = true }: Props) {
   const [detail, setDetail] = useState<AdminTripDetail | null>(null);
   const [detailPhase, setDetailPhase] = useState<"loading" | "ready" | "error">("ready");
   const [pending, setPending] = useState<TripStatusIntent | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<AdminTripDetail | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const query = useMemo(() => search.trim().slice(0, 100), [search]);
@@ -152,15 +156,33 @@ export function TripsManagement({ api, token, search, canAct = true }: Props) {
     setBusy(false);
   }
 
+  async function confirmCancel(body: CancellationBody) {
+    if (!cancelTarget) return;
+    await api.cancelAdminTrip(token, cancelTarget.id, body);
+    const id = cancelTarget.id;
+    setCancelTarget(null);
+    await loadTrips();
+    await loadDetail(id);
+  }
+
   const pages = Math.max(1, Math.ceil(data.total / data.limit));
-  return <TripsManagementView
+  return <>
+  <TripsManagementView
     phase={phase} data={data} page={page} pages={pages} query={query} statusFilter={statusFilter} kindFilter={kindFilter}
     selectedId={selectedId} detail={detail} detailPhase={detailPhase} pending={pending} busy={busy} error={error} canAct={canAct}
     onStatusFilterChange={setStatusFilter} onKindFilterChange={setKindFilter} onPageChange={setPage}
     onLoadDetail={(id) => void loadDetail(id)} onCloseDetail={() => { detailRequests.current.invalidate(); setSelectedId(null); setDetail(null); setError(null); }}
     onRefresh={() => void loadTrips()} onBeginStatus={(intent) => setPending(intent)} onSubmitStatus={() => void submit()}
     onCancelStatus={() => { setPending(null); setError(null); }}
-  />;
+    onBeginCancel={(trip) => setCancelTarget(trip)}
+  />
+  <CancelDialog
+    open={cancelTarget !== null}
+    subject={cancelTarget ? t("cancelTripSubject", { id: cancelTarget.id }) : ""}
+    onClose={() => setCancelTarget(null)}
+    onConfirm={confirmCancel}
+  />
+  </>;
 }
 
 export type TripsManagementViewProps = {
@@ -187,7 +209,14 @@ export type TripsManagementViewProps = {
   onBeginStatus: (intent: TripStatusIntent) => void;
   onSubmitStatus: () => void;
   onCancelStatus: () => void;
+  /** Opens the reason dialog to cancel this trip (legacy trips before delivery). */
+  onBeginCancel?: (trip: AdminTripDetail) => void;
 };
+
+/** An Admin may cancel a route-based trip from acceptance until it is in transit. */
+export function isAdminCancellableTrip(trip: Pick<AdminTripDetail, "kind" | "status">) {
+  return trip.kind === "legacy" && isOneOf(ADMIN_CANCELLABLE_TRIP_STATUSES, trip.status);
+}
 
 function DeliveryConfirmationBadge({ confirmation }: { confirmation: AdminTripListItem["delivery_confirmation"] }) {
   const { t, number } = useLocale();
@@ -262,8 +291,10 @@ export function TripsManagementView(props: TripsManagementViewProps) {
           <div className="stack stack--tight"><p><strong>{t("latestStoredLocation")}</strong></p>{detail.latest_stored_location ? <><TechnicalValue>{`${detail.latest_stored_location.lat}, ${detail.latest_stored_location.lng}`}</TechnicalValue><p>{t("storedLocationSource")}: <TechnicalValue>{detail.latest_stored_location.source}</TechnicalValue></p><p>{dateTime(detail.latest_stored_location.recorded_at)}</p></> : <p>{t("storedLocationUnavailable")}</p>}</div>
         </div>
         {limitation && <AlertItem tone="info" title={t("tripLifecyclePolicy")} description={limitation} />}
-        <AlertItem tone="info" title={t("tripCancellationDisabled")} description={t("tripCancellationExplanation")} />
-        {intent && canAct && <Button variant="action" icon="check" onClick={() => props.onBeginStatus(intent)}>{t("tripMoveTo", { status: status(intent.nextStatus) })}</Button>}
+        <div className="card__actions">
+          {intent && canAct && <Button variant="action" icon="check" onClick={() => props.onBeginStatus(intent)}>{t("tripMoveTo", { status: status(intent.nextStatus) })}</Button>}
+          {canAct && props.onBeginCancel && isAdminCancellableTrip(detail) && <Button variant="outline" icon="block" onClick={() => props.onBeginCancel?.(detail)}>{t("cancelTripAction")}</Button>}
+        </div>
       </Card>}
 
       {pending && <Card span={12}><CardHeader title={t("confirmTripTransition")} /><p>{t("tripTransitionConfirm", { id: pending.trip.id, status: status(pending.nextStatus) })}</p>{error && <p role="alert" className="overview-resource-note overview-resource-note--error">{error}</p>}<div className="card__actions"><Button variant="action" disabled={busy} onClick={props.onSubmitStatus}>{busy ? t("saving") : t("confirm")}</Button><Button variant="ghost" disabled={busy} onClick={props.onCancelStatus}>{t("cancel")}</Button></div></Card>}

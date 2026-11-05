@@ -21,6 +21,7 @@ import '../../community_reports/application/community_reports_controller.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
 import '../application/passenger_trip_controller.dart';
 import 'driver_call_card.dart';
+import 'passenger_cancel_trip_section.dart';
 import 'trip_rating_prompt.dart';
 
 class PassengerTripScreen extends ConsumerStatefulWidget {
@@ -583,6 +584,9 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                 // REFRESH
                 // ==================================================
                 _buildRefreshButton(context, l10n),
+
+                // Cancel before pickup, and why a cancelled trip was cancelled.
+                PassengerCancelTripSection(trip: data.trip),
 
                 if (data.trip.status.toLowerCase() == 'completed')
                   TripRatingPrompt(tripId: widget.tripId),

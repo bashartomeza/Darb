@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/cancellation/cancellation.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/darb_back_button.dart';
@@ -142,31 +143,60 @@ class _ParcelCardState extends ConsumerState<ParcelCard> {
 
   Future<void> _cancel() async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final choice = await showDialog<CancelChoice>(
       context: context,
-      builder: (context) => AlertDialog(
-        content: Text(l10n.parcelCancelConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.keepParcel),
+      builder: (dialogContext) {
+        CancelChoice? picked;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.parcelCancelConfirm),
+                  if (widget.parcel.state == ParcelTrackingState.assigned) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.cancelAcceptedOrderNote,
+                      key: const ValueKey('parcelCancelAcceptedNote'),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  CancelReasonPicker(
+                    role: CancelRole.sender,
+                    onChanged: (value) => setDialogState(() => picked = value),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.keepParcel),
+              ),
+              FilledButton(
+                key: const ValueKey('confirmCancelParcel'),
+                onPressed: picked == null
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(picked),
+                child: Text(l10n.parcelCancelAction),
+              ),
+            ],
           ),
-          FilledButton(
-            key: const ValueKey('confirmCancelParcel'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.parcelCancelAction),
-          ),
-        ],
-      ),
+        );
+      },
     );
-    if (confirmed != true || !mounted) return;
+    if (choice == null || !mounted) return;
     setState(() {
       _busy = true;
       _message = null;
     });
     String? message;
     try {
-      await ref.read(passengerParcelsProvider.notifier).cancel(widget.parcel);
+      await ref
+          .read(passengerParcelsProvider.notifier)
+          .cancel(widget.parcel, choice);
       message = l10n.parcelCancelledNotice;
     } catch (error) {
       message = parcelErrorLabel(
@@ -237,6 +267,9 @@ class _ParcelCardState extends ConsumerState<ParcelCard> {
           // The fare frozen when the parcel was sent; absent without a fare.
           fareSnapshotBox(context, parcel.fare),
           const SizedBox(height: AppTokens.spaceSmall),
+          // Who cancelled the parcel and why.
+          if (parcel.state == ParcelTrackingState.cancelled)
+            CancellationReasonNote(info: parcel.cancellation),
           if (parcel.receiverDetailsRemoved)
             Text(l10n.parcelReceiverRemoved, style: theme.textTheme.bodySmall)
           else if (parcel.receiverName != null)

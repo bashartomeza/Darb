@@ -124,21 +124,51 @@ describe("cancellation endpoints", () => {
 
   describe("GET /admin/cancellations", () => {
     beforeEach(() => {
-      prismaMock.cancellation.count.mockResolvedValue(1);
-      prismaMock.cancellation.findMany.mockResolvedValue([{ id: "c1", actor_role: "system", reason_code: "no_driver_in_time", automatic: true }]);
+      prismaMock.cancellation.findMany.mockResolvedValue([
+        {
+          id: "c1", actor_role: "system", actor: null, reason_code: "no_driver_in_time", note: null, automatic: true, ends_order: true,
+          trip_id: null, created_at: new Date("2026-11-12T10:00:00Z"),
+          passenger_request: { id: "request_1", status: "cancelled", passenger: { id: "p1", name: "Sara" } }, merchant_order: null
+        },
+        {
+          id: "c2", actor_role: "driver", actor: { id: "d1", name: "Omar" }, reason_code: "emergency", note: "private", automatic: false, ends_order: false,
+          trip_id: "trip_1", created_at: new Date("2026-11-12T09:00:00Z"), passenger_request: null,
+          merchant_order: { id: "order_1", status: "batched", merchant: { id: "m1", name: "Shop" }, passenger_parcel: { order_id: "order_1" } }
+        },
+        { id: "c3", actor_role: "admin", actor: null, reason_code: "other", note: null, automatic: false, ends_order: true, trip_id: null, created_at: new Date(), passenger_request: null, merchant_order: null }
+      ]);
     });
 
-    it("lists newest first with paging", async () => {
-      const response = await request(createApp()).get("/api/v1/admin/cancellations?page=2&limit=10").set(as("admin")).expect(200);
+    it("lists newest first, with who cancelled, the order and its owner, and what became of the order", async () => {
+      const response = await request(createApp()).get("/api/v1/admin/cancellations?limit=2").set(as("admin")).expect(200);
       expect(prismaMock.cancellation.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: {}, skip: 10, take: 10, orderBy: [{ created_at: "desc" }, { id: "desc" }]
+        where: {}, take: 3, orderBy: [{ created_at: "desc" }, { id: "desc" }]
       }));
-      expect(response.body).toMatchObject({ total: 1, page: 2, limit: 10 });
+      expect(response.body.cancellations).toEqual([
+        {
+          id: "c1", created_at: "2026-11-12T10:00:00.000Z", kind: "automatic", by_role: "system", by: null, reason: "no_driver_in_time", note: null,
+          outcome: "cancelled", trip_id: null, order: { type: "ride", id: "request_1", status: "cancelled", owner: { id: "p1", name: "Sara" } }
+        },
+        {
+          id: "c2", created_at: "2026-11-12T09:00:00.000Z", kind: "manual", by_role: "driver", by: { id: "d1", name: "Omar" }, reason: "emergency", note: "private",
+          outcome: "requeued", trip_id: "trip_1", order: { type: "parcel", id: "order_1", status: "batched", owner: { id: "m1", name: "Shop" } }
+        }
+      ]);
+      // A third row exists, so there is a next page that starts after the last one shown.
+      expect(response.body.next_cursor).toBe("c2");
+      expect(response.body.reasons.driver).toContain("vehicle_problem");
+    });
+
+    it("continues after a cursor", async () => {
+      prismaMock.cancellation.findMany.mockResolvedValue([]);
+      const response = await request(createApp()).get("/api/v1/admin/cancellations?cursor=c2").set(as("admin")).expect(200);
+      expect(prismaMock.cancellation.findMany).toHaveBeenCalledWith(expect.objectContaining({ cursor: { id: "c2" }, skip: 1, take: 51 }));
+      expect(response.body.next_cursor).toBeNull();
     });
 
     it("filters by date, automatic or manual, role and reason", async () => {
       await request(createApp())
-        .get("/api/v1/admin/cancellations?from=2026-11-01T00:00:00Z&to=2026-11-30T00:00:00Z&kind=auto&role=system&reason=no_driver_in_time")
+        .get("/api/v1/admin/cancellations?from=2026-11-01T00:00:00Z&to=2026-11-30T00:00:00Z&kind=automatic&role=system&reason=no_driver_in_time")
         .set(as("admin")).expect(200);
       expect(prismaMock.cancellation.findMany).toHaveBeenCalledWith(expect.objectContaining({
         where: {
