@@ -8,8 +8,8 @@ import { statusLabel, translate } from "../i18n/locale";
 import { NotificationControl, SideNav, TopBar, initialOf, notificationPanelState } from "./AppShell";
 import { toneForStatus } from "./StatusBadge";
 import { ModuleUnavailable } from "../features/placeholder/ModuleUnavailable";
-import type { DashboardResponse } from "../api";
-import { OverviewDashboard, deriveAlerts, type OverviewData } from "../features/overview/OverviewDashboard";
+import type { DashboardActiveTrip, DashboardResponse } from "../api";
+import { OverviewDashboard, deriveAlerts, tripFigures, type OverviewData } from "../features/overview/OverviewDashboard";
 import { OVERVIEW_RESOURCE_KEYS, type OverviewResourcePhase, type OverviewResourceStates } from "../features/overview/overviewState";
 import { matchesSearch } from "../features/search";
 import { ProfilePanel } from "../features/profile/ProfilePanel";
@@ -45,12 +45,30 @@ function resourceStates(phase: OverviewResourcePhase, hasData: boolean): Overvie
 const zeroDashboard: DashboardResponse = {
   counts: { users: 0, drivers: 0, routes: 0, passenger_requests: 0, merchant_orders: 0, parcels: 0, active_drivers: 0, pending_driver_approvals: 0, open_incidents: 0 },
   alerts: { unmatched_requests: 0, unbatched_orders: 0, unverified_driver_routes: 0 },
-  recent: { passenger_requests: [], merchant_orders: [], routes: [] }
+  recent: { passenger_requests: [], merchant_orders: [], routes: [] },
+  trips: { by_status: {}, active_total: 0, active: [] }
 };
+function activeTrip(id: string, status: DashboardActiveTrip["status"] = "in_transit", driverName = "Hebron Driver"): DashboardActiveTrip {
+  return {
+    id,
+    status,
+    driver_route_id: "route_1",
+    created_at: "2026-11-05T08:00:00.000Z",
+    started_at: null,
+    driver_route: {
+      id: "route_1",
+      origin_label: "Hebron",
+      destination_label: "Bethlehem",
+      driver: {
+        id: "profile_1",
+        user: { id: "u_driver", name: driverName, phone: "+970590000002", role: "driver", account_status: "active", status_reason: null, status_updated_at: "", last_login_at: null, demo_account: false, created_at: "" }
+      }
+    }
+  };
+}
 const emptyOverview: OverviewData = {
   dashboard: zeroDashboard,
   routes: [],
-  trips: [],
   resources: resourceStates("ready", true)
 };
 
@@ -217,12 +235,11 @@ describe("overview dashboard", () => {
   it("renders only supported metric values from their owning API resources", () => {
     const data: OverviewData = {
       ...emptyOverview,
-      dashboard: { ...zeroDashboard, counts: { ...zeroDashboard.counts, merchant_orders: 12, passenger_parcels: 30, passenger_requests: 8, active_drivers: 3, pending_driver_approvals: 2 } },
-      trips: [
-        { id: "trip_accepted", status: "accepted", driver_route_id: "route_1" },
-        { id: "trip_active", status: "in_transit", driver_route_id: "route_1" },
-        { id: "trip_delivered", status: "delivered", driver_route_id: "route_1" }
-      ]
+      dashboard: {
+        ...zeroDashboard,
+        counts: { ...zeroDashboard.counts, merchant_orders: 12, passenger_parcels: 30, passenger_requests: 8, active_drivers: 3, pending_driver_approvals: 2 },
+        trips: { by_status: { accepted: 1, in_transit: 1, delivered: 1 }, active_total: 1, active: [activeTrip("trip_active")] }
+      }
     };
     const markup = withLocale("en", <OverviewDashboard data={data} search="" busy={false} onRefresh={() => undefined} />);
 
@@ -275,7 +292,7 @@ describe("overview dashboard", () => {
   });
 
   it("has no dead per-row action button in active operations", () => {
-    const data: OverviewData = { ...emptyOverview, trips: [{ id: "trip_1", status: "in_transit", driver_route_id: "route_1" }] };
+    const data: OverviewData = { ...emptyOverview, dashboard: { ...zeroDashboard, trips: { by_status: { in_transit: 1 }, active_total: 1, active: [activeTrip("trip_1")] } } };
     const markup = withLocale("en", <OverviewDashboard data={data} search="" busy={false} onRefresh={() => undefined} />);
     expect(markup).toContain("trip_1");
     expect(markup).not.toContain("Row actions");
@@ -317,14 +334,49 @@ describe("overview dashboard", () => {
     const partial: OverviewData = {
       ...emptyOverview,
       dashboard: null,
-      trips: [{ id: "trip_1", status: "in_transit", driver_route_id: "route_1" }],
+      routes: [{ id: "route_1", status: "active", origin_label: "Hebron", destination_label: "Bethlehem", seats_available: 3, parcel_capacity_available: 4 }],
       resources
     };
     const markup = withLocale("en", <OverviewDashboard data={partial} search="" busy={false} onRefresh={() => undefined} />);
 
     expect(textOf(markup)).toContain("Active drivers — Data could not be loaded");
-    expect(textOf(markup)).toContain("Active trips 1");
+    expect(textOf(markup)).toContain("Active trips — Data could not be loaded");
     expect(textOf(markup)).toContain("Total merchant orders — Data could not be loaded");
+    expect(markup).toContain('aria-label="Passenger seats available"');
+  });
+
+  it("takes trip counts from the dashboard, so they do not stop at a list limit", () => {
+    const manyTrips: DashboardResponse = {
+      ...zeroDashboard,
+      trips: {
+        by_status: { completed: 4_000, in_transit: 260, picked_up: 20, pickup_started: 20, accepted: 15 },
+        active_total: 300,
+        active: [activeTrip("trip_newest", "in_transit", "Newest Driver"), activeTrip("trip_older", "picked_up", "Older Driver")]
+      }
+    };
+    expect(tripFigures(null)).toBeNull();
+    expect(tripFigures({ counts: zeroDashboard.counts })).toBeNull();
+    const figures = tripFigures(manyTrips)!;
+    expect(figures.activeTotal).toBe(300);
+    expect(figures.byStatus.find((bar) => bar.id === "completed")?.value).toBe(4_000);
+    expect(figures.byStatus.find((bar) => bar.id === "failed")?.value).toBe(0);
+
+    const markup = withLocale("en", <OverviewDashboard data={{ ...emptyOverview, dashboard: manyTrips }} search="" busy={false} onRefresh={() => undefined} />);
+    const text = textOf(markup);
+    expect(text).toContain("Active trips 300");
+    expect(markup).toContain('title="Completed: 4000"');
+    expect(text.indexOf("Newest Driver")).toBeLessThan(text.indexOf("Older Driver"));
+    expect(text).toContain("Showing the newest 2 of 300 trips in progress.");
+
+    const searched = textOf(withLocale("en", <OverviewDashboard data={{ ...emptyOverview, dashboard: manyTrips }} search="older" busy={false} onRefresh={() => undefined} />));
+    expect(searched).toContain("Older Driver");
+    expect(searched).not.toContain("Newest Driver");
+  });
+
+  it("marks trip figures unavailable when an older API sends none, instead of showing zero", () => {
+    const { trips: _unused, ...withoutTrips } = zeroDashboard;
+    const text = textOf(withLocale("en", <OverviewDashboard data={{ ...emptyOverview, dashboard: withoutTrips }} search="" busy={false} onRefresh={() => undefined} />));
+    expect(text).toContain("Active trips — Data could not be loaded");
   });
 
   it("shows the open-incident count from the API and localizes the empty state", () => {

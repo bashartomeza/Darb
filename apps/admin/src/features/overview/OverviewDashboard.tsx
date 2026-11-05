@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import type { DashboardResponse, DriverRoute, Trip } from "../../api";
+import type { DashboardActiveTrip, DashboardResponse, DriverRoute } from "../../api";
 import { useLocale } from "../../i18n/LocaleContext";
 import type { TranslationKey } from "../../i18n/translations";
 import {
@@ -23,19 +23,31 @@ import {
 import type { IconName } from "../../ui/Icon";
 import type { Tone } from "../../ui/StatusBadge";
 import { matchesSearch } from "../search";
-import { activeTrips as selectActiveTrips, isActiveTripStatus } from "./overviewMetrics";
 import type { OverviewResourceState, OverviewResourceStates } from "./overviewState";
 
-const TRIP_FLOW = ["created", "accepted", "pickup_started", "picked_up", "in_transit", "delivered", "completed", "cancelled"];
+const TRIP_FLOW = ["created", "accepted", "pickup_started", "picked_up", "in_transit", "delivered", "completed", "cancelled", "failed"] as const;
 
 export type OverviewData = {
   dashboard: DashboardResponse | null;
   routes: DriverRoute[];
-  trips: Trip[];
   resources: OverviewResourceStates;
 };
 
-type OperationRow = { trip: Trip; route: DriverRoute | undefined };
+/**
+ * Trip figures as the API counted them in the database, so they stay right
+ * however many trips there are. Null when the dashboard did not load or an
+ * older API build sent none.
+ */
+export function tripFigures(dashboard: DashboardResponse | null) {
+  const trips = dashboard?.trips;
+  // Anything but the expected shape (an older API, a malformed reply) counts as unavailable.
+  if (!trips || typeof trips.by_status !== "object" || trips.by_status === null || !Array.isArray(trips.active) || typeof trips.active_total !== "number") return null;
+  return {
+    byStatus: TRIP_FLOW.map((flowStatus) => ({ id: flowStatus, value: trips.by_status[flowStatus] ?? 0 })),
+    activeTotal: trips.active_total,
+    active: trips.active
+  };
+}
 
 /**
  * Alert counts as the API computed them over every row (requests awaiting a
@@ -160,44 +172,38 @@ export function OverviewDashboard({
   const recentOrders = data.dashboard?.recent?.merchant_orders ?? [];
 
   const activeRoutes = data.routes.filter((route) => route.status === "active");
-  const activeTrips = selectActiveTrips(data.trips);
+  const trips = useMemo(() => tripFigures(data.dashboard), [data.dashboard]);
 
-  const operations = useMemo<OperationRow[]>(() => {
-    const byId = new Map(data.routes.map((route) => [route.id, route]));
-    return data.trips
-      .filter((trip) => isActiveTripStatus(trip.status))
-      .map((trip) => ({ trip, route: byId.get(trip.driver_route_id) }))
-      .filter(({ trip, route }) =>
+  const operations = useMemo<DashboardActiveTrip[]>(
+    () =>
+      (trips?.active ?? []).filter((trip) =>
         matchesSearch(
-          [trip.id, trip.status, route?.origin_label, route?.destination_label, route?.driver?.user?.name, route?.driver?.user?.phone],
+          [trip.id, trip.status, trip.driver_route.origin_label, trip.driver_route.destination_label, trip.driver_route.driver.user.name, trip.driver_route.driver.user.phone],
           search
         )
-      );
-  }, [data.routes, data.trips, search]);
+      ),
+    [trips, search]
+  );
 
   const tripsByStatus = useMemo(
-    () =>
-      TRIP_FLOW.map((flowStatus) => {
-        const value = data.trips.filter((trip) => trip.status === flowStatus).length;
-        return { id: flowStatus, value, title: `${status(flowStatus)}: ${value}` };
-      }),
-    [data.trips, status]
+    () => (trips?.byStatus ?? []).map((bar) => ({ ...bar, title: `${status(bar.id)}: ${bar.value}` })),
+    [trips, status]
   );
 
   const seatCapacity = activeRoutes.reduce((total, route) => total + (route.seats_available ?? 0), 0);
   const parcelCapacity = activeRoutes.reduce((total, route) => total + (route.parcel_capacity_available ?? 0), 0);
   const totalCapacity = Math.max(1, seatCapacity + parcelCapacity);
 
-  const columns: Column<OperationRow>[] = [
+  const columns: Column<DashboardActiveTrip>[] = [
     {
       key: "driver",
       header: t("columnDriver"),
-      cell: ({ route }) => (
+      cell: (trip) => (
         <div className="cell-stack">
-          <Avatar name={route?.driver?.user?.name ?? "—"} />
+          <Avatar name={trip.driver_route.driver.user.name || "—"} />
           <div>
-            <p className="cell-stack__title">{route?.driver?.user?.name ?? t("noData")}</p>
-            <p className="cell-stack__sub technical">{route?.driver?.user?.phone ?? ""}</p>
+            <p className="cell-stack__title">{trip.driver_route.driver.user.name || t("noData")}</p>
+            <p className="cell-stack__sub technical">{trip.driver_route.driver.user.phone ?? ""}</p>
           </div>
         </div>
       )
@@ -205,14 +211,14 @@ export function OverviewDashboard({
     {
       key: "route",
       header: t("columnRoute"),
-      cell: ({ route }) => route ? <RouteChip from={route.origin_label} to={route.destination_label} /> : <span className="muted">{t("noData")}</span>
+      cell: (trip) => <RouteChip from={trip.driver_route.origin_label} to={trip.driver_route.destination_label} />
     },
     {
       key: "status",
       header: t("columnStatus"),
-      cell: ({ trip }) => <StatusBadge status={trip.status} icon={trip.status === "in_transit" ? "near_me" : undefined}>{status(trip.status)}</StatusBadge>
+      cell: (trip) => <StatusBadge status={trip.status} icon={trip.status === "in_transit" ? "near_me" : undefined}>{status(trip.status)}</StatusBadge>
     },
-    { key: "trip", header: t("columnTrip"), align: "end", cell: ({ trip }) => <TechnicalValue>{trip.id}</TechnicalValue> }
+    { key: "trip", header: t("columnTrip"), align: "end", cell: (trip) => <TechnicalValue>{trip.id}</TechnicalValue> }
   ];
 
   const alertState = data.resources.dashboard;
@@ -224,7 +230,7 @@ export function OverviewDashboard({
     <>
       <section className="kpi-row" aria-label={t("overviewMetrics")}>
         <MetricCard metric="active-drivers" icon="directions_car" tone="info" label={t("activeDrivers")} value={data.dashboard?.counts.active_drivers} emptyLabel="noActiveDrivers" state={data.resources.dashboard} />
-        <MetricCard metric="active-trips" icon="route" tone="neutral" label={t("activeTrips")} value={activeTrips.length} emptyLabel="noActiveTrips" state={data.resources.trips} />
+        <MetricCard metric="active-trips" icon="route" tone="neutral" label={t("activeTrips")} value={trips?.activeTotal} emptyLabel="noActiveTrips" state={data.resources.dashboard} unavailable={Boolean(data.dashboard) && !trips} unavailableLabel="metricLoadError" />
         <MetricCard metric="pending-approvals" icon="verified" tone="warning" label={t("pendingApprovals")} value={data.dashboard?.counts.pending_driver_approvals} emptyLabel="noPendingApprovals" state={data.resources.dashboard} />
         <MetricCard metric="orders" icon="inventory_2" tone="success" label={t("ordersMetric")} value={data.dashboard?.counts.merchant_orders} emptyLabel="noOrders" state={data.resources.dashboard} />
         <MetricCard metric="requests" icon="person_pin_circle" tone="info" label={t("requestsMetric")} value={data.dashboard?.counts.passenger_requests} emptyLabel="noRequests" state={data.resources.dashboard} />
@@ -237,14 +243,16 @@ export function OverviewDashboard({
             title={t("activeOperations")}
             action={<Button variant="ghost" size="sm" icon="refresh" onClick={onRefresh} disabled={busy}>{busy ? t("refreshingData") : t("refreshData")}</Button>}
           />
-          <ResourceBoundary state={data.resources.trips} onRetry={onRefresh} lines={4}>
-            <ResourceNote state={data.resources.routes} />
+          <ResourceBoundary state={data.resources.dashboard} onRetry={onRefresh} lines={4}>
             <DataTable
               columns={columns}
               rows={operations}
-              rowKey={({ trip }) => trip.id}
+              rowKey={(trip) => trip.id}
               empty={<EmptyState icon="local_shipping" compact title={search ? t("searchNoResults") : t("noOperations")} />}
             />
+            {trips && trips.activeTotal > trips.active.length && (
+              <p className="muted" role="note">{t("activeOperationsNewest", { shown: number(trips.active.length), total: number(trips.activeTotal) })}</p>
+            )}
           </ResourceBoundary>
         </Card>
 
@@ -265,7 +273,7 @@ export function OverviewDashboard({
 
         <Card span={6}>
           <CardHeader title={t("tripVolume")} action={<span className="legend"><span className="legend__swatch" />{t("trips")}</span>} />
-          <ResourceBoundary state={data.resources.trips} onRetry={onRefresh}>
+          <ResourceBoundary state={data.resources.dashboard} onRetry={onRefresh}>
             <BarChart bars={tripsByStatus} label={t("tripVolume")} />
           </ResourceBoundary>
         </Card>

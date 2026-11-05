@@ -95,6 +95,24 @@ function isUniqueViolation(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
+/** A serializable transaction that lost a race (write conflict or deadlock, P2034). */
+function isWriteConflict(error: unknown) {
+  return Boolean(error && typeof error === "object" && "code" in error && error.code === "P2034");
+}
+
+export const CHECKPOINT_WRITE_ATTEMPTS = 3;
+
+/** Runs a serializable write again after a lost race, a few times at most. */
+export async function withConflictRetry<T>(write: () => Promise<T>, attempts = CHECKPOINT_WRITE_ATTEMPTS): Promise<T> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await write();
+    } catch (error) {
+      if (!isWriteConflict(error) || attempt >= attempts) throw error;
+    }
+  }
+}
+
 /**
  * Researched positions for partner checkpoints the OpenStreetMap extract cannot
  * place. The partner map looks a row up by city and name with spelling
@@ -152,7 +170,10 @@ export function createAdminCheckpointPositionsRouter(partnerMap?: Pick<PartnerCh
     try {
       const input = createSchema.parse(req.body);
       const key = checkpointPositionKey(input.city_ar, input.name_ar);
-      const created = await prisma.$transaction(async (tx) => {
+      // Serializable, so two admins adding the same checkpoint under different
+      // spellings at once cannot both pass the duplicate check; the loser is
+      // retried and then sees the other row.
+      const created = await withConflictRetry(() => prisma.$transaction(async (tx) => {
         const existing = await tx.checkpointPosition.findMany({ select: { city_ar: true, name_ar: true } });
         if (existing.some((row) => checkpointPositionKey(row.city_ar, row.name_ar) === key)) {
           throw new HttpError(409, "checkpoint_position_exists");
@@ -185,7 +206,7 @@ export function createAdminCheckpointPositionsRouter(partnerMap?: Pick<PartnerCh
           }
         });
         return row;
-      });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
       res.status(201).json({ position: serialize(created) });
     } catch (error) {
       next(isUniqueViolation(error) ? new HttpError(409, "checkpoint_position_exists") : error);

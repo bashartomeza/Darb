@@ -1,12 +1,12 @@
-import type { DashboardResponse, DriverRoute, Trip } from "../../api";
+import type { DashboardResponse, DriverRoute } from "../../api";
 
 /**
- * What the overview loads. Counts, alerts and the newest requests and orders
- * all come from the dashboard endpoint; routes and trips feed the active
- * operations table and the capacity chart. The full people and order lists are
- * loaded, page by page, by their own pages.
+ * What the overview loads. Counts, alerts, trip figures and the newest
+ * requests, orders and in-progress trips all come from the dashboard
+ * endpoint, which counts in the database; driver routes feed the capacity
+ * chart. Full lists are loaded, page by page, by their own pages.
  */
-export const OVERVIEW_RESOURCE_KEYS = ["dashboard", "routes", "trips"] as const;
+export const OVERVIEW_RESOURCE_KEYS = ["dashboard", "routes"] as const;
 
 export type OverviewResourceKey = (typeof OVERVIEW_RESOURCE_KEYS)[number];
 export type OverviewResourcePhase = "idle" | "loading" | "ready" | "error";
@@ -16,7 +16,6 @@ export type OverviewResourceStates = Record<OverviewResourceKey, OverviewResourc
 export type OverviewPayloads = {
   dashboard: DashboardResponse;
   routes: { routes: DriverRoute[] };
-  trips: { trips: Trip[] };
 };
 
 export type OverviewLoaders = { [Key in OverviewResourceKey]: () => Promise<OverviewPayloads[Key]> };
@@ -37,15 +36,11 @@ export function beginOverviewRefresh(states: OverviewResourceStates): OverviewRe
 
 /**
  * Loads every resource independently. Promise.allSettled is intentional: a
- * trips outage must not erase valid dashboard or route data.
+ * routes outage must not erase valid dashboard data.
  */
 export async function loadOverviewResources(loaders: OverviewLoaders): Promise<OverviewResults> {
-  const [dashboard, routes, trips] = await Promise.allSettled([
-    loaders.dashboard(),
-    loaders.routes(),
-    loaders.trips()
-  ]);
-  return { dashboard, routes, trips };
+  const [dashboard, routes] = await Promise.allSettled([loaders.dashboard(), loaders.routes()]);
+  return { dashboard, routes };
 }
 
 export function completeOverviewRefresh(

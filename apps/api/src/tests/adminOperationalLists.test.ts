@@ -12,7 +12,8 @@ const prismaMock = vi.hoisted(() => ({
   driverProfile: { findMany: vi.fn(), count: vi.fn() },
   driverRoute: { findMany: vi.fn(), count: vi.fn(), groupBy: vi.fn() },
   driverVerification: { count: vi.fn() },
-  incident: { count: vi.fn() }
+  incident: { count: vi.fn() },
+  trip: { groupBy: vi.fn(), findMany: vi.fn() }
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -91,6 +92,49 @@ describe("admin operational lists", () => {
       });
       prismaMock.passengerRequest.count.mockImplementation((args?: { where?: unknown }) => (args?.where ? 1 : 5));
       prismaMock.driverRoute.count.mockImplementation((args?: { where?: unknown }) => (args?.where ? 1 : 7));
+      prismaMock.trip.groupBy.mockResolvedValue([]);
+      prismaMock.trip.findMany.mockResolvedValue([]);
+    });
+
+    it("counts trips by status in the database, beyond any list limit", async () => {
+      prismaMock.trip.groupBy.mockResolvedValue([
+        { status: "completed", _count: { _all: 900 } },
+        { status: "in_transit", _count: { _all: 180 } },
+        { status: "picked_up", _count: { _all: 40 } },
+        { status: "pickup_started", _count: { _all: 30 } },
+        { status: "accepted", _count: { _all: 12 } }
+      ]);
+      prismaMock.trip.findMany.mockResolvedValue([
+        {
+          id: "trip_new",
+          status: "in_transit",
+          driver_route_id: "route_1",
+          created_at: new Date("2026-11-05T08:00:00Z"),
+          started_at: null,
+          driver_route: { id: "route_1", origin_label: "Hebron", destination_label: "Bethlehem", driver: { id: "profile_1", user: { ...unsafeUser, role: "driver" } } }
+        }
+      ]);
+
+      const response = await request(createApp()).get("/api/v1/admin/dashboard").set(auth("admin_1")).expect(200);
+
+      expect(prismaMock.trip.groupBy).toHaveBeenCalledWith({ by: ["status"], _count: { _all: true } });
+      expect(prismaMock.trip.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: { status: { in: ["pickup_started", "picked_up", "in_transit"] } },
+        orderBy: [{ created_at: "desc" }, { id: "asc" }],
+        take: 50
+      }));
+      expect(response.body.trips.by_status).toEqual({ completed: 900, in_transit: 180, picked_up: 40, pickup_started: 30, accepted: 12 });
+      expect(response.body.trips.active_total).toBe(250);
+      expect(response.body.trips.active[0]).toMatchObject({
+        id: "trip_new",
+        driver_route: { origin_label: "Hebron", driver: { user: { name: "Sender Nine" } } }
+      });
+      expect(JSON.stringify(response.body)).not.toContain("must-never-leak");
+    });
+
+    it("reports zero active trips when there are none", async () => {
+      const response = await request(createApp()).get("/api/v1/admin/dashboard").set(auth("admin_1")).expect(200);
+      expect(response.body.trips).toEqual({ by_status: {}, active_total: 0, active: [] });
     });
 
     it("counts merchant orders without passenger parcels, and reports parcels separately", async () => {

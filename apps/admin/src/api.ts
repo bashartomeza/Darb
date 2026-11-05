@@ -350,7 +350,6 @@ return {
       token,
       body: { status, expected_status: expectedStatus },
     }),
-  trips: (token: string) => apiRequest<{ trips: Trip[] }>("/trips", { token }),
   serviceRoutes: (token: string, query = "") => apiRequest<RoutePage>(`/admin/service-routes${query}`, { token }),
   serviceRoute: (token: string, id: string) => apiRequest<{ route: ServiceRoute }>(`/admin/service-routes/${id}`, { token }),
   createServiceRoute: (token: string, body: RouteIdentityDraft, key: string) => apiRequest<{ route: ServiceRoute }>("/admin/service-routes", { method: "POST", token, body, idempotencyKey: key }),
@@ -635,6 +634,28 @@ export type DashboardResponse = {
     passenger_requests: PassengerRequest[];
     merchant_orders: MerchantOrder[];
     routes: DriverRoute[];
+  };
+  /** Trip figures counted in the database over every trip. Absent from older API builds. */
+  trips?: {
+    by_status: Partial<Record<TripStatus, number>>;
+    /** Trips from the start of pickup until delivery is recorded. */
+    active_total: number;
+    /** The newest in-progress trips (at most 50), newest first. */
+    active: DashboardActiveTrip[];
+  };
+};
+
+export type DashboardActiveTrip = {
+  id: string;
+  status: TripStatus;
+  driver_route_id: string;
+  created_at: string;
+  started_at: string | null;
+  driver_route: {
+    id: string;
+    origin_label: string;
+    destination_label: string;
+    driver: { id: string; user: AdminUser };
   };
 };
 

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { createApiClient, createDemoApiClient, type AccountStatus, type DashboardResponse, type DriverRoute, type Trip, type User, type UserAccountStatus } from "./api";
+import { createApiClient, createDemoApiClient, type AccountStatus, type DashboardResponse, type DriverRoute, type User, type UserAccountStatus } from "./api";
 import { demoUiEnabled, getAdminBuildConfig, routeManagementUiEnabled, type AdminBuildConfig } from "./config";
 import { useLocale } from "./i18n/LocaleContext";
 import type { TranslationKey } from "./i18n/translations";
@@ -98,7 +98,6 @@ export function App({
 
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [routes, setRoutes] = useState<DriverRoute[]>([]);
-  const [trips, setTrips] = useState<Trip[]>([]);
   const [overviewResources, setOverviewResources] = useState(createInitialOverviewResourceStates);
   const overviewRefreshRef = useRef<{
     token: string;
@@ -118,7 +117,6 @@ export function App({
     setAdmin(null);
     setDashboard(null);
     setRoutes([]);
-    setTrips([]);
     setOverviewResources(createInitialOverviewResourceStates());
     setDemoSteps([]);
     setDemoResetAvailable(false);
@@ -193,13 +191,11 @@ export function App({
       setOverviewResources((current) => beginOverviewRefresh(current));
       const results = await loadOverviewResources({
         dashboard: () => api.dashboard(currentToken),
-        routes: () => api.routes(currentToken),
-        trips: () => api.trips(currentToken)
+        routes: () => api.routes(currentToken)
       });
 
       if (results.dashboard.status === "fulfilled") setDashboard(results.dashboard.value);
       if (results.routes.status === "fulfilled") setRoutes(results.routes.value.routes);
-      if (results.trips.status === "fulfilled") setTrips(results.trips.value.trips);
 
       for (const key of OVERVIEW_RESOURCE_KEYS) {
         const result = results[key];
@@ -423,7 +419,7 @@ export function App({
     );
   }
 
-  const overviewData: OverviewData = { dashboard, routes, trips, resources: overviewResources };
+  const overviewData: OverviewData = { dashboard, routes, resources: overviewResources };
   const overviewRefreshing = Object.values(overviewResources).some((resource) => resource.phase === "loading");
   const activeNavId = navItemForModule(currentModule);
   const activeNavItem = navItems.find((item) => item.id === activeNavId);

@@ -1078,6 +1078,28 @@ const AWAITING_MATCH_REQUEST_STATUSES = ["draft", "pending"] as const;
 const UNBATCHED_ORDER_STATUSES = ["draft", "submitted"] as const;
 /** Passenger parcels are stored as merchant orders; the merchant-order figures leave them out. */
 const merchantOrdersOnly = { passenger_parcel: null } satisfies Prisma.MerchantOrderWhereInput;
+/**
+ * In-progress trips: from the start of pickup until delivery is recorded.
+ * `accepted` is assigned but not yet moving; `delivered` only awaits closeout.
+ */
+export const ACTIVE_TRIP_STATUSES = ["pickup_started", "picked_up", "in_transit"] as const;
+/** How many in-progress trips the overview lists; the count covers all of them. */
+export const DASHBOARD_ACTIVE_TRIP_LIMIT = 50;
+const activeTripSelect = {
+  id: true,
+  status: true,
+  driver_route_id: true,
+  created_at: true,
+  started_at: true,
+  driver_route: {
+    select: {
+      id: true,
+      origin_label: true,
+      destination_label: true,
+      driver: { select: { id: true, user: { select: safeUserSelect } } }
+    }
+  }
+} satisfies Prisma.TripSelect;
 
 adminRouter.get("/admin/dashboard", async (req: AuthenticatedRequest, res, next) => {
   try {
@@ -1097,7 +1119,9 @@ adminRouter.get("/admin/dashboard", async (req: AuthenticatedRequest, res, next)
       unverifiedDriverRoutes,
       recentRequests,
       recentOrders,
-      recentRoutes
+      recentRoutes,
+      tripStatusGroups,
+      activeTrips
     ] =
       await Promise.all([
         prisma.user.count(),
@@ -1129,8 +1153,20 @@ adminRouter.get("/admin/dashboard", async (req: AuthenticatedRequest, res, next)
           take: 5,
           include: { parcels: true, merchant: { select: safeUserSelect } }
         }),
-        prisma.driverRoute.findMany({ orderBy: [{ activated_at: "desc" }, { id: "asc" }], take: 5 })
+        prisma.driverRoute.findMany({ orderBy: [{ activated_at: "desc" }, { id: "asc" }], take: 5 }),
+        // Counted in the database, so the overview stays right however many trips there are.
+        prisma.trip.groupBy({ by: ["status"], _count: { _all: true } }),
+        prisma.trip.findMany({
+          where: { status: { in: [...ACTIVE_TRIP_STATUSES] } },
+          orderBy: [{ created_at: "desc" }, { id: "asc" }],
+          take: DASHBOARD_ACTIVE_TRIP_LIMIT,
+          select: activeTripSelect
+        })
       ]);
+
+    const tripsByStatus: Record<string, number> = {};
+    for (const group of tripStatusGroups) tripsByStatus[group.status] = group._count._all;
+    const activeTripTotal = ACTIVE_TRIP_STATUSES.reduce((total, status) => total + (tripsByStatus[status] ?? 0), 0);
 
     await auditEvent(prisma, {
       userId: req.user!.id,
@@ -1167,6 +1203,18 @@ adminRouter.get("/admin/dashboard", async (req: AuthenticatedRequest, res, next)
           merchant: order.merchant ? serializeSafeUser(order.merchant) : null
         })),
         routes: recentRoutes
+      },
+      trips: {
+        by_status: tripsByStatus,
+        active_total: activeTripTotal,
+        /** The newest in-progress trips, at most DASHBOARD_ACTIVE_TRIP_LIMIT. */
+        active: activeTrips.map((trip) => ({
+          ...trip,
+          driver_route: {
+            ...trip.driver_route,
+            driver: { ...trip.driver_route.driver, user: serializeSafeUser(trip.driver_route.driver.user) }
+          }
+        }))
       }
     });
   } catch (error) {

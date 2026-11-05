@@ -145,6 +145,34 @@ describe("admin checkpoint positions", () => {
     expect(prismaMock.checkpointPosition.create).not.toHaveBeenCalled();
   });
 
+  it("checks for a duplicate and inserts in one serializable transaction, retrying a lost race", async () => {
+    const conflict = Object.assign(new Error("write conflict"), { code: "P2034" });
+    prismaMock.$transaction
+      .mockRejectedValueOnce(conflict)
+      .mockImplementationOnce((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
+    await request(createApp()).post("/api/v1/admin/checkpoint-positions").set(auth("admin_1")).send(newPosition).expect(201);
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(2);
+    expect(prismaMock.$transaction.mock.calls[1][1]).toEqual({ isolationLevel: "Serializable" });
+    expect(prismaMock.checkpointPosition.create).toHaveBeenCalledOnce();
+
+    // After the retry the other admin's row is visible, so the duplicate is refused.
+    prismaMock.$transaction.mockClear();
+    prismaMock.$transaction
+      .mockRejectedValueOnce(conflict)
+      .mockImplementationOnce((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
+    prismaMock.checkpointPosition.findMany.mockResolvedValueOnce([{ city_ar: "رام الله", name_ar: "عطاره" }]);
+    const duplicate = await request(createApp()).post("/api/v1/admin/checkpoint-positions").set(auth("admin_1")).send(newPosition).expect(409);
+    expect(duplicate.body.error).toBe("checkpoint_position_exists");
+  });
+
+  it("gives up after a few lost races", async () => {
+    const conflict = Object.assign(new Error("write conflict"), { code: "P2034" });
+    prismaMock.$transaction.mockRejectedValue(conflict);
+    await request(createApp()).post("/api/v1/admin/checkpoint-positions").set(auth("admin_1")).send(newPosition).expect(409);
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(3);
+    expect(prismaMock.checkpointPosition.create).not.toHaveBeenCalled();
+  });
+
   it("updates coordinates, confidence and note, and audits before and after", async () => {
     const response = await request(createApp())
       .patch("/api/v1/admin/checkpoint-positions/pos_1")

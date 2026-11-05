@@ -1,6 +1,7 @@
 export const translations = {
   ar: {
     status_failed: "فشل",
+    activeOperationsNewest: "تظهر أحدث {shown} رحلة من أصل {total} رحلة جارية.",
     checkpointPositionSave: "حفظ",
     parcelSize_S: "صغير",
     parcelSize_M: "متوسط",
@@ -910,6 +911,7 @@ export const translations = {
   },
   en: {
     status_failed: "Failed",
+    activeOperationsNewest: "Showing the newest {shown} of {total} trips in progress.",
     checkpointPositionSave: "Save",
     parcelSize_S: "Small",
     parcelSize_M: "Medium",
