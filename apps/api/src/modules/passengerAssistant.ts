@@ -1,6 +1,9 @@
-import express, { Router } from "express";
+import { createHash } from "node:crypto";
+import express, { Router, type Response } from "express";
 import { z } from "zod";
 import type { AppConfig } from "../config.js";
+import { consumeAbuseCounter } from "../lib/abuseCounters.js";
+import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../middleware/error.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
 import {
@@ -38,6 +41,39 @@ const voiceQuerySchema = z.object({
   locale: z.enum(["ar", "en"]).default("ar"),
   conversation_id: z.string().trim().min(1).max(128).optional()
 });
+
+/**
+ * Per-passenger hourly caps. Every text message is a paid LLM call and every voice message a paid
+ * transcription plus an LLM call, so one account cannot run up the bill. A real conversation stays
+ * far below these.
+ */
+export const ASSISTANT_RATE_LIMITS = {
+  passenger_assistant_message: { limit: 60, windowSeconds: 3_600 },
+  passenger_assistant_voice: { limit: 20, windowSeconds: 3_600 }
+} as const;
+
+type AssistantBucket = keyof typeof ASSISTANT_RATE_LIMITS;
+
+/** Counts one request against the passenger's bucket; answers 429 and returns false when over. */
+async function withinAssistantLimit(req: AuthenticatedRequest, res: Response, bucket: AssistantBucket) {
+  const { limit, windowSeconds } = ASSISTANT_RATE_LIMITS[bucket];
+  const result = await consumeAbuseCounter(prisma, {
+    bucketType: bucket,
+    subjectDigest: createHash("sha256").update(`${bucket}:${req.user!.id}`).digest("hex"),
+    digestVersion: 1,
+    windowSeconds,
+    limit
+  });
+  if (result.allowed) return true;
+  req.operationalLog?.warn({ event: "passenger_assistant_rate_limited", bucket }, "Passenger assistant rate limit reached");
+  res.setHeader("Retry-After", String(result.retryAfterSeconds));
+  res.status(429).json({
+    error: "assistant_rate_limited",
+    retry_after_seconds: result.retryAfterSeconds,
+    request_id: req.requestId ?? "unavailable"
+  });
+  return false;
+}
 
 /** Turns the model sees with a new message, as many as the text route accepts from the app. */
 const VOICE_HISTORY_TURNS = 8;
@@ -198,6 +234,7 @@ export function createPassengerAssistantRouter(
   router.post("/passenger/assistant/messages", async (req: AuthenticatedRequest, res, next) => {
     try {
       const input = assistantMessageSchema.parse(req.body);
+      if (!(await withinAssistantLimit(req, res, "passenger_assistant_message"))) return;
       res.json(await answerExchange(req, input));
     } catch (error) {
       if (error instanceof PassengerAssistantProviderError) {
@@ -233,6 +270,7 @@ export function createPassengerAssistantRouter(
         const query = voiceQuerySchema.parse(req.query);
         const audio = req.body;
         if (!Buffer.isBuffer(audio) || audio.length === 0) throw new HttpError(415, "unsupported_media_type");
+        if (!(await withinAssistantLimit(req, res, "passenger_assistant_voice"))) return;
 
         const analysis = await aiServices.analyzeVoice(audio, String(req.headers["content-type"] ?? ""));
         if (analysis.kind === "blocked") {
