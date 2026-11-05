@@ -34,7 +34,7 @@ import { HttpError } from "../middleware/error.js";
 import { AuditAction, Prisma } from "../generated/prisma/client.js";
 import type { GoogleVerifier } from "../lib/googleIdentity.js";
 import { GoogleAuthService, googleCompleteSchema } from "../services/googleAuth.js";
-import { EmailAuthService, canonicalEmail, emailStartSchema, emailCompleteSchema, emailProofStartSchema, emailProofConfirmSchema, passwordResetSchema, passwordSetSchema, type EmailDelivery } from "../services/emailAuth.js";
+import { EmailAuthService, canonicalEmail, contactPhone, emailStartSchema, emailCompleteSchema, emailProofStartSchema, emailProofConfirmSchema, passwordResetSchema, passwordSetSchema, type EmailDelivery } from "../services/emailAuth.js";
 import type { ConsentReleaseService } from "../services/consentReleases.js";
 import { createAuthenticatedAuthRateLimiter } from "../middleware/rateLimit.js";
 import { IdentityProfileService, googleLinkSchema, phoneStartSchema, phoneConfirmSchema, type PhoneVerificationProvider } from "../services/identityProfile.js";
@@ -635,7 +635,7 @@ const profileUpdateSchema = z
     name: z.string().trim().min(1).max(120).optional(),
     city: z.string().trim().max(100).nullable().optional(),
     // A typed number only: a control character (newline, tab, NUL...) is refused, not stored.
-    contact_phone: z.string().trim().min(7).max(32).refine(hasNoControlCharacters).nullable().optional()
+    contact_phone: contactPhone.nullable().optional()
   })
   .refine((value) => Object.keys(value).length > 0, { message: "no_changes" });
 

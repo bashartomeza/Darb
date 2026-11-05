@@ -17,7 +17,7 @@ const { createOperationalLogger } = await import("../lib/logger.js");
 const documents = ["terms", "privacy", "adult_self_attestation"].map((type, index) => ({
   id: `doc_${index}`, document_type: type, locale: "en", content_digest: String(index + 1).repeat(64)
 }));
-const registration = { name: "Passenger", email: "  Owner+tag@Example.COM ", password: "correct horse battery staple 42", locale: "en" };
+const registration = { name: "Passenger", email: "  Owner+tag@Example.COM ", phone: "0599123456", password: "correct horse battery staple 42", locale: "en" };
 const consents = documents.map((d) => ({ id: d.id, type: d.document_type, content_hash: d.content_digest }));
 const actions: any[] = [];
 const users: any[] = [];
@@ -266,23 +266,26 @@ describe("email authentication lifecycle", () => {
       await request(server).post("/api/v1/auth/mobile/register/complete").send(body).expect(409);
       expect(users).toHaveLength(0);
     });
-    it("stores the sign-up phone as entered, only length-checked, and lets accounts share it", async () => {
+    it("stores the sign-up mobile number normalised (E.164) and lets accounts share it", async () => {
       const server = app(dev);
-      const phone = "0599 12-34 (x)";
-      for (const email of ["first@example.com", "second@example.com"]) {
-        const r = await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, email, phone: ` ${phone} ` }).expect(202);
+      for (const [email, typed] of [["first@example.com", " 0599 123 456 "], ["second@example.com", "+970 599-123-456"]]) {
+        const r = await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, email, phone: typed }).expect(202);
         const body = { registration_token: r.body.registration_token, locale: "en", consents, adult_self_attestation: true };
         await request(server).post("/api/v1/auth/mobile/register/complete").send(body).expect(201);
       }
-      expect(users.map((u) => u.contact_phone)).toEqual([phone, phone]);
+      expect(users.map((u) => u.contact_phone)).toEqual(["+970599123456", "+970599123456"]);
       expect(users.map((u) => u.phone)).toEqual([null, null]);
     });
-    it("rejects a sign-up phone outside the length limits and nothing else about it", async () => {
+    it("requires a valid mobile number at sign-up", async () => {
       const server = app(dev);
-      for (const phone of ["123456", "1".repeat(33)]) {
+      const { phone: _omit, ...withoutPhone } = registration;
+      await request(server).post("/api/v1/auth/mobile/register/start").send(withoutPhone).expect(400);
+      for (const phone of ["123456", "1".repeat(33), "not a number", "0599", "+1 000 000 0000", "059912345678901", "٠٥٩٩abc"]) {
         await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, phone }).expect(400);
       }
-      await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, phone: "not a number" }).expect(202);
+      expect(messages).toHaveLength(0);
+      // Arabic-Indic digits are accepted and normalised.
+      await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, phone: "٠٥٩٩١٢٣٤٥٦" }).expect(202);
     });
     it("lets an unverified email account sign in", async () => {
       users.push(actor({ password_hash: await bcrypt.hash(registration.password, 4), email_verified_at: null }));
@@ -313,7 +316,7 @@ describe("email authentication lifecycle", () => {
   it("lets a newly signed-up passenger use product routes without a separate phone step", async () => {
     const server = app(); const r = await request(server).post("/api/v1/auth/mobile/register/start").send({ ...registration, phone: "0599123456" }).expect(202);
     await request(server).post("/api/v1/auth/mobile/register/complete").send(complete(r.body)).expect(201);
-    expect(users[0]).toMatchObject({ profile_state: "complete", contact_phone: "0599123456", phone: null });
+    expect(users[0]).toMatchObject({ profile_state: "complete", contact_phone: "+970599123456", phone: null });
     const response = await request(server).get("/api/v1/trips").set("Authorization", bearer(users[0]));
     expect(response.body.error).not.toBe("profile_incomplete");
     expect(response.status).toBe(200);
@@ -322,6 +325,15 @@ describe("email authentication lifecycle", () => {
     for (const appEnv of ["staging", "production"]) {
       expect(() => createConfig({ ...process.env, APP_ENV: appEnv, EMAIL_VERIFICATION_DISABLED: "true" } as any)).toThrow(/EMAIL_VERIFICATION_DISABLED is only allowed/);
     }
+  });
+  it("allows unverified email sign-up in production only with the explicit second switch", () => {
+    const problemsFor = (extra: Record<string, string>) => {
+      try { createConfig({ ...process.env, APP_ENV: "production", ...extra } as any); return ""; }
+      catch (error) { return String((error as Error).message); }
+    };
+    expect(problemsFor({ EMAIL_VERIFICATION_DISABLED: "true", ALLOW_UNVERIFIED_EMAIL_SIGNUP: "true" })).not.toMatch(/EMAIL_VERIFICATION_DISABLED is only allowed/);
+    expect(problemsFor({ ALLOW_UNVERIFIED_EMAIL_SIGNUP: "true" })).toMatch(/ALLOW_UNVERIFIED_EMAIL_SIGNUP only makes sense/);
+    expect(problemsFor({ EMAIL_VERIFICATION_DISABLED: "true" })).toMatch(/EMAIL_VERIFICATION_DISABLED is only allowed/);
   });
   it.each(["/auth/mobile/login", "/auth/mobile/login/", "/AUTH/MOBILE/LOGIN"])("rejects Admin credentials on the mobile login variant %s", async (path) => {
     users.push(actor({ role: "admin", password_hash: await bcrypt.hash(registration.password, 4) }));

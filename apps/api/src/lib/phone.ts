@@ -85,3 +85,12 @@ export function analyzePhoneNormalization(rows: readonly { id: string; phone: st
   }
   return { total: rows.length, valid, invalid, collisions };
 }
+
+/**
+ * The mobile number typed at sign-up: accepted only when it is a real, valid number (a local Palestinian
+ * number such as 0599123456 or any number in international form such as +970599123456) and stored
+ * in E.164. It is a contact number: it is never verified and never used to sign in.
+ */
+export function normalizeContactPhone(input: string) {
+  return normalizePhoneToE164(input, { region: "PS" });
+}

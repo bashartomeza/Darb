@@ -28,7 +28,7 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
 2. The owner opens cPanel > Setup Node.js App > darb-app > Environment variables and adds two variables
    (name left, value right, exactly as they are):
    - `DB_PASSWORD` - the password of the MySQL user `aynurzzx_Darb_User`
-   - `SMTP_PASSWORD` - the 16-character Gmail App Password of darbapp9@gmail.com
+   - `SMTP_PASSWORD` - the 16-character password of the cPanel mailbox darb@aynur.ps
    Passenger gives them to the web app; `ops/env.mjs` also reads them from CloudLinux's
    `~/.cl.selector/node-selector.json` for migrations, backups and cron. If that file does not contain
    them on your account, put the two values in `~/darb-app/.env` instead (the scripts read both).
@@ -54,3 +54,12 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
 
 `cd ~/darb-app && source ~/nodevenv/darb-app/22/bin/activate && node ops/run.mjs <command>`
 (for example `npx prisma migrate status`). Secrets reach the child process only and are never printed.
+
+## Direct sign-up (no emailed code)
+
+Outbound Gmail SMTP is blocked on this host, and riders should be able to sign up directly. In cPanel >
+Setup Node.js App > darb-app > Environment variables set both `EMAIL_VERIFICATION_DISABLED=true` and
+`ALLOW_UNVERIFIED_EMAIL_SIGNUP=true` (the API refuses the first one alone in production). A rider then signs up
+with name, email, mobile number and password, accepts the legal texts and is signed in, with no code. Consequences:
+accounts can use any address; password reset and email codes need a working mailbox (`darb@aynur.ps` on
+`mail.aynur.ps:465`, see `ops/setup.sh`); driver and shop-owner sign-up still sends an email code.

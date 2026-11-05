@@ -1079,7 +1079,7 @@ abstract class AppLocalizations {
   /// No description provided for @authEnterPhoneNumber7.
   ///
   /// In ar, this message translates to:
-  /// **'أدخل رقم هاتفك (من 7 إلى 32 حرفاً).'**
+  /// **'أدخل رقم جوال صحيح، مثل 0599123456.'**
   String get authEnterPhoneNumber7;
 
   /// No description provided for @emailAlreadyRegistered.

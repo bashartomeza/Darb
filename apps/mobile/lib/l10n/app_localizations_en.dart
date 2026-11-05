@@ -536,7 +536,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authEnterPhoneNumber7 =>
-      'Enter your phone number (7–32 characters).';
+      'Enter a valid mobile number, for example 0599123456.';
 
   @override
   String get emailAlreadyRegistered =>
