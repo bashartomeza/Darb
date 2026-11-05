@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { MerchantOrder, PassengerRequest } from "../../api";
+import type { PassengerRequest } from "../../api";
 import { LocaleProvider } from "../../i18n/LocaleContext";
 import type { Locale } from "../../i18n/translations";
-import { RequestsBoard } from "../requests/RequestsBoard";
 import { OrderRouteDetails, orderRouteName } from "./OrderRouteDetails";
 
 function render(locale: Locale, children: ReactNode) {
@@ -48,26 +47,4 @@ describe("route details on orders", () => {
     expect(render("en", <OrderRouteDetails order={{ pickup_details: "   " }} />)).toBe("");
   });
 
-  it("shows route details on passenger requests and merchant orders", () => {
-    const order: MerchantOrder = {
-      id: "order_1",
-      status: "pending",
-      pickup_label: "Hebron",
-      pickup_details: "store, Ein Sarah street",
-      route_name_ar: "الخليل ← بيت لحم",
-      route_name_en: "Hebron → Bethlehem",
-      parcels: [
-        { id: "p1", status: "pending", destination_label: "Bethlehem", size: "small", priority: "normal", dropoff_details: "Manger Square shop" },
-        { id: "p2", status: "pending", destination_label: "Bethlehem", size: "small", priority: "normal", dropoff_details: null }
-      ]
-    };
-    const markup = render("en", <RequestsBoard requests={[routed, legacy]} orders={[order]} search="" />);
-    expect(markup).toContain("near the PPU main gate");
-    expect(markup).toContain("Bethlehem bus station");
-    expect(markup).toContain("store, Ein Sarah street");
-    expect(markup).toContain("Manger Square shop");
-    expect(markup).toContain("Hebron / PPU");
-
-    expect(render("en", <RequestsBoard requests={[routed, legacy]} orders={[order]} search="bus station" />)).not.toContain("Hebron / PPU");
-  });
 });

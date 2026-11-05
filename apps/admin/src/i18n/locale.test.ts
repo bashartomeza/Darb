@@ -4,11 +4,13 @@ import {
   LOCALE_STORAGE_KEY,
   applyDocumentLocale,
   getInitialLocale,
+  parcelSizeLabel,
   persistLocale,
   statusLabel,
   translate,
   translateUnsafe
 } from "./locale";
+import { translations } from "./translations";
 
 function storage(initial?: string) {
   const store = new Map<string, string>();
@@ -59,5 +61,31 @@ describe("admin localization", () => {
     expect(apiValue).toBe("pickup_started");
     expect(statusLabel("ar", "submitted")).toBe("مقدم");
     expect(statusLabel("en", "submitted")).toBe("Submitted");
+    expect(statusLabel("en", "failed")).toBe("Failed");
+    expect(statusLabel("ar", "failed")).toBe("فشل");
+  });
+
+  it("has every key in both Arabic and English", () => {
+    const arabic = Object.keys(translations.ar).sort();
+    const english = Object.keys(translations.en).sort();
+    expect(arabic.filter((key) => !english.includes(key))).toEqual([]);
+    expect(english.filter((key) => !arabic.includes(key))).toEqual([]);
+  });
+
+  it("names parcel sizes in words and keeps an unknown code as sent", () => {
+    expect(parcelSizeLabel("en", "M")).toBe("Medium");
+    expect(parcelSizeLabel("ar", "L")).toBe("كبير");
+    expect(parcelSizeLabel("en", "XL")).toBe("XL");
+  });
+
+  it("presents the console as a production admin tool, not a demo", () => {
+    for (const locale of ["ar", "en"] as const) {
+      const sign = [translate(locale, "appName"), translate(locale, "loginHeading"), translate(locale, "loginDescription")].join(" ");
+      expect(sign).not.toMatch(/judge|demo|seeded|الحكام|التجريبي|عرض واحد/i);
+    }
+    expect(translate("en", "appName")).toBe("Darb Admin Console");
+    expect(translate("en", "matchingDescription")).not.toMatch(/run corridor-based matching/i);
+    const everything = JSON.stringify(translations);
+    expect(everything).not.toMatch(/M7B|milestone/i);
   });
 });

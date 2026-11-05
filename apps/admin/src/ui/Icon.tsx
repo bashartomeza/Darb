@@ -43,7 +43,9 @@ export type IconName =
   | "emergency"
   | "block"
   | "check_circle"
-  | "play";
+  | "play"
+  | "star"
+  | "flag";
 
 const paths: Record<IconName, string> = {
   dashboard: "M3 3h8v8H3zm10 0h8v5h-8zm0 7h8v11h-8zM3 13h8v8H3z",
@@ -112,7 +114,9 @@ const paths: Record<IconName, string> = {
     "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2M4 12a8 8 0 0 1 12.9-6.3L5.7 16.9A7.9 7.9 0 0 1 4 12m8 8a7.9 7.9 0 0 1-4.9-1.7L18.3 7.1A8 8 0 0 1 12 20",
   check_circle:
     "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m-2 15-5-5 1.4-1.4L10 14.2l7.6-7.6L19 8z",
-  play: "M8 5v14l11-7z"
+  play: "M8 5v14l11-7z",
+  star: "M12 17.3 18.2 21l-1.7-7L22 9.2l-7.2-.6L12 2 9.2 8.6 2 9.2 7.5 14l-1.7 7z",
+  flag: "M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"
 };
 
 export function Icon({

@@ -14,7 +14,7 @@ const prismaMock = vi.hoisted(() => ({
   parcelBatchOrder: { findMany: vi.fn(), updateMany: vi.fn() },
   merchantOrder: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), count: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
-  trip: { findFirst: vi.fn() },
+  trip: { findFirst: vi.fn(), groupBy: vi.fn(async () => []), findMany: vi.fn(async () => []) },
   driverProfile: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
   driverRoute: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn(), groupBy: vi.fn() },
   driverVerification: { count: vi.fn() },

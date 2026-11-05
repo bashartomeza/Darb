@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
-import type { ServiceRoute, ServiceRouteVersion } from "../../api";
+import { describe, expect, it, vi } from "vitest";
+import type { CanonicalStop, ServiceRoute, ServiceRouteVersion } from "../../api";
 import {
   initialRouteUiState,
+  loadAllCanonicalStops,
+  STOP_PAGE_SIZE,
   lifecycleActionRequiresReason,
   normalizeRouteVersionDraft,
   routeUiReducer,
@@ -250,5 +252,46 @@ describe("routeManagementModel", () => {
     expect(lifecycleActionRequiresReason("clone")).toBe(false);
     expect(lifecycleActionRequiresReason("publish")).toBe(false);
     expect(lifecycleActionRequiresReason("resume")).toBe(false);
+  });
+});
+
+describe("loadAllCanonicalStops", () => {
+  const stop = (index: number): CanonicalStop => ({
+    id: `stop_${index}`,
+    stop_key: `stop-${index}`,
+    service_region_key: "west-bank",
+    name_ar: `محطة ${index}`,
+    name_en: `Stop ${index}`,
+    latitude: 31.5,
+    longitude: 35.1,
+    status: "active"
+  });
+
+  it("reads every page so stops beyond the first 50 are not dropped", async () => {
+    const all = Array.from({ length: 120 }, (_, index) => stop(index));
+    const fetchPage = vi.fn(async (query: string) => {
+      const params = new URLSearchParams(query.slice(1));
+      const page = Number(params.get("page"));
+      const limit = Number(params.get("limit"));
+      return { stops: all.slice((page - 1) * limit, page * limit), page, limit, total: all.length };
+    });
+    const stops = await loadAllCanonicalStops(fetchPage);
+    expect(stops).toHaveLength(120);
+    expect(stops.at(-1)?.id).toBe("stop_119");
+    expect(fetchPage.mock.calls.map(([query]) => query)).toEqual([
+      `?page=1&limit=${STOP_PAGE_SIZE}`,
+      `?page=2&limit=${STOP_PAGE_SIZE}`,
+      `?page=3&limit=${STOP_PAGE_SIZE}`
+    ]);
+  });
+
+  it("stops after one request for a small catalog and on an empty page", async () => {
+    const small = vi.fn().mockResolvedValue({ stops: [stop(1)], page: 1, limit: 50, total: 1 });
+    expect(await loadAllCanonicalStops(small)).toHaveLength(1);
+    expect(small).toHaveBeenCalledOnce();
+
+    const shrinking = vi.fn().mockResolvedValueOnce({ stops: [stop(1)], page: 1, limit: 50, total: 99 }).mockResolvedValueOnce({ stops: [], page: 2, limit: 50, total: 99 });
+    expect(await loadAllCanonicalStops(shrinking)).toHaveLength(1);
+    expect(shrinking).toHaveBeenCalledTimes(2);
   });
 });

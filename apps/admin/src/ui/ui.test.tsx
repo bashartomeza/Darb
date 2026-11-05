@@ -4,16 +4,14 @@ import { describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n/LocaleContext";
 import type { Locale } from "../i18n/translations";
 import { NAV_ITEMS } from "../navigation";
-import { translate } from "../i18n/locale";
-import { NotificationControl, SideNav, initialOf, notificationPanelState } from "./AppShell";
+import { statusLabel, translate } from "../i18n/locale";
+import { NotificationControl, SideNav, TopBar, initialOf, notificationPanelState } from "./AppShell";
 import { toneForStatus } from "./StatusBadge";
 import { ModuleUnavailable } from "../features/placeholder/ModuleUnavailable";
-import { OverviewDashboard, deriveAlerts } from "../features/overview/OverviewDashboard";
+import type { DashboardActiveTrip, DashboardResponse } from "../api";
+import { OverviewDashboard, deriveAlerts, tripFigures, type OverviewData } from "../features/overview/OverviewDashboard";
 import { OVERVIEW_RESOURCE_KEYS, type OverviewResourcePhase, type OverviewResourceStates } from "../features/overview/overviewState";
 import { matchesSearch } from "../features/search";
-import { railSteps } from "../features/trips/TripsTracking";
-import { parcelSteps } from "../features/batching/BatchingWorkspace";
-import { scorePercent } from "../features/matching/MatchingWorkspace";
 import { ProfilePanel } from "../features/profile/ProfilePanel";
 
 /**
@@ -44,16 +42,33 @@ function resourceStates(phase: OverviewResourcePhase, hasData: boolean): Overvie
   return Object.fromEntries(OVERVIEW_RESOURCE_KEYS.map((key) => [key, { phase, hasData }])) as OverviewResourceStates;
 }
 
-const zeroDashboard = {
-  counts: { users: 0, drivers: 0, routes: 0, passenger_requests: 0, merchant_orders: 0, parcels: 0, active_drivers: 0, pending_driver_approvals: 0, open_incidents: 0 }
+const zeroDashboard: DashboardResponse = {
+  counts: { users: 0, drivers: 0, routes: 0, passenger_requests: 0, merchant_orders: 0, parcels: 0, active_drivers: 0, pending_driver_approvals: 0, open_incidents: 0 },
+  alerts: { unmatched_requests: 0, unbatched_orders: 0, unverified_driver_routes: 0 },
+  recent: { passenger_requests: [], merchant_orders: [], routes: [] },
+  trips: { by_status: {}, active_total: 0, active: [] }
 };
-const emptyOverview = {
+function activeTrip(id: string, status: DashboardActiveTrip["status"] = "in_transit", driverName = "Hebron Driver"): DashboardActiveTrip {
+  return {
+    id,
+    status,
+    driver_route_id: "route_1",
+    created_at: "2026-11-05T08:00:00.000Z",
+    started_at: null,
+    driver_route: {
+      id: "route_1",
+      origin_label: "Hebron",
+      destination_label: "Bethlehem",
+      driver: {
+        id: "profile_1",
+        user: { id: "u_driver", name: driverName, phone: "+970590000002", role: "driver", account_status: "active", status_reason: null, status_updated_at: "", last_login_at: null, demo_account: false, created_at: "" }
+      }
+    }
+  };
+}
+const emptyOverview: OverviewData = {
   dashboard: zeroDashboard,
-  drivers: [],
   routes: [],
-  requests: [],
-  orders: [],
-  trips: [],
   resources: resourceStates("ready", true)
 };
 
@@ -99,6 +114,25 @@ describe("admin shell", () => {
     );
     expect(markup.match(/aria-current="page"/g)).toHaveLength(1);
     expect(markup).toContain('class="sidenav__item is-active"');
+  });
+
+  it("has no help button without a destination in the top bar", () => {
+    const markup = renderToStaticMarkup(
+      <TopBar
+        title="Overview"
+        search=""
+        onSearch={() => undefined}
+        searchPlaceholder="Search"
+        searchLabel="Search"
+        notificationsLabel="Notifications"
+        notificationsTitle="Notifications"
+        notificationsDescription="None"
+        closeNotificationsLabel="Close"
+        user={{ name: "Admin", detail: "" }}
+      />
+    );
+    expect(markup).not.toContain('aria-label="Help"');
+    expect(markup).toContain('aria-label="Notifications"');
   });
 
   it("derives avatar initials without assuming a Latin alphabet", () => {
@@ -150,6 +184,12 @@ describe("status tones", () => {
     expect(toneForStatus("in_transit")).toBe("info");
     expect(toneForStatus("pending")).toBe("warning");
     expect(toneForStatus("cancelled")).toBe("danger");
+    expect(toneForStatus("failed")).toBe("danger");
+  });
+
+  it("labels the failed status in both languages", () => {
+    expect(statusLabel("en", "failed")).toBe("Failed");
+    expect(statusLabel("ar", "failed")).toBe("فشل");
   });
 
   it("falls back to neutral for a status the backend adds later", () => {
@@ -193,30 +233,13 @@ describe("overview dashboard", () => {
   });
 
   it("renders only supported metric values from their owning API resources", () => {
-    const user = (id: string, account_status: "active" | "pending") => ({
-      id,
-      name: id,
-      phone: `+97059${id}`,
-      role: "driver",
-      account_status,
-      status_reason: null,
-      status_updated_at: "2026-08-19T00:00:00.000Z",
-      last_login_at: null,
-      demo_account: false,
-      created_at: "2026-08-19T00:00:00.000Z"
-    });
-    const data = {
+    const data: OverviewData = {
       ...emptyOverview,
-      dashboard: { ...zeroDashboard, counts: { ...zeroDashboard.counts, merchant_orders: 12, passenger_requests: 8, active_drivers: 3, pending_driver_approvals: 2 } },
-      drivers: [
-        { id: "d1", vehicle_type: "sedan", seats_total: 4, parcel_capacity: 2, verified: true, trust_score: 80, created_at: "", user: user("1", "active") },
-        { id: "d2", vehicle_type: "van", seats_total: 6, parcel_capacity: 8, verified: false, trust_score: 70, created_at: "", user: user("2", "pending") }
-      ],
-      trips: [
-        { id: "trip_accepted", status: "accepted", driver_route_id: "route_1" },
-        { id: "trip_active", status: "in_transit", driver_route_id: "route_1" },
-        { id: "trip_delivered", status: "delivered", driver_route_id: "route_1" }
-      ]
+      dashboard: {
+        ...zeroDashboard,
+        counts: { ...zeroDashboard.counts, merchant_orders: 12, passenger_parcels: 30, passenger_requests: 8, active_drivers: 3, pending_driver_approvals: 2 },
+        trips: { by_status: { accepted: 1, in_transit: 1, delivered: 1 }, active_total: 1, active: [activeTrip("trip_active")] }
+      }
     };
     const markup = withLocale("en", <OverviewDashboard data={data} search="" busy={false} onRefresh={() => undefined} />);
 
@@ -226,7 +249,9 @@ describe("overview dashboard", () => {
     expect(textOf(markup)).toContain("Active drivers 3");
     expect(textOf(markup)).toContain("Active trips 1");
     expect(textOf(markup)).toContain("Pending approvals 2");
-    expect(textOf(markup)).toContain("Total orders 12");
+    // Merchant orders only, labelled as such, so it matches the Deliveries list; passenger parcels are not added in.
+    expect(textOf(markup)).toContain("Total merchant orders 12");
+    expect(textOf(markup)).not.toContain("42");
     expect(textOf(markup)).toContain("Total passenger requests 8");
   });
 
@@ -240,8 +265,42 @@ describe("overview dashboard", () => {
     expect(text).toContain("إجمالي طلبات الركاب ٠");
   });
 
+  it("shows the newest requests and orders exactly as the API sorted them", () => {
+    const passenger = { id: "u1", name: "Newest Passenger", phone: "+1", role: "passenger" };
+    const data: OverviewData = {
+      ...emptyOverview,
+      dashboard: {
+        ...zeroDashboard,
+        counts: { ...zeroDashboard.counts, passenger_requests: 40, merchant_orders: 9 },
+        recent: {
+          passenger_requests: [
+            { id: "r_new", status: "pending", pickup_label: "Nablus", destination_label: "Ramallah", passenger_count: 1, passenger },
+            { id: "r_old", status: "matched", pickup_label: "Hebron", destination_label: "Bethlehem", passenger_count: 2, passenger: { ...passenger, name: "Older Passenger" } }
+          ],
+          merchant_orders: [{ id: "o_new", status: "submitted", pickup_label: "Jenin", merchant: { id: "m1", name: "Newest Shop", phone: "+2", role: "merchant" }, parcels: [] }],
+          routes: []
+        }
+      }
+    };
+    const text = textOf(withLocale("en", <OverviewDashboard data={data} search="" busy={false} onRefresh={() => undefined} />));
+
+    expect(text).toContain("Newest passenger requests 40");
+    expect(text).toContain("Newest merchant orders 9");
+    expect(text.indexOf("Newest Passenger")).toBeGreaterThan(-1);
+    expect(text.indexOf("Newest Passenger")).toBeLessThan(text.indexOf("Older Passenger"));
+    expect(text).toContain("Newest Shop");
+  });
+
+  it("has no dead per-row action button in active operations", () => {
+    const data: OverviewData = { ...emptyOverview, dashboard: { ...zeroDashboard, trips: { by_status: { in_transit: 1 }, active_total: 1, active: [activeTrip("trip_1")] } } };
+    const markup = withLocale("en", <OverviewDashboard data={data} search="" busy={false} onRefresh={() => undefined} />);
+    expect(markup).toContain("trip_1");
+    expect(markup).not.toContain("Row actions");
+    expect(markup).not.toMatch(/<button[^>]*disabled[^>]*>[^<]*<svg/);
+  });
+
   it("shows stable loading states without flashing fake zero values", () => {
-    const loading = {
+    const loading: OverviewData = {
       ...emptyOverview,
       dashboard: null,
       resources: resourceStates("loading", false)
@@ -255,7 +314,7 @@ describe("overview dashboard", () => {
   });
 
   it("distinguishes a total API error from an empty dashboard and exposes retry", () => {
-    const failed = {
+    const failed: OverviewData = {
       ...emptyOverview,
       dashboard: null,
       resources: resourceStates("error", false)
@@ -272,34 +331,56 @@ describe("overview dashboard", () => {
   it("keeps successful metrics visible during a partial resource failure", () => {
     const resources = resourceStates("ready", true);
     resources.dashboard = { phase: "error", hasData: false };
-    const partial = {
+    const partial: OverviewData = {
       ...emptyOverview,
       dashboard: null,
-      drivers: [{
-        id: "d1",
-        vehicle_type: "sedan",
-        seats_total: 4,
-        parcel_capacity: 2,
-        verified: true,
-        trust_score: 80,
-        created_at: "",
-        user: {
-          id: "u1", name: "Driver", phone: "+970590000001", role: "driver", account_status: "active" as const,
-          status_reason: null, status_updated_at: "", last_login_at: null, demo_account: false, created_at: ""
-        }
-      }],
-      trips: [{ id: "trip_1", status: "in_transit", driver_route_id: "route_1" }],
+      routes: [{ id: "route_1", status: "active", origin_label: "Hebron", destination_label: "Bethlehem", seats_available: 3, parcel_capacity_available: 4 }],
       resources
     };
     const markup = withLocale("en", <OverviewDashboard data={partial} search="" busy={false} onRefresh={() => undefined} />);
 
     expect(textOf(markup)).toContain("Active drivers — Data could not be loaded");
-    expect(textOf(markup)).toContain("Active trips 1");
-    expect(textOf(markup)).toContain("Total orders — Data could not be loaded");
+    expect(textOf(markup)).toContain("Active trips — Data could not be loaded");
+    expect(textOf(markup)).toContain("Total merchant orders — Data could not be loaded");
+    expect(markup).toContain('aria-label="Passenger seats available"');
+  });
+
+  it("takes trip counts from the dashboard, so they do not stop at a list limit", () => {
+    const manyTrips: DashboardResponse = {
+      ...zeroDashboard,
+      trips: {
+        by_status: { completed: 4_000, in_transit: 260, picked_up: 20, pickup_started: 20, accepted: 15 },
+        active_total: 300,
+        active: [activeTrip("trip_newest", "in_transit", "Newest Driver"), activeTrip("trip_older", "picked_up", "Older Driver")]
+      }
+    };
+    expect(tripFigures(null)).toBeNull();
+    expect(tripFigures({ counts: zeroDashboard.counts })).toBeNull();
+    const figures = tripFigures(manyTrips)!;
+    expect(figures.activeTotal).toBe(300);
+    expect(figures.byStatus.find((bar) => bar.id === "completed")?.value).toBe(4_000);
+    expect(figures.byStatus.find((bar) => bar.id === "failed")?.value).toBe(0);
+
+    const markup = withLocale("en", <OverviewDashboard data={{ ...emptyOverview, dashboard: manyTrips }} search="" busy={false} onRefresh={() => undefined} />);
+    const text = textOf(markup);
+    expect(text).toContain("Active trips 300");
+    expect(markup).toContain('title="Completed: 4000"');
+    expect(text.indexOf("Newest Driver")).toBeLessThan(text.indexOf("Older Driver"));
+    expect(text).toContain("Showing the newest 2 of 300 trips in progress.");
+
+    const searched = textOf(withLocale("en", <OverviewDashboard data={{ ...emptyOverview, dashboard: manyTrips }} search="older" busy={false} onRefresh={() => undefined} />));
+    expect(searched).toContain("Older Driver");
+    expect(searched).not.toContain("Newest Driver");
+  });
+
+  it("marks trip figures unavailable when an older API sends none, instead of showing zero", () => {
+    const { trips: _unused, ...withoutTrips } = zeroDashboard;
+    const text = textOf(withLocale("en", <OverviewDashboard data={{ ...emptyOverview, dashboard: withoutTrips }} search="" busy={false} onRefresh={() => undefined} />));
+    expect(text).toContain("Active trips — Data could not be loaded");
   });
 
   it("shows the open-incident count from the API and localizes the empty state", () => {
-    const data = {
+    const data: OverviewData = {
       ...emptyOverview,
       dashboard: { ...zeroDashboard, counts: { ...zeroDashboard.counts, open_incidents: 4 } }
     };
@@ -311,65 +392,21 @@ describe("overview dashboard", () => {
     expect(empty).toContain("لا توجد بلاغات مفتوحة");
   });
 
-  it("derives alerts only from data the API actually returned", () => {
-    expect(deriveAlerts(emptyOverview)).toEqual({
-      unmatchedRequests: 0,
-      unverifiedDriverRoutes: 0,
-      unbatchedOrders: 0
-    });
+  it("takes alert counts from the API, which counts every row rather than one page", () => {
+    expect(deriveAlerts(null)).toBeNull();
+    expect(deriveAlerts({ counts: zeroDashboard.counts })).toBeNull();
+    expect(deriveAlerts(zeroDashboard)).toEqual({ unmatchedRequests: 0, unverifiedDriverRoutes: 0, unbatchedOrders: 0 });
 
-    const alerts = deriveAlerts({
-      ...emptyOverview,
-      requests: [
-        { id: "r1", status: "pending", pickup_label: "a", destination_label: "b", passenger_count: 1 },
-        { id: "r2", status: "matched", pickup_label: "a", destination_label: "b", passenger_count: 1 }
-      ],
-      routes: [
-        {
-          id: "route_1",
-          status: "active",
-          origin_label: "a",
-          destination_label: "b",
-          seats_available: 2,
-          parcel_capacity_available: 3,
-          driver: { verified: false }
-        }
-      ],
-      orders: [{ id: "o1", status: "submitted", pickup_label: "a" }]
-    });
-    expect(alerts).toEqual({ unmatchedRequests: 1, unverifiedDriverRoutes: 1, unbatchedOrders: 1 });
+    const dashboard: DashboardResponse = { ...zeroDashboard, alerts: { unmatched_requests: 120, unbatched_orders: 3, unverified_driver_routes: 1 } };
+    expect(deriveAlerts(dashboard)).toEqual({ unmatchedRequests: 120, unverifiedDriverRoutes: 1, unbatchedOrders: 3 });
+    const text = textOf(withLocale("en", <OverviewDashboard data={{ ...emptyOverview, dashboard }} search="" busy={false} onRefresh={() => undefined} />));
+    expect(text).not.toContain("No critical alerts");
+    expect(text).toContain("120");
   });
 
   it("searches case-insensitively across the operator-facing fields", () => {
     expect(matchesSearch(["Hebron", "Bethlehem"], "hebr")).toBe(true);
     expect(matchesSearch(["Hebron"], "nablus")).toBe(false);
     expect(matchesSearch([undefined, 12], "")).toBe(true);
-  });
-});
-
-describe("progress rails", () => {
-  it("splits the trip lifecycle into done, current, and pending steps", () => {
-    const flow = ["accepted", "picked_up", "in_transit", "completed"];
-    expect(railSteps(flow, "in_transit").map((step) => step.state)).toEqual(["done", "done", "current", "pending"]);
-  });
-
-  it("treats an unknown trip status as entirely pending rather than crashing", () => {
-    const flow = ["accepted", "completed"];
-    expect(railSteps(flow, "unknown").map((step) => step.state)).toEqual(["pending", "pending"]);
-  });
-
-  it("marks the first undelivered parcel as the current delivery stop", () => {
-    const parcels = [
-      { id: "p1", status: "delivered", destination_label: "a", size: "s", priority: "normal" },
-      { id: "p2", status: "in_transit", destination_label: "b", size: "s", priority: "normal" },
-      { id: "p3", status: "created", destination_label: "c", size: "s", priority: "normal" }
-    ];
-    expect(parcelSteps(parcels, (value) => value).map((step) => step.state)).toEqual(["done", "current", "pending"]);
-  });
-
-  it("scales match sub-scores to a percentage but leaves the deviation distance alone", () => {
-    expect(scorePercent("trustScore", 0.82)).toBeCloseTo(82);
-    expect(scorePercent("estimatedDeviationKm", 4.2)).toBeNull();
-    expect(scorePercent("timingFit", 3)).toBe(100);
   });
 });

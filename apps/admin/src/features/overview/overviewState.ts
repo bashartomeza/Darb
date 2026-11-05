@@ -1,13 +1,12 @@
-import type {
-  DashboardResponse,
-  DriverProfile,
-  DriverRoute,
-  MerchantOrder,
-  PassengerRequest,
-  Trip
-} from "../../api";
+import type { DashboardResponse, DriverRoute } from "../../api";
 
-export const OVERVIEW_RESOURCE_KEYS = ["dashboard", "drivers", "routes", "requests", "orders", "trips"] as const;
+/**
+ * What the overview loads. Counts, alerts, trip figures and the newest
+ * requests, orders and in-progress trips all come from the dashboard
+ * endpoint, which counts in the database; driver routes feed the capacity
+ * chart. Full lists are loaded, page by page, by their own pages.
+ */
+export const OVERVIEW_RESOURCE_KEYS = ["dashboard", "routes"] as const;
 
 export type OverviewResourceKey = (typeof OVERVIEW_RESOURCE_KEYS)[number];
 export type OverviewResourcePhase = "idle" | "loading" | "ready" | "error";
@@ -16,11 +15,7 @@ export type OverviewResourceStates = Record<OverviewResourceKey, OverviewResourc
 
 export type OverviewPayloads = {
   dashboard: DashboardResponse;
-  drivers: { drivers: DriverProfile[] };
   routes: { routes: DriverRoute[] };
-  requests: { requests: PassengerRequest[] };
-  orders: { orders: MerchantOrder[] };
-  trips: { trips: Trip[] };
 };
 
 export type OverviewLoaders = { [Key in OverviewResourceKey]: () => Promise<OverviewPayloads[Key]> };
@@ -40,19 +35,12 @@ export function beginOverviewRefresh(states: OverviewResourceStates): OverviewRe
 }
 
 /**
- * Loads every resource independently. Promise.allSettled is intentional: an
- * orders outage must not erase valid driver, trip, or request data.
+ * Loads every resource independently. Promise.allSettled is intentional: a
+ * routes outage must not erase valid dashboard data.
  */
 export async function loadOverviewResources(loaders: OverviewLoaders): Promise<OverviewResults> {
-  const [dashboard, drivers, routes, requests, orders, trips] = await Promise.allSettled([
-    loaders.dashboard(),
-    loaders.drivers(),
-    loaders.routes(),
-    loaders.requests(),
-    loaders.orders(),
-    loaders.trips()
-  ]);
-  return { dashboard, drivers, routes, requests, orders, trips };
+  const [dashboard, routes] = await Promise.allSettled([loaders.dashboard(), loaders.routes()]);
+  return { dashboard, routes };
 }
 
 export function completeOverviewRefresh(

@@ -181,6 +181,12 @@ describe("Admin Trips Management", () => {
     expect(older).toContain("Hebron → Bethlehem");
   });
 
+  it("points the origin-to-destination arrow the reading direction in Arabic", () => {
+    const arabic = render("ar", <TripsManagementView {...props()} />);
+    expect(arabic).toContain("Hebron ← Bethlehem");
+    expect(arabic).not.toContain("Hebron → Bethlehem");
+  });
+
   it("labels persisted location evidence honestly and never claims live GPS", () => {
     const markup = render("en", <TripsManagementView {...props()} />);
     expect(markup).toContain("Latest stored location");

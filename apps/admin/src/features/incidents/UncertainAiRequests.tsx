@@ -4,6 +4,9 @@ import { useLocale } from "../../i18n/LocaleContext";
 import type { TranslationKey } from "../../i18n/translations";
 import { BentoGrid, Button, Card, CardHeader, EmptyState, Skeleton, StatusBadge } from "../../ui";
 import type { Tone } from "../../ui/StatusBadge";
+import { Pager } from "../shared/Pager";
+
+export const UNCERTAIN_AI_PAGE_SIZE = 50;
 
 type UncertainAiApi = {
   uncertainAiRequests: (token: string, query: { status?: UncertainAiStatus; page?: number; limit?: number }) => Promise<UncertainAiPage>;
@@ -43,6 +46,7 @@ export function UncertainAiRequests({ api, token }: { api: UncertainAiApi; token
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: "error" | "ok"; key: TranslationKey } | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
   const latest = useRef(0);
 
   const load = useCallback(async () => {
@@ -50,14 +54,14 @@ export function UncertainAiRequests({ api, token }: { api: UncertainAiApi; token
     setLoading(true);
     setFailed(false);
     try {
-      const result = await api.uncertainAiRequests(token, { status: filter === "all" ? undefined : filter, limit: 50 });
+      const result = await api.uncertainAiRequests(token, { status: filter === "all" ? undefined : filter, page: pageNumber, limit: UNCERTAIN_AI_PAGE_SIZE });
       if (request === latest.current) setPage(result);
     } catch {
       if (request === latest.current) setFailed(true);
     } finally {
       if (request === latest.current) setLoading(false);
     }
-  }, [api, token, filter]);
+  }, [api, token, filter, pageNumber]);
 
   useEffect(() => {
     void load();
@@ -95,7 +99,7 @@ export function UncertainAiRequests({ api, token }: { api: UncertainAiApi; token
               size="sm"
               variant={filter === value ? "secondary" : "ghost"}
               aria-pressed={filter === value}
-              onClick={() => { setFilter(value); setSelectedId(null); }}
+              onClick={() => { setFilter(value); setPageNumber(1); setSelectedId(null); }}
             >
               {value === "all" ? t("incidentsFilterAll") : value === "open" ? t("incidentStatusOpen") : t("uncertainAiResolved")}
             </Button>
@@ -140,6 +144,7 @@ export function UncertainAiRequests({ api, token }: { api: UncertainAiApi; token
             ))}
           </div>
         )}
+        {page && <Pager page={pageNumber} total={page.total} limit={UNCERTAIN_AI_PAGE_SIZE} disabled={loading} onPage={(next) => { setPageNumber(next); setSelectedId(null); }} />}
       </Card>
 
       {selected && (
