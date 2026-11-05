@@ -87,6 +87,16 @@ function param(params: unknown, key: string): string | undefined {
 
 export function pushText(type: string, params: unknown, locale: string | null | undefined): Text {
   const lang = pushLanguage(locale);
+  if (type === "driver_approaching" && param(params, "reason") === "pickup_started") {
+    // The driver marked the pickup as started: they have set off, they are not near yet.
+    return {
+      title: fixed.driver_approaching.title[lang],
+      body:
+        lang === "en"
+          ? "Your driver has set off to your pickup point. Please get ready."
+          : "انطلق سائقك إلى نقطة الانطلاق. يرجى الاستعداد."
+    };
+  }
   const preset = fixed[type];
   if (preset) return { title: preset.title[lang], body: preset.body?.[lang] };
 

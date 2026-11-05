@@ -2049,6 +2049,8 @@ model PushDevice {
   /// The sign-in session that registered the token; pushes stop when it ends.
   session_id    String?
   platform      PushPlatform
+  /// ASCII with a binary (case-sensitive) collation in the migration; the API only accepts
+  /// [A-Za-z0-9_:.-] tokens, so the character set never loses data.
   token         String       @unique @db.VarChar(512)
   app_version   String?      @db.VarChar(40)
   /// App language when the token was registered; push text is written in it.

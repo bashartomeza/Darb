@@ -141,6 +141,33 @@ describe("push device registration API", () => {
     expect(prismaMock.pushDevice.upsert).not.toHaveBeenCalled();
   });
 
+  it("keeps at most ten live tokens per account, retiring the least recently seen", async () => {
+    prismaMock.pushDevice.upsert.mockResolvedValue({ id: "pd11", platform: "android", locale: null, last_seen_at: new Date() });
+    prismaMock.pushDevice.findMany.mockResolvedValue([{ id: "pd_old_1" }, { id: "pd_old_2" }]);
+    prismaMock.pushDevice.updateMany.mockResolvedValue({ count: 2 });
+
+    await request(createApp()).put("/api/v1/push/devices").set(auth("passenger_1")).send({ token: TOKEN, platform: "android" }).expect(200);
+
+    // Newest first, so every live token after the first ten is excess.
+    expect(prismaMock.pushDevice.findMany).toHaveBeenCalledWith({
+      where: { user_id: "passenger_1", revoked_at: null },
+      orderBy: [{ last_seen_at: "desc" }, { id: "desc" }],
+      skip: 10,
+      select: { id: true }
+    });
+    expect(prismaMock.pushDevice.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["pd_old_1", "pd_old_2"] }, revoked_at: null },
+      data: { revoked_at: expect.any(Date), revoke_reason: "device_limit" }
+    });
+  });
+
+  it("revokes nothing when the account is within the limit", async () => {
+    prismaMock.pushDevice.upsert.mockResolvedValue({ id: "pd1", platform: "android", locale: null, last_seen_at: new Date() });
+    prismaMock.pushDevice.findMany.mockResolvedValue([]);
+    await request(createApp()).put("/api/v1/push/devices").set(auth("passenger_1")).send({ token: TOKEN, platform: "android" }).expect(200);
+    expect(prismaMock.pushDevice.updateMany).not.toHaveBeenCalled();
+  });
+
   it("unregisters only the caller's own token, with the same answer either way", async () => {
     prismaMock.pushDevice.updateMany.mockResolvedValue({ count: 0 });
 
@@ -373,6 +400,14 @@ describe("push dispatcher", () => {
     expect(pushText("driver_documents_expiring", { kind: "licence", expires_on: "2026-12-01" }, "en").body).toBe(
       "Your Driving licence expires on 2026-12-01."
     );
+    // "Pickup started" means the driver has set off, not that they are near.
+    expect(pushText("driver_approaching", { reason: "pickup_started" }, "en")).toEqual({
+      title: "Your driver is approaching",
+      body: "Your driver has set off to your pickup point. Please get ready."
+    });
+    expect(pushText("driver_approaching", { reason: "pickup_started" }, "ar").body).toBe("انطلق سائقك إلى نقطة الانطلاق. يرجى الاستعداد.");
+    expect(pushText("driver_approaching", { reason: "radius" }, "en").body).toBe("Your driver is near your pickup point. Please get ready.");
+    expect(pushText("driver_approaching", { reason: "eta" }, "ar").body).toBe("سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.");
     // A reviewer's free-text reason never goes to a lock screen.
     expect(pushText("driver_verification_rejected", { reason: "Blurry photo of the licence" }, "en").body).not.toContain("Blurry");
   });

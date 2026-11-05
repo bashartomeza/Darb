@@ -5,6 +5,9 @@ type Db = PrismaClient | Prisma.TransactionClient;
 export const PUSH_PLATFORMS = ["android", "ios", "web"] as const;
 export type PushPlatformName = (typeof PUSH_PLATFORMS)[number];
 
+/** Live tokens kept per account; registering another retires the least recently seen. */
+export const MAX_LIVE_PUSH_DEVICES_PER_USER = 10;
+
 /** FCM and APNs-via-FCM tokens: URL-safe base64 plus ':' separators. */
 export const PUSH_TOKEN_PATTERN = /^[A-Za-z0-9_:.-]{20,512}$/;
 
@@ -46,13 +49,35 @@ export async function registerPushDevice(db: Db, input: RegisterPushDeviceInput)
       update: fields,
       select: { id: true, platform: true, locale: true, last_seen_at: true }
     });
+  let device: Awaited<ReturnType<typeof upsert>>;
   try {
-    return await upsert();
+    device = await upsert();
   } catch (error) {
     // Two registrations of the same new token raced on the unique index: the row exists now.
     if (!isUniqueViolation(error)) throw error;
-    return upsert();
+    device = await upsert();
   }
+  await revokeExcessPushDevices(db, input.userId, now);
+  return device;
+}
+
+/**
+ * Keeps at most MAX_LIVE_PUSH_DEVICES_PER_USER live tokens per account (phones
+ * reinstalled or replaced without logging out leave tokens behind). The one
+ * just registered was seen last, so it is always kept.
+ */
+async function revokeExcessPushDevices(db: Db, userId: string, now: Date) {
+  const excess = await db.pushDevice.findMany({
+    where: { user_id: userId, revoked_at: null },
+    orderBy: [{ last_seen_at: "desc" }, { id: "desc" }],
+    skip: MAX_LIVE_PUSH_DEVICES_PER_USER,
+    select: { id: true }
+  });
+  if (!excess?.length) return;
+  await db.pushDevice.updateMany({
+    where: { id: { in: excess.map((row) => row.id) }, revoked_at: null },
+    data: { revoked_at: now, revoke_reason: "device_limit" }
+  });
 }
 
 /** Revokes the caller's own token. Another account's token is left alone, with the same answer. */

@@ -21,7 +21,7 @@ Entries carry `type` and `params`, never display text; each client words them in
 | `GET /push/preferences` | `{push_enabled, push_available}`; `push_enabled` defaults to `true`. |
 | `PUT /push/preferences` `{push_enabled}` | Turn push on or off for the account. |
 
-Tokens are write-only: no endpoint returns them. Session revocation (logout, logout-all, password change, refresh-token reuse, admin action) revokes the session's tokens; Firebase-reported dead tokens are revoked by the sender.
+Tokens are write-only: no endpoint returns them. An account keeps at most 10 live tokens; registering another retires the least recently seen. Session revocation (logout, logout-all, password change, refresh-token reuse, admin action) revokes the session's tokens; Firebase-reported dead tokens are revoked by the sender.
 
 ## Events
 

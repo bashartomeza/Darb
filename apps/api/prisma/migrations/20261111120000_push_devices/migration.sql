@@ -4,6 +4,8 @@
 -- from another account moves the row. Rows are revoked (not deleted) on logout, session
 -- revocation, or when the push service reports the token invalid, and are erased with the account.
 -- session_id ties the token to the sign-in that registered it; pushes stop when that session ends.
+-- token is ASCII with a binary collation: FCM tokens are case-sensitive, and a 512-byte unique key
+-- stays within the 767-byte index limit of older row formats (MySQL or MariaDB).
 --
 -- notification_preferences: per-account choices. No row means the defaults (push on).
 --
@@ -16,7 +18,7 @@ CREATE TABLE `push_devices` (
     `user_id` VARCHAR(191) NOT NULL,
     `session_id` VARCHAR(191) NULL,
     `platform` ENUM('android', 'ios', 'web') NOT NULL,
-    `token` VARCHAR(512) NOT NULL,
+    `token` VARCHAR(512) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     `app_version` VARCHAR(40) NULL,
     `locale` VARCHAR(10) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
