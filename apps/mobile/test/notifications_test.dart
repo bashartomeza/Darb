@@ -121,6 +121,53 @@ Future<void> _pumpScreen(
 }
 
 void main() {
+  group('order expiry and withdrawn offers', () {
+    final en = lookupAppLocalizations(const Locale('en'));
+    final ar = lookupAppLocalizations(const Locale('ar'));
+
+    test('an expired order says why, in both languages', () {
+      final aged = _note(
+        'a',
+        'merchant_order_expired',
+        params: {'policy': 'max_age', 'max_age_hours': 72},
+      );
+      expect(notificationText(en, aged).title, 'Order expired');
+      expect(notificationText(en, aged).body, contains('within 72 hours'));
+      expect(notificationText(ar, aged).title, 'انتهت صلاحية الطلب');
+      expect(notificationText(ar, aged).body, contains('72'));
+
+      final window = _note(
+        'b',
+        'merchant_order_expired',
+        params: {'policy': 'departure_window'},
+      );
+      expect(
+        notificationText(en, window).body,
+        contains('before the pickup time you chose ended'),
+      );
+    });
+
+    test('a withdrawn offer tells the driver what happened', () {
+      final cancelled = _note(
+        'a',
+        'match_withdrawn',
+        params: {'reason': 'cancelled'},
+      );
+      final expired = _note(
+        'b',
+        'match_withdrawn',
+        params: {'reason': 'expired'},
+      );
+      expect(notificationText(en, cancelled).title, 'Offer withdrawn');
+      expect(
+        notificationText(en, cancelled).body,
+        contains('sender cancelled'),
+      );
+      expect(notificationText(en, expired).body, contains('expired'));
+      expect(notificationText(ar, expired).title, 'تم سحب العرض');
+    });
+  });
+
   group('controller', () {
     test('loads the inbox and exposes the unread count', () async {
       final repo = _FakeRepository([

@@ -8,6 +8,7 @@ const prismaMock = vi.hoisted(() => ({
   user: { findUnique: vi.fn(), count: vi.fn() },
   authSession: { findUnique: vi.fn(), update: vi.fn() },
   auditEvent: { create: vi.fn() },
+  notification: { create: vi.fn() },
   passengerRequest: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
   match: { findMany: vi.fn(), updateMany: vi.fn() },
   parcelBatch: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
@@ -101,6 +102,7 @@ describe("manual role APIs", () => {
     });
     prismaMock.authSession.update.mockResolvedValue({});
     prismaMock.auditEvent.create.mockResolvedValue({ id: "audit_1" });
+    prismaMock.notification.create.mockResolvedValue({});
     prismaMock.passengerRequest.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.passengerRequest.findUniqueOrThrow.mockImplementation(({ where }: { where: { id: string } }) => ({ id: where.id, status: "cancelled", passenger_id: "passenger_1" }));
     prismaMock.match.findMany.mockResolvedValue([]);
@@ -264,7 +266,7 @@ describe("manual role APIs", () => {
     prismaMock.merchantOrder.findFirst.mockResolvedValue({ id: "order_1", status: "matched" });
     prismaMock.parcelBatchOrder.findFirst.mockResolvedValue({ parcel_batch: { id: "batch_1", merchant_order_id: "order_1" } });
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }, { merchant_order_id: "order_2" }]);
-    prismaMock.match.findMany.mockResolvedValue([{ id: "match_1", driver_route_id: "route_1", legacy_capacity_held: true }]);
+    prismaMock.match.findMany.mockResolvedValue([{ id: "match_1", driver_route_id: "route_1", legacy_capacity_held: true, driver_route: { driver: { user_id: "driver_1" } } }]);
     prismaMock.parcel.count.mockResolvedValue(3);
 
     const response = await request(createApp())
@@ -305,6 +307,10 @@ describe("manual role APIs", () => {
     });
     expect(prismaMock.auditEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({
       metadata: expect.objectContaining({ action: "merchant_order_cancelled", parcel_batch_id: "batch_1", batch_orders_remaining: 1 })
+    }) });
+    // The driver waiting on the withdrawn offer is told it is gone.
+    expect(prismaMock.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      user_id: "driver_1", type: "match_withdrawn", entity_id: "match_1", params: { reason: "cancelled" }
     }) });
   });
 

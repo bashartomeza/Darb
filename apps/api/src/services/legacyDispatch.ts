@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma.js";
 import { releaseLegacyCapacity } from "./legacyCapacity.js";
 import { closeOpenLegacyOrder, OPEN_LEGACY_ORDER_STATUSES, type OpenLegacyOrderStatus } from "./legacyOrderClosure.js";
 import { config } from "../config.js";
+import { notify } from "./notifications.js";
 
 const LEGACY_MATCH_TERMINAL_BATCH_STATUSES = ["cancelled", "failed", "expired"] as const;
 
@@ -230,7 +231,7 @@ export async function expireLegacyDispatches(
         { requested_departure_until: null, created_at: { lte: createdCutoff } },
       ],
     },
-    select: { id: true, status: true, requested_departure_until: true },
+    select: { id: true, merchant_id: true, status: true, requested_departure_until: true },
     orderBy: { created_at: "asc" },
     take: limit,
   });
@@ -256,6 +257,18 @@ export async function expireLegacyDispatches(
             ? { parcel_batch_id: closed.batchId, batch_orders_remaining: closed.remainingOrderIds.length }
             : {}),
         },
+      });
+      // The sender (merchant, or passenger for a parcel) learns the order
+      // expired and why: no driver took it in time, so nothing is collected.
+      await notify(tx, {
+        userId: order.merchant_id,
+        type: "merchant_order_expired",
+        entityType: "MerchantOrder",
+        entityId: order.id,
+        dedupeKey: `merchant_order_expired:${order.id}`,
+        params: order.requested_departure_until
+          ? { policy: "departure_window" }
+          : { policy: "max_age", max_age_hours: maxAgeHours },
       });
       return true;
     });

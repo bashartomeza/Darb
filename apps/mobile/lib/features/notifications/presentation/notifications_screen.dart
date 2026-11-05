@@ -217,6 +217,8 @@ class _NotificationTile extends StatelessWidget {
     'driver_documents_renewal_submitted' => Icons.upload_file_outlined,
     'incident_updated' => Icons.flag_outlined,
     'driver_approaching' => Icons.directions_car_outlined,
+    'merchant_order_expired' => Icons.timer_off_outlined,
+    'match_withdrawn' => Icons.remove_circle_outline,
     _ => Icons.notifications_none_outlined,
   };
 
@@ -305,6 +307,24 @@ bool opensDriverRenewal(String type) =>
       return (
         title: l10n.notifDriverApproachingTitle,
         body: l10n.notifDriverApproachingBody,
+      );
+    case 'merchant_order_expired':
+      // Says why, so a sender is not left wondering where the order went.
+      final hours = notification.params['max_age_hours'];
+      return (
+        title: l10n.notifOrderExpiredTitle,
+        body: notification.params['policy'] == 'departure_window'
+            ? l10n.notifOrderExpiredWindowBody
+            : hours is num
+            ? l10n.notifOrderExpiredMaxAgeBody(hours.toInt())
+            : null,
+      );
+    case 'match_withdrawn':
+      return (
+        title: l10n.notifOfferWithdrawnTitle,
+        body: notification.params['reason'] == 'expired'
+            ? l10n.notifOfferWithdrawnExpiredBody
+            : l10n.notifOfferWithdrawnCancelledBody,
       );
     case 'incident_updated':
       return (

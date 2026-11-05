@@ -881,6 +881,19 @@
   "notifIncidentUpdatedTitle": "Update on your report",
   "notifIncidentReviewingBody": "Your report is under review.",
   "notifIncidentResolvedBody": "Your report has been resolved.",
+  "notifOrderExpiredTitle": "Order expired",
+  "notifOrderExpiredMaxAgeBody": "No driver took this order within {hours} hours, so it expired and nothing will be collected. Create it again if you still want to send it.",
+  "@notifOrderExpiredMaxAgeBody": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "notifOrderExpiredWindowBody": "No driver was found before the pickup time you chose ended, so the order expired and nothing will be collected. Create it again if you still want to send it.",
+  "notifOfferWithdrawnTitle": "Offer withdrawn",
+  "notifOfferWithdrawnCancelledBody": "The sender cancelled an order in this parcel offer, so it is no longer waiting for you. The space it held is free again.",
+  "notifOfferWithdrawnExpiredBody": "An order in this parcel offer expired, so it is no longer waiting for you. The space it held is free again.",
   "verificationDocuments": "Verification documents",
   "verificationDocumentsHint": "To get approved, upload clear photos or PDFs of your driving licence, your vehicle registration and your national ID. Files are stored on our server and only the review team can open them.",
   "documentKind": "Document type",

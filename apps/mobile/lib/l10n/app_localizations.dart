@@ -4580,6 +4580,42 @@ abstract class AppLocalizations {
   /// **'تمت معالجة بلاغك.'**
   String get notifIncidentResolvedBody;
 
+  /// No description provided for @notifOrderExpiredTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية الطلب'**
+  String get notifOrderExpiredTitle;
+
+  /// No description provided for @notifOrderExpiredMaxAgeBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يأخذ أي سائق هذا الطلب خلال {hours} ساعة، فانتهت صلاحيته ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله.'**
+  String notifOrderExpiredMaxAgeBody(int hours);
+
+  /// No description provided for @notifOrderExpiredWindowBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يُعثر على سائق قبل انتهاء وقت الاستلام الذي اخترته، فانتهت صلاحية الطلب ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله.'**
+  String get notifOrderExpiredWindowBody;
+
+  /// No description provided for @notifOfferWithdrawnTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم سحب العرض'**
+  String get notifOfferWithdrawnTitle;
+
+  /// No description provided for @notifOfferWithdrawnCancelledBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ألغى المرسل طلباً في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.'**
+  String get notifOfferWithdrawnCancelledBody;
+
+  /// No description provided for @notifOfferWithdrawnExpiredBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية طلب في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.'**
+  String get notifOfferWithdrawnExpiredBody;
+
   /// No description provided for @verificationDocuments.
   ///
   /// In ar, this message translates to:

@@ -2488,6 +2488,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifIncidentResolvedBody => 'Your report has been resolved.';
 
   @override
+  String get notifOrderExpiredTitle => 'Order expired';
+
+  @override
+  String notifOrderExpiredMaxAgeBody(int hours) {
+    return 'No driver took this order within $hours hours, so it expired and nothing will be collected. Create it again if you still want to send it.';
+  }
+
+  @override
+  String get notifOrderExpiredWindowBody =>
+      'No driver was found before the pickup time you chose ended, so the order expired and nothing will be collected. Create it again if you still want to send it.';
+
+  @override
+  String get notifOfferWithdrawnTitle => 'Offer withdrawn';
+
+  @override
+  String get notifOfferWithdrawnCancelledBody =>
+      'The sender cancelled an order in this parcel offer, so it is no longer waiting for you. The space it held is free again.';
+
+  @override
+  String get notifOfferWithdrawnExpiredBody =>
+      'An order in this parcel offer expired, so it is no longer waiting for you. The space it held is free again.';
+
+  @override
   String get verificationDocuments => 'Verification documents';
 
   @override

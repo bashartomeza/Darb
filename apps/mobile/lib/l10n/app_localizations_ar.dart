@@ -2468,6 +2468,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notifIncidentResolvedBody => 'تمت معالجة بلاغك.';
 
   @override
+  String get notifOrderExpiredTitle => 'انتهت صلاحية الطلب';
+
+  @override
+  String notifOrderExpiredMaxAgeBody(int hours) {
+    return 'لم يأخذ أي سائق هذا الطلب خلال $hours ساعة، فانتهت صلاحيته ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله.';
+  }
+
+  @override
+  String get notifOrderExpiredWindowBody =>
+      'لم يُعثر على سائق قبل انتهاء وقت الاستلام الذي اخترته، فانتهت صلاحية الطلب ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله.';
+
+  @override
+  String get notifOfferWithdrawnTitle => 'تم سحب العرض';
+
+  @override
+  String get notifOfferWithdrawnCancelledBody =>
+      'ألغى المرسل طلباً في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.';
+
+  @override
+  String get notifOfferWithdrawnExpiredBody =>
+      'انتهت صلاحية طلب في عرض الطرود هذا، لذلك لم يعد بانتظارك. المساحة التي كان يحجزها متاحة من جديد.';
+
+  @override
   String get verificationDocuments => 'مستندات التوثيق';
 
   @override

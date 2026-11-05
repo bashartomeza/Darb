@@ -1,6 +1,7 @@
 import type { Prisma } from "../generated/prisma/client.js";
 import { MatchStatus } from "../generated/prisma/enums.js";
 import { releaseLegacyCapacity } from "./legacyCapacity.js";
+import { notify } from "./notifications.js";
 
 /** Order states in which no driver has taken the order yet. */
 export const OPEN_LEGACY_ORDER_STATUSES = ["submitted", "batched", "matched"] as const;
@@ -62,7 +63,12 @@ export async function closeOpenLegacyOrder(
     : { merchant_order_id: input.orderId };
   const activeMatches = await tx.match.findMany({
     where: { ...matchWhere, operational_mode: "legacy", status: { in: [MatchStatus.proposed, MatchStatus.sent_to_driver] } },
-    select: { id: true, driver_route_id: true, legacy_capacity_held: true },
+    select: {
+      id: true,
+      driver_route_id: true,
+      legacy_capacity_held: true,
+      driver_route: { select: { driver: { select: { user_id: true } } } },
+    },
   });
 
   // Held capacity covers every still-open parcel of the offer, counted before any closes.
@@ -86,6 +92,18 @@ export async function closeOpenLegacyOrder(
         ? { status: MatchStatus.expired, expired_at: now, legacy_demand_key: null, legacy_capacity_held: false }
         : { status: MatchStatus.invalidated, legacy_demand_key: null, legacy_capacity_held: false },
     });
+    // The driver was waiting on this offer: say it is gone and why, rather
+    // than let it silently disappear from the inbox.
+    for (const match of activeMatches) {
+      await notify(tx, {
+        userId: match.driver_route?.driver?.user_id,
+        type: "match_withdrawn",
+        entityType: "Match",
+        entityId: match.id,
+        dedupeKey: `match_withdrawn:${match.id}`,
+        params: { reason: input.outcome },
+      });
+    }
   }
 
   if (!batch) {

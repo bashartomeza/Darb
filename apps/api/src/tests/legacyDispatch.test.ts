@@ -9,7 +9,8 @@ const prismaMock = vi.hoisted(() => ({
   parcelBatchOrder: { findMany: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
   driverRoute: { update: vi.fn() },
-  auditEvent: { create: vi.fn() }
+  auditEvent: { create: vi.fn() },
+  notification: { create: vi.fn() }
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -38,6 +39,7 @@ describe("legacy dispatch expiry", () => {
     prismaMock.parcel.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.driverRoute.update.mockResolvedValue({});
     prismaMock.auditEvent.create.mockResolvedValue({ id: "audit_1" });
+    prismaMock.notification.create.mockResolvedValue({});
     prismaMock.$transaction.mockImplementation((callback: (tx: typeof prismaMock) => unknown) => callback(prismaMock));
   });
 
@@ -101,10 +103,10 @@ describe("legacy dispatch expiry", () => {
 
   it("expires an old order alone; its batch siblings stay batched and the batch can be offered again", async () => {
     const now = new Date("2026-10-08T12:00:00.000Z");
-    prismaMock.merchantOrder.findMany.mockResolvedValue([{ id: "order_1", status: "matched", requested_departure_until: null }]);
+    prismaMock.merchantOrder.findMany.mockResolvedValue([{ id: "order_1", merchant_id: "merchant_1", status: "matched", requested_departure_until: null }]);
     prismaMock.parcelBatchOrder.findFirst.mockResolvedValue({ parcel_batch: { id: "batch_1", merchant_order_id: "order_1" } });
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }, { merchant_order_id: "order_2" }]);
-    prismaMock.match.findMany.mockResolvedValue([{ id: "match_1", driver_route_id: "route_1", legacy_capacity_held: true }]);
+    prismaMock.match.findMany.mockResolvedValue([{ id: "match_1", driver_route_id: "route_1", legacy_capacity_held: true, driver_route: { driver: { user_id: "driver_1" } } }]);
     prismaMock.parcel.count.mockResolvedValue(4);
 
     const result = await expireLegacyDispatches(prismaMock as never, { now, limit: 10 });
@@ -136,11 +138,19 @@ describe("legacy dispatch expiry", () => {
     });
     expect(prismaMock.parcelBatch.update).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "expired" }) }));
     expect(prismaMock.parcel.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({ where: { batch_id: "batch_1" } }));
+    // The driver hears the offer is gone; the merchant hears why the order expired.
+    expect(prismaMock.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      user_id: "driver_1", type: "match_withdrawn", entity_id: "match_1", dedupe_key: "match_withdrawn:match_1", params: { reason: "expired" }
+    }) });
+    expect(prismaMock.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      user_id: "merchant_1", type: "merchant_order_expired", entity_type: "MerchantOrder", entity_id: "order_1",
+      dedupe_key: "merchant_order_expired:order_1", params: { policy: "max_age", max_age_hours: 72 }
+    }) });
   });
 
   it("expires the batch with its last order", async () => {
     const now = new Date("2026-10-08T12:00:00.000Z");
-    prismaMock.merchantOrder.findMany.mockResolvedValue([{ id: "order_1", status: "batched", requested_departure_until: new Date("2026-10-08T11:00:00.000Z") }]);
+    prismaMock.merchantOrder.findMany.mockResolvedValue([{ id: "order_1", merchant_id: "merchant_1", status: "batched", requested_departure_until: new Date("2026-10-08T11:00:00.000Z") }]);
     prismaMock.parcelBatchOrder.findFirst.mockResolvedValue({ parcel_batch: { id: "batch_1", merchant_order_id: "order_1" } });
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }]);
 
@@ -154,6 +164,9 @@ describe("legacy dispatch expiry", () => {
     });
     expect(prismaMock.parcel.updateMany).toHaveBeenCalledWith({ where: { batch_id: "batch_1" }, data: { status: "expired" } });
     expect(prismaMock.parcelBatchOrder.deleteMany).not.toHaveBeenCalled();
+    expect(prismaMock.notification.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      user_id: "merchant_1", type: "merchant_order_expired", params: { policy: "departure_window" }
+    }) });
     expect(prismaMock.auditEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({
       entity_id: "order_1",
       metadata: expect.objectContaining({ action: "merchant_order_expired", policy: "departure_window" })
@@ -169,5 +182,6 @@ describe("legacy dispatch expiry", () => {
     expect(result.ordersExpired).toBe(0);
     expect(prismaMock.parcel.updateMany).not.toHaveBeenCalled();
     expect(prismaMock.auditEvent.create).not.toHaveBeenCalled();
+    expect(prismaMock.notification.create).not.toHaveBeenCalled();
   });
 });
