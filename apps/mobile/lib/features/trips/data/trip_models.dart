@@ -138,7 +138,13 @@ class TripLocation {
     required this.source,
     required this.sequence,
     required this.recordedAt,
+    this.ageSeconds,
+    this.receivedAt,
   });
+
+  /// A point older than this is the driver's last known position, not a live
+  /// one. Matches the server's `stale_after_seconds`.
+  static const staleAfter = Duration(minutes: 2);
 
   final double lat;
   final double lng;
@@ -146,13 +152,36 @@ class TripLocation {
   final int sequence;
   final DateTime recordedAt;
 
+  /// The point's age by the server clock when it was read, if the server sent
+  /// it. Preferred over [recordedAt] so a phone with a wrong clock still
+  /// tells a fresh point from an old one.
+  final int? ageSeconds;
+
+  /// When this device received [ageSeconds].
+  final DateTime? receivedAt;
+
+  /// How old the point is at [now], by the server's age when it sent one.
+  Duration ageAt(DateTime now) {
+    final age = ageSeconds;
+    final received = receivedAt;
+    if (age != null && received != null) {
+      return Duration(seconds: age) + now.difference(received);
+    }
+    return now.difference(recordedAt);
+  }
+
+  bool isStaleAt(DateTime now) => ageAt(now) > staleAfter;
+
   factory TripLocation.fromJson(Map<String, dynamic> json) {
+    final age = json['age_seconds'];
     return TripLocation(
       lat: _double(json, 'lat'),
       lng: _double(json, 'lng'),
       source: _string(json, 'source'),
       sequence: _int(json, 'sequence'),
       recordedAt: DateTime.parse(_string(json, 'recorded_at')).toLocal(),
+      ageSeconds: age is num ? age.toInt() : null,
+      receivedAt: age is num ? DateTime.now() : null,
     );
   }
 }

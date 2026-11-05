@@ -14,6 +14,14 @@ const merchantTripTimeline = [
   'completed',
 ];
 
+/// How far a delivery has come, from its trip status: each step of
+/// [merchantTripTimeline] reached fills an equal share. Cancelled, failed and
+/// unknown statuses show no progress.
+double merchantTripProgress(String status) {
+  final index = merchantTripTimeline.indexOf(status);
+  return index < 0 ? 0 : (index + 1) / merchantTripTimeline.length;
+}
+
 /// One parcel of an order being written: where it goes, as free text the
 /// driver reads, plus its size, priority and an optional receiver.
 class ParcelDraft {

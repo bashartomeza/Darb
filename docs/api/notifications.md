@@ -35,7 +35,7 @@ Tokens are write-only: no endpoint returns them. An account keeps at most 10 liv
 | `driver_documents_expired` (`params.kinds`) | The driver | The expiry job restricted the account. |
 | `driver_documents_renewal_submitted` | The driver | They sent renewed documents to Admin re-review. |
 | `incident_updated` (`params.status`) | The reporter | An Admin moves their incident report forward. |
-| `driver_approaching` (`params.reason`: `radius` or `eta`) | Passenger on the trip | The matched driver comes within the configured radius or ETA of the pickup (see below). |
+| `driver_approaching` (`params.reason`: `radius`, `eta` or `pickup_started`) | Passenger on the trip | The matched driver comes within the configured radius or ETA of the pickup, or starts the pickup of a route request (see below). |
 | `merchant_order_expired` (`params.policy`: `max_age` with `max_age_hours`, or `departure_window`) | The order's sender (merchant, or passenger for a parcel) | The dispatch worker expires an order no driver took: older than `MERCHANT_ORDER_MAX_AGE_HOURS`, or past the parcel's own departure window. App text — EN "Order expired" / "No driver took this order within {hours} hours, so it expired and nothing will be collected. Create it again if you still want to send it."; AR "انتهت صلاحية الطلب" / "لم يأخذ أي سائق هذا الطلب خلال {hours} ساعة، فانتهت صلاحيته ولن يُستلم شيء. أنشئه من جديد إن كنت ما زلت تريد إرساله." |
 | `match_withdrawn` (`params.reason`: `cancelled` or `expired`) | Driver of a pending offer | An order in the offer was cancelled by its sender or expired, so the offer is withdrawn and its held capacity released. App text — EN "Offer withdrawn"; AR "تم سحب العرض", with a body naming the reason. |
 
@@ -47,11 +47,12 @@ Tokens are write-only: no endpoint returns them. An account keeps at most 10 liv
 
 ## "Driver is approaching" alert
 
-`services/driverApproaching.ts` is evaluated whenever a driver position is recorded (`POST /trips/:id/simulate/step`) and after a legacy trip status update (using the latest recorded position).
+`services/driverApproaching.ts` is evaluated whenever a driver position is recorded (the driver's phone through `POST /trips/:id/location`, or the demo simulator `POST /trips/:id/simulate/step`) and after a legacy trip status update (using the latest recorded position, if any).
 
-- Trigger: great-circle distance driver to pickup is at most `APPROACH_ALERT_RADIUS_KM` (default `1`, boundary inclusive), or the estimated time (`distance / APPROACH_ALERT_ASSUMED_SPEED_KMH * 60`) is at most `APPROACH_ALERT_ETA_MINUTES` (default `0` = ETA trigger off; assumed speed default `30` km/h).
+- Which pickup: only a request whose pickup coordinate the passenger chose is measured. A route request stores its origin city's centre as the coordinate and the real pickup as typed text (`pickup_details`); measuring against the centre would announce the driver while they cross the city, nowhere near the passenger. Such a request fires instead when the driver marks `pickup_started` (`params.reason = "pickup_started"`), the driver's own "on my way to you", and positions are ignored for it.
+- Trigger (real pickup coordinate): great-circle distance driver to pickup is at most `APPROACH_ALERT_RADIUS_KM` (default `1`, boundary inclusive), or the estimated time (`distance / APPROACH_ALERT_ASSUMED_SPEED_KMH * 60`) is at most `APPROACH_ALERT_ETA_MINUTES` (default `0` = ETA trigger off; assumed speed default `30` km/h).
 - One notification per trip: dedupe key `driver_approaching:<tripId>`; later positions never repeat it.
 - State guard: only trips in `created`, `accepted` or `pickup_started` with a passenger request. Picked-up, in-transit, delivered, completed, cancelled and failed trips never fire. Parcel/merchant trips are not covered.
 - Privacy: `params` holds only `reason`; no coordinates or distance reach the passenger.
-- Honesty: positions are still simulated and the `live_tracking_available` capability stays `false`; this alert does not imply live tracking.
+- Positions: real driver GPS when `LIVE_TRACKING_ENABLED` is on (see `docs/api/live-location.md`), simulated points in demo builds.
 - Localised text lives in the mobile ARB files (`notifDriverApproachingTitle/Body`, EN and AR).

@@ -15,6 +15,7 @@ import 'package:darb_mobile/features/checkpoints/application/checkpoint_controll
 import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
 import 'package:darb_mobile/features/driver/application/driver_controller.dart';
 import 'package:darb_mobile/features/driver/data/driver_models.dart';
+import 'package:darb_mobile/features/driver/presentation/driver_location_sharing_scope.dart';
 import 'package:darb_mobile/features/driver/presentation/driver_trip_screen.dart';
 import 'package:darb_mobile/features/driver/presentation/driver_ui.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
@@ -133,6 +134,13 @@ void main() {
     (tester) async {
       final container = _container((_) async => _road(31.8, 35.3));
       await _pump(tester, container, 'one');
+      // The trip screen owns the phone's location sharing for its trip.
+      expect(
+        tester
+            .widget<DriverLocationSharing>(find.byType(DriverLocationSharing))
+            .tripStatus,
+        'accepted',
+      );
       final json = _tripJson('one');
       (json['passenger_request'] as Map).remove('pickup_lat');
       (container.read(driverTripControllerProvider('one').notifier) as _Trip)

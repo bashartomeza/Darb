@@ -6,7 +6,7 @@ const db = vi.hoisted(() => ({
   locationEvent: { findFirst: vi.fn() }
 }));
 
-const { evaluateApproaching, maybeNotifyDriverApproaching, maybeNotifyDriverApproachingFromLatest } = await import(
+const { evaluateApproaching, hasRealPickupCoordinate, maybeNotifyDriverApproaching, maybeNotifyDriverApproachingFromLatest } = await import(
   "../services/driverApproaching.js"
 );
 
@@ -110,6 +110,44 @@ describe("maybeNotifyDriverApproaching", () => {
     db.trip.findUnique.mockRejectedValue(new Error("down"));
     await expect(maybeNotifyDriverApproaching(db as never, "trip_1", pickup, thresholds)).resolves.toBe(false);
   });
+
+  it("needs a driver position for a request with a real pickup coordinate", async () => {
+    db.trip.findUnique.mockResolvedValue(trip("pickup_started"));
+    expect(await maybeNotifyDriverApproaching(db as never, "trip_1", null, thresholds)).toBe(false);
+    expect(db.notification.create).not.toHaveBeenCalled();
+  });
+
+  describe("route request (pickup typed as text, coordinate is the city centre)", () => {
+    const routeTrip = (status: string) => ({
+      ...trip(status),
+      passenger_request: { ...trip(status).passenger_request, pickup_details: "PPU main gate" }
+    });
+
+    it.each(["created", "accepted"])("never fires from a position while %s, even at the city centre", async (status) => {
+      db.trip.findUnique.mockResolvedValue(routeTrip(status));
+      expect(await maybeNotifyDriverApproaching(db as never, "trip_1", pickup, thresholds)).toBe(false);
+      expect(await maybeNotifyDriverApproaching(db as never, "trip_1", null, thresholds)).toBe(false);
+      expect(db.notification.create).not.toHaveBeenCalled();
+    });
+
+    it("fires once when the driver starts the pickup, wherever the driver is", async () => {
+      db.trip.findUnique.mockResolvedValue(routeTrip("pickup_started"));
+      expect(await maybeNotifyDriverApproaching(db as never, "trip_1", northOf(40), thresholds)).toBe(true);
+      expect(db.notification.create.mock.calls[0][0].data).toMatchObject({
+        dedupe_key: "driver_approaching:trip_1",
+        params: { reason: "pickup_started" }
+      });
+      db.notification.findFirst.mockResolvedValue({ id: "n1" });
+      expect(await maybeNotifyDriverApproaching(db as never, "trip_1", pickup, thresholds)).toBe(false);
+      expect(db.notification.create).toHaveBeenCalledTimes(1);
+    });
+
+    it("treats blank typed text as no text", () => {
+      expect(hasRealPickupCoordinate({ pickup_details: "  " })).toBe(true);
+      expect(hasRealPickupCoordinate({ pickup_details: null })).toBe(true);
+      expect(hasRealPickupCoordinate({ pickup_details: "Gate" })).toBe(false);
+    });
+  });
 });
 
 describe("maybeNotifyDriverApproachingFromLatest", () => {
@@ -128,5 +166,14 @@ describe("maybeNotifyDriverApproachingFromLatest", () => {
   it("does nothing when no location was recorded", async () => {
     db.locationEvent.findFirst.mockResolvedValue(null);
     expect(await maybeNotifyDriverApproachingFromLatest(db as never, "trip_1")).toBe(false);
+  });
+
+  it("fires for a route request at pickup_started even before any position", async () => {
+    db.locationEvent.findFirst.mockResolvedValue(null);
+    db.trip.findUnique.mockResolvedValue({
+      ...trip("pickup_started"),
+      passenger_request: { ...trip().passenger_request, pickup_details: "PPU main gate" }
+    });
+    expect(await maybeNotifyDriverApproachingFromLatest(db as never, "trip_1")).toBe(true);
   });
 });

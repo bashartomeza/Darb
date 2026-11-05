@@ -17,9 +17,11 @@ class PassengerTripState {
     if (current == null) {
       return false;
     }
-    return DateTime.now().difference(current.recordedAt) >
-        const Duration(minutes: 5);
+    return current.isStaleAt(DateTime.now());
   }
+
+  /// A recent point: only then is the driver shown as tracked live.
+  bool get hasLiveLocation => location != null && !locationIsStale;
 }
 
 final passengerTripControllerProvider = AsyncNotifierProvider.autoDispose

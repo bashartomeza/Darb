@@ -780,6 +780,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sourceSimulated => 'محاكى';
 
   @override
+  String get sourceDriverGps => 'موقع هاتف السائق';
+
+  @override
   String get recordedTime => 'وقت التسجيل';
 
   @override
@@ -2831,6 +2834,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get locationEnable => 'تفعيل الموقع';
 
   @override
+  String get locationSharingConsentTitle => 'مشاركة موقعك في هذه الرحلة؟';
+
+  @override
+  String get locationSharingConsentBody =>
+      'أثناء فتح شاشة الرحلة، يرسل درب موقعك إلى الركاب والمرسلين في هذه الرحلة ليعرفوا مكانك وموعد وصولك. تتوقف المشاركة عند انتهاء الرحلة أو مغادرة هذه الشاشة أو انتقال التطبيق إلى الخلفية.';
+
+  @override
+  String get locationSharingAllow => 'مشاركة موقعي';
+
+  @override
+  String get locationSharingNotNow => 'ليس الآن';
+
+  @override
+  String get locationSharingActive =>
+      'موقعك مُشارك مع هذه الرحلة ما دامت هذه الشاشة مفتوحة.';
+
+  @override
+  String get locationSharingDeclined =>
+      'موقعك غير مُشارك، لذلك لا يرى الركاب مكانك.';
+
+  @override
+  String get locationSharingDenied =>
+      'لم يُسمح بالوصول إلى الموقع، لذلك لا يرى الركاب مكانك.';
+
+  @override
+  String get locationSharingPermanentlyDenied =>
+      'الوصول إلى الموقع محظور لتطبيق درب. اسمح به من إعدادات الهاتف ليرى الركاب مكانك.';
+
+  @override
+  String get locationSharingServiceDisabled =>
+      'خدمات الموقع متوقفة على هذا الهاتف. شغّلها لمشاركة موقعك.';
+
+  @override
+  String get locationSharingUnavailable =>
+      'موقعك غير متاح الآن. يواصل درب المحاولة ما دامت هذه الشاشة مفتوحة.';
+
+  @override
+  String get locationSharingTurnOn => 'مشاركة الموقع';
+
+  @override
+  String get locationSharingOpenSettings => 'فتح الإعدادات';
+
+  @override
+  String locationLastSeenMinutes(int minutes) {
+    return 'قبل $minutes د';
+  }
+
+  @override
   String get checkpoints => 'الحواجز';
 
   @override
@@ -3585,6 +3636,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get notifDriverApproachingBody =>
       'سائقك قريب من نقطة الانطلاق. يرجى الاستعداد.';
+
+  @override
+  String get notifDriverOnTheWayBody =>
+      'انطلق سائقك إلى نقطة الانطلاق. يرجى الاستعداد.';
 
   @override
   String get pushSettingTitle => 'الإشعارات الفورية';
