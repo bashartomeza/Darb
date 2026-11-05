@@ -1,6 +1,6 @@
 # In-app notifications
 
-A per-user inbox. There is no push channel: clients poll `GET /api/v1/notifications` (the mobile app every 10 s while a bell or the inbox is on screen).
+A per-user inbox. Clients poll `GET /api/v1/notifications` (the mobile app every 10 s while a bell or the inbox is on screen). Each entry can also be sent as a push notification once push is switched on (off by default; see [push setup](../notifications/push-setup.md)).
 
 ## Endpoints (any authenticated role; always scoped to the caller)
 
@@ -11,6 +11,17 @@ A per-user inbox. There is no push channel: clients poll `GET /api/v1/notificati
 | `POST /notifications/read-all` | Mark every unread entry read. |
 
 Entries carry `type` and `params`, never display text; each client words them in its own locale.
+
+## Push endpoints (any authenticated role; always scoped to the caller)
+
+| Method / path | Purpose |
+| --- | --- |
+| `PUT /push/devices` `{token, platform: android\|ios\|web, locale?, app_version?}` | Register or refresh this phone's token for the caller's session. Idempotent; a token held by another account moves to the caller. |
+| `POST /push/devices/unregister` `{token}` | Stop pushes to the caller's own token. Same answer for unknown or foreign tokens. |
+| `GET /push/preferences` | `{push_enabled, push_available}`; `push_enabled` defaults to `true`. |
+| `PUT /push/preferences` `{push_enabled}` | Turn push on or off for the account. |
+
+Tokens are write-only: no endpoint returns them. An account keeps at most 10 live tokens; registering another retires the least recently seen. Session revocation (logout, logout-all, password change, refresh-token reuse, admin action) revokes the session's tokens; Firebase-reported dead tokens are revoked by the sender.
 
 ## Events
 

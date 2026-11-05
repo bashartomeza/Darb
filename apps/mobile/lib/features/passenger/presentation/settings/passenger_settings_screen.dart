@@ -9,6 +9,8 @@ import '../../../../core/routing/app_router.dart';
 import '../../../../core/theme/passenger_theme.dart';
 import '../../../../core/theme/semantic_colors.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../push/application/push_controller.dart';
+import '../../../push/presentation/push_settings_tile.dart';
 import '../../../security/presentation/security_actions.dart';
 import '../../../security/presentation/session_status_banner.dart';
 import 'rate_app_sheet.dart';
@@ -71,6 +73,10 @@ class PassengerSettingsScreen extends ConsumerWidget {
               onTap: () => showPassengerLanguagePicker(context, ref, locale),
             ),
             const SizedBox(height: 12),
+            // Renders nothing on builds without push.
+            const PushSettingsTile.passenger(),
+            if (ref.watch(pushControllerProvider).available)
+              const SizedBox(height: 12),
             SettingsRow(
               key: const ValueKey('settingsRate'),
               icon: Icons.star_outline_rounded,

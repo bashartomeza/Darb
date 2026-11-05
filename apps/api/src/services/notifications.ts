@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
+import { signalPushDispatch } from "../lib/pushSignal.js";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -48,6 +49,8 @@ export async function notifyOnce(db: Db, input: NotifyInput): Promise<boolean> {
         params: input.params
       }
     });
+    // Pushed later from the committed row (see lib/pushSignal.ts); a no-op while push is off.
+    signalPushDispatch();
     return true;
   } catch {
     // Duplicate key, or the inbox is unavailable: the event itself stands.
