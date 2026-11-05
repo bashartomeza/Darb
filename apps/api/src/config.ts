@@ -118,6 +118,7 @@ const rawSchema = z.object({
   OPEN_SIGNUP_MAX_STARTS_PER_HOUR: z.coerce.number().int().min(1).max(10_000).default(200),
   DRIVER_DOCUMENTS_ENABLED: z.string().optional(),
   DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
+  ADMIN_STATIC_DIR: z.string().min(1).optional(),
   DRIVER_DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
   OTP_PROVIDER: z.enum(["disabled", "fake", "email"]).default("disabled"),
   EMAIL_DELIVERY: z.preprocess((v) => typeof v === "string" && v.trim() === "" ? undefined : v, z.enum(["disabled", "smtp"]).default("disabled")),
@@ -258,6 +259,10 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   // documents uploaded before that change and not yet imported (npm run documents:import).
   if (driverDocumentsEnabled && raw.DRIVER_DOCUMENTS_DIR && !isAbsolute(raw.DRIVER_DOCUMENTS_DIR)) {
     problems.push("DRIVER_DOCUMENTS_DIR must be an absolute path when set");
+  }
+  // Single-app hosting (cPanel / Passenger): the API also serves the built Admin site.
+  if (raw.ADMIN_STATIC_DIR && !isAbsolute(raw.ADMIN_STATIC_DIR)) {
+    problems.push("ADMIN_STATIC_DIR must be an absolute path when set");
   }
   if (checkpointDirectoryEnabled && !raw.CHECKPOINT_DIRECTORY_FILE) {
     problems.push("CHECKPOINT_DIRECTORY_FILE is required when the directory is enabled");
@@ -719,6 +724,7 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
     driverDocuments: driverDocumentsEnabled
       ? { legacyDir: raw.DRIVER_DOCUMENTS_DIR, retentionDays: raw.DRIVER_DOCUMENT_RETENTION_DAYS }
       : undefined,
+    adminStaticDir: raw.ADMIN_STATIC_DIR,
     publicRegistration: publicOnboardingEnabled
       ? {
           attemptTtlSeconds: raw.ONBOARDING_ATTEMPT_TTL_SECONDS,

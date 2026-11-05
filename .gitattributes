@@ -1,0 +1,5 @@
+
+# Server scripts run on Linux (cPanel): always LF.
+deploy/cpanel/**/*.sh text eol=lf
+deploy/cpanel/**/*.mjs text eol=lf
+deploy/cpanel/*.js text eol=lf
