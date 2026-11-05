@@ -19,6 +19,10 @@ $release = (git rev-parse --short=12 HEAD).Trim()
 Write-Output "Release $release"
 
 # 1. Build the API and the Admin site (the Admin calls the API on the same origin).
+#    The Prisma client is regenerated first so it always matches this commit's schema.
+$env:DATABASE_URL = "mysql://build:unused@localhost:3306/build"
+try { Push-Location apps/api; npx prisma generate | Out-Null; if ($LASTEXITCODE -ne 0) { throw "prisma generate failed" } }
+finally { Pop-Location; Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue }
 npm run build -w @darb/api | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "API build failed" }
 $env:VITE_APP_ENV = "production"; $env:VITE_ENABLE_DEMO_FEATURES = "false"; $env:VITE_API_BASE_URL = "https://darb.aynur.ps"
