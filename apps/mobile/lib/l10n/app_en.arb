@@ -1653,5 +1653,131 @@
   "merchantOrderMapTitle": "Order route",
   "driverPhoneLabel": "Driver's phone",
   "callDriver": "Call driver",
-  "callDriverUnavailable": "This device can't place the call. Dial the number shown."
+  "callDriverUnavailable": "This device can't place the call. Dial the number shown.",
+  "placeCategoryCafe": "Cafe",
+  "placeCategoryRestaurant": "Restaurant",
+  "placeCategoryFuel": "Fuel station",
+  "placeCategoryRestStop": "Rest stop / toilets",
+  "placeCategoryPharmacy": "Pharmacy",
+  "placeCategoryHospital": "Hospital",
+  "placeCategoryClinic": "Clinic",
+  "placeCategorySupermarket": "Supermarket",
+  "placeCategoryAtm": "ATM / bank",
+  "placeCategoryMosque": "Mosque",
+  "placeCategoryCarRepair": "Car repair",
+  "placeCategoryEvCharging": "EV charging",
+  "placeClusterLabel": "{count} × {category} — zoom in to see them",
+  "@placeClusterLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "placesLoading": "Loading places…",
+  "placesLoadFailed": "Places could not be loaded",
+  "placesNoneHere": "No {category} in this area",
+  "@placesNoneHere": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "placesTruncated": "Showing the nearest only — zoom in for more",
+  "placeDistanceMetres": "{value} m",
+  "@placeDistanceMetres": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "placeDistanceKm": "{value} km",
+  "@placeDistanceKm": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "placeOpenNow": "Open now",
+  "placeClosedNow": "Closed now",
+  "placeNavigate": "Navigate",
+  "placeNavigateFailed": "No maps app was found to open directions",
+  "placeShowOnMap": "Show on map",
+  "placeCall": "Call",
+  "placeReport": "Report a problem",
+  "placeReportTitle": "What is wrong with this place?",
+  "placeReportClosed": "Permanently closed",
+  "placeReportWrongLocation": "Wrong location",
+  "placeReportWrongInfo": "Wrong information",
+  "placeReportNotExists": "Does not exist",
+  "placeReportSent": "Thanks, we will review your report",
+  "placeReportFailed": "The report could not be sent. Try again later",
+  "placeDataAttribution": "Place data © OpenStreetMap contributors",
+  "placeSuggestCafe": "There is a cafe on your road — want a coffee?",
+  "placeSuggestCafeNamed": "{name} cafe is on your road — want a coffee?",
+  "@placeSuggestCafeNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestRestaurant": "There is a restaurant on your road",
+  "placeSuggestRestaurantNamed": "{name} restaurant is on your road",
+  "@placeSuggestRestaurantNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestFuel": "There is a fuel station on your road",
+  "placeSuggestFuelNamed": "{name} fuel station is on your road",
+  "@placeSuggestFuelNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestRestStop": "There is a rest stop on your road",
+  "placeSuggestRestStopNamed": "{name} rest stop is on your road",
+  "@placeSuggestRestStopNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestGeneric": "There is a {category} on your road",
+  "@placeSuggestGeneric": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestGenericNamed": "A {category} is on your road: {name}",
+  "@placeSuggestGenericNamed": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestNever": "Don't suggest this again",
+  "placeSuggestDismiss": "Dismiss",
+  "placeSuggestSettingTitle": "Suggestions on your road",
+  "placeSuggestSettingSubtitle": "A quiet note when a cafe or fuel station is near during a trip",
+  "placeSuggestSettingMaster": "Show suggestions during a trip",
+  "mapFilterCheckpoints": "Checkpoints"
 }

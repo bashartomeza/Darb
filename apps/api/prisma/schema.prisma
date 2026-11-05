@@ -464,6 +464,7 @@ model User {
   trip_ratings                     TripRating[]
   assistant_conversations          PassengerAssistantConversation[]
   app_rating                       AppRating?
+  map_place_reports                MapPlaceReport[]
   push_devices                     PushDevice[]
   cancellations_made               Cancellation[]
   notification_preference          NotificationPreference?
@@ -2124,4 +2125,53 @@ model Cancellation {
   @@index([merchant_order_id])
   @@index([trip_id])
   @@map("cancellations")
+}
+
+/// A place of interest on the map (cafe, pharmacy, fuel station, ...). Loaded from OpenStreetMap by
+/// `npm run places:import` and editable by admins. `category` is a key of
+/// apps/api/data/map-place-categories.json, so a new category needs no migration.
+model MapPlace {
+  id            String   @id @default(cuid())
+  category      String   @db.VarChar(40)
+  name_ar       String?  @db.VarChar(191)
+  name_en       String?  @db.VarChar(191)
+  latitude      Decimal  @db.Decimal(9, 6)
+  longitude     Decimal  @db.Decimal(9, 6)
+  phone         String?  @db.VarChar(40)
+  opening_hours String?  @db.VarChar(500)
+  /// Slug of the nearest route city at import time.
+  city          String?  @db.VarChar(40)
+  /// "osm" for imported rows, "admin" for places added by hand.
+  source        String   @default("osm") @db.VarChar(20)
+  osm_id        String?  @unique @db.VarChar(40)
+  active        Boolean  @default(true)
+  /// An admin changed this row; the importer no longer overwrites it.
+  admin_edited  Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  reports MapPlaceReport[]
+
+  @@index([active, category, latitude, longitude])
+  @@index([category, city])
+  @@map("map_places")
+}
+
+/// "This place is wrong" report from an app user, reviewed on the admin places page.
+model MapPlaceReport {
+  id          String    @id @default(cuid())
+  place_id    String
+  reporter_id String?
+  reason      String    @db.VarChar(30)
+  note        String?   @db.VarChar(300)
+  status      String    @default("open") @db.VarChar(20)
+  created_at  DateTime  @default(now())
+  resolved_at DateTime?
+
+  place    MapPlace @relation(fields: [place_id], references: [id], onDelete: Cascade)
+  reporter User?    @relation(fields: [reporter_id], references: [id], onDelete: SetNull)
+
+  @@unique([place_id, reporter_id])
+  @@index([status, created_at])
+  @@map("map_place_reports")
 }

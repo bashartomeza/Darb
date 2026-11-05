@@ -33,6 +33,9 @@ import '../../community_reports/presentation/community_reports_section.dart';
 import '../../checkpoints/domain/checkpoint_models.dart';
 import '../../checkpoints/presentation/checkpoint_sheet.dart';
 import '../../checkpoint_directory/presentation/checkpoint_directory_screen.dart';
+import '../../places/application/places_controller.dart';
+import '../../places/presentation/map_filter_bar.dart';
+import '../../places/presentation/places_layer.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
 import '../application/driver_controller.dart';
 import '../data/driver_models.dart';
@@ -1661,11 +1664,18 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
         .value
         ?.checkpointsAvailable;
 
+    final layer = watchPlacesLayer(ref, widget.l10n);
     final markers = <DarbMapMarker>[
       // --------------------------------------------------------
-      // CHECKPOINTS AND COMMUNITY REPORTS
+      // CHECKPOINTS AND COMMUNITY REPORTS (or, with a chip filter, only the
+      // chosen layer)
       // --------------------------------------------------------
-      ..._markersFor(widget.snapshot, reports),
+      if (layer.showsCheckpoints)
+        ..._markersFor(
+          widget.snapshot,
+          layer.showsReports ? reports : const <CommunityReport>[],
+        ),
+      ...layer.markers,
 
       // --------------------------------------------------------
       // ORIGIN
@@ -1753,12 +1763,15 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
                   attributionLabel: widget.l10n.mapAttribution,
                   // Keep the zoom buttons clear of this screen's top buttons.
                   controlsTop: 100,
-                  focus: widget.focus,
+                  focus: widget.focus ?? ref.watch(placeFocusProvider),
+                  onViewportChanged: (bounds) =>
+                      reportPlacesViewport(ref, bounds),
                   paths: roadRoutePaths(road, color: orange, width: 7),
                   markers: markers,
                   notes: [
                     ...roadRouteNotes(widget.l10n, road),
-                    if (checkpointsAvailable == false)
+                    ...layer.notes,
+                    if (checkpointsAvailable == false && layer.showsCheckpoints)
                       widget.l10n.mapCheckpointsUnavailable
                     else if (widget.checkpointsError &&
                         widget.snapshot.checkpoints.isEmpty)
@@ -1769,6 +1782,16 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
                       ? Text(widget.l10n.mapRouteMissingCoordinates)
                       : null,
                 ),
+              ),
+
+              // ------------------------------------------------
+              // MAP FILTER CHIPS
+              // ------------------------------------------------
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 112,
+                left: 14,
+                right: 64,
+                child: const MapFilterBar(),
               ),
 
               // ------------------------------------------------

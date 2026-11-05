@@ -11,6 +11,7 @@ import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/status_chip.dart';
 import '../../auth/domain/auth_models.dart';
 import '../../auth/presentation/credential_actions.dart';
+import '../../places/presentation/place_suggestions_settings_tile.dart';
 import '../../push/presentation/push_settings_tile.dart';
 import '../application/session_controller.dart';
 import 'security_actions.dart';
@@ -70,6 +71,7 @@ class _SessionManagementScreenState
                     CredentialSettings(),
                     // Renders nothing on builds without push.
                     PushSettingsTile(),
+                    PlaceSuggestionsSettingsTile(),
                     MapCacheTile(),
                   ],
                 ),

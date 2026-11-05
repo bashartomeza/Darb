@@ -6,6 +6,9 @@ apps/api/data/*
 !apps/api/data/checkpoint-directory.v1.manifest.json
 # Public OpenStreetMap checkpoint positions (ODbL), used to place partner checkpoints.
 !apps/api/data/osm-checkpoints.json
+# Map place categories and the OpenStreetMap places extract (ODbL), loaded by npm run places:import.
+!apps/api/data/map-place-categories.json
+!apps/api/data/osm-places.json
 .env
 **/.env
 **/.env.local

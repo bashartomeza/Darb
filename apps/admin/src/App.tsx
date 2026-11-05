@@ -33,6 +33,7 @@ import { IncidentsPanel } from "./features/incidents/IncidentsPanel";
 import { UncertainAiRequests } from "./features/incidents/UncertainAiRequests";
 import { CommunityReportsPage } from "./features/communityReports/CommunityReportsPage";
 import { CheckpointPositionsPage } from "./features/checkpoints/CheckpointPositionsPage";
+import { MapPlacesPage } from "./features/places/MapPlacesPage";
 import { ProfilePanel } from "./features/profile/ProfilePanel";
 import {
   hashForModule,
@@ -496,6 +497,9 @@ export function App({
       case "checkpointPositions":
         return <CheckpointPositionsPage api={api} token={token} search={search} />;
 
+      case "mapPlaces":
+        return <MapPlacesPage api={api} token={token} search={search} />;
+
       case "settings":
         return <SettingsPanel config={config} admin={admin} api={api} token={token} />;
 
@@ -554,6 +558,7 @@ export function App({
     trips: t("tripsDescription"),
     routes: t("operatingRoutesDescription"),
     checkpointPositions: t("checkpointPositionsDescription"),
+    mapPlaces: t("mapPlacesDescription"),
     users: t("usersDescription"),
     invitations: t("invitationsDescription"),
     drivers: t("verificationDescription"),

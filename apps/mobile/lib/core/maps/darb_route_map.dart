@@ -6,6 +6,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
+import '../../features/places/application/places_controller.dart';
+import '../../features/places/presentation/map_filter_bar.dart';
+import '../../features/places/presentation/places_layer.dart';
 import '../theme/semantic_colors.dart';
 import '../widgets/darb_map.dart';
 import 'map_overlays.dart';
@@ -119,6 +122,11 @@ class DarbRouteMap extends ConsumerWidget {
       height: height,
       emptyLabel: emptyLabel,
       attributionLabel: l10n.mapAttribution,
+      overlay: showOverlay ? const MapFilterBar() : null,
+      focus: showOverlay ? ref.watch(placeFocusProvider) : null,
+      onViewportChanged: showOverlay
+          ? (bounds) => reportPlacesViewport(ref, bounds)
+          : null,
       banner: banner,
       bannerElevation: bannerElevation,
       controlsTop: controlsTop,

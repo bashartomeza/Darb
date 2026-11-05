@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "note": "Single list of map place categories. 'osm' is a list of alternatives (OR); each alternative is a list of [key, value] tags that must all match (AND). It drives scripts/places/fetch-osm-places.mjs. The keys are what the API accepts and the apps filter on. To add a category: add it here, add an icon and labels in the mobile registry (apps/mobile/lib/features/places/domain/place_category.dart) and in the admin translations, then re-run the importer. See docs/maps/places.md.",
+  "categories": [
+    { "key": "cafe", "osm": [[["amenity", "cafe"]]] },
+    { "key": "restaurant", "osm": [[["amenity", "restaurant"]], [["amenity", "fast_food"]]] },
+    { "key": "fuel", "osm": [[["amenity", "fuel"]]] },
+    { "key": "pharmacy", "osm": [[["amenity", "pharmacy"]]] },
+    { "key": "hospital", "osm": [[["amenity", "hospital"]]] },
+    { "key": "clinic", "osm": [[["amenity", "clinic"]], [["amenity", "doctors"]]] },
+    { "key": "supermarket", "osm": [[["shop", "supermarket"]], [["shop", "convenience"]]] },
+    { "key": "atm", "osm": [[["amenity", "atm"]], [["amenity", "bank"]]] },
+    { "key": "mosque", "osm": [[["amenity", "place_of_worship"], ["religion", "muslim"]]] },
+    { "key": "car_repair", "osm": [[["shop", "car_repair"]]] },
+    { "key": "rest_stop", "osm": [[["amenity", "toilets"]], [["highway", "rest_area"]], [["highway", "services"]]] },
+    { "key": "ev_charging", "osm": [[["amenity", "charging_station"]]] }
+  ]
+}

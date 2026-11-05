@@ -25,6 +25,9 @@ import '../../checkpoints/domain/checkpoint_models.dart';
 import '../../checkpoints/presentation/checkpoint_sheet.dart';
 import '../../checkpoints/presentation/unplaced_checkpoints_list.dart';
 import '../../checkpoint_directory/presentation/checkpoint_directory_screen.dart';
+import '../../places/application/places_controller.dart';
+import '../../places/presentation/map_filter_bar.dart';
+import '../../places/presentation/places_layer.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../trips/application/passenger_trip_controller.dart';
 import '../../trips/data/trip_models.dart';
@@ -530,6 +533,10 @@ class _MapBodyState extends ConsumerState<_MapBody> {
                       : l10n.noLocationYet,
                   attributionLabel: l10n.mapAttribution,
                   height: 390,
+                  overlay: const MapFilterBar(),
+                  focus: ref.watch(placeFocusProvider),
+                  onViewportChanged: (bounds) =>
+                      reportPlacesViewport(ref, bounds),
                   paths: roadRoutePaths(road, color: _navyLight, width: 6),
                   notes: [...roadRouteNotes(l10n, road), ...overlay.notes],
                   markers: [
