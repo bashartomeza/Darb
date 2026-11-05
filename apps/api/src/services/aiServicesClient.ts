@@ -118,23 +118,39 @@ export class AiServicesError extends Error {
 }
 
 export interface AiServicesClient {
-  analyzeText(text: string): Promise<AiAnalysis>;
+  analyzeText(text: string, routes?: AiRouteHint[]): Promise<AiAnalysis>;
   analyzeVoice(audio: Buffer, contentType: string): Promise<AiAnalysis>;
 }
+
+/**
+ * The Python service enforces its own total budget per request (text 12 s, voice 45 s by default,
+ * AI_SERVICES_TEXT_BUDGET_SECONDS / AI_SERVICES_VOICE_BUDGET_SECONDS) and then answers from its
+ * offline fallback. These client timeouts are deliberately larger so the Node side never gives up
+ * first. If you raise a Python budget, raise the matching timeout above it.
+ */
+export const DEFAULT_TEXT_TIMEOUT_MS = 20_000;
+export const DEFAULT_VOICE_TIMEOUT_MS = 55_000;
+
+/** One predefined operating route (GET /api/v1/operating-routes), reduced to what the hint needs. */
+export type AiRouteHint = { key: string; origin_ar: string; destination_ar: string };
 
 export type AiServicesClientOptions = {
   baseUrl: string;
   sharedSecret: string;
+  /** Text budget. Must stay above Python AI_SERVICES_TEXT_BUDGET_SECONDS (default 12 s). */
   timeoutMs?: number;
+  /** Voice budget. Must stay above Python AI_SERVICES_VOICE_BUDGET_SECONDS (default 45 s). */
+  voiceTimeoutMs?: number;
   fetchImpl?: typeof fetch;
 };
 
 export function createAiServicesClient(options: AiServicesClientOptions): AiServicesClient {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const timeoutMs = options.timeoutMs ?? 20_000;
+  const textTimeoutMs = options.timeoutMs ?? DEFAULT_TEXT_TIMEOUT_MS;
+  const voiceTimeoutMs = options.voiceTimeoutMs ?? DEFAULT_VOICE_TIMEOUT_MS;
   const base = options.baseUrl.replace(/\/+$/, "");
 
-  async function call(path: string, body: BodyInit, contentType: string): Promise<AiAnalysis> {
+  async function call(path: string, body: BodyInit, contentType: string, timeoutMs: number): Promise<AiAnalysis> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     let response: Response;
@@ -186,9 +202,15 @@ export function createAiServicesClient(options: AiServicesClientOptions): AiServ
   }
 
   return {
-    analyzeText: (text) => call("/v1/analyze", JSON.stringify({ text }), "application/json"),
+    analyzeText: (text, routes) =>
+      call(
+        "/v1/analyze",
+        JSON.stringify(routes && routes.length > 0 ? { text, routes } : { text }),
+        "application/json",
+        textTimeoutMs
+      ),
     analyzeVoice: (audio, contentType) =>
-      call("/v1/voice", new Uint8Array(audio) as unknown as BodyInit, contentType)
+      call("/v1/voice", new Uint8Array(audio) as unknown as BodyInit, contentType, voiceTimeoutMs)
   };
 }
 
@@ -205,10 +227,15 @@ export function createAiServicesClientFromEnv(
   } catch {
     return null;
   }
-  const timeout = Number(env.AI_SERVICES_TIMEOUT_MS);
   return createAiServicesClient({
     baseUrl: url,
     sharedSecret: secret,
-    timeoutMs: Number.isFinite(timeout) && timeout >= 1_000 && timeout <= 60_000 ? timeout : 20_000
+    timeoutMs: readTimeout(env.AI_SERVICES_TIMEOUT_MS, DEFAULT_TEXT_TIMEOUT_MS),
+    voiceTimeoutMs: readTimeout(env.AI_SERVICES_VOICE_TIMEOUT_MS, DEFAULT_VOICE_TIMEOUT_MS)
   });
+}
+
+function readTimeout(raw: string | undefined, fallback: number) {
+  const value = Number(raw);
+  return raw?.trim() && Number.isFinite(value) && value >= 1_000 && value <= 120_000 ? value : fallback;
 }

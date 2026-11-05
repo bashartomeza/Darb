@@ -1,4 +1,4 @@
-"""Module 01 (dialect parsing), Module 02 (fallback gateway), voice STT and
+"""Dialect parsing, fallback gateway, voice STT and
 dynamic UI directives.
 
 Public API
@@ -31,7 +31,8 @@ from .provider_pool import (
     load_pool,
     run_with_failover,
 )
-from .spatial import Correction, correct_location, default_landmarks
+from .route_hints import hint_route
+from .spatial import LandmarkHint, default_landmarks, suggest_landmark
 
 __all__ = [
     "CONFIDENCE_REVIEW_THRESHOLD", "HUMAN_DISPATCHER_QUEUE_INTERFACE", "UI_DIRECTIVES_SCHEMA_VERSION",
@@ -80,14 +81,10 @@ def _violation_block(raw: str, rule: str) -> dict:
 # =============================================================================
 # Module 01 - verified dialect parsing
 # =============================================================================
-def _apply_spatial_correction(request: dict, landmarks: list[str]) -> dict[str, Correction]:
-    corrections: dict[str, Correction] = {}
-    for field in ("pickup_location", "destination_location"):
-        result = correct_location(request[field], landmarks)
-        corrections[field] = result
-        if result.applied:
-            request[field] = result.corrected
-    return corrections
+def _landmark_hints(request: dict, landmarks: list[str]) -> dict[str, LandmarkHint]:
+    """Hints only. The user's typed places in `request` are never modified."""
+    return {field: suggest_landmark(request[field], landmarks)
+            for field in ("pickup_location", "destination_location")}
 
 
 def process_and_verify_request_detailed(
@@ -95,6 +92,7 @@ def process_and_verify_request_detailed(
     *,
     extractor: Callable[[str], dict] | None = None,
     landmarks: list[str] | None = None,
+    routes: list[dict] | None = None,
 ) -> dict:
     """Full result: {"status", "request", "meta"} or a security-violation block."""
     if not isinstance(raw_input_text, str) or not raw_input_text.strip():
@@ -121,14 +119,16 @@ def process_and_verify_request_detailed(
         names = landmarks if landmarks is not None else default_landmarks()
     except Exception:  # landmark source must never break dispatching
         names = []
-    corrections = _apply_spatial_correction(request, names)
+    hints = _landmark_hints(request, names)
+    route = hint_route(request["pickup_location"], request["destination_location"], routes) if routes else None
 
     return {
         "status": "OK",
         "request": request,
         "meta": {
             "engine": engine["name"],
-            "spatial_corrections": {k: v.as_dict() for k, v in corrections.items()},
+            "landmark_hints": {k: v.as_dict() for k, v in hints.items()},
+            "route_hint": route,
             "confidence_review_threshold": CONFIDENCE_REVIEW_THRESHOLD,
         },
     }

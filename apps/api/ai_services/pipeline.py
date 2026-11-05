@@ -1,6 +1,7 @@
 """Orchestration of the two NLP layers (LLM extraction + deterministic safety)."""
 from __future__ import annotations
 
+import math
 from typing import Callable
 
 from pydantic import ValidationError
@@ -40,7 +41,12 @@ def parse_dispatch_request(
             temporal_element = clock_time
 
     capacity = extract_capacity(raw_text)
-    confidence = float(llm_result.get("confidence", 0.5))
+    raw_confidence = llm_result.get("confidence", 0.5)
+    if isinstance(raw_confidence, bool) or not isinstance(raw_confidence, (int, float)) \
+            or not math.isfinite(raw_confidence):
+        confidence = 0.0                      # NaN/inf/non-numeric: invalid, so a human reviews it
+    else:
+        confidence = max(0.0, min(1.0, float(raw_confidence)))
     needs_review = confidence < CONFIDENCE_REVIEW_THRESHOLD
     if final_urgency == "Emergency":
         needs_review = True

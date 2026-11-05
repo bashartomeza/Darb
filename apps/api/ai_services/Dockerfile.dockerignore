@@ -1,0 +1,15 @@
+# Build context is apps/api; BuildKit uses this file (not a root .dockerignore) for
+# ai_services/Dockerfile. Send nothing except the service code: never .env files,
+# node_modules, prisma, tests or local tooling.
+**
+!ai_services/
+ai_services/tests/
+ai_services/contracts_dump.py
+ai_services/requirements-dev.txt
+ai_services/Dockerfile
+ai_services/Dockerfile.dockerignore
+ai_services/README.md
+ai_services/**/__pycache__/
+ai_services/**/*.pyc
+ai_services/**/.env*
+ai_services/.pytest_cache/

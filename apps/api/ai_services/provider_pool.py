@@ -14,6 +14,8 @@ Key values are never logged, never returned, never put in exception text.
 """
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import json
 import os
 import threading
@@ -27,6 +29,47 @@ T = TypeVar("T")
 
 KEY_COOLDOWN_SECONDS = 60.0
 DEFAULT_TIMEOUT_SECONDS = 15.0
+
+
+# --------------------------------------------------------------------------
+# Total time budget per request. Provider failover can try many keys at up to
+# 15 s (Whisper 60 s) each; the Node client gives up after a fixed time, so the
+# whole request here must finish inside a budget smaller than that.
+# --------------------------------------------------------------------------
+_DEADLINE: contextvars.ContextVar[float | None] = contextvars.ContextVar("darb_ai_deadline", default=None)
+
+
+def _env_seconds(name: str, default: float, low: float = 1.0, high: float = 300.0) -> float:
+    try:
+        value = float(os.environ.get(name, ""))
+    except ValueError:
+        return default
+    return value if low <= value <= high else default
+
+
+def text_budget_seconds() -> float:
+    return _env_seconds("AI_SERVICES_TEXT_BUDGET_SECONDS", 12.0)
+
+
+def voice_budget_seconds() -> float:
+    return _env_seconds("AI_SERVICES_VOICE_BUDGET_SECONDS", 45.0)
+
+
+@contextlib.contextmanager
+def request_deadline(seconds: float):
+    """Everything inside this block shares one budget (never extends an outer one)."""
+    new = time.monotonic() + seconds
+    outer = _DEADLINE.get()
+    token = _DEADLINE.set(new if outer is None else min(new, outer))
+    try:
+        yield
+    finally:
+        _DEADLINE.reset(token)
+
+
+def time_left() -> float | None:
+    deadline = _DEADLINE.get()
+    return None if deadline is None else deadline - time.monotonic()
 
 
 class ResourceExhausted(Exception):
@@ -120,6 +163,11 @@ def pool_status(env: Mapping[str, str] | None = None) -> dict[str, int]:
 # --------------------------------------------------------------------------
 def http_post(url: str, headers: Mapping[str, str], body: bytes,
               timeout: float = DEFAULT_TIMEOUT_SECONDS) -> tuple[int, bytes]:
+    left = time_left()
+    if left is not None:
+        if left <= 0.25:
+            raise ProviderError("deadline_exceeded")
+        timeout = min(timeout, left)
     request = urllib.request.Request(url, data=body, headers=dict(headers), method="POST")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 (fixed https hosts)
@@ -131,6 +179,11 @@ def http_post(url: str, headers: Mapping[str, str], body: bytes,
 
 
 def http_get(url: str, timeout: float = 8.0) -> bytes:
+    left = time_left()
+    if left is not None:
+        if left <= 0.25:
+            raise ProviderError("deadline_exceeded")
+        timeout = min(timeout, left)
     request = urllib.request.Request(url, headers={"User-Agent": "darb-ai-services/1"})
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
@@ -171,12 +224,17 @@ def run_with_failover(pools: Sequence[KeyPool], call: Callable[[str, str], T]) -
     """
     for pool in pools:
         for index, key in pool.candidates():
+            left = time_left()
+            if left is not None and left <= 0.25:
+                raise AllProvidersExhausted("request time budget used up")
             try:
                 result = call(pool.provider, key)
             except ResourceExhausted:
                 pool.mark_exhausted(index)  # slide to key N+1
                 continue
-            except ProviderError:
+            except ProviderError as exc:
+                if str(exc) == "deadline_exceeded":   # not the key's fault: no cooldown
+                    raise AllProvidersExhausted("request time budget used up") from None
                 # Bad key / 5xx / timeout: skip this key without a long cooldown.
                 pool.mark_exhausted(index)
                 continue
