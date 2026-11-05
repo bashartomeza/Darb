@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { compareRankedRoutes, scoreDriverRoute } from "../lib/routeScoring.js";
+import { toNumber } from "../lib/geo.js";
 
 import { latitudeSchema, longitudeSchema } from "../lib/validation.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth.js";
@@ -340,6 +341,8 @@ export function sameServiceRouteWhere(serviceRouteId: string | null): Prisma.Dri
 async function rankDriverRoutes(input: {
   serviceRouteId: string | null;
   passengerRequest?: PassengerDemand | null;
+  /** Pickup point of parcel-only demand (the merchant order's own pickup). */
+  pickupPoint?: { lat: number; lng: number } | null;
   parcelCount: number;
   excludeRouteIds?: ReadonlySet<string>;
 }) {
@@ -374,8 +377,10 @@ async function rankDriverRoutes(input: {
       breakdown: scoreDriverRoute({
         route,
         passengerRequest: input.passengerRequest,
+        pickupPoint: input.pickupPoint,
         parcelCount: input.parcelCount,
-        sameRoute: true
+        sameRoute: true,
+        now
       })
     }))
     .sort(compareRankedRoutes);
@@ -453,6 +458,7 @@ export async function createBestMatch(actor: MatchActor, input: MatchInput) {
   const candidates = await rankDriverRoutes({
     serviceRouteId,
     passengerRequest,
+    pickupPoint: merchantOrder ? { lat: toNumber(merchantOrder.pickup_lat), lng: toNumber(merchantOrder.pickup_lng) } : null,
     parcelCount,
     excludeRouteIds: new Set(rejectedRoutes.map((item) => item.driver_route_id))
   });
