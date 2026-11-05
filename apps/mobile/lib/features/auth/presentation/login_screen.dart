@@ -180,6 +180,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             color: Theme.of(context).colorScheme.error,
                           ),
                         ),
+                        // The message points at this option; it opens the
+                        // email verification flow for the address typed.
+                        if (_googleErrorKey == null &&
+                            error is ApiException &&
+                            error.message == 'email_verification_required')
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: TextButton(
+                              key: const ValueKey('loginVerifyEmail'),
+                              onPressed: loading
+                                  ? null
+                                  : () =>
+                                        openCredentialAction(context, 'verify'),
+                              child: Text(l10n.authVerifyEmail),
+                            ),
+                          ),
                       ],
                       if (sessionEndReason != null) ...[
                         const SizedBox(height: AppTokens.spaceMedium),
@@ -220,11 +236,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ? null
                             : () => openCredentialAction(context, 'reset'),
                         child: Text(
-                          authText(
-                            context,
-                            'Forgot password?',
-                            'نسيت كلمة المرور؟',
-                          ),
+                          AppLocalizations.of(context).authForgotPassword,
                         ),
                       ),
                       if (onboardingEnabled)
@@ -307,6 +319,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _openOnboarding(String route) async {
     if (_openingOnboarding) return;
+    // A failed sign-in must not keep the router on the login page.
+    _clearAttemptError();
     setState(() => _openingOnboarding = true);
     await ref.read(onboardingControllerProvider.notifier).refreshAvailability();
     final enabled =

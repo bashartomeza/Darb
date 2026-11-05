@@ -111,6 +111,12 @@ class AuthController extends AsyncNotifier<AuthState> {
       _authAttempt++;
       _coordinator.setListener(null);
     });
+    return _restore();
+  }
+
+  /// Reads the stored session. Every failure settles in a state the splash or
+  /// login screen can act on, never in an endless "authenticating".
+  Future<AuthState> _restore() async {
     try {
       final bundle = await _coordinator.restoreBundle();
       if (bundle == null) return const AuthState.unauthenticated();
@@ -130,12 +136,7 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   Future<void> retryRestore() async {
     state = const AsyncData(AuthState.authenticating());
-    final bundle = await _coordinator.restoreBundle();
-    if (bundle == null) {
-      state = const AsyncData(AuthState.unauthenticated());
-      return;
-    }
-    state = AsyncData(await _restoreLoadedSession());
+    state = AsyncData(await _restore());
   }
 
   Future<void> login({required String email, required String password}) {

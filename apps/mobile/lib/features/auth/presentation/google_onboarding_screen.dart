@@ -10,8 +10,9 @@ import '../../../core/widgets/language_switch.dart';
 import '../../../core/widgets/darb_card.dart';
 import '../application/auth_controller.dart';
 import '../data/auth_repository.dart';
-import 'auth_completion_screen.dart' show authFailure, authText;
+import 'auth_completion_screen.dart' show authFailure;
 import 'widgets/auth_style.dart';
+import '../../../l10n/app_localizations.dart';
 
 enum GoogleOnboardingRole { passenger, driver, merchant }
 
@@ -156,8 +157,6 @@ class _GoogleOnboardingScreenState
 
   _Step get _step => _steps[_index];
 
-  String _t(String en, String ar) => authText(context, en, ar);
-
   void _back() {
     if (_busy) return;
     if (_index == 0) {
@@ -284,7 +283,7 @@ class _GoogleOnboardingScreenState
           surfaceTintColor: Colors.transparent,
           scrolledUnderElevation: 0,
           leading: BackButton(onPressed: _busy ? null : _back),
-          title: Text(_t('Set up your account', 'إعداد حسابك')),
+          title: Text(AppLocalizations.of(context).onboardingSetUpAccount),
           actions: const [LanguageSwitch()],
         ),
         body: SafeArea(
@@ -296,11 +295,10 @@ class _GoogleOnboardingScreenState
                 children: [
                   _ProgressHeader(
                     label: _role == null
-                        ? _t('Get started', 'لنبدأ')
-                        : _t(
-                            'Step ${_index + 1} of ${steps.length}',
-                            'الخطوة ${_index + 1} من ${steps.length}',
-                          ),
+                        ? AppLocalizations.of(context).onboardingGetStarted
+                        : AppLocalizations.of(
+                            context,
+                          ).onboardingStep(_index + 1, steps.length),
                     progress: progress,
                   ),
                   Expanded(
@@ -377,7 +375,9 @@ class _GoogleOnboardingScreenState
                       ),
                     ),
                     child: Text(
-                      _index == 0 ? _t('Cancel', 'إلغاء') : _t('Back', 'رجوع'),
+                      _index == 0
+                          ? AppLocalizations.of(context).cancel
+                          : AppLocalizations.of(context).onboardingBack,
                     ),
                   ),
                 ),
@@ -389,9 +389,11 @@ class _GoogleOnboardingScreenState
                   buttonKey: const ValueKey('googleOnboardingContinue'),
                   label: last
                       ? (_role == GoogleOnboardingRole.driver
-                            ? _t('Submit application', 'إرسال الطلب')
-                            : _t('Create account', 'إنشاء الحساب'))
-                      : _t('Continue', 'متابعة'),
+                            ? AppLocalizations.of(
+                                context,
+                              ).onboardingSubmitApplication
+                            : AppLocalizations.of(context).createAccount)
+                      : AppLocalizations.of(context).continueAction,
                   loading: _busy,
                   onPressed: _busy || !canContinue ? null : _continue,
                 ),
@@ -420,36 +422,24 @@ class _GoogleOnboardingScreenState
         capabilities?['google_driver_signup_available'] != false;
     return [
       _StepTitle(
-        title: _t('How will you use Darb?', 'كيف ستستخدم درب؟'),
-        subtitle: _t(
-          'Choose one. It sets up the right experience for you.',
-          'اختر واحداً، وسنجهز لك التجربة المناسبة.',
-        ),
+        title: AppLocalizations.of(context).registerChooseTitle,
+        subtitle: AppLocalizations.of(context).onboardingChooseOneSetsUp,
       ),
       _RoleOption(
         key: const ValueKey('googleRole-passenger'),
         icon: Icons.person_outline,
-        title: _t('Passenger', 'راكب'),
-        help: _t(
-          'Book rides and send parcels. Ready right away.',
-          'احجز رحلات وأرسل طروداً. جاهز فوراً.',
-        ),
+        title: AppLocalizations.of(context).onboardingPassenger,
+        help: AppLocalizations.of(context).onboardingBookRidesSendParcels,
         selected: _role == GoogleOnboardingRole.passenger,
         onTap: () => _chooseRole(GoogleOnboardingRole.passenger),
       ),
       _RoleOption(
         key: const ValueKey('googleRole-driver'),
         icon: Icons.directions_car_outlined,
-        title: _t('Driver', 'سائق'),
+        title: AppLocalizations.of(context).driver,
         help: driverAvailable
-            ? _t(
-                'Drive on Darb routes. Needs Admin approval first.',
-                'قُد على مسارات درب. يتطلب موافقة الإدارة أولاً.',
-              )
-            : _t(
-                'Driver applications are not open right now.',
-                'طلبات السائقين غير متاحة حالياً.',
-              ),
+            ? AppLocalizations.of(context).onboardingDriveDarbRoutesNeeds
+            : AppLocalizations.of(context).onboardingDriverApplicationsAreNot,
         selected: _role == GoogleOnboardingRole.driver,
         onTap: driverAvailable
             ? () => _chooseRole(GoogleOnboardingRole.driver)
@@ -458,11 +448,8 @@ class _GoogleOnboardingScreenState
       _RoleOption(
         key: const ValueKey('googleRole-merchant'),
         icon: Icons.storefront_outlined,
-        title: _t('Shop owner', 'صاحب متجر'),
-        help: _t(
-          'Send orders to your customers. Ready right away.',
-          'أرسل الطلبات إلى زبائنك. جاهز فوراً.',
-        ),
+        title: AppLocalizations.of(context).registerMerchantTitle,
+        help: AppLocalizations.of(context).onboardingSendOrdersCustomersReady,
         selected: _role == GoogleOnboardingRole.merchant,
         onTap: () => _chooseRole(GoogleOnboardingRole.merchant),
       ),
@@ -479,13 +466,10 @@ class _GoogleOnboardingScreenState
 
   List<Widget> _aboutStep() => [
     _StepTitle(
-      title: _t('About you', 'معلوماتك'),
-      subtitle: _t(
-        'We filled in your name from Google. You can change it.',
-        'أخذنا اسمك من Google، ويمكنك تعديله.',
-      ),
+      title: AppLocalizations.of(context).onboardingAbout,
+      subtitle: AppLocalizations.of(context).onboardingFilledNameFromGoogle,
     ),
-    _nameField(_t('Full name', 'الاسم الكامل')),
+    _nameField(AppLocalizations.of(context).fullName),
     _gap,
     _phoneField(),
     if (_role == GoogleOnboardingRole.driver) ...[_gap, _cityField()],
@@ -493,27 +477,21 @@ class _GoogleOnboardingScreenState
 
   List<Widget> _locationStep() => [
     _StepTitle(
-      title: _t('Where are you?', 'أين أنت؟'),
-      subtitle: _t(
-        'Your city helps us show routes near you.',
-        'تساعدنا مدينتك على عرض المسارات القريبة منك.',
-      ),
+      title: AppLocalizations.of(context).onboardingWhereAre,
+      subtitle: AppLocalizations.of(context).onboardingCityHelpsUsShow,
     ),
     _cityField(),
   ];
 
   List<Widget> _identityStep() => [
     _StepTitle(
-      title: _t('Identity and licence', 'الهوية والرخصة'),
-      subtitle: _t(
-        'An Admin checks these against the documents you upload next.',
-        'تطابق الإدارة هذه البيانات مع المستندات التي سترفعها لاحقاً.',
-      ),
+      title: AppLocalizations.of(context).onboardingIdentityLicence,
+      subtitle: AppLocalizations.of(context).onboardingAdminChecksTheseAgainst,
     ),
     AuthTextField(
       key: const ValueKey('googleNationalId'),
       controller: _nationalId,
-      hint: _t('National ID number', 'رقم الهوية الوطنية'),
+      hint: AppLocalizations.of(context).onboardingNationalIdNumber,
       icon: Icons.badge_outlined,
       textInputAction: TextInputAction.next,
       inputFormatters: [
@@ -523,13 +501,13 @@ class _GoogleOnboardingScreenState
       validator: (value) =>
           RegExp(r'^[A-Za-z0-9-]{5,40}$').hasMatch(value ?? '')
           ? null
-          : _t('Enter your ID number', 'أدخل رقم هويتك'),
+          : AppLocalizations.of(context).onboardingEnterIdNumber,
     ),
     _gap,
     AuthTextField(
       key: const ValueKey('googleLicenceNumber'),
       controller: _licenceNumber,
-      hint: _t('Driving licence number', 'رقم رخصة القيادة'),
+      hint: AppLocalizations.of(context).onboardingDrivingLicenceNumber,
       icon: Icons.credit_card_outlined,
       textInputAction: TextInputAction.done,
       inputFormatters: [
@@ -539,18 +517,18 @@ class _GoogleOnboardingScreenState
       validator: (value) =>
           RegExp(r'^[A-Za-z0-9-]{4,40}$').hasMatch(value ?? '')
           ? null
-          : _t('Enter your licence number', 'أدخل رقم الرخصة'),
+          : AppLocalizations.of(context).onboardingEnterLicenceNumber,
     ),
     _gap,
     _PickerTile(
       key: const ValueKey('googleLicenceExpiry'),
       icon: Icons.event_outlined,
       label: _licenceExpiry == null
-          ? _t('Licence expiry date', 'تاريخ انتهاء الرخصة')
+          ? AppLocalizations.of(context).onboardingLicenceExpiryDate
           : _isoDate(_licenceExpiry!),
       filled: _licenceExpiry != null,
       error: _showErrors && _licenceExpiry == null
-          ? _t('Pick the expiry date', 'اختر تاريخ الانتهاء')
+          ? AppLocalizations.of(context).onboardingPickExpiryDate
           : null,
       onTap: _pickExpiry,
     ),
@@ -569,14 +547,11 @@ class _GoogleOnboardingScreenState
 
   List<Widget> _vehicleStep() => [
     _StepTitle(
-      title: _t('Your vehicle', 'مركبتك'),
-      subtitle: _t(
-        'The car you will drive on Darb.',
-        'السيارة التي ستقودها على درب.',
-      ),
+      title: AppLocalizations.of(context).onboardingVehicle,
+      subtitle: AppLocalizations.of(context).onboardingCarDriveDarb,
     ),
     _ChipGroup(
-      label: _t('Vehicle type', 'نوع المركبة'),
+      label: AppLocalizations.of(context).vehicleType,
       options: {
         for (final type in _vehicleTypes) type: _vehicleTypeLabel(type),
       },
@@ -590,17 +565,14 @@ class _GoogleOnboardingScreenState
     AuthTextField(
       key: const ValueKey('googleMakeModel'),
       controller: _makeModel,
-      hint: _t(
-        'Make and model (e.g. Kia Optima)',
-        'الشركة والطراز (مثل كيا أوبتيما)',
-      ),
+      hint: AppLocalizations.of(context).onboardingMakeModelEG,
       icon: Icons.directions_car_outlined,
       textInputAction: TextInputAction.next,
       textCapitalization: TextCapitalization.words,
       validator: _required(
         2,
         80,
-        _t('Enter make and model', 'أدخل الشركة والطراز'),
+        AppLocalizations.of(context).onboardingEnterMakeModel,
       ),
     ),
     _gap,
@@ -611,10 +583,14 @@ class _GoogleOnboardingScreenState
           child: AuthTextField(
             key: const ValueKey('googleVehicleColor'),
             controller: _color,
-            hint: _t('Colour', 'اللون'),
+            hint: AppLocalizations.of(context).onboardingColour,
             icon: Icons.palette_outlined,
             textInputAction: TextInputAction.next,
-            validator: _required(2, 30, _t('Enter colour', 'أدخل اللون')),
+            validator: _required(
+              2,
+              30,
+              AppLocalizations.of(context).onboardingEnterColour,
+            ),
           ),
         ),
         const SizedBox(width: AppTokens.gutterMobile),
@@ -622,7 +598,7 @@ class _GoogleOnboardingScreenState
           child: AuthTextField(
             key: const ValueKey('googlePlate'),
             controller: _plate,
-            hint: _t('Plate number', 'رقم اللوحة'),
+            hint: AppLocalizations.of(context).onboardingPlateNumber,
             icon: Icons.pin_outlined,
             textCapitalization: TextCapitalization.characters,
             inputFormatters: [
@@ -632,21 +608,21 @@ class _GoogleOnboardingScreenState
             validator: (value) =>
                 RegExp(r'^[A-Za-z0-9 -]{2,20}$').hasMatch(value?.trim() ?? '')
                 ? null
-                : _t('Enter plate', 'أدخل اللوحة'),
+                : AppLocalizations.of(context).onboardingEnterPlate,
           ),
         ),
       ],
     ),
     _gap,
     _Stepper(
-      label: _t('Passenger seats', 'مقاعد الركاب'),
+      label: AppLocalizations.of(context).passengerSeats,
       value: _seats,
       min: 1,
       max: _maxSeats,
       onChanged: (value) => setState(() => _seats = value),
     ),
     _Stepper(
-      label: _t('Parcels you can carry', 'الطرود التي يمكنك حملها'),
+      label: AppLocalizations.of(context).onboardingParcelsCarry,
       value: _parcels,
       min: 0,
       max: 20,
@@ -661,70 +637,67 @@ class _GoogleOnboardingScreenState
   };
 
   String _vehicleTypeLabel(String type) => switch (type) {
-    'sedan' => _t('Sedan', 'سيدان'),
-    'suv' => _t('SUV', 'دفع رباعي'),
-    'van' => _t('Van', 'فان'),
-    _ => _t('Minibus', 'ميني باص'),
+    'sedan' => AppLocalizations.of(context).onboardingSedan,
+    'suv' => AppLocalizations.of(context).onboardingSuv,
+    'van' => AppLocalizations.of(context).onboardingVan,
+    _ => AppLocalizations.of(context).onboardingMinibus,
   };
 
   List<Widget> _storeStep() => [
     _StepTitle(
-      title: _t('Your store', 'متجرك'),
-      subtitle: _t('Tell customers who you are.', 'عرّف زبائنك بمتجرك.'),
+      title: AppLocalizations.of(context).onboardingStore,
+      subtitle: AppLocalizations.of(context).onboardingTellCustomersWhoAre,
     ),
     AuthTextField(
       key: const ValueKey('googleStoreName'),
       controller: _storeName,
-      hint: _t('Store name', 'اسم المتجر'),
+      hint: AppLocalizations.of(context).onboardingStoreName,
       icon: Icons.storefront_outlined,
       textInputAction: TextInputAction.next,
       textCapitalization: TextCapitalization.words,
       validator: _required(
         2,
         120,
-        _t('Enter the store name', 'أدخل اسم المتجر'),
+        AppLocalizations.of(context).onboardingEnterStoreName,
       ),
     ),
     _gap,
-    _nameField(_t('Owner full name', 'اسم المالك الكامل')),
+    _nameField(AppLocalizations.of(context).onboardingOwnerFullName),
     _gap,
     _ChipGroup(
-      label: _t('Store type', 'نوع المتجر'),
+      label: AppLocalizations.of(context).onboardingStoreType,
       options: {for (final type in _storeTypes) type: _storeTypeLabel(type)},
       selected: _storeType,
       error: _showErrors && _storeType == null
-          ? _t('Choose a store type', 'اختر نوع المتجر')
+          ? AppLocalizations.of(context).onboardingChooseStoreType
           : null,
       onSelected: (value) => setState(() => _storeType = value),
     ),
   ];
 
   String _storeTypeLabel(String type) => switch (type) {
-    'grocery' => _t('Grocery', 'بقالة'),
-    'restaurant' => _t('Restaurant', 'مطعم'),
-    'pharmacy' => _t('Pharmacy', 'صيدلية'),
-    'clothing' => _t('Clothing', 'ملابس'),
-    'electronics' => _t('Electronics', 'إلكترونيات'),
-    'bakery' => _t('Bakery', 'مخبز'),
-    _ => _t('Other', 'أخرى'),
+    'grocery' => AppLocalizations.of(context).onboardingGrocery,
+    'restaurant' => AppLocalizations.of(context).onboardingRestaurant,
+    'pharmacy' => AppLocalizations.of(context).onboardingPharmacy,
+    'clothing' => AppLocalizations.of(context).onboardingClothing,
+    'electronics' => AppLocalizations.of(context).onboardingElectronics,
+    'bakery' => AppLocalizations.of(context).onboardingBakery,
+    _ => AppLocalizations.of(context).incidentCategoryOther,
   };
 
   List<Widget> _storeContactStep() => [
     _StepTitle(
-      title: _t('Contact and location', 'التواصل والموقع'),
-      subtitle: _t(
-        'How customers and drivers reach you.',
-        'كيف يصل إليك الزبائن والسائقون.',
-      ),
+      title: AppLocalizations.of(context).onboardingContactLocation,
+      subtitle: AppLocalizations.of(context).onboardingHowCustomersDriversReach,
     ),
     _phoneField(),
     _gap,
     _ChipGroup(
-      label: _t('Where do you sell?', 'أين تبيع؟'),
+      label: AppLocalizations.of(context).onboardingWhereDoSell,
       options: {
-        'physical': _t('In a shop', 'في محل'),
-        'online': _t('Online', 'عبر الإنترنت'),
-        'both': _t('Both', 'كلاهما'),
+        'physical': AppLocalizations.of(context).onboardingShop,
+        'online': AppLocalizations.of(context).onboardingOnline,
+        'both': AppLocalizations.of(context).onboardingBoth,
       },
       selected: _salesChannel,
       onSelected: (value) => setState(() => _salesChannel = value),
@@ -736,13 +709,13 @@ class _GoogleOnboardingScreenState
       AuthTextField(
         key: const ValueKey('googleStoreAddress'),
         controller: _address,
-        hint: _t('Shop address', 'عنوان المحل'),
+        hint: AppLocalizations.of(context).onboardingShopAddress,
         icon: Icons.place_outlined,
         textCapitalization: TextCapitalization.sentences,
         validator: _required(
           3,
           200,
-          _t('Enter the shop address', 'أدخل عنوان المحل'),
+          AppLocalizations.of(context).onboardingEnterShopAddress,
         ),
       ),
     ],
@@ -752,16 +725,10 @@ class _GoogleOnboardingScreenState
     final documents = _documents;
     return [
       _StepTitle(
-        title: _t('Almost done', 'اقتربت من الانتهاء'),
+        title: AppLocalizations.of(context).onboardingAlmostDone,
         subtitle: _role == GoogleOnboardingRole.driver
-            ? _t(
-                'Accept the terms to send your details. Next you upload your driving licence, vehicle registration and ID for Admin review.',
-                'وافق على الشروط لإرسال بياناتك. بعدها ترفع رخصة القيادة ورخصة المركبة والهوية لمراجعة الإدارة.',
-              )
-            : _t(
-                'Read and accept these to create your account.',
-                'اقرأ هذه المستندات ووافق عليها لإنشاء حسابك.',
-              ),
+            ? AppLocalizations.of(context).onboardingAcceptTermsSendDetails
+            : AppLocalizations.of(context).onboardingReadAcceptTheseCreate,
       ),
       if (documents == null && _error == null)
         const Padding(
@@ -774,7 +741,7 @@ class _GoogleOnboardingScreenState
             setState(() => _error = null);
             _loadConsents(_locale!);
           },
-          child: Text(_t('Retry', 'إعادة المحاولة')),
+          child: Text(AppLocalizations.of(context).retry),
         ),
       for (final document in documents ?? <Map<String, dynamic>>[])
         Padding(
@@ -807,7 +774,7 @@ class _GoogleOnboardingScreenState
                               : _accepted.remove(document['id']);
                         }),
                   title: Text(
-                    _t('I have read and accept this', 'قرأت هذا وأوافق عليه'),
+                    AppLocalizations.of(context).onboardingIHaveReadAccept,
                   ),
                 ),
               ],
@@ -818,9 +785,9 @@ class _GoogleOnboardingScreenState
   }
 
   String _consentTitle(Object? type) => switch (type) {
-    'terms' => _t('Terms of service', 'شروط الخدمة'),
-    'privacy' => _t('Privacy policy', 'سياسة الخصوصية'),
-    _ => _t('I am 18 or older', 'عمري 18 عاماً أو أكثر'),
+    'terms' => AppLocalizations.of(context).onboardingTermsService,
+    'privacy' => AppLocalizations.of(context).onboardingPrivacyPolicy,
+    _ => AppLocalizations.of(context).onboardingIAm18Older,
   };
 
   Widget get _gap => const SizedBox(height: AppTokens.gutterMobile);
@@ -833,13 +800,17 @@ class _GoogleOnboardingScreenState
     textInputAction: TextInputAction.next,
     textCapitalization: TextCapitalization.words,
     autofillHints: const [AutofillHints.name],
-    validator: _required(2, 80, _t('Enter your full name', 'أدخل اسمك الكامل')),
+    validator: _required(
+      2,
+      80,
+      AppLocalizations.of(context).onboardingEnterFullName,
+    ),
   );
 
   Widget _phoneField() => AuthTextField(
     key: const ValueKey('googlePhone'),
     controller: _phone,
-    hint: _t('Phone, e.g. +970599123456', 'الهاتف، مثل ‎+970599123456'),
+    hint: AppLocalizations.of(context).onboardingPhoneEG970599123456,
     icon: Icons.phone_outlined,
     keyboardType: TextInputType.phone,
     textInputAction: TextInputAction.next,
@@ -850,21 +821,22 @@ class _GoogleOnboardingScreenState
     ],
     validator: (value) => RegExp(_phonePattern).hasMatch(value?.trim() ?? '')
         ? null
-        : _t(
-            'Use international format starting with +',
-            'استخدم الصيغة الدولية التي تبدأ بـ +',
-          ),
+        : AppLocalizations.of(context).onboardingUseInternationalFormatStarting,
   );
 
   Widget _cityField() => AuthTextField(
     key: const ValueKey('googleCity'),
     controller: _city,
-    hint: _t('City', 'المدينة'),
+    hint: AppLocalizations.of(context).onboardingCity,
     icon: Icons.location_city_outlined,
     textInputAction: TextInputAction.done,
     textCapitalization: TextCapitalization.words,
     autofillHints: const [AutofillHints.addressCity],
-    validator: _required(2, 100, _t('Enter your city', 'أدخل مدينتك')),
+    validator: _required(
+      2,
+      100,
+      AppLocalizations.of(context).onboardingEnterCity,
+    ),
   );
 
   FormFieldValidator<String> _required(int min, int max, String message) =>
@@ -876,18 +848,15 @@ class _GoogleOnboardingScreenState
   String _failure(Object? error) {
     final code = error is ApiException ? error.message : '';
     return switch (code) {
-      'licence_expired' => _t(
-        'Your driving licence has expired. Renew it before applying.',
-        'رخصة القيادة منتهية. جددها قبل التقديم.',
-      ),
-      'google_driver_signup_unavailable' => _t(
-        'Driver applications are not open right now. Choose another role or try later.',
-        'طلبات السائقين غير متاحة حالياً. اختر دوراً آخر أو حاول لاحقاً.',
-      ),
-      'validation_error' => _t(
-        'Some details are not valid. Go back and check them.',
-        'بعض البيانات غير صحيحة. ارجع وتحقق منها.',
-      ),
+      'licence_expired' => AppLocalizations.of(
+        context,
+      ).onboardingDrivingLicenceHasExpired,
+      'google_driver_signup_unavailable' => AppLocalizations.of(
+        context,
+      ).onboardingDriverApplicationsAreNotOpen,
+      'validation_error' => AppLocalizations.of(
+        context,
+      ).onboardingSomeDetailsAreNot,
       _ => authFailure(context, error),
     };
   }

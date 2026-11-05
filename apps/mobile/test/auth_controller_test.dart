@@ -17,6 +17,7 @@ import 'package:darb_mobile/features/canonical_routes/data/canonical_operation_s
 import 'package:darb_mobile/features/onboarding/data/onboarding_storage.dart';
 import 'package:darb_mobile/features/passenger/application/passenger_history_controller.dart';
 
+import 'support/auth_test_support.dart';
 import 'test_app_config.dart';
 
 void main() {
@@ -269,6 +270,53 @@ void main() {
       expect(token, 'possibly-valid');
     },
   );
+
+  test('retrying a restore that fails again settles, never hangs', () async {
+    FlutterSecureStorage.setMockInitialValues({
+      TokenStorage.tokenKey: 'possibly-valid',
+    });
+    final container = _container(
+      (request) async => throw http.ClientException('offline'),
+    );
+    addTearDown(container.dispose);
+    expect(
+      (await container.read(authControllerProvider.future)).status,
+      AuthStatus.restoreFailed,
+    );
+
+    await container.read(authControllerProvider.notifier).retryRestore();
+
+    expect(
+      container.read(authControllerProvider).value?.status,
+      AuthStatus.restoreFailed,
+    );
+  });
+
+  test('a retry whose credential read throws settles signed out', () async {
+    final storage = _FlakyStorage();
+    final container = ProviderContainer(
+      overrides: [
+        appConfigProvider.overrideWithValue(demoTestAppConfig),
+        httpClientProvider.overrideWithValue(
+          MockClient((request) async => http.Response('{}', 500)),
+        ),
+        tokenStorageProvider.overrideWithValue(storage),
+      ],
+    );
+    addTearDown(container.dispose);
+    expect(
+      (await container.read(authControllerProvider.future)).status,
+      AuthStatus.unauthenticated,
+    );
+
+    storage.readError = StateError('keystore unavailable');
+    await container.read(authControllerProvider.notifier).retryRestore();
+
+    expect(
+      container.read(authControllerProvider).value?.status,
+      AuthStatus.unauthenticated,
+    );
+  });
 
   test('logout removes token', () async {
     FlutterSecureStorage.setMockInitialValues({
@@ -532,4 +580,16 @@ ProviderContainer _container(
       httpClientProvider.overrideWithValue(MockClient(handler)),
     ],
   );
+}
+
+/// Credential storage whose reads can be made to fail, like a locked keystore.
+class _FlakyStorage extends MemoryTokenStorage {
+  Object? readError;
+
+  @override
+  Future<AuthTokenBundle?> readBundle() async {
+    final error = readError;
+    if (error != null) throw error;
+    return super.readBundle();
+  }
 }

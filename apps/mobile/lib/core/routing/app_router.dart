@@ -600,7 +600,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return path == '/splash' ? null : '/splash';
       }
       if (auth.hasError) {
-        return (path == '/login' || path == '/register' || path == '/signup')
+        // A failed sign-in still lets the user check an application status.
+        return (path == '/login' ||
+                path == '/register' ||
+                path == '/signup' ||
+                path.startsWith('/onboarding'))
             ? null
             : '/login';
       }

@@ -117,12 +117,12 @@ void main() {
     await tester.ensureVisible(find.text('Barriers'));
     await tester.tap(find.text('Barriers'));
     await tester.pumpAndSettle();
-    expect(find.text('مغلق'), findsOneWidget);
+    expect(find.text('Closed'), findsOneWidget);
     await tester.tap(find.text('Test City'));
     await tester.pumpAndSettle();
-    expect(find.text('مغلق'), findsOneWidget);
-    expect(find.text('سالك'), findsOneWidget);
-    expect(find.text('أزمة'), findsOneWidget);
+    expect(find.text('Closed'), findsOneWidget);
+    expect(find.text('Open'), findsOneWidget);
+    expect(find.text('Congested'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     h.dispose();

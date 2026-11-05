@@ -53,9 +53,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
       final confirmed = await confirmSecurityAction(
         context,
         title: l10n.cancelRequest,
-        message: Localizations.localeOf(context).languageCode == 'ar'
-            ? 'هل تريد إلغاء هذا الطلب؟'
-            : 'Would you like to cancel this request?',
+        message: l10n.cancelRequestConfirm,
         confirmLabel: l10n.cancelRequest,
       );
       if (!confirmed || !currentActor()) return;
@@ -125,12 +123,16 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(AppTokens.spaceLarge),
             children: [
-              if (!ShellLanguageControl.isProvided(context))
+              // Both role shells already title this page in their app bar;
+              // the heading is only drawn when it stands alone.
+              if (!ShellLanguageControl.isProvided(context) &&
+                  !(Scaffold.maybeOf(context)?.hasAppBar ?? false)) ...[
                 Text(
                   l10n.requestDetails,
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
-              const SizedBox(height: AppTokens.spaceLarge),
+                const SizedBox(height: AppTokens.spaceLarge),
+              ],
               detail.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (_, _) => FilledButton(

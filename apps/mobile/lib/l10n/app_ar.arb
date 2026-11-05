@@ -20,6 +20,8 @@
   "sessionRestoreFailed": "تعذرت استعادة الجلسة. يرجى إعادة المحاولة.",
   "retry": "إعادة المحاولة",
   "whereToGo": "إلى أين تريد الذهاب؟",
+  "newRideLabel": "رحلة جديدة",
+  "newRideBody": "حدد نقطة الانطلاق والوجهة، لنساعدك في إيجاد الرحلة المناسبة.",
   "selectPickupLocation": "اختاري موقع الانطلاق",
   "selectDestination": "اختاري الوجهة",
   "selectPickupLocationTitle": "اختيار موقع الانطلاق",
@@ -58,6 +60,120 @@
   "nameRequired": "أدخل اسمك.",
   "passwordRequired": "أدخل كلمة المرور.",
   "passwordRuleHint": "8 أحرف أو أكثر، تتضمن حرفاً ورقماً",
+  "authSignExistingAccountThen": "سجل الدخول إلى حسابك الحالي ثم اربط Google من إعدادات أمان الحساب.",
+  "authPhoneBelongsAnotherAccount": "هذا الرقم مرتبط بحساب آخر. استعد ذلك الحساب أو تواصل مع الدعم.",
+  "authVerifyEmailUsingEmail": "تحقق من بريدك باستخدام خيار التحقق أدناه.",
+  "authProofIncorrectExpiredRequest": "الإثبات غير صحيح أو منتهي. اطلب رمزاً جديداً أو أعد بدء التسجيل بالبريد.",
+  "authDocumentsChangedReadAccept": "تغيرت المستندات. اقرأ أحدث الإصدارات ووافق عليها.",
+  "authConfirmCurrentPasswordRequest": "أكد كلمة المرور الحالية أو اطلب إثبات بريد جديداً.",
+  "authGoogleIdentityAlreadyLinked": "هوية Google مرتبطة بالفعل. استخدم استعادة الحساب أو تواصل مع الدعم.",
+  "authEnterValidInternationalPhone": "أدخل رقم هاتف دولياً صحيحاً يبدأ بعلامة +.",
+  "authGooglePassengerRegistrationNot": "التسجيل كراكب باستخدام Google غير متاح لهذا الحساب بعد.",
+  "authUnableCompleteRequestCheck": "تعذر إكمال الطلب. تحقق من الاتصال وحاول مجدداً.",
+  "authCompleteRegistration": "إكمال التسجيل",
+  "authReadAcceptAllRequired": "اقرأ ووافق على المستندات المطلوبة لإنشاء حساب الراكب.",
+  "authIHaveReadAccept": "قرأت هذا المستند وأوافق عليه",
+  "authCancelRegistration": "إلغاء التسجيل",
+  "authSixDigitCodeFrom": "الرمز المكون من ستة أرقام من بريدك الإلكتروني",
+  "authSetChangePassword": "تعيين أو تغيير كلمة المرور",
+  "authLinkGoogleExplicitly": "ربط حساب Google",
+  "authVerifyEmail": "التحقق من البريد الإلكتروني",
+  "authResetPassword": "إعادة تعيين كلمة المرور",
+  "authCompletedSignAgainIf": "اكتمل الطلب. سجل الدخول مجدداً عند الحاجة.",
+  "authEnterCurrentPasswordIf": "أدخل كلمة المرور الحالية. إذا لم تكن لديك كلمة مرور، اطلب إثباتاً عبر البريد الإلكتروني.",
+  "authCurrentPassword": "كلمة المرور الحالية",
+  "authSendEmailProof": "إرسال إثبات البريد",
+  "authIfEligibleEmailHas": "إذا كان الحساب مؤهلاً، أُرسلت رسالة. تحقق من الوارد والبريد غير المرغوب.",
+  "authNewPassword": "كلمة المرور الجديدة",
+  "authSelectingGoogleConfirmsLinking": "اختيار Google يؤكد ربط تلك الهوية بهذا الحساب المسجل دخوله.",
+  "authClose": "إغلاق",
+  "authConfirm": "تأكيد",
+  "authLinkGoogleAccount": "ربط حساب Google",
+  "onboardingSetUpAccount": "إعداد حسابك",
+  "onboardingGetStarted": "لنبدأ",
+  "onboardingStep": "الخطوة {value} من {stepsLength}",
+  "@onboardingStep": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      },
+      "stepsLength": {
+        "type": "Object"
+      }
+    }
+  },
+  "onboardingBack": "رجوع",
+  "onboardingSubmitApplication": "إرسال الطلب",
+  "onboardingChooseOneSetsUp": "اختر واحداً، وسنجهز لك التجربة المناسبة.",
+  "onboardingPassenger": "راكب",
+  "onboardingBookRidesSendParcels": "احجز رحلات وأرسل طروداً. جاهز فوراً.",
+  "onboardingDriveDarbRoutesNeeds": "قُد على مسارات درب. يتطلب موافقة الإدارة أولاً.",
+  "onboardingDriverApplicationsAreNot": "طلبات السائقين غير متاحة حالياً.",
+  "onboardingSendOrdersCustomersReady": "أرسل الطلبات إلى زبائنك. جاهز فوراً.",
+  "onboardingAbout": "معلوماتك",
+  "onboardingFilledNameFromGoogle": "أخذنا اسمك من Google، ويمكنك تعديله.",
+  "onboardingWhereAre": "أين أنت؟",
+  "onboardingCityHelpsUsShow": "تساعدنا مدينتك على عرض المسارات القريبة منك.",
+  "onboardingIdentityLicence": "الهوية والرخصة",
+  "onboardingAdminChecksTheseAgainst": "تطابق الإدارة هذه البيانات مع المستندات التي سترفعها لاحقاً.",
+  "onboardingNationalIdNumber": "رقم الهوية الوطنية",
+  "onboardingEnterIdNumber": "أدخل رقم هويتك",
+  "onboardingDrivingLicenceNumber": "رقم رخصة القيادة",
+  "onboardingEnterLicenceNumber": "أدخل رقم الرخصة",
+  "onboardingLicenceExpiryDate": "تاريخ انتهاء الرخصة",
+  "onboardingPickExpiryDate": "اختر تاريخ الانتهاء",
+  "onboardingVehicle": "مركبتك",
+  "onboardingCarDriveDarb": "السيارة التي ستقودها على درب.",
+  "onboardingMakeModelEG": "الشركة والطراز (مثل كيا أوبتيما)",
+  "onboardingEnterMakeModel": "أدخل الشركة والطراز",
+  "onboardingColour": "اللون",
+  "onboardingEnterColour": "أدخل اللون",
+  "onboardingPlateNumber": "رقم اللوحة",
+  "onboardingEnterPlate": "أدخل اللوحة",
+  "onboardingParcelsCarry": "الطرود التي يمكنك حملها",
+  "onboardingSedan": "سيدان",
+  "onboardingSuv": "دفع رباعي",
+  "onboardingVan": "فان",
+  "onboardingMinibus": "ميني باص",
+  "onboardingStore": "متجرك",
+  "onboardingTellCustomersWhoAre": "عرّف زبائنك بمتجرك.",
+  "onboardingStoreName": "اسم المتجر",
+  "onboardingEnterStoreName": "أدخل اسم المتجر",
+  "onboardingOwnerFullName": "اسم المالك الكامل",
+  "onboardingStoreType": "نوع المتجر",
+  "onboardingChooseStoreType": "اختر نوع المتجر",
+  "onboardingGrocery": "بقالة",
+  "onboardingRestaurant": "مطعم",
+  "onboardingPharmacy": "صيدلية",
+  "onboardingClothing": "ملابس",
+  "onboardingElectronics": "إلكترونيات",
+  "onboardingBakery": "مخبز",
+  "onboardingContactLocation": "التواصل والموقع",
+  "onboardingHowCustomersDriversReach": "كيف يصل إليك الزبائن والسائقون.",
+  "onboardingWhereDoSell": "أين تبيع؟",
+  "onboardingShop": "في محل",
+  "onboardingOnline": "عبر الإنترنت",
+  "onboardingBoth": "كلاهما",
+  "onboardingShopAddress": "عنوان المحل",
+  "onboardingEnterShopAddress": "أدخل عنوان المحل",
+  "onboardingAlmostDone": "اقتربت من الانتهاء",
+  "onboardingAcceptTermsSendDetails": "وافق على الشروط لإرسال بياناتك. بعدها ترفع رخصة القيادة ورخصة المركبة والهوية لمراجعة الإدارة.",
+  "onboardingReadAcceptTheseCreate": "اقرأ هذه المستندات ووافق عليها لإنشاء حسابك.",
+  "onboardingIHaveReadAccept": "قرأت هذا وأوافق عليه",
+  "onboardingTermsService": "شروط الخدمة",
+  "onboardingPrivacyPolicy": "سياسة الخصوصية",
+  "authAdultSelfAttestation": "الإقرار ببلوغ السن القانوني",
+  "onboardingIAm18Older": "عمري 18 عاماً أو أكثر",
+  "onboardingEnterFullName": "أدخل اسمك الكامل",
+  "onboardingPhoneEG970599123456": "الهاتف، مثل ‎+970599123456",
+  "onboardingUseInternationalFormatStarting": "استخدم الصيغة الدولية التي تبدأ بـ +",
+  "onboardingCity": "المدينة",
+  "onboardingEnterCity": "أدخل مدينتك",
+  "onboardingDrivingLicenceHasExpired": "رخصة القيادة منتهية. جددها قبل التقديم.",
+  "onboardingDriverApplicationsAreNotOpen": "طلبات السائقين غير متاحة حالياً. اختر دوراً آخر أو حاول لاحقاً.",
+  "onboardingSomeDetailsAreNot": "بعض البيانات غير صحيحة. ارجع وتحقق منها.",
+  "authForgotPassword": "نسيت كلمة المرور؟",
+  "authEnterPhoneNumber7": "أدخل رقم هاتفك (من 7 إلى 32 حرفاً).",
   "emailAlreadyRegistered": "هذا البريد الإلكتروني مسجّل بالفعل. حاول تسجيل الدخول.",
   "googleSignInFailed": "فشل تسجيل الدخول عبر Google. حاول مرة أخرى.",
   "googleSignInUnavailable": "تسجيل الدخول عبر Google غير متاح حالياً.",
@@ -95,11 +211,23 @@
   "destination": "الوجهة",
   "bethlehem": "بيت لحم",
   "preferredTime": "الوقت المفضل",
+  "dateTimeValue": "{date}، {time}",
+  "@dateTimeValue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "passengerCount": "عدد الركاب",
   "submitRequest": "إرسال الطلب",
   "requestCreated": "تم إنشاء الطلب",
   "requestDetails": "تفاصيل الطلب",
   "cancelRequest": "إلغاء الطلب",
+  "cancelRequestConfirm": "هل تريد إلغاء هذا الطلب؟",
   "requestCancelled": "تم إلغاء الطلب",
   "requestCannotBeCancelled": "لا يمكن إلغاء هذا الطلب الآن.",
   "findCompatibleRoute": "البحث عن مسار متوافق",
@@ -143,6 +271,7 @@
   "statusDelivered": "تم التسليم",
   "statusCompleted": "مكتملة",
   "statusCancelled": "ملغاة",
+  "statusFailed": "فشلت",
   "driverDashboard": "لوحة السائق",
   "activeRoute": "المسار النشط",
   "noActiveRoute": "لا يوجد مسار نشط حالياً.",
@@ -212,6 +341,61 @@
   "fixedPickup": "نقطة الاستلام الثابتة",
   "parcel": "طرد",
   "parcelSize": "حجم الطرد",
+  "handoverReceiverHandoverCode": "رمز تسليم المستلم",
+  "handoverGiveCodePersonReceiving": "أعطِ هذا الرمز للشخص الذي سيستلم الطرد. سيطلبه السائق عند التسليم. لا تشاركه قبل وصول الطرد.",
+  "handoverCodeWasIssuedSafety": "تم إصدار رمز. يظهر مرة واحدة فقط لأسباب أمنية؛ اطلب رمزاً جديداً إذا احتجت لقراءته مجدداً.",
+  "handoverNoHandoverCodeYet": "لا يوجد رمز تسليم بعد. أنشئ رمزاً لتعطيه للمستلم.",
+  "handoverCreateHandoverCode": "إنشاء رمز التسليم",
+  "handoverGetNewCode": "الحصول على رمز جديد",
+  "handoverTooManyWrongAttempts": "محاولات خاطئة كثيرة. احصل على رمز جديد لفتح التسليم.",
+  "handoverCodeHasExpiredGet": "انتهت صلاحية هذا الرمز. احصل على رمز جديد.",
+  "handoverWrongAttemptsLeft": "تبقّت {count} محاولات خاطئة",
+  "@handoverWrongAttemptsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "handoverDeliveredReceiverConfirmedCode": "تم التسليم. أكّد المستلم بالرمز.",
+  "handoverDeliveredWithoutReceiverDriver": "تم التسليم دون المستلم: أبلغ السائق أن المستلم غير متوفر.",
+  "handoverDeliveryWasClosedBy": "أغلق دعم درب عملية التسليم.",
+  "handoverDriverNote": "ملاحظة السائق: {reason}",
+  "@handoverDriverNote": {
+    "placeholders": {
+      "reason": {
+        "type": "Object"
+      }
+    }
+  },
+  "handoverCouldNotLoadHandover": "تعذّر تحميل رمز التسليم. اسحب للتحديث وحاول مجدداً.",
+  "handoverConfirmHandOver": "تأكيد التسليم",
+  "handoverAskReceiverTheir6": "اطلب من المستلم رمزه المكوّن من 6 أرقام وأدخله أدناه.",
+  "handoverCodeParcelOrder": "رمز الطلب {index} من {total}",
+  "@handoverCodeParcelOrder": {
+    "placeholders": {
+      "index": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "handoverReceiverCode": "رمز المستلم",
+  "handoverConfirmDelivery": "تأكيد التسليم",
+  "handoverReceiverUnavailable": "المستلم غير متوفر",
+  "handoverOnlyUseIfReceiver": "استخدم هذا فقط إذا تعذّر على المستلم إعطاء الرمز. يُسجَّل سببك وستراجعه درب.",
+  "handoverReasonAtLeast10": "السبب (10 أحرف على الأقل)",
+  "handoverCompleteWithoutReceiver": "إتمام دون المستلم",
+  "handoverEnter6DigitCode": "أدخل الرمز المكوّن من 6 أرقام.",
+  "handoverDescribeWhyReceiverWas": "اشرح سبب عدم توفر المستلم (10 أحرف على الأقل).",
+  "handoverThatCodeNotRight": "هذا الرمز غير صحيح. تحقق منه مع المستلم وحاول مجدداً.",
+  "handoverTooManyWrongCodes": "رموز خاطئة كثيرة. على المرسل إصدار رمز جديد، أو استخدم «المستلم غير متوفر».",
+  "handoverCodeHasExpiredSender": "انتهت صلاحية الرمز. على المرسل إصدار رمز جديد، أو استخدم «المستلم غير متوفر».",
+  "handoverNoCodeWasIssued": "لم يُصدر رمز لهذا الطرد. استخدم «المستلم غير متوفر» أو اطلب من المرسل إنشاء رمز.",
+  "handoverReceiverMustConfirmBefore": "يجب أن يؤكد المستلم قبل إتمام التسليم.",
+  "handoverCouldNotConfirmDelivery": "تعذّر تأكيد التسليم. حاول مجدداً.",
   "priority": "الأولوية",
   "priorityLow": "منخفضة",
   "priorityNormal": "عادية",
@@ -614,7 +798,16 @@
   "navMapAlerts": "الخرائط والبلاغات",
   "navShipments": "الشحنات",
   "navReports": "التقارير",
+  "navMyOrders": "طلباتي",
+  "navMainMenu": "القائمة الرئيسية",
+  "navSidebarTitle": "رحلتك بأمان",
+  "navSidebarBody": "تابع رحلاتك وراجع جلسات حسابك.",
   "myTrips": "رحلاتي",
+  "myTripsSubtitle": "كل رحلاتك في مكان واحد",
+  "myTripsCurrentTrip": "الرحلة الحالية",
+  "myTripsFilterEmptyTitle": "لا توجد رحلات هنا",
+  "myTripsFilterEmptyBody": "لا توجد رحلات في هذه الفئة بعد.",
+  "myTripsShowAll": "عرض كل الرحلات",
   "tripsActiveSection": "الرحلة النشطة",
   "tripsUpcomingSection": "الرحلات القادمة",
   "tripsPastSection": "الرحلات السابقة",
@@ -652,6 +845,44 @@
   "supportUnavailable": "الدعم داخل التطبيق غير متاح",
   "supportUnavailableBody": "لا توجد قناة دعم متصلة بالنظام الخلفي في هذه النسخة.",
   "accountSettings": "الإعدادات",
+  "settingsMyProfile": "ملفي الشخصي",
+  "settingsChangePassword": "تغيير كلمة المرور",
+  "settingsRateOurApp": "قيّم التطبيق",
+  "settingsHelpSupport": "المساعدة والدعم",
+  "profileEnterValidPhoneNumber": "أدخل رقم هاتف صحيحاً.",
+  "profileProfileUpdated": "تم تحديث الملف.",
+  "profileEdit": "تعديل",
+  "profileNotAdded": "غير مضاف",
+  "profileName": "الاسم",
+  "profileVerifiedNumberCannotChanged": "لا يمكن تغيير رقمك الموثّق من هنا.",
+  "profileSaveChanges": "حفظ التغييرات",
+  "changePasswordEnterCurrentPassword": "أدخل كلمة المرور الحالية.",
+  "changePasswordChoosePasswordDifferentFrom": "اختر كلمة مرور مختلفة عن الحالية.",
+  "changePasswordPasswordsDoNotMatch": "كلمتا المرور غير متطابقتين.",
+  "changePasswordPasswordChanged": "تم تغيير كلمة المرور",
+  "changePasswordSecurityPleaseSignAgain": "لأمانك، سجّل الدخول من جديد بكلمة المرور الجديدة.",
+  "changePasswordOk": "حسناً",
+  "changePasswordCurrentPasswordIncorrect": "كلمة المرور الحالية غير صحيحة.",
+  "changePasswordConfirmNewPassword": "تأكيد كلمة المرور الجديدة",
+  "changePasswordUpdatePassword": "تحديث كلمة المرور",
+  "changePasswordIDonTHave": "ليس لديّ كلمة مرور",
+  "helpHowDoIRequest": "كيف أطلب رحلة؟",
+  "helpOpenHomeTapSearch": "افتح الرئيسية واضغط على بطاقة البحث، اختر خط الرحلة (مثل الخليل إلى بيت لحم)، واكتب مكان الانطلاق والوصول بالتفصيل ثم أرسل الطلب. سيراه السائقون على هذا الخط.",
+  "helpWhereISeeMy": "أين أجد رحلاتي؟",
+  "helpTripsTabListsRequests": "تعرض لك صفحة الرحلات طلباتك وحالتها، من قيد الانتظار حتى الاكتمال.",
+  "helpHowDoIFollow": "كيف أتابع السائق؟",
+  "helpOnceDriverAcceptsOpen": "بعد قبول السائق افتح صفحة الخرائط لترى المسار وآخر موقع للسائق وتنبيهات الحواجز.",
+  "helpIForgotMyPassword": "نسيت كلمة المرور",
+  "helpLoginScreenChooseForgot": "من شاشة تسجيل الدخول اختر «نسيت كلمة المرور» وسنرسل لك رمزاً عبر البريد لإعادة تعيينها.",
+  "helpAskDarbAssistant": "اسأل مساعد درب",
+  "helpCommonQuestions": "أسئلة شائعة",
+  "rateAppThank": "شكراً لك!",
+  "rateAppFeedbackHelpsUsImprove": "ملاحظاتك تساعدنا على تحسين درب.",
+  "rateAppDone": "تم",
+  "rateAppHowExperienceDarb": "كيف تجد تجربتك مع درب؟",
+  "rateAppTellUsMoreOptional": "أخبرنا المزيد (اختياري)",
+  "rateAppRatingCouldNotSent": "تعذّر إرسال تقييمك. تحقّق من الاتصال وحاول مرة أخرى.",
+  "rateAppSubmit": "إرسال",
   "featureNotBackedNotice": "هذا القسم غير مدعوم من النظام الخلفي بعد.",
   "offers": "العروض",
   "individualOffers": "العروض الفردية",
@@ -821,6 +1052,79 @@
   "checkpointCongested": "ازدحام",
   "checkpointClosed": "مغلق",
   "checkpointUnknown": "الحالة غير معروفة",
+  "checkpointStatusOpen": "سالك",
+  "checkpointStatusCongested": "أزمة",
+  "checkpointStatusClosed": "مغلق",
+  "checkpointStatusUnknown": "غير معروف",
+  "checkpointStatusNotAvailable": "الحالة غير متوفرة",
+  "checkpointEnteringStatus": "دخول: {status}",
+  "@checkpointEnteringStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLeavingStatus": "خروج: {status}",
+  "@checkpointLeavingStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointDirectionStatus": "الحالة",
+  "checkpointDirectionEntering": "الدخول",
+  "checkpointDirectionLeaving": "الخروج",
+  "checkpointUpdatedAt": "التحديث: {time}",
+  "@checkpointUpdatedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointUpdatedUnavailable": "التحديث: غير متوفر",
+  "checkpointLastUpdatedAt": "آخر تحديث: {time}",
+  "@checkpointLastUpdatedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointLastUpdatedUnavailable": "آخر تحديث غير متوفر",
+  "checkpointTimeUnavailable": "غير متوفر",
+  "checkpointCityUnspecified": "مدينة غير محددة",
+  "checkpointCityHasCongestion": "يوجد أزمة",
+  "checkpointsOnRoad": "الحواجز على الطريق",
+  "checkpointsCityCount": "{checkpoints} حاجز · {cities} مدينة",
+  "@checkpointsCityCount": {
+    "placeholders": {
+      "checkpoints": {
+        "type": "int"
+      },
+      "cities": {
+        "type": "int"
+      }
+    }
+  },
+  "checkpointsCitiesLabel": "المدن",
+  "checkpointsCongestedLabel": "حواجز عليها ازدحام",
+  "checkpointsViewDetails": "عرض تفاصيل الحواجز وحالتها",
+  "checkpointsDataUpdated": "آخر تحديث للبيانات: {time}",
+  "@checkpointsDataUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "checkpointsRefreshData": "تحديث بيانات الحواجز",
+  "checkpointsByCity": "الحواجز حسب المدينة",
+  "checkpointsRefreshing": "جاري تحديث الحواجز...",
+  "checkpointsNoData": "لا توجد بيانات حواجز متاحة حالياً.",
+  "checkpointsPickCity": "اختر المدينة لعرض حواجزها",
   "checkpointLabel": "{name} — {status}",
   "@checkpointLabel": {
     "placeholders": {
@@ -1317,6 +1621,93 @@
   "communityLocationSet": "تم تحديد المكان على الخريطة",
   "communityClearLocation": "إزالة المكان",
   "mapRouteLabel": "المسار",
+  "mapDriverLocationFailed": "تعذر تحديث موقع السائق حاليًا.",
+  "mapWaitingDriverLocation": "بانتظار آخر موقع مسجل للسائق.",
+  "mapTimeRemaining": "الوقت المتبقي: {duration}",
+  "@mapTimeRemaining": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "mapRouteFollowsDriver": "المسار يتحدث حسب موقع السائق الحالي",
+  "mapRouteIsPlanned": "المسار المعروض هو المسار المحدد للرحلة",
+  "mapYourTripRoute": "مسار رحلتك",
+  "mapPickupPoint": "نقطة الالتقاء",
+  "mapZoomIn": "تكبير الخريطة",
+  "mapZoomOut": "تصغير الخريطة",
+  "mapShowRoute": "إظهار المسار",
+  "mapMarkerDetails": "التفاصيل",
+  "mapMyLocation": "موقعي",
+  "mapYouAreHere": "أنت هنا",
+  "mapLocationOutsideArea": "موقعك خارج منطقة خدمة درب.",
+  "driverArrivalTitle": "السائق في الطريق إليك",
+  "driverArrivalSubtitle": "المسافة والوقت المتبقي للوصول إلى نقطة الالتقاء",
+  "driverArrivalDistance": "المسافة المتبقية",
+  "driverArrivalEta": "وقت الوصول التقريبي",
+  "driverArrivalDisclaimer": "الوقت تقديري وقد يتغير حسب حركة الطريق.",
+  "distanceKmValue": "{km} كم",
+  "@distanceKmValue": {
+    "placeholders": {
+      "km": {
+        "type": "String"
+      }
+    }
+  },
+  "distanceMetersValue": "{meters} م",
+  "@distanceMetersValue": {
+    "placeholders": {
+      "meters": {
+        "type": "int"
+      }
+    }
+  },
+  "durationMinutesValue": "{minutes} د",
+  "@durationMinutesValue": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHoursValue": "{hours} س",
+  "@durationHoursValue": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "durationHoursMinutesValue": "{hours} س {minutes} د",
+  "@durationHoursMinutesValue": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "tripInProgress": "الرحلة جارية",
+  "tripLiveTracking": "تتبع مباشر",
+  "tripWaitingForLocation": "بانتظار الموقع",
+  "tripStartLabel": "البداية",
+  "tripArrivalLabel": "الوصول",
+  "tripLocationLabel": "الموقع",
+  "tripLive": "مباشر",
+  "tripEstimatedArrival": "الوصول المتوقع",
+  "tripDistance": "المسافة",
+  "tripRemainingTime": "الوقت المتبقي",
+  "tripCalculatingRoute": "جاري حساب المسار...",
+  "tripVehicleLocation": "موقع المركبة",
+  "tripRefreshLocation": "تحديث الموقع",
+  "driverFailDeliveryAction": "تسجيل فشل التوصيل",
+  "driverFailDeliveryTitle": "فشل التوصيل",
+  "driverFailDeliveryMessage": "هل تريد تسجيل الرحلة كتوصيل فاشل؟",
+  "driverCancelTripTitle": "إلغاء الرحلة",
+  "driverCancelTripMessage": "هل أنت متأكد من إلغاء الرحلة الحالية؟",
   "merchantOrderMapTitle": "مسار الطلب",
   "driverPhoneLabel": "هاتف السائق",
   "callDriver": "اتصل بالسائق",

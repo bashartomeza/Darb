@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:darb_mobile/features/auth/data/auth_repository.dart';
 import 'package:darb_mobile/features/auth/presentation/credential_actions.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import 'support/auth_test_support.dart';
 
@@ -36,6 +37,7 @@ Future<List<http.Request>> _pump(
         locale: locale,
         supportedLocales: const [Locale('en'), Locale('ar')],
         localizationsDelegates: const [
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,

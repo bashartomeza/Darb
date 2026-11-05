@@ -73,6 +73,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get whereToGo => 'إلى أين تريد الذهاب؟';
 
   @override
+  String get newRideLabel => 'رحلة جديدة';
+
+  @override
+  String get newRideBody =>
+      'حدد نقطة الانطلاق والوجهة، لنساعدك في إيجاد الرحلة المناسبة.';
+
+  @override
   String get selectPickupLocation => 'اختاري موقع الانطلاق';
 
   @override
@@ -185,6 +192,351 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get passwordRuleHint => '8 أحرف أو أكثر، تتضمن حرفاً ورقماً';
+
+  @override
+  String get authSignExistingAccountThen =>
+      'سجل الدخول إلى حسابك الحالي ثم اربط Google من إعدادات أمان الحساب.';
+
+  @override
+  String get authPhoneBelongsAnotherAccount =>
+      'هذا الرقم مرتبط بحساب آخر. استعد ذلك الحساب أو تواصل مع الدعم.';
+
+  @override
+  String get authVerifyEmailUsingEmail =>
+      'تحقق من بريدك باستخدام خيار التحقق أدناه.';
+
+  @override
+  String get authProofIncorrectExpiredRequest =>
+      'الإثبات غير صحيح أو منتهي. اطلب رمزاً جديداً أو أعد بدء التسجيل بالبريد.';
+
+  @override
+  String get authDocumentsChangedReadAccept =>
+      'تغيرت المستندات. اقرأ أحدث الإصدارات ووافق عليها.';
+
+  @override
+  String get authConfirmCurrentPasswordRequest =>
+      'أكد كلمة المرور الحالية أو اطلب إثبات بريد جديداً.';
+
+  @override
+  String get authGoogleIdentityAlreadyLinked =>
+      'هوية Google مرتبطة بالفعل. استخدم استعادة الحساب أو تواصل مع الدعم.';
+
+  @override
+  String get authEnterValidInternationalPhone =>
+      'أدخل رقم هاتف دولياً صحيحاً يبدأ بعلامة +.';
+
+  @override
+  String get authGooglePassengerRegistrationNot =>
+      'التسجيل كراكب باستخدام Google غير متاح لهذا الحساب بعد.';
+
+  @override
+  String get authUnableCompleteRequestCheck =>
+      'تعذر إكمال الطلب. تحقق من الاتصال وحاول مجدداً.';
+
+  @override
+  String get authCompleteRegistration => 'إكمال التسجيل';
+
+  @override
+  String get authReadAcceptAllRequired =>
+      'اقرأ ووافق على المستندات المطلوبة لإنشاء حساب الراكب.';
+
+  @override
+  String get authIHaveReadAccept => 'قرأت هذا المستند وأوافق عليه';
+
+  @override
+  String get authCancelRegistration => 'إلغاء التسجيل';
+
+  @override
+  String get authSixDigitCodeFrom =>
+      'الرمز المكون من ستة أرقام من بريدك الإلكتروني';
+
+  @override
+  String get authSetChangePassword => 'تعيين أو تغيير كلمة المرور';
+
+  @override
+  String get authLinkGoogleExplicitly => 'ربط حساب Google';
+
+  @override
+  String get authVerifyEmail => 'التحقق من البريد الإلكتروني';
+
+  @override
+  String get authResetPassword => 'إعادة تعيين كلمة المرور';
+
+  @override
+  String get authCompletedSignAgainIf =>
+      'اكتمل الطلب. سجل الدخول مجدداً عند الحاجة.';
+
+  @override
+  String get authEnterCurrentPasswordIf =>
+      'أدخل كلمة المرور الحالية. إذا لم تكن لديك كلمة مرور، اطلب إثباتاً عبر البريد الإلكتروني.';
+
+  @override
+  String get authCurrentPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get authSendEmailProof => 'إرسال إثبات البريد';
+
+  @override
+  String get authIfEligibleEmailHas =>
+      'إذا كان الحساب مؤهلاً، أُرسلت رسالة. تحقق من الوارد والبريد غير المرغوب.';
+
+  @override
+  String get authNewPassword => 'كلمة المرور الجديدة';
+
+  @override
+  String get authSelectingGoogleConfirmsLinking =>
+      'اختيار Google يؤكد ربط تلك الهوية بهذا الحساب المسجل دخوله.';
+
+  @override
+  String get authClose => 'إغلاق';
+
+  @override
+  String get authConfirm => 'تأكيد';
+
+  @override
+  String get authLinkGoogleAccount => 'ربط حساب Google';
+
+  @override
+  String get onboardingSetUpAccount => 'إعداد حسابك';
+
+  @override
+  String get onboardingGetStarted => 'لنبدأ';
+
+  @override
+  String onboardingStep(Object value, Object stepsLength) {
+    return 'الخطوة $value من $stepsLength';
+  }
+
+  @override
+  String get onboardingBack => 'رجوع';
+
+  @override
+  String get onboardingSubmitApplication => 'إرسال الطلب';
+
+  @override
+  String get onboardingChooseOneSetsUp =>
+      'اختر واحداً، وسنجهز لك التجربة المناسبة.';
+
+  @override
+  String get onboardingPassenger => 'راكب';
+
+  @override
+  String get onboardingBookRidesSendParcels =>
+      'احجز رحلات وأرسل طروداً. جاهز فوراً.';
+
+  @override
+  String get onboardingDriveDarbRoutesNeeds =>
+      'قُد على مسارات درب. يتطلب موافقة الإدارة أولاً.';
+
+  @override
+  String get onboardingDriverApplicationsAreNot =>
+      'طلبات السائقين غير متاحة حالياً.';
+
+  @override
+  String get onboardingSendOrdersCustomersReady =>
+      'أرسل الطلبات إلى زبائنك. جاهز فوراً.';
+
+  @override
+  String get onboardingAbout => 'معلوماتك';
+
+  @override
+  String get onboardingFilledNameFromGoogle =>
+      'أخذنا اسمك من Google، ويمكنك تعديله.';
+
+  @override
+  String get onboardingWhereAre => 'أين أنت؟';
+
+  @override
+  String get onboardingCityHelpsUsShow =>
+      'تساعدنا مدينتك على عرض المسارات القريبة منك.';
+
+  @override
+  String get onboardingIdentityLicence => 'الهوية والرخصة';
+
+  @override
+  String get onboardingAdminChecksTheseAgainst =>
+      'تطابق الإدارة هذه البيانات مع المستندات التي سترفعها لاحقاً.';
+
+  @override
+  String get onboardingNationalIdNumber => 'رقم الهوية الوطنية';
+
+  @override
+  String get onboardingEnterIdNumber => 'أدخل رقم هويتك';
+
+  @override
+  String get onboardingDrivingLicenceNumber => 'رقم رخصة القيادة';
+
+  @override
+  String get onboardingEnterLicenceNumber => 'أدخل رقم الرخصة';
+
+  @override
+  String get onboardingLicenceExpiryDate => 'تاريخ انتهاء الرخصة';
+
+  @override
+  String get onboardingPickExpiryDate => 'اختر تاريخ الانتهاء';
+
+  @override
+  String get onboardingVehicle => 'مركبتك';
+
+  @override
+  String get onboardingCarDriveDarb => 'السيارة التي ستقودها على درب.';
+
+  @override
+  String get onboardingMakeModelEG => 'الشركة والطراز (مثل كيا أوبتيما)';
+
+  @override
+  String get onboardingEnterMakeModel => 'أدخل الشركة والطراز';
+
+  @override
+  String get onboardingColour => 'اللون';
+
+  @override
+  String get onboardingEnterColour => 'أدخل اللون';
+
+  @override
+  String get onboardingPlateNumber => 'رقم اللوحة';
+
+  @override
+  String get onboardingEnterPlate => 'أدخل اللوحة';
+
+  @override
+  String get onboardingParcelsCarry => 'الطرود التي يمكنك حملها';
+
+  @override
+  String get onboardingSedan => 'سيدان';
+
+  @override
+  String get onboardingSuv => 'دفع رباعي';
+
+  @override
+  String get onboardingVan => 'فان';
+
+  @override
+  String get onboardingMinibus => 'ميني باص';
+
+  @override
+  String get onboardingStore => 'متجرك';
+
+  @override
+  String get onboardingTellCustomersWhoAre => 'عرّف زبائنك بمتجرك.';
+
+  @override
+  String get onboardingStoreName => 'اسم المتجر';
+
+  @override
+  String get onboardingEnterStoreName => 'أدخل اسم المتجر';
+
+  @override
+  String get onboardingOwnerFullName => 'اسم المالك الكامل';
+
+  @override
+  String get onboardingStoreType => 'نوع المتجر';
+
+  @override
+  String get onboardingChooseStoreType => 'اختر نوع المتجر';
+
+  @override
+  String get onboardingGrocery => 'بقالة';
+
+  @override
+  String get onboardingRestaurant => 'مطعم';
+
+  @override
+  String get onboardingPharmacy => 'صيدلية';
+
+  @override
+  String get onboardingClothing => 'ملابس';
+
+  @override
+  String get onboardingElectronics => 'إلكترونيات';
+
+  @override
+  String get onboardingBakery => 'مخبز';
+
+  @override
+  String get onboardingContactLocation => 'التواصل والموقع';
+
+  @override
+  String get onboardingHowCustomersDriversReach =>
+      'كيف يصل إليك الزبائن والسائقون.';
+
+  @override
+  String get onboardingWhereDoSell => 'أين تبيع؟';
+
+  @override
+  String get onboardingShop => 'في محل';
+
+  @override
+  String get onboardingOnline => 'عبر الإنترنت';
+
+  @override
+  String get onboardingBoth => 'كلاهما';
+
+  @override
+  String get onboardingShopAddress => 'عنوان المحل';
+
+  @override
+  String get onboardingEnterShopAddress => 'أدخل عنوان المحل';
+
+  @override
+  String get onboardingAlmostDone => 'اقتربت من الانتهاء';
+
+  @override
+  String get onboardingAcceptTermsSendDetails =>
+      'وافق على الشروط لإرسال بياناتك. بعدها ترفع رخصة القيادة ورخصة المركبة والهوية لمراجعة الإدارة.';
+
+  @override
+  String get onboardingReadAcceptTheseCreate =>
+      'اقرأ هذه المستندات ووافق عليها لإنشاء حسابك.';
+
+  @override
+  String get onboardingIHaveReadAccept => 'قرأت هذا وأوافق عليه';
+
+  @override
+  String get onboardingTermsService => 'شروط الخدمة';
+
+  @override
+  String get onboardingPrivacyPolicy => 'سياسة الخصوصية';
+
+  @override
+  String get authAdultSelfAttestation => 'الإقرار ببلوغ السن القانوني';
+
+  @override
+  String get onboardingIAm18Older => 'عمري 18 عاماً أو أكثر';
+
+  @override
+  String get onboardingEnterFullName => 'أدخل اسمك الكامل';
+
+  @override
+  String get onboardingPhoneEG970599123456 => 'الهاتف، مثل ‎+970599123456';
+
+  @override
+  String get onboardingUseInternationalFormatStarting =>
+      'استخدم الصيغة الدولية التي تبدأ بـ +';
+
+  @override
+  String get onboardingCity => 'المدينة';
+
+  @override
+  String get onboardingEnterCity => 'أدخل مدينتك';
+
+  @override
+  String get onboardingDrivingLicenceHasExpired =>
+      'رخصة القيادة منتهية. جددها قبل التقديم.';
+
+  @override
+  String get onboardingDriverApplicationsAreNotOpen =>
+      'طلبات السائقين غير متاحة حالياً. اختر دوراً آخر أو حاول لاحقاً.';
+
+  @override
+  String get onboardingSomeDetailsAreNot =>
+      'بعض البيانات غير صحيحة. ارجع وتحقق منها.';
+
+  @override
+  String get authForgotPassword => 'نسيت كلمة المرور؟';
+
+  @override
+  String get authEnterPhoneNumber7 => 'أدخل رقم هاتفك (من 7 إلى 32 حرفاً).';
 
   @override
   String get emailAlreadyRegistered =>
@@ -306,6 +658,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get preferredTime => 'الوقت المفضل';
 
   @override
+  String dateTimeValue(String date, String time) {
+    return '$date، $time';
+  }
+
+  @override
   String get passengerCount => 'عدد الركاب';
 
   @override
@@ -319,6 +676,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cancelRequest => 'إلغاء الطلب';
+
+  @override
+  String get cancelRequestConfirm => 'هل تريد إلغاء هذا الطلب؟';
 
   @override
   String get requestCancelled => 'تم إلغاء الطلب';
@@ -451,6 +811,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get statusCancelled => 'ملغاة';
+
+  @override
+  String get statusFailed => 'فشلت';
 
   @override
   String get driverDashboard => 'لوحة السائق';
@@ -660,6 +1023,122 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get parcelSize => 'حجم الطرد';
+
+  @override
+  String get handoverReceiverHandoverCode => 'رمز تسليم المستلم';
+
+  @override
+  String get handoverGiveCodePersonReceiving =>
+      'أعطِ هذا الرمز للشخص الذي سيستلم الطرد. سيطلبه السائق عند التسليم. لا تشاركه قبل وصول الطرد.';
+
+  @override
+  String get handoverCodeWasIssuedSafety =>
+      'تم إصدار رمز. يظهر مرة واحدة فقط لأسباب أمنية؛ اطلب رمزاً جديداً إذا احتجت لقراءته مجدداً.';
+
+  @override
+  String get handoverNoHandoverCodeYet =>
+      'لا يوجد رمز تسليم بعد. أنشئ رمزاً لتعطيه للمستلم.';
+
+  @override
+  String get handoverCreateHandoverCode => 'إنشاء رمز التسليم';
+
+  @override
+  String get handoverGetNewCode => 'الحصول على رمز جديد';
+
+  @override
+  String get handoverTooManyWrongAttempts =>
+      'محاولات خاطئة كثيرة. احصل على رمز جديد لفتح التسليم.';
+
+  @override
+  String get handoverCodeHasExpiredGet =>
+      'انتهت صلاحية هذا الرمز. احصل على رمز جديد.';
+
+  @override
+  String handoverWrongAttemptsLeft(Object count) {
+    return 'تبقّت $count محاولات خاطئة';
+  }
+
+  @override
+  String get handoverDeliveredReceiverConfirmedCode =>
+      'تم التسليم. أكّد المستلم بالرمز.';
+
+  @override
+  String get handoverDeliveredWithoutReceiverDriver =>
+      'تم التسليم دون المستلم: أبلغ السائق أن المستلم غير متوفر.';
+
+  @override
+  String get handoverDeliveryWasClosedBy => 'أغلق دعم درب عملية التسليم.';
+
+  @override
+  String handoverDriverNote(Object reason) {
+    return 'ملاحظة السائق: $reason';
+  }
+
+  @override
+  String get handoverCouldNotLoadHandover =>
+      'تعذّر تحميل رمز التسليم. اسحب للتحديث وحاول مجدداً.';
+
+  @override
+  String get handoverConfirmHandOver => 'تأكيد التسليم';
+
+  @override
+  String get handoverAskReceiverTheir6 =>
+      'اطلب من المستلم رمزه المكوّن من 6 أرقام وأدخله أدناه.';
+
+  @override
+  String handoverCodeParcelOrder(Object index, Object total) {
+    return 'رمز الطلب $index من $total';
+  }
+
+  @override
+  String get handoverReceiverCode => 'رمز المستلم';
+
+  @override
+  String get handoverConfirmDelivery => 'تأكيد التسليم';
+
+  @override
+  String get handoverReceiverUnavailable => 'المستلم غير متوفر';
+
+  @override
+  String get handoverOnlyUseIfReceiver =>
+      'استخدم هذا فقط إذا تعذّر على المستلم إعطاء الرمز. يُسجَّل سببك وستراجعه درب.';
+
+  @override
+  String get handoverReasonAtLeast10 => 'السبب (10 أحرف على الأقل)';
+
+  @override
+  String get handoverCompleteWithoutReceiver => 'إتمام دون المستلم';
+
+  @override
+  String get handoverEnter6DigitCode => 'أدخل الرمز المكوّن من 6 أرقام.';
+
+  @override
+  String get handoverDescribeWhyReceiverWas =>
+      'اشرح سبب عدم توفر المستلم (10 أحرف على الأقل).';
+
+  @override
+  String get handoverThatCodeNotRight =>
+      'هذا الرمز غير صحيح. تحقق منه مع المستلم وحاول مجدداً.';
+
+  @override
+  String get handoverTooManyWrongCodes =>
+      'رموز خاطئة كثيرة. على المرسل إصدار رمز جديد، أو استخدم «المستلم غير متوفر».';
+
+  @override
+  String get handoverCodeHasExpiredSender =>
+      'انتهت صلاحية الرمز. على المرسل إصدار رمز جديد، أو استخدم «المستلم غير متوفر».';
+
+  @override
+  String get handoverNoCodeWasIssued =>
+      'لم يُصدر رمز لهذا الطرد. استخدم «المستلم غير متوفر» أو اطلب من المرسل إنشاء رمز.';
+
+  @override
+  String get handoverReceiverMustConfirmBefore =>
+      'يجب أن يؤكد المستلم قبل إتمام التسليم.';
+
+  @override
+  String get handoverCouldNotConfirmDelivery =>
+      'تعذّر تأكيد التسليم. حاول مجدداً.';
 
   @override
   String get priority => 'الأولوية';
@@ -1615,7 +2094,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navReports => 'التقارير';
 
   @override
+  String get navMyOrders => 'طلباتي';
+
+  @override
+  String get navMainMenu => 'القائمة الرئيسية';
+
+  @override
+  String get navSidebarTitle => 'رحلتك بأمان';
+
+  @override
+  String get navSidebarBody => 'تابع رحلاتك وراجع جلسات حسابك.';
+
+  @override
   String get myTrips => 'رحلاتي';
+
+  @override
+  String get myTripsSubtitle => 'كل رحلاتك في مكان واحد';
+
+  @override
+  String get myTripsCurrentTrip => 'الرحلة الحالية';
+
+  @override
+  String get myTripsFilterEmptyTitle => 'لا توجد رحلات هنا';
+
+  @override
+  String get myTripsFilterEmptyBody => 'لا توجد رحلات في هذه الفئة بعد.';
+
+  @override
+  String get myTripsShowAll => 'عرض كل الرحلات';
 
   @override
   String get tripsActiveSection => 'الرحلة النشطة';
@@ -1714,6 +2220,129 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountSettings => 'الإعدادات';
+
+  @override
+  String get settingsMyProfile => 'ملفي الشخصي';
+
+  @override
+  String get settingsChangePassword => 'تغيير كلمة المرور';
+
+  @override
+  String get settingsRateOurApp => 'قيّم التطبيق';
+
+  @override
+  String get settingsHelpSupport => 'المساعدة والدعم';
+
+  @override
+  String get profileEnterValidPhoneNumber => 'أدخل رقم هاتف صحيحاً.';
+
+  @override
+  String get profileProfileUpdated => 'تم تحديث الملف.';
+
+  @override
+  String get profileEdit => 'تعديل';
+
+  @override
+  String get profileNotAdded => 'غير مضاف';
+
+  @override
+  String get profileName => 'الاسم';
+
+  @override
+  String get profileVerifiedNumberCannotChanged =>
+      'لا يمكن تغيير رقمك الموثّق من هنا.';
+
+  @override
+  String get profileSaveChanges => 'حفظ التغييرات';
+
+  @override
+  String get changePasswordEnterCurrentPassword => 'أدخل كلمة المرور الحالية.';
+
+  @override
+  String get changePasswordChoosePasswordDifferentFrom =>
+      'اختر كلمة مرور مختلفة عن الحالية.';
+
+  @override
+  String get changePasswordPasswordsDoNotMatch => 'كلمتا المرور غير متطابقتين.';
+
+  @override
+  String get changePasswordPasswordChanged => 'تم تغيير كلمة المرور';
+
+  @override
+  String get changePasswordSecurityPleaseSignAgain =>
+      'لأمانك، سجّل الدخول من جديد بكلمة المرور الجديدة.';
+
+  @override
+  String get changePasswordOk => 'حسناً';
+
+  @override
+  String get changePasswordCurrentPasswordIncorrect =>
+      'كلمة المرور الحالية غير صحيحة.';
+
+  @override
+  String get changePasswordConfirmNewPassword => 'تأكيد كلمة المرور الجديدة';
+
+  @override
+  String get changePasswordUpdatePassword => 'تحديث كلمة المرور';
+
+  @override
+  String get changePasswordIDonTHave => 'ليس لديّ كلمة مرور';
+
+  @override
+  String get helpHowDoIRequest => 'كيف أطلب رحلة؟';
+
+  @override
+  String get helpOpenHomeTapSearch =>
+      'افتح الرئيسية واضغط على بطاقة البحث، اختر خط الرحلة (مثل الخليل إلى بيت لحم)، واكتب مكان الانطلاق والوصول بالتفصيل ثم أرسل الطلب. سيراه السائقون على هذا الخط.';
+
+  @override
+  String get helpWhereISeeMy => 'أين أجد رحلاتي؟';
+
+  @override
+  String get helpTripsTabListsRequests =>
+      'تعرض لك صفحة الرحلات طلباتك وحالتها، من قيد الانتظار حتى الاكتمال.';
+
+  @override
+  String get helpHowDoIFollow => 'كيف أتابع السائق؟';
+
+  @override
+  String get helpOnceDriverAcceptsOpen =>
+      'بعد قبول السائق افتح صفحة الخرائط لترى المسار وآخر موقع للسائق وتنبيهات الحواجز.';
+
+  @override
+  String get helpIForgotMyPassword => 'نسيت كلمة المرور';
+
+  @override
+  String get helpLoginScreenChooseForgot =>
+      'من شاشة تسجيل الدخول اختر «نسيت كلمة المرور» وسنرسل لك رمزاً عبر البريد لإعادة تعيينها.';
+
+  @override
+  String get helpAskDarbAssistant => 'اسأل مساعد درب';
+
+  @override
+  String get helpCommonQuestions => 'أسئلة شائعة';
+
+  @override
+  String get rateAppThank => 'شكراً لك!';
+
+  @override
+  String get rateAppFeedbackHelpsUsImprove => 'ملاحظاتك تساعدنا على تحسين درب.';
+
+  @override
+  String get rateAppDone => 'تم';
+
+  @override
+  String get rateAppHowExperienceDarb => 'كيف تجد تجربتك مع درب؟';
+
+  @override
+  String get rateAppTellUsMoreOptional => 'أخبرنا المزيد (اختياري)';
+
+  @override
+  String get rateAppRatingCouldNotSent =>
+      'تعذّر إرسال تقييمك. تحقّق من الاتصال وحاول مرة أخرى.';
+
+  @override
+  String get rateAppSubmit => 'إرسال';
 
   @override
   String get featureNotBackedNotice =>
@@ -2181,6 +2810,102 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get checkpointUnknown => 'الحالة غير معروفة';
+
+  @override
+  String get checkpointStatusOpen => 'سالك';
+
+  @override
+  String get checkpointStatusCongested => 'أزمة';
+
+  @override
+  String get checkpointStatusClosed => 'مغلق';
+
+  @override
+  String get checkpointStatusUnknown => 'غير معروف';
+
+  @override
+  String get checkpointStatusNotAvailable => 'الحالة غير متوفرة';
+
+  @override
+  String checkpointEnteringStatus(String status) {
+    return 'دخول: $status';
+  }
+
+  @override
+  String checkpointLeavingStatus(String status) {
+    return 'خروج: $status';
+  }
+
+  @override
+  String get checkpointDirectionStatus => 'الحالة';
+
+  @override
+  String get checkpointDirectionEntering => 'الدخول';
+
+  @override
+  String get checkpointDirectionLeaving => 'الخروج';
+
+  @override
+  String checkpointUpdatedAt(String time) {
+    return 'التحديث: $time';
+  }
+
+  @override
+  String get checkpointUpdatedUnavailable => 'التحديث: غير متوفر';
+
+  @override
+  String checkpointLastUpdatedAt(String time) {
+    return 'آخر تحديث: $time';
+  }
+
+  @override
+  String get checkpointLastUpdatedUnavailable => 'آخر تحديث غير متوفر';
+
+  @override
+  String get checkpointTimeUnavailable => 'غير متوفر';
+
+  @override
+  String get checkpointCityUnspecified => 'مدينة غير محددة';
+
+  @override
+  String get checkpointCityHasCongestion => 'يوجد أزمة';
+
+  @override
+  String get checkpointsOnRoad => 'الحواجز على الطريق';
+
+  @override
+  String checkpointsCityCount(int checkpoints, int cities) {
+    return '$checkpoints حاجز · $cities مدينة';
+  }
+
+  @override
+  String get checkpointsCitiesLabel => 'المدن';
+
+  @override
+  String get checkpointsCongestedLabel => 'حواجز عليها ازدحام';
+
+  @override
+  String get checkpointsViewDetails => 'عرض تفاصيل الحواجز وحالتها';
+
+  @override
+  String checkpointsDataUpdated(String time) {
+    return 'آخر تحديث للبيانات: $time';
+  }
+
+  @override
+  String get checkpointsRefreshData => 'تحديث بيانات الحواجز';
+
+  @override
+  String get checkpointsByCity => 'الحواجز حسب المدينة';
+
+  @override
+  String get checkpointsRefreshing => 'جاري تحديث الحواجز...';
+
+  @override
+  String get checkpointsNoData => 'لا توجد بيانات حواجز متاحة حالياً.';
+
+  @override
+  String get checkpointsPickCity => 'اختر المدينة لعرض حواجزها';
 
   @override
   String checkpointLabel(String name, String status) {
@@ -3173,6 +3898,146 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get mapRouteLabel => 'المسار';
+
+  @override
+  String get mapDriverLocationFailed => 'تعذر تحديث موقع السائق حاليًا.';
+
+  @override
+  String get mapWaitingDriverLocation => 'بانتظار آخر موقع مسجل للسائق.';
+
+  @override
+  String mapTimeRemaining(String duration) {
+    return 'الوقت المتبقي: $duration';
+  }
+
+  @override
+  String get mapRouteFollowsDriver => 'المسار يتحدث حسب موقع السائق الحالي';
+
+  @override
+  String get mapRouteIsPlanned => 'المسار المعروض هو المسار المحدد للرحلة';
+
+  @override
+  String get mapYourTripRoute => 'مسار رحلتك';
+
+  @override
+  String get mapPickupPoint => 'نقطة الالتقاء';
+
+  @override
+  String get mapZoomIn => 'تكبير الخريطة';
+
+  @override
+  String get mapZoomOut => 'تصغير الخريطة';
+
+  @override
+  String get mapShowRoute => 'إظهار المسار';
+
+  @override
+  String get mapMarkerDetails => 'التفاصيل';
+
+  @override
+  String get mapMyLocation => 'موقعي';
+
+  @override
+  String get mapYouAreHere => 'أنت هنا';
+
+  @override
+  String get mapLocationOutsideArea => 'موقعك خارج منطقة خدمة درب.';
+
+  @override
+  String get driverArrivalTitle => 'السائق في الطريق إليك';
+
+  @override
+  String get driverArrivalSubtitle =>
+      'المسافة والوقت المتبقي للوصول إلى نقطة الالتقاء';
+
+  @override
+  String get driverArrivalDistance => 'المسافة المتبقية';
+
+  @override
+  String get driverArrivalEta => 'وقت الوصول التقريبي';
+
+  @override
+  String get driverArrivalDisclaimer =>
+      'الوقت تقديري وقد يتغير حسب حركة الطريق.';
+
+  @override
+  String distanceKmValue(String km) {
+    return '$km كم';
+  }
+
+  @override
+  String distanceMetersValue(int meters) {
+    return '$meters م';
+  }
+
+  @override
+  String durationMinutesValue(int minutes) {
+    return '$minutes د';
+  }
+
+  @override
+  String durationHoursValue(int hours) {
+    return '$hours س';
+  }
+
+  @override
+  String durationHoursMinutesValue(int hours, int minutes) {
+    return '$hours س $minutes د';
+  }
+
+  @override
+  String get tripInProgress => 'الرحلة جارية';
+
+  @override
+  String get tripLiveTracking => 'تتبع مباشر';
+
+  @override
+  String get tripWaitingForLocation => 'بانتظار الموقع';
+
+  @override
+  String get tripStartLabel => 'البداية';
+
+  @override
+  String get tripArrivalLabel => 'الوصول';
+
+  @override
+  String get tripLocationLabel => 'الموقع';
+
+  @override
+  String get tripLive => 'مباشر';
+
+  @override
+  String get tripEstimatedArrival => 'الوصول المتوقع';
+
+  @override
+  String get tripDistance => 'المسافة';
+
+  @override
+  String get tripRemainingTime => 'الوقت المتبقي';
+
+  @override
+  String get tripCalculatingRoute => 'جاري حساب المسار...';
+
+  @override
+  String get tripVehicleLocation => 'موقع المركبة';
+
+  @override
+  String get tripRefreshLocation => 'تحديث الموقع';
+
+  @override
+  String get driverFailDeliveryAction => 'تسجيل فشل التوصيل';
+
+  @override
+  String get driverFailDeliveryTitle => 'فشل التوصيل';
+
+  @override
+  String get driverFailDeliveryMessage => 'هل تريد تسجيل الرحلة كتوصيل فاشل؟';
+
+  @override
+  String get driverCancelTripTitle => 'إلغاء الرحلة';
+
+  @override
+  String get driverCancelTripMessage => 'هل أنت متأكد من إلغاء الرحلة الحالية؟';
 
   @override
   String get merchantOrderMapTitle => 'مسار الطلب';

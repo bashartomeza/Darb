@@ -39,6 +39,54 @@ enum DarbMapMarkerType {
   report,
 }
 
+/// What a line in a marker's callout describes. The callout picks the line's
+/// icon from this, never from the wording, so every language works the same.
+enum DarbMapDetailKind { info, entering, leaving }
+
+/// One line under a marker callout's title.
+@immutable
+class DarbMapDetail {
+  const DarbMapDetail(
+    this.text, {
+    this.kind = DarbMapDetailKind.info,
+    this.status,
+  });
+
+  final String text;
+  final DarbMapDetailKind kind;
+
+  /// The traffic state the line reports, which colours it. When null the
+  /// line's own text is read as a state.
+  final CheckpointStatus? status;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DarbMapDetail &&
+      other.text == text &&
+      other.kind == kind &&
+      other.status == status;
+
+  @override
+  int get hashCode => Object.hash(text, kind, status);
+}
+
+/// Asks the map to centre on [point]. A new [request] number repeats the move
+/// for the same point (e.g. tapping "my location" twice).
+@immutable
+class DarbMapFocus {
+  const DarbMapFocus(this.point, this.request);
+
+  final GeoPoint point;
+  final int request;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DarbMapFocus && other.point == point && other.request == request;
+
+  @override
+  int get hashCode => Object.hash(point, request);
+}
+
 /// A pin the map can draw.
 @immutable
 class DarbMapMarker {
@@ -54,6 +102,7 @@ class DarbMapMarker {
     this.ringColor,
     this.badgeIcon,
     this.dimmed = false,
+    this.details,
   });
 
   final GeoPoint position;
@@ -84,6 +133,10 @@ class DarbMapMarker {
   /// Drawn faded, e.g. a disputed community report.
   final bool dimmed;
 
+  /// Lines shown under the title when the marker is tapped. When null, the
+  /// lines of [label] after the first are shown.
+  final List<DarbMapDetail>? details;
+
   bool get fitsCamera =>
       fit ??
       (type != DarbMapMarkerType.checkpoint &&
@@ -102,7 +155,8 @@ class DarbMapMarker {
       other.fit == fit &&
       other.ringColor == ringColor &&
       other.badgeIcon == badgeIcon &&
-      other.dimmed == dimmed;
+      other.dimmed == dimmed &&
+      listEquals(other.details, details);
 
   @override
   int get hashCode => Object.hash(
@@ -117,6 +171,7 @@ class DarbMapMarker {
     ringColor,
     badgeIcon,
     dimmed,
+    details == null ? null : Object.hashAll(details!),
   );
 }
 
@@ -263,6 +318,7 @@ class DarbMap extends StatefulWidget {
     this.controlsTop,
     this.tileProvider,
     this.tileCache,
+    this.focus,
     super.key,
   });
 
@@ -311,6 +367,10 @@ class DarbMap extends StatefulWidget {
   /// The cache whose "showing saved map" state the indicator follows.
   /// Defaults to [MapTileCache.shared].
   final MapTileCache? tileCache;
+
+  /// When this changes the camera centres on its point (if it is inside the
+  /// service area) and stops following content updates until reset.
+  final DarbMapFocus? focus;
 
   @override
   State<DarbMap> createState() => _DarbMapState();
@@ -367,6 +427,9 @@ class _DarbMapState extends State<DarbMap> {
     }
 
     _fitIfContentMoved();
+
+    final focus = widget.focus;
+    if (focus != null && focus != oldWidget.focus) _focusOn(focus.point);
 
     // Clear an old marker callout if the selected marker no longer exists.
     if (_selectedLabel != null &&
@@ -496,6 +559,13 @@ class _DarbMapState extends State<DarbMap> {
     if (!_mapReady || _userMovedCamera) return;
     _fittedSignature = signature;
     _moveCamera(fit);
+  }
+
+  void _focusOn(GeoPoint point) {
+    final target = LatLng(point.latitude, point.longitude);
+    if (!_mapReady || !DarbServiceArea.containsLatLng(target)) return;
+    _userMovedCamera = true;
+    _controller.move(target, DarbServiceArea.singlePointZoom);
   }
 
   void _resetCamera() {
@@ -1001,9 +1071,6 @@ class _TileFailedCard extends StatelessWidget {
 // MAP CONTROLS
 // ============================================================================
 
-bool _ar(BuildContext context) =>
-    Localizations.localeOf(context).languageCode == 'ar';
-
 class _MapControls extends StatelessWidget {
   const _MapControls({
     required this.enabled,
@@ -1028,19 +1095,19 @@ class _MapControls extends StatelessWidget {
         children: [
           _MapControlButton(
             icon: Icons.add_rounded,
-            tooltip: _ar(context) ? 'تكبير الخريطة' : 'Zoom in',
+            tooltip: AppLocalizations.of(context).mapZoomIn,
             onPressed: enabled ? onZoomIn : null,
           ),
           const Divider(height: 1, thickness: 1),
           _MapControlButton(
             icon: Icons.remove_rounded,
-            tooltip: _ar(context) ? 'تصغير الخريطة' : 'Zoom out',
+            tooltip: AppLocalizations.of(context).mapZoomOut,
             onPressed: enabled ? onZoomOut : null,
           ),
           const Divider(height: 1, thickness: 1),
           _MapControlButton(
             icon: Icons.center_focus_strong_rounded,
-            tooltip: _ar(context) ? 'إظهار المسار' : 'Show route',
+            tooltip: AppLocalizations.of(context).mapShowRoute,
             onPressed: enabled ? onReset : null,
           ),
         ],
@@ -1172,8 +1239,12 @@ class _Callout extends StatelessWidget {
         .map((line) => line.trim())
         .where((line) => line.isNotEmpty)
         .toList();
-    final title = lines.isNotEmpty ? lines.first : 'تفاصيل الحاجز';
-    final details = lines.length > 1 ? lines.skip(1).toList() : <String>[];
+    final title = lines.isNotEmpty
+        ? lines.first
+        : AppLocalizations.of(context).mapMarkerDetails;
+    final details =
+        marker?.details ??
+        [for (final line in lines.skip(1)) DarbMapDetail(line)];
 
     return Material(
       color: Colors.white,
@@ -1233,7 +1304,7 @@ class _Callout extends StatelessWidget {
               for (final detail in details)
                 Padding(
                   padding: const EdgeInsets.only(top: 5),
-                  child: _CalloutDetail(text: detail),
+                  child: _CalloutDetail(detail: detail),
                 ),
             ],
           ],
@@ -1244,18 +1315,14 @@ class _Callout extends StatelessWidget {
 }
 
 class _CalloutDetail extends StatelessWidget {
-  const _CalloutDetail({required this.text});
+  const _CalloutDetail({required this.detail});
 
-  final String text;
+  final DarbMapDetail detail;
 
   @override
   Widget build(BuildContext context) {
-    final isEntering = text.startsWith('دخول:');
-    final isLeaving = text.startsWith('خروج:');
-    final status = text.split(':').length > 1
-        ? text.substring(text.indexOf(':') + 1).trim()
-        : text;
-    final color = switch (parseCheckpointStatus(status)) {
+    final text = detail.text;
+    final color = switch (detail.status ?? parseCheckpointStatus(text)) {
       CheckpointStatus.open => const Color(0xFF16A34A),
       CheckpointStatus.congested => const Color(0xFFF59E0B),
       CheckpointStatus.closed => const Color(0xFFDC2626),
@@ -1271,11 +1338,11 @@ class _CalloutDetail extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            isEntering
-                ? Icons.login_rounded
-                : isLeaving
-                ? Icons.logout_rounded
-                : Icons.info_outline_rounded,
+            switch (detail.kind) {
+              DarbMapDetailKind.entering => Icons.login_rounded,
+              DarbMapDetailKind.leaving => Icons.logout_rounded,
+              DarbMapDetailKind.info => Icons.info_outline_rounded,
+            },
             size: 16,
             color: color,
           ),
