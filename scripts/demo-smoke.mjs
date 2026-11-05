@@ -101,7 +101,7 @@ async function primaryStory() {
   ]);
   assert(
     JSON.stringify(dashboard.counts) ===
-      JSON.stringify({ users: 5, drivers: 2, routes: 2, passenger_requests: 1, merchant_orders: 1, parcels: 5, active_drivers: 1, pending_driver_approvals: 0, open_incidents: 0 }),
+      JSON.stringify({ users: 5, drivers: 2, routes: 2, passenger_requests: 1, merchant_orders: 1, passenger_parcels: 0, parcels: 5, active_drivers: 1, pending_driver_approvals: 0, open_incidents: 0 }),
     `unexpected reset counts: ${JSON.stringify(dashboard.counts)}`
   );
 

@@ -20,7 +20,7 @@ const prismaMock = vi.hoisted(() => ({
     upsert: vi.fn(),
     deleteMany: vi.fn()
   },
-  communityReportFlag: { upsert: vi.fn(), count: vi.fn() }
+  communityReportFlag: { upsert: vi.fn(), count: vi.fn(), groupBy: vi.fn() }
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -81,6 +81,7 @@ describe("community reports API", () => {
     prismaMock.communityReport.count.mockResolvedValue(0);
     prismaMock.communityReportVote.groupBy.mockResolvedValue([]);
     prismaMock.communityReportVote.findMany.mockResolvedValue([]);
+    prismaMock.communityReportFlag.groupBy.mockResolvedValue([]);
   });
 
   const body = {
@@ -211,5 +212,27 @@ describe("community reports API", () => {
     prismaMock.communityReport.update.mockResolvedValue(row({ hidden_at: new Date() }));
     await request(createApp()).patch("/api/v1/admin/community-reports/rep_1").set(auth("admin_1")).send({ action: "hide" }).expect(200);
     await request(createApp()).patch("/api/v1/admin/community-reports/rep_1").set(auth("admin_1")).send({ action: "delete" }).expect(400);
+  });
+
+  it("filters the admin list by category and visibility and reports flag counts", async () => {
+    prismaMock.communityReport.findMany.mockResolvedValue([row({ id: "rep_1", hidden_at: new Date("2026-11-02T10:00:00Z") })]);
+    prismaMock.communityReport.count.mockResolvedValue(1);
+    prismaMock.communityReportFlag.groupBy.mockResolvedValue([{ report_id: "rep_1", _count: { _all: 4 } }]);
+
+    const list = await request(createApp())
+      .get("/api/v1/admin/community-reports?pending=false&category=road_closure&hidden=true&page=2&limit=10")
+      .set(auth("admin_1"))
+      .expect(200);
+
+    const query = prismaMock.communityReport.findMany.mock.calls[0][0];
+    expect(query.where).toEqual({ category: "road_closure", hidden_at: { not: null } });
+    expect(query.skip).toBe(10);
+    expect(query.take).toBe(10);
+    expect(list.body.reports[0]).toMatchObject({ id: "rep_1", flag_count: 4, admin_reviewed_at: null });
+    expect(list.body).toMatchObject({ page: 2, limit: 10, total: 1 });
+
+    await request(createApp()).get("/api/v1/admin/community-reports?hidden=false").set(auth("admin_1")).expect(200);
+    expect(prismaMock.communityReport.findMany.mock.calls[1][0].where).toEqual({ needs_admin_review: true, admin_reviewed_at: null, hidden_at: null });
+    await request(createApp()).get("/api/v1/admin/community-reports?category=unknown").set(auth("admin_1")).expect(400);
   });
 });
