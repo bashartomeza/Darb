@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
+  $queryRaw: vi.fn(async () => []),
   match: { findMany: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn() },
   passengerRequest: { findMany: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn() },
   merchantOrder: { findMany: vi.fn(), updateMany: vi.fn() },
-  parcelBatch: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+  parcelBatch: { findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(async () => null), update: vi.fn() },
   parcelBatchOrder: { findMany: vi.fn(), findFirst: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   parcel: { count: vi.fn(), updateMany: vi.fn() },
   driverRoute: { update: vi.fn() },

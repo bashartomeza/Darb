@@ -314,6 +314,22 @@ describe("manual role APIs", () => {
     }) });
   });
 
+  it("an offer another write already withdrew is not released twice", async () => {
+    prismaMock.merchantOrder.findFirst.mockResolvedValue({ id: "order_1", status: "matched" });
+    prismaMock.parcelBatchOrder.findFirst.mockResolvedValue({ parcel_batch: { id: "batch_1", merchant_order_id: "order_1" } });
+    prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }, { merchant_order_id: "order_2" }]);
+    prismaMock.match.findMany.mockResolvedValue([{ id: "match_1", driver_route_id: "route_1", legacy_capacity_held: true }]);
+    prismaMock.match.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.parcel.count.mockResolvedValue(3);
+
+    await request(createApp()).patch("/api/v1/merchant/orders/order_1/cancel").set(auth("merchant_1")).expect(200);
+
+    // The batch row is locked first, and the lost offer claim releases nothing.
+    expect(prismaMock.$queryRaw).toHaveBeenCalled();
+    expect(prismaMock.driverRoute.update).not.toHaveBeenCalled();
+    expect(prismaMock.notification.create).not.toHaveBeenCalled();
+  });
+
   it("cancelling the last order of a batch cancels the batch", async () => {
     prismaMock.merchantOrder.findFirst.mockResolvedValue({ id: "order_1", status: "batched" });
     prismaMock.parcelBatchOrder.findFirst.mockResolvedValue({ parcel_batch: { id: "batch_1", merchant_order_id: "order_1" } });

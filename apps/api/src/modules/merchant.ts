@@ -402,7 +402,9 @@ merchantRouter.patch("/merchant/orders/:id/cancel", async (req: AuthenticatedReq
       batch_orders_remaining: result.closed.remainingOrderIds
     });
   } catch (error) {
-    next(error);
+    // A deadlock with a concurrent match or acceptance rolled everything back: retry is safe.
+    next(error && typeof error === "object" && "code" in error && error.code === "P2034"
+      ? new HttpError(409, "transaction_retry_required") : error);
   }
 });
 

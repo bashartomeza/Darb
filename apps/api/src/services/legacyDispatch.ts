@@ -271,7 +271,9 @@ export async function expireLegacyDispatches(
           : { policy: "max_age", max_age_hours: maxAgeHours },
       });
       return true;
-    });
+      // Read committed, like merchant cancellation: reads after the claim and
+      // the batch lock see what concurrent closes committed.
+    }, { isolationLevel: "ReadCommitted" });
     if (expired) ordersExpired += 1;
   }
 
