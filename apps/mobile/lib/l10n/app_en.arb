@@ -20,6 +20,8 @@
   "sessionRestoreFailed": "We could not restore your session. Please retry.",
   "retry": "Retry",
   "whereToGo": "Where do you want to go?",
+  "newRideLabel": "New ride",
+  "newRideBody": "Choose your pickup and destination to find a suitable ride.",
   "selectPickupLocation": "Select pickup location",
   "selectDestination": "Select destination",
   "selectPickupLocationTitle": "Select pickup location",

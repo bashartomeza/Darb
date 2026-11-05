@@ -218,6 +218,18 @@ abstract class AppLocalizations {
   /// **'إلى أين تريد الذهاب؟'**
   String get whereToGo;
 
+  /// No description provided for @newRideLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'رحلة جديدة'**
+  String get newRideLabel;
+
+  /// No description provided for @newRideBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدد نقطة الانطلاق والوجهة، لنساعدك في إيجاد الرحلة المناسبة.'**
+  String get newRideBody;
+
   /// No description provided for @selectPickupLocation.
   ///
   /// In ar, this message translates to:

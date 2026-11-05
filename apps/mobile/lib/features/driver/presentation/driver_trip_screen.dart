@@ -17,6 +17,7 @@ import 'package:darb_mobile/features/trips/data/trip_models.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/location/locate_device.dart';
 import '../../../core/maps/darb_route_map.dart';
 import '../../../core/maps/osrm_route_service.dart';
 import '../../../core/presentation/localized_labels.dart';
@@ -80,6 +81,20 @@ class DriverTripScreen extends ConsumerStatefulWidget {
 
 class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
   String? _error;
+
+  /// The device's own position once "my location" was tapped, and the camera
+  /// request that centres the map on it.
+  GeoPoint? _devicePosition;
+  DarbMapFocus? _focus;
+
+  Future<void> _centreOnDevice() async {
+    final point = await locateDeviceForMap(context, ref);
+    if (point == null || !mounted) return;
+    setState(() {
+      _devicePosition = point;
+      _focus = DarbMapFocus(point, (_focus?.request ?? 0) + 1);
+    });
+  }
 
   // ============================================================
   // LIFECYCLE
@@ -148,6 +163,8 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
             snapshot: checkpointSnapshot,
             checkpointsLoading: checkpoints.isLoading,
             checkpointsError: checkpoints.hasError,
+            devicePosition: _devicePosition,
+            focus: _focus,
           ),
         ),
 
@@ -180,10 +197,10 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
               const SizedBox(width: 8),
 
               _buildFloatingButton(
+                key: const ValueKey('tripMyLocation'),
                 icon: Icons.my_location_rounded,
-                onPressed: () {
-                  setState(() {});
-                },
+                tooltip: l10n.mapMyLocation,
+                onPressed: _centreOnDevice,
               ),
 
               const SizedBox(width: 8),
@@ -250,10 +267,13 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
   // ============================================================
 
   Widget _buildFloatingButton({
+    Key? key,
     required IconData icon,
     required VoidCallback onPressed,
+    String? tooltip,
   }) {
-    return Material(
+    final button = Material(
+      key: key,
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
@@ -276,6 +296,7 @@ class _DriverTripScreenState extends ConsumerState<DriverTripScreen> {
         ),
       ),
     );
+    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
   }
 
   // ============================================================
@@ -1506,6 +1527,8 @@ class _DriverMapSection extends ConsumerStatefulWidget {
     required this.snapshot,
     required this.checkpointsLoading,
     required this.checkpointsError,
+    this.devicePosition,
+    this.focus,
   });
 
   final AppLocalizations l10n;
@@ -1514,6 +1537,10 @@ class _DriverMapSection extends ConsumerStatefulWidget {
   final CheckpointSnapshot snapshot;
   final bool checkpointsLoading;
   final bool checkpointsError;
+
+  /// This phone's position after "my location", and the camera request.
+  final GeoPoint? devicePosition;
+  final DarbMapFocus? focus;
 
   @override
   ConsumerState<_DriverMapSection> createState() => _DriverMapSectionState();
@@ -1622,6 +1649,20 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
           label: widget.l10n.mapYourLocation,
           size: 50,
         ),
+
+      // --------------------------------------------------------
+      // THIS DEVICE (after "my location")
+      // ----------------------------------------------------------
+      if (widget.devicePosition case final device?)
+        DarbMapMarker(
+          position: device,
+          icon: Icons.person_pin_circle_rounded,
+          color: SemanticColors.upcomingRoute,
+          label: widget.l10n.mapYouAreHere,
+          size: 34,
+          type: DarbMapMarkerType.location,
+          fit: false,
+        ),
     ];
 
     final remainingResult =
@@ -1654,6 +1695,7 @@ class _DriverMapSectionState extends ConsumerState<_DriverMapSection> {
                   attributionLabel: widget.l10n.mapAttribution,
                   // Keep the zoom buttons clear of this screen's top buttons.
                   controlsTop: 100,
+                  focus: widget.focus,
                   paths: roadRoutePaths(road, color: orange, width: 7),
                   markers: markers,
                   notes: [

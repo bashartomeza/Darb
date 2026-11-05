@@ -7,6 +7,7 @@ import 'package:darb_mobile/features/canonical_routes/domain/canonical_route_mod
 import 'package:darb_mobile/features/checkpoints/domain/checkpoint_models.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
+import '../../../core/location/locate_device.dart';
 import '../../../core/maps/darb_route_map.dart';
 import '../../../core/maps/map_overlays.dart';
 import '../../../core/maps/osrm_route_service.dart';
@@ -32,6 +33,20 @@ class PassengerTripScreen extends ConsumerStatefulWidget {
 }
 
 class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
+  /// The device's own position once "my location" was tapped, and the camera
+  /// request that centres the map on it.
+  GeoPoint? _devicePosition;
+  DarbMapFocus? _focus;
+
+  Future<void> _centreOnDevice() async {
+    final point = await locateDeviceForMap(context, ref);
+    if (point == null || !mounted) return;
+    setState(() {
+      _devicePosition = point;
+      _focus = DarbMapFocus(point, (_focus?.request ?? 0) + 1);
+    });
+  }
+
   // ============================================================
   // DARB DESIGN SYSTEM
   // ============================================================
@@ -192,10 +207,10 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
               _buildLanguageButton(),
               const SizedBox(width: 8),
               _buildFloatingButton(
+                key: const ValueKey('tripMyLocation'),
                 icon: Icons.my_location_rounded,
-                onPressed: () {
-                  setState(() {});
-                },
+                tooltip: l10n.mapMyLocation,
+                onPressed: _centreOnDevice,
               ),
               const SizedBox(width: 8),
               _buildFloatingButton(
@@ -241,10 +256,13 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
   // ============================================================
 
   Widget _buildFloatingButton({
+    Key? key,
     required IconData icon,
     required VoidCallback onPressed,
+    String? tooltip,
   }) {
-    return Material(
+    final button = Material(
+      key: key,
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
@@ -267,6 +285,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
         ),
       ),
     );
+    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
   }
 
   // ============================================================
@@ -999,6 +1018,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
         return DarbMap(
           emptyLabel: l10n.noLocationYet,
           attributionLabel: l10n.mapAttribution,
+          focus: _focus,
 
           banner: data.locationIsStale
               ? OfflineBanner(message: l10n.locationIsStale)
@@ -1058,6 +1078,20 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                 label: localizedLocationSource(l10n, data.location!.source),
                 size: 50,
                 type: DarbMapMarkerType.driver,
+              ),
+
+            // ==========================================================
+            // THIS DEVICE (after "my location")
+            // ==========================================================
+            if (_devicePosition case final device?)
+              DarbMapMarker(
+                position: device,
+                icon: Icons.person_pin_circle_rounded,
+                color: _blue,
+                label: l10n.mapYouAreHere,
+                size: 34,
+                type: DarbMapMarkerType.location,
+                fit: false,
               ),
           ],
         );

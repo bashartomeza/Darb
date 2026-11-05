@@ -32,9 +32,7 @@ class DestinationSearchCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            Localizations.localeOf(context).languageCode == 'ar'
-                ? 'رحلة جديدة'
-                : 'NEW RIDE',
+            l10n.newRideLabel.toUpperCase(),
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppTheme.tertiary,
@@ -51,9 +49,7 @@ class DestinationSearchCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            Localizations.localeOf(context).languageCode == 'ar'
-                ? 'حدد نقطة الانطلاق والوجهة، لنساعدك في إيجاد الرحلة المناسبة.'
-                : 'Choose your pickup and destination to find a suitable ride.',
+            l10n.newRideBody,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall,
           ),

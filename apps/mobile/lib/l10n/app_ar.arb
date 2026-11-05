@@ -20,6 +20,8 @@
   "sessionRestoreFailed": "تعذرت استعادة الجلسة. يرجى إعادة المحاولة.",
   "retry": "إعادة المحاولة",
   "whereToGo": "إلى أين تريد الذهاب؟",
+  "newRideLabel": "رحلة جديدة",
+  "newRideBody": "حدد نقطة الانطلاق والوجهة، لنساعدك في إيجاد الرحلة المناسبة.",
   "selectPickupLocation": "اختاري موقع الانطلاق",
   "selectDestination": "اختاري الوجهة",
   "selectPickupLocationTitle": "اختيار موقع الانطلاق",

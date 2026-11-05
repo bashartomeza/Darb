@@ -7,6 +7,7 @@ import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/passenger_theme.dart';
 import '../../../core/widgets/state_views.dart';
+import '../../../core/widgets/foreground_refresh.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../notifications/application/notifications_controller.dart';
 import '../../security/presentation/session_status_banner.dart';
@@ -40,61 +41,65 @@ class PassengerHomeScreen extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).value?.user;
     final today = now ?? DateTime.now();
 
-    return ColoredBox(
-      key: const ValueKey('passengerHome'),
-      color: PassengerStyle.surface,
-      child: Stack(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-              color: PassengerStyle.orange,
-              onRefresh: () =>
-                  ref.read(passengerDashboardProvider.notifier).refresh(),
-              child: ListView(
-                padding: EdgeInsets.zero,
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: SessionStatusBanner(),
-                  ),
-                  _Header(name: user?.name ?? '', now: today),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _PlanTripCard(
-                      onSearch: () => context.go(_newRequestRoute),
+    // Driver accept/start/complete reaches Home without pull-to-refresh.
+    return ForegroundRefresh(
+      refresh: () => ref.read(passengerDashboardProvider.notifier).poll(),
+      child: ColoredBox(
+        key: const ValueKey('passengerHome'),
+        color: PassengerStyle.surface,
+        child: Stack(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: RefreshIndicator(
+                color: PassengerStyle.orange,
+                onRefresh: () =>
+                    ref.read(passengerDashboardProvider.notifier).refresh(),
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: SessionStatusBanner(),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 20),
-                    child: Text(
-                      l10n.passengerUpcomingTrips,
-                      style: PassengerStyle.sectionTitle,
+                    _Header(name: user?.name ?? '', now: today),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _PlanTripCard(
+                        onSearch: () => context.go(_newRequestRoute),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _UpcomingTrips(dashboard: dashboard),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: _ParcelEntryCard(),
-                  ),
-                  // Keeps the last card clear of the assistant button.
-                  const SizedBox(height: 25 + 63 + 16),
-                ],
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 20),
+                      child: Text(
+                        l10n.passengerUpcomingTrips,
+                        style: PassengerStyle.sectionTitle,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _UpcomingTrips(dashboard: dashboard),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: _ParcelEntryCard(),
+                    ),
+                    // Keeps the last card clear of the assistant button.
+                    const SizedBox(height: 25 + 63 + 16),
+                  ],
+                ),
               ),
             ),
-          ),
-          const PositionedDirectional(
-            end: 17,
-            bottom: 25,
-            child: _AssistantButton(),
-          ),
-        ],
+            const PositionedDirectional(
+              end: 17,
+              bottom: 25,
+              child: _AssistantButton(),
+            ),
+          ],
+        ),
       ),
     );
   }

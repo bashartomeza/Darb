@@ -8,6 +8,7 @@ import 'package:darb_mobile/core/widgets/status_chip.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/widgets/foreground_refresh.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/language_switch.dart';
 import '../../canonical_routes/application/canonical_route_controller.dart';
@@ -44,170 +45,175 @@ class _PassengerTripsScreenState extends ConsumerState<PassengerTripsScreen> {
 
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: scheme.surface,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            const _GlassBackground(),
+    // Driver accept/start/complete reaches the list without pull-to-refresh.
+    return ForegroundRefresh(
+      refresh: () => ref.read(passengerHistoryProvider.notifier).poll(),
+      child: Scaffold(
+        backgroundColor: scheme.surface,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              const _GlassBackground(),
 
-            RefreshIndicator(
-              color: scheme.primary,
-              backgroundColor: scheme.surface.withValues(alpha: 0.92),
-              onRefresh: () =>
-                  ref.read(passengerHistoryProvider.notifier).refresh(),
-              child: history.when(
-                loading: () => ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: _pagePadding,
-                  children: const [
-                    _HeaderSkeleton(),
-                    SizedBox(height: AppTokens.spaceMedium),
-                    _StatsSkeleton(),
-                    SizedBox(height: AppTokens.spaceMedium),
-                    _TripSkeleton(),
-                  ],
-                ),
+              RefreshIndicator(
+                color: scheme.primary,
+                backgroundColor: scheme.surface.withValues(alpha: 0.92),
+                onRefresh: () =>
+                    ref.read(passengerHistoryProvider.notifier).refresh(),
+                child: history.when(
+                  loading: () => ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: _pagePadding,
+                    children: const [
+                      _HeaderSkeleton(),
+                      SizedBox(height: AppTokens.spaceMedium),
+                      _StatsSkeleton(),
+                      SizedBox(height: AppTokens.spaceMedium),
+                      _TripSkeleton(),
+                    ],
+                  ),
 
-                error: (error, _) => ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: _pagePadding,
-                  children: [
-                    _TopHeader(
-                      onLanguageTap: () => _showLanguagePicker(context),
-                    ),
-                    const SizedBox(height: AppTokens.spaceLarge),
-                    _GlassCard(
-                      padding: const EdgeInsets.all(AppTokens.spaceMedium),
-                      child: ErrorStateView(
-                        title: l10n.tripHistoryFailed,
-                        retryLabel: l10n.retry,
-                        onRetry: () => ref
-                            .read(passengerHistoryProvider.notifier)
-                            .refresh(),
-                      ),
-                    ),
-                  ],
-                ),
-
-                data: (state) {
-                  final filteredRequests = _filteredRequests(state);
-
-                  return ListView(
-                    key: const ValueKey('passengerTripsList'),
+                  error: (error, _) => ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: _pagePadding,
                     children: [
-                      // ------------------------------------------------------
-                      // HEADER
-                      // ------------------------------------------------------
                       _TopHeader(
                         onLanguageTap: () => _showLanguagePicker(context),
                       ),
-
-                      const SizedBox(height: AppTokens.spaceMedium),
-
-                      // ------------------------------------------------------
-                      // STATS
-                      // ------------------------------------------------------
-                      _TripStats(
-                        total:
-                            state.active.length +
-                            state.upcoming.length +
-                            state.past.length +
-                            state.cancelled.length,
-                        active: state.active.length,
-                        upcoming: state.upcoming.length,
-                        past: state.past.length,
-                        cancelled: state.cancelled.length,
-                      ),
-
-                      const SizedBox(height: AppTokens.spaceMedium),
-
-                      // ------------------------------------------------------
-                      // FILTERS
-                      // ------------------------------------------------------
-                      _FilterBar(
-                        selectedFilter: _selectedFilter,
-                        onChanged: (filter) {
-                          setState(() {
-                            _selectedFilter = filter;
-                          });
-                        },
-                        activeCount: state.active.length,
-                        upcomingCount: state.upcoming.length,
-                        pastCount: state.past.length,
-                        cancelledCount: state.cancelled.length,
-                      ),
-
                       const SizedBox(height: AppTokens.spaceLarge),
+                      _GlassCard(
+                        padding: const EdgeInsets.all(AppTokens.spaceMedium),
+                        child: ErrorStateView(
+                          title: l10n.tripHistoryFailed,
+                          retryLabel: l10n.retry,
+                          onRetry: () => ref
+                              .read(passengerHistoryProvider.notifier)
+                              .refresh(),
+                        ),
+                      ),
+                    ],
+                  ),
 
-                      // ------------------------------------------------------
-                      // EMPTY
-                      // ------------------------------------------------------
-                      if (state.isEmpty)
-                        _ModernEmptyState(
-                          title: l10n.noTripsYet,
-                          message: l10n.noTripsYetBody,
-                          actionLabel: l10n.createRequest,
-                          onAction: () => context.go('/passenger/request/new'),
-                        )
-                      // ------------------------------------------------------
-                      // FILTER EMPTY
-                      // ------------------------------------------------------
-                      else if (filteredRequests.isEmpty)
-                        _FilterEmptyState(
-                          onReset: () {
+                  data: (state) {
+                    final filteredRequests = _filteredRequests(state);
+
+                    return ListView(
+                      key: const ValueKey('passengerTripsList'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: _pagePadding,
+                      children: [
+                        // ------------------------------------------------------
+                        // HEADER
+                        // ------------------------------------------------------
+                        _TopHeader(
+                          onLanguageTap: () => _showLanguagePicker(context),
+                        ),
+
+                        const SizedBox(height: AppTokens.spaceMedium),
+
+                        // ------------------------------------------------------
+                        // STATS
+                        // ------------------------------------------------------
+                        _TripStats(
+                          total:
+                              state.active.length +
+                              state.upcoming.length +
+                              state.past.length +
+                              state.cancelled.length,
+                          active: state.active.length,
+                          upcoming: state.upcoming.length,
+                          past: state.past.length,
+                          cancelled: state.cancelled.length,
+                        ),
+
+                        const SizedBox(height: AppTokens.spaceMedium),
+
+                        // ------------------------------------------------------
+                        // FILTERS
+                        // ------------------------------------------------------
+                        _FilterBar(
+                          selectedFilter: _selectedFilter,
+                          onChanged: (filter) {
                             setState(() {
-                              _selectedFilter = _TripFilter.all;
+                              _selectedFilter = filter;
                             });
                           },
-                        )
-                      // ------------------------------------------------------
-                      // TRIPS
-                      // ------------------------------------------------------
-                      else ...[
-                        _TripsTitle(
-                          filter: _selectedFilter,
-                          count: filteredRequests.length,
+                          activeCount: state.active.length,
+                          upcomingCount: state.upcoming.length,
+                          pastCount: state.past.length,
+                          cancelledCount: state.cancelled.length,
                         ),
 
-                        const SizedBox(height: AppTokens.spaceSmall),
+                        const SizedBox(height: AppTokens.spaceLarge),
 
-                        for (final (index, item)
-                            in filteredRequests.indexed) ...[
-                          if (index > 0)
-                            const SizedBox(height: AppTokens.spaceSmall),
+                        // ------------------------------------------------------
+                        // EMPTY
+                        // ------------------------------------------------------
+                        if (state.isEmpty)
+                          _ModernEmptyState(
+                            title: l10n.noTripsYet,
+                            message: l10n.noTripsYetBody,
+                            actionLabel: l10n.createRequest,
+                            onAction: () =>
+                                context.go('/passenger/request/new'),
+                          )
+                        // ------------------------------------------------------
+                        // FILTER EMPTY
+                        // ------------------------------------------------------
+                        else if (filteredRequests.isEmpty)
+                          _FilterEmptyState(
+                            onReset: () {
+                              setState(() {
+                                _selectedFilter = _TripFilter.all;
+                              });
+                            },
+                          )
+                        // ------------------------------------------------------
+                        // TRIPS
+                        // ------------------------------------------------------
+                        else ...[
+                          _TripsTitle(
+                            filter: _selectedFilter,
+                            count: filteredRequests.length,
+                          ),
 
-                          _TripCard(
-                            key: ValueKey('passengerTrip-${item.request.id}'),
-                            request: item.request,
-                            tripId: item.tripId,
-                            active: item.isActive,
+                          const SizedBox(height: AppTokens.spaceSmall),
+
+                          for (final (index, item)
+                              in filteredRequests.indexed) ...[
+                            if (index > 0)
+                              const SizedBox(height: AppTokens.spaceSmall),
+
+                            _TripCard(
+                              key: ValueKey('passengerTrip-${item.request.id}'),
+                              request: item.request,
+                              tripId: item.tripId,
+                              active: item.isActive,
+                            ),
+                          ],
+                        ],
+
+                        // ------------------------------------------------------
+                        // CANONICAL ASSIGNMENTS
+                        // ------------------------------------------------------
+                        if (canonicalStatus) ...[
+                          const SizedBox(height: AppTokens.spaceLarge),
+                          _CanonicalCard(
+                            title: l10n.canonicalAssignments,
+                            sectionTitle: l10n.canonicalRoutes,
+                            onPressed: () =>
+                                context.go('/passenger/canonical-assignments'),
                           ),
                         ],
-                      ],
 
-                      // ------------------------------------------------------
-                      // CANONICAL ASSIGNMENTS
-                      // ------------------------------------------------------
-                      if (canonicalStatus) ...[
                         const SizedBox(height: AppTokens.spaceLarge),
-                        _CanonicalCard(
-                          title: l10n.canonicalAssignments,
-                          sectionTitle: l10n.canonicalRoutes,
-                          onPressed: () =>
-                              context.go('/passenger/canonical-assignments'),
-                        ),
                       ],
-
-                      const SizedBox(height: AppTokens.spaceLarge),
-                    ],
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

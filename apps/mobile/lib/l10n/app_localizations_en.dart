@@ -73,6 +73,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get whereToGo => 'Where do you want to go?';
 
   @override
+  String get newRideLabel => 'New ride';
+
+  @override
+  String get newRideBody =>
+      'Choose your pickup and destination to find a suitable ride.';
+
+  @override
   String get selectPickupLocation => 'Select pickup location';
 
   @override

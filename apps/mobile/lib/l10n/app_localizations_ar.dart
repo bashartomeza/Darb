@@ -73,6 +73,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get whereToGo => 'إلى أين تريد الذهاب؟';
 
   @override
+  String get newRideLabel => 'رحلة جديدة';
+
+  @override
+  String get newRideBody =>
+      'حدد نقطة الانطلاق والوجهة، لنساعدك في إيجاد الرحلة المناسبة.';
+
+  @override
   String get selectPickupLocation => 'اختاري موقع الانطلاق';
 
   @override
