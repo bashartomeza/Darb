@@ -235,7 +235,7 @@ class RoleShellScaffold extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        arabic ? 'درب' : 'Darb',
+                        AppLocalizations.of(context).appTitle,
                         style: const TextStyle(
                           color: AppTheme.onSurface,
                           fontSize: 26,
@@ -255,7 +255,7 @@ class RoleShellScaffold extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               Text(
-                arabic ? 'القائمة الرئيسية' : 'MAIN MENU',
+                AppLocalizations.of(context).navMainMenu.toUpperCase(),
                 style: const TextStyle(
                   color: AppTheme.onSurfaceVariant,
                   fontSize: 12,
@@ -325,7 +325,7 @@ class RoleShellScaffold extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            arabic ? 'رحلتك بأمان' : 'Travel with confidence',
+                            AppLocalizations.of(context).navSidebarTitle,
                             style: const TextStyle(
                               color: AppTheme.onSurface,
                               fontWeight: FontWeight.w600,
@@ -334,9 +334,7 @@ class RoleShellScaffold extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            arabic
-                                ? 'تابع رحلاتك وراجع جلسات حسابك.'
-                                : 'Follow your trips and manage your account sessions.',
+                            AppLocalizations.of(context).navSidebarBody,
                             style: const TextStyle(
                               color: AppTheme.onSurfaceVariant,
                               fontSize: 11,

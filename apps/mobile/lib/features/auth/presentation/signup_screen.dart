@@ -116,7 +116,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       AuthTextField(
                         key: const ValueKey('phoneField'),
                         controller: _phoneController,
-                        hint: authText(context, 'Phone number', 'رقم الهاتف'),
+                        hint: AppLocalizations.of(context).phoneNumber,
                         icon: Icons.phone_outlined,
                         keyboardType: TextInputType.phone,
                         autofillHints: const [AutofillHints.telephoneNumber],
@@ -260,11 +260,7 @@ String? _validatePhone(BuildContext context, String? value) {
   final length = value?.trim().length ?? 0;
   return length >= 7 && length <= 32
       ? null
-      : authText(
-          context,
-          'Enter your phone number (7–32 characters).',
-          'أدخل رقم هاتفك (من 7 إلى 32 حرفاً).',
-        );
+      : AppLocalizations.of(context).authEnterPhoneNumber7;
 }
 
 String _errorMessage(AppLocalizations l10n, Object error) {

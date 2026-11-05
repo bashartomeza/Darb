@@ -8,6 +8,7 @@ import 'package:darb_mobile/features/delivery_handover/data/delivery_handover_re
 import 'package:darb_mobile/features/delivery_handover/delivery_handover_strings.dart';
 import 'package:darb_mobile/features/delivery_handover/presentation/handover_code_card.dart';
 import 'package:darb_mobile/features/delivery_handover/presentation/receiver_confirmation_dialog.dart';
+import 'package:darb_mobile/l10n/app_localizations.dart';
 
 class _FakeRepository implements DeliveryHandoverRepository {
   _FakeRepository();
@@ -42,7 +43,10 @@ Widget _host(Widget child, {Locale locale = const Locale('en')}) {
   return MaterialApp(
     locale: locale,
     supportedLocales: const [Locale('en'), Locale('ar')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      ...GlobalMaterialLocalizations.delegates,
+    ],
     home: Scaffold(body: child),
   );
 }

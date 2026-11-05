@@ -60,25 +60,8 @@ void main() {
           destinationLat: 31.705211,
           destinationLng: 35.202185,
         );
-        // Legacy known-place translation is retained for header/detail only.
-        final displayedOrigin = locale == 'ar' && origin == 'Bab Al-Zawiya'
-            ? 'باب الزاوية'
-            : origin;
-        final displayedDestination =
-            locale == 'ar' && destination == 'Bethlehem'
-            ? 'بيت لحم'
-            : locale == 'ar' && destination == 'Bab Al-Zawiya'
-            ? 'باب الزاوية'
-            : destination;
-        await _verifyScreen(
-          tester,
-          trip,
-          locale,
-          origin,
-          destination,
-          displayedOrigin: displayedOrigin,
-          displayedDestination: displayedDestination,
-        );
+        // Endpoint labels are shown exactly as stored in every language.
+        await _verifyScreen(tester, trip, locale, origin, destination);
       });
     }
     for (final labels in <(String?, String?)>[
@@ -192,6 +175,9 @@ Future<void> _verifyScreen(
   await tester.pump();
   final context = tester.element(find.byType(PassengerTripScreen));
   final l10n = AppLocalizations.of(context);
+  // A missing endpoint falls back to the localized generic word.
+  if (origin == 'Origin') origin = l10n.origin;
+  if (destination == 'Destination') destination = l10n.destination;
   expect(
     Directionality.of(context),
     locale == 'ar' ? TextDirection.rtl : TextDirection.ltr,

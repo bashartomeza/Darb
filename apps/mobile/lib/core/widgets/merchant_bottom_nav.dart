@@ -15,21 +15,20 @@ class MerchantBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final ar = Localizations.localeOf(context).languageCode == 'ar';
     final items = [
       (0, Icons.home_outlined, Icons.home_rounded, l10n.navHome),
       (
         1,
         Icons.inventory_2_outlined,
         Icons.inventory_2_rounded,
-        ar ? 'طلباتي' : 'My orders',
+        l10n.navMyOrders,
       ),
       (2, Icons.assessment_outlined, Icons.assessment_rounded, l10n.navReports),
       (
         4,
         Icons.person_outline_rounded,
         Icons.person_rounded,
-        ar ? 'الملف الشخصي' : 'Profile',
+        l10n.accountProfile,
       ),
     ];
     return DecoratedBox(

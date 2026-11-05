@@ -58,9 +58,9 @@ class UnplacedCheckpointsList extends StatelessWidget {
                 [
                   if (checkpoint.city.isNotEmpty) checkpoint.city,
                   if (checkpoint.enteringStatus != null)
-                    'دخول: ${checkpoint.enteringStatus}',
+                    l10n.checkpointEnteringStatus(checkpoint.enteringStatus!),
                   if (checkpoint.leavingStatus != null)
-                    'خروج: ${checkpoint.leavingStatus}',
+                    l10n.checkpointLeavingStatus(checkpoint.leavingStatus!),
                   if (checkpoint.enteringLastChangedText != null)
                     l10n.checkpointEnteringChanged(
                       formatProviderTime(checkpoint.enteringLastChangedText!),

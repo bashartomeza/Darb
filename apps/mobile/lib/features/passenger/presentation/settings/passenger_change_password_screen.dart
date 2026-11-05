@@ -7,9 +7,10 @@ import '../../../../core/widgets/darb_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../auth/presentation/auth_completion_screen.dart'
-    show authFailure, authText;
+    show authFailure;
 import '../../../auth/presentation/credential_actions.dart';
 import 'settings_widgets.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Current password, new password and confirmation.
 ///
@@ -45,33 +46,23 @@ class _PassengerChangePasswordScreenState
 
   String? _currentError(BuildContext context) =>
       _submitted && _current.text.isEmpty
-      ? authText(
-          context,
-          'Enter your current password.',
-          'أدخل كلمة المرور الحالية.',
-        )
+      ? AppLocalizations.of(context).changePasswordEnterCurrentPassword
       : null;
 
   String? _newError(BuildContext context) {
     if (!_submitted) return null;
     if (!validNewPassword(_new.text)) return passwordRuleHint(context);
     if (_new.text == _current.text) {
-      return authText(
+      return AppLocalizations.of(
         context,
-        'Choose a password different from the current one.',
-        'اختر كلمة مرور مختلفة عن الحالية.',
-      );
+      ).changePasswordChoosePasswordDifferentFrom;
     }
     return null;
   }
 
   String? _confirmError(BuildContext context) =>
       _submitted && _confirm.text != _new.text
-      ? authText(
-          context,
-          'Passwords do not match.',
-          'كلمتا المرور غير متطابقتين.',
-        )
+      ? AppLocalizations.of(context).changePasswordPasswordsDoNotMatch
       : null;
 
   Future<void> _submit() async {
@@ -105,19 +96,17 @@ class _PassengerChangePasswordScreenState
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          authText(dialogContext, 'Password changed', 'تم تغيير كلمة المرور'),
+          AppLocalizations.of(dialogContext).changePasswordPasswordChanged,
         ),
         content: Text(
-          authText(
+          AppLocalizations.of(
             dialogContext,
-            'For your security, please sign in again with your new password.',
-            'لأمانك، سجّل الدخول من جديد بكلمة المرور الجديدة.',
-          ),
+          ).changePasswordSecurityPleaseSignAgain,
         ),
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(authText(dialogContext, 'OK', 'حسناً')),
+            child: Text(AppLocalizations.of(dialogContext).changePasswordOk),
           ),
         ],
       ),
@@ -131,11 +120,9 @@ class _PassengerChangePasswordScreenState
   String _failure(BuildContext context) {
     final error = _error;
     if (error is ApiException && error.message == 'reauthentication_required') {
-      return authText(
+      return AppLocalizations.of(
         context,
-        'The current password is incorrect.',
-        'كلمة المرور الحالية غير صحيحة.',
-      );
+      ).changePasswordCurrentPasswordIncorrect;
     }
     return authFailure(context, error);
   }
@@ -150,12 +137,12 @@ class _PassengerChangePasswordScreenState
   @override
   Widget build(BuildContext context) {
     return SettingsPage(
-      title: authText(context, 'Change Password', 'تغيير كلمة المرور'),
+      title: AppLocalizations.of(context).settingsChangePassword,
       children: [
         DarbTextField(
           key: const ValueKey('passwordCurrent'),
           controller: _current,
-          label: authText(context, 'Current password', 'كلمة المرور الحالية'),
+          label: AppLocalizations.of(context).authCurrentPassword,
           prefixIcon: Icons.lock_outline_rounded,
           obscureText: !_showCurrent,
           textInputAction: TextInputAction.next,
@@ -171,7 +158,7 @@ class _PassengerChangePasswordScreenState
         DarbTextField(
           key: const ValueKey('passwordNew'),
           controller: _new,
-          label: authText(context, 'New password', 'كلمة المرور الجديدة'),
+          label: AppLocalizations.of(context).authNewPassword,
           prefixIcon: Icons.lock_reset_rounded,
           obscureText: !_showNew,
           textInputAction: TextInputAction.next,
@@ -188,11 +175,7 @@ class _PassengerChangePasswordScreenState
         DarbTextField(
           key: const ValueKey('passwordConfirm'),
           controller: _confirm,
-          label: authText(
-            context,
-            'Confirm new password',
-            'تأكيد كلمة المرور الجديدة',
-          ),
+          label: AppLocalizations.of(context).changePasswordConfirmNewPassword,
           prefixIcon: Icons.verified_user_outlined,
           obscureText: !_showNew,
           textInputAction: TextInputAction.done,
@@ -224,7 +207,7 @@ class _PassengerChangePasswordScreenState
                     color: Colors.white,
                   ),
                 )
-              : Text(authText(context, 'Update password', 'تحديث كلمة المرور')),
+              : Text(AppLocalizations.of(context).changePasswordUpdatePassword),
         ),
         const SizedBox(height: 8),
         // Google-only accounts have no password to type in; the existing
@@ -232,9 +215,7 @@ class _PassengerChangePasswordScreenState
         TextButton(
           key: const ValueKey('passwordNoPassword'),
           onPressed: _busy ? null : () => openCredentialAction(context, 'set'),
-          child: Text(
-            authText(context, "I don't have a password", 'ليس لديّ كلمة مرور'),
-          ),
+          child: Text(AppLocalizations.of(context).changePasswordIDonTHave),
         ),
       ],
     );

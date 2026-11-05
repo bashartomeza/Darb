@@ -21,7 +21,7 @@ class DarbApp extends ConsumerWidget {
     ref.listen(pushControllerProvider, (_, _) {});
 
     return MaterialApp.router(
-      title: 'Darb',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       locale: locale,

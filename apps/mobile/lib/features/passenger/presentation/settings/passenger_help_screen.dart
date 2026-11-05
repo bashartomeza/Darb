@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/passenger_theme.dart';
-import '../../../auth/presentation/auth_completion_screen.dart' show authText;
 import 'settings_widgets.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Help & Support: the assistant one tap away, then answers to the questions
 /// passengers ask most. There is no support inbox behind the API yet, so the
@@ -15,51 +15,35 @@ class PassengerHelpScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final faqs = [
       (
-        authText(context, 'How do I request a trip?', 'كيف أطلب رحلة؟'),
-        authText(
-          context,
-          'Open Home, tap the search card, choose your route (for example Hebron to Bethlehem), type your exact pickup and drop-off places, then send the request. Drivers on that route will see it.',
-          'افتح الرئيسية واضغط على بطاقة البحث، اختر خط الرحلة (مثل الخليل إلى بيت لحم)، واكتب مكان الانطلاق والوصول بالتفصيل ثم أرسل الطلب. سيراه السائقون على هذا الخط.',
-        ),
+        AppLocalizations.of(context).helpHowDoIRequest,
+        AppLocalizations.of(context).helpOpenHomeTapSearch,
       ),
       (
-        authText(context, 'Where can I see my trips?', 'أين أجد رحلاتي؟'),
-        authText(
-          context,
-          'The Trips tab lists your requests and their status, from pending to completed.',
-          'تعرض لك صفحة الرحلات طلباتك وحالتها، من قيد الانتظار حتى الاكتمال.',
-        ),
+        AppLocalizations.of(context).helpWhereISeeMy,
+        AppLocalizations.of(context).helpTripsTabListsRequests,
       ),
       (
-        authText(context, 'How do I follow my driver?', 'كيف أتابع السائق؟'),
-        authText(
-          context,
-          'Once a driver accepts, open the Maps tab to see the route, the driver’s latest location and checkpoint alerts.',
-          'بعد قبول السائق افتح صفحة الخرائط لترى المسار وآخر موقع للسائق وتنبيهات الحواجز.',
-        ),
+        AppLocalizations.of(context).helpHowDoIFollow,
+        AppLocalizations.of(context).helpOnceDriverAcceptsOpen,
       ),
       (
-        authText(context, 'I forgot my password', 'نسيت كلمة المرور'),
-        authText(
-          context,
-          'On the login screen choose “Forgot password” and we will email you a code to reset it.',
-          'من شاشة تسجيل الدخول اختر «نسيت كلمة المرور» وسنرسل لك رمزاً عبر البريد لإعادة تعيينها.',
-        ),
+        AppLocalizations.of(context).helpIForgotMyPassword,
+        AppLocalizations.of(context).helpLoginScreenChooseForgot,
       ),
     ];
 
     return SettingsPage(
-      title: authText(context, 'Help & Support', 'المساعدة والدعم'),
+      title: AppLocalizations.of(context).settingsHelpSupport,
       children: [
         SettingsRow(
           key: const ValueKey('helpAssistant'),
           icon: Icons.support_agent_rounded,
-          label: authText(context, 'Ask the Darb assistant', 'اسأل مساعد درب'),
+          label: AppLocalizations.of(context).helpAskDarbAssistant,
           onTap: () => context.go('/passenger/assistant'),
         ),
         const SizedBox(height: 24),
         Text(
-          authText(context, 'Common questions', 'أسئلة شائعة'),
+          AppLocalizations.of(context).helpCommonQuestions,
           style: PassengerStyle.sectionTitle,
         ),
         const SizedBox(height: 12),
