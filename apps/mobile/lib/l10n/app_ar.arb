@@ -1799,6 +1799,60 @@
     }
   },
   "mapStraightLineNote": "تعذر حساب الطريق: يظهر خط مستقيم",
+  "routeChangedClosed": "تم تغيير المسار: حاجز {names} مغلق",
+  "@routeChangedClosed": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeChangedClosedExtra": "تم تغيير المسار: حاجز {names} مغلق (أطول بحوالي {minutes} دقيقة)",
+  "@routeChangedClosedExtra": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "routeChangedCongested": "تم تغيير المسار لتجنب الازدحام عند {names}",
+  "@routeChangedCongested": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeAllClosed": "كل المسارات المعروفة تمر بحاجز مغلق: {names}. تأكد قبل الانطلاق.",
+  "@routeAllClosed": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeCongestedWarning": "مسارك يمر بحاجز مزدحم: {names}. لم يتوفر بديل معقول.",
+  "@routeCongestedWarning": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "routeCheckUnavailable": "تعذّر فحص هذا المسار مقابل حالة الحواجز",
+  "routeStatusStale": "حالة الحواجز قديمة، لذلك لم يتم تغيير المسار",
+  "routePositionApproximate": "موقع أحد الحواجز على هذا المسار تقريبي",
+  "routeCheckpointOnRoute": "على مسارك: {name}",
+  "@routeCheckpointOnRoute": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "mapCheckpointsUnavailable": "بيانات الحواجز غير متوفرة",
   "mapCheckpointsLoadFailed": "تعذر تحميل الحواجز",
   "checkpointOfficialUnknown": "الحالة الرسمية: غير منشورة",

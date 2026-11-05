@@ -4161,6 +4161,46 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mapStraightLineNote => 'تعذر حساب الطريق: يظهر خط مستقيم';
 
   @override
+  String routeChangedClosed(String names) {
+    return 'تم تغيير المسار: حاجز $names مغلق';
+  }
+
+  @override
+  String routeChangedClosedExtra(String names, int minutes) {
+    return 'تم تغيير المسار: حاجز $names مغلق (أطول بحوالي $minutes دقيقة)';
+  }
+
+  @override
+  String routeChangedCongested(String names) {
+    return 'تم تغيير المسار لتجنب الازدحام عند $names';
+  }
+
+  @override
+  String routeAllClosed(String names) {
+    return 'كل المسارات المعروفة تمر بحاجز مغلق: $names. تأكد قبل الانطلاق.';
+  }
+
+  @override
+  String routeCongestedWarning(String names) {
+    return 'مسارك يمر بحاجز مزدحم: $names. لم يتوفر بديل معقول.';
+  }
+
+  @override
+  String get routeCheckUnavailable => 'تعذّر فحص هذا المسار مقابل حالة الحواجز';
+
+  @override
+  String get routeStatusStale => 'حالة الحواجز قديمة، لذلك لم يتم تغيير المسار';
+
+  @override
+  String get routePositionApproximate =>
+      'موقع أحد الحواجز على هذا المسار تقريبي';
+
+  @override
+  String routeCheckpointOnRoute(String name) {
+    return 'على مسارك: $name';
+  }
+
+  @override
   String get mapCheckpointsUnavailable => 'بيانات الحواجز غير متوفرة';
 
   @override

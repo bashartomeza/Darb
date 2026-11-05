@@ -249,7 +249,11 @@ describe("GET /api/v1/checkpoints from the partner source", () => {
     db.authSession.update.mockResolvedValue({});
   });
 
-  function app(mapEnabled: boolean, positions = { list: async (): Promise<ResearchedCheckpointPosition[]> => [] }) {
+  function app(
+    mapEnabled: boolean,
+    positions = { list: async (): Promise<ResearchedCheckpointPosition[]> => [] },
+    routingEngine?: import("../services/routePlanner.js").RoutingEngine
+  ) {
     const transport = vi.fn(
       async () =>
         new Response(
@@ -277,7 +281,8 @@ describe("GET /api/v1/checkpoints from the partner source", () => {
       transport,
       app: createApp(appConfig, {
         limitedCheckpointDirectoryService: directory,
-        partnerCheckpointMapService: new PartnerCheckpointMapService(directory, osm, positions)
+        partnerCheckpointMapService: new PartnerCheckpointMapService(directory, osm, positions),
+        routingEngine
       })
     };
   }
@@ -322,5 +327,33 @@ describe("GET /api/v1/checkpoints from the partner source", () => {
     await request(server).get("/api/v1/checkpoints").set(auth("merchant")).expect(403);
     expect((await request(server).get("/api/v1/capabilities").set(auth("merchant")).expect(200)).body.checkpoints_available).toBe(false);
     expect(transport).not.toHaveBeenCalled();
+  });
+
+  describe("route plans from the partner source", () => {
+    // The synthetic Huwara pin is at 32.178, 35.2734 and the partner says one direction is closed.
+    const trip = { waypoints: [{ latitude: 32.178, longitude: 35.25 }, { latitude: 32.178, longitude: 35.3 }] };
+    const through = { line: [{ lat: 32.178, lng: 35.25 }, { lat: 32.178, lng: 35.3 }], distance_meters: 2_400, duration_seconds: 200 };
+    const around = { line: [{ lat: 32.178, lng: 35.25 }, { lat: 32.2, lng: 35.2734 }, { lat: 32.178, lng: 35.3 }], distance_meters: 6_000, duration_seconds: 500 };
+
+    it("reroutes passengers and drivers around a closed partner checkpoint", async () => {
+      const { app: server } = app(true, undefined, { route: async () => [through, around] });
+      for (const next of ["passenger", "driver"]) {
+        role = next;
+        const res = await request(server).post("/api/v1/route-plans").set(auth(next)).send(trip).expect(200);
+        expect(res.body.plan.status).toBe("rerouted_closed");
+        expect(res.body.plan.avoided_checkpoints).toEqual([expect.objectContaining({ id: "aweenrayeh:p1", status: "closed" })]);
+      }
+    });
+
+    it("refuses merchants, like the checkpoint feed it is built on", async () => {
+      role = "merchant";
+      const { app: server } = app(true, undefined, { route: async () => [through] });
+      await request(server).post("/api/v1/route-plans").set(auth("merchant")).send(trip).expect(403);
+    });
+
+    it("does not exist while the partner map is off", async () => {
+      const { app: server } = app(false);
+      await request(server).post("/api/v1/route-plans").set(auth("passenger")).send(trip).expect(404);
+    });
   });
 });

@@ -6,10 +6,13 @@ import 'package:latlong2/latlong.dart';
 import 'package:darb_mobile/l10n/app_localizations.dart';
 
 import '../../features/canonical_routes/domain/canonical_route_models.dart';
+import '../../features/checkpoints/domain/checkpoint_models.dart';
 import '../theme/semantic_colors.dart';
 import '../widgets/darb_map.dart';
+import 'checkpoint_map_markers.dart';
 import 'map_overlays.dart';
 import 'osrm_route_service.dart';
+import 'route_plan_models.dart';
 
 /// The line for [road]: solid along real roads, dashed for the straight
 /// fallback (which the map labels with [straightLineNote]).
@@ -27,11 +30,156 @@ List<DarbMapPath> roadRoutePaths(
     ),
 ];
 
-/// Notes for a route line: says so when the line is the straight fallback.
-List<String> roadRouteNotes(AppLocalizations l10n, RoadRoute? road) => [
+/// Notes for a route line: says so when the line is the straight fallback, and
+/// (unless [includeCheckpointNotices] is false) what the checkpoint check found:
+/// a rerouting, a closed or congested checkpoint that could not be avoided, or
+/// that the check could not be done.
+List<String> roadRouteNotes(
+  AppLocalizations l10n,
+  RoadRoute? road, {
+  bool includeCheckpointNotices = true,
+}) => [
   if (road != null && !road.routed && road.points.length >= 2)
     l10n.mapStraightLineNote,
+  if (includeCheckpointNotices)
+    for (final notice in routeNotices(l10n, road)) notice.text,
 ];
+
+enum RouteNoticeLevel { info, warning, critical }
+
+class RouteNotice {
+  const RouteNotice(this.level, this.text);
+  final RouteNoticeLevel level;
+  final String text;
+}
+
+String _joinNames(AppLocalizations l10n, Iterable<PlannedCheckpoint> items) {
+  final arabic = l10n.localeName.startsWith('ar');
+  final names = <String>{
+    for (final c in items)
+      if (arabic)
+        c.displayName
+      else
+        (c.nameEn.trim().isNotEmpty ? c.nameEn.trim() : c.displayName),
+  };
+  return names.join(arabic ? '، ' : ', ');
+}
+
+/// What to tell the user about a route's checkpoint check, most important
+/// first. Empty when the route is simply clear (or never needed checking).
+List<RouteNotice> routeNotices(AppLocalizations l10n, RoadRoute? road) {
+  if (road == null) return const [];
+  final plan = road.plan;
+  if (plan == null) {
+    return [
+      if (road.checkFailed)
+        RouteNotice(RouteNoticeLevel.warning, l10n.routeCheckUnavailable),
+    ];
+  }
+  final avoidedClosed = [
+    for (final c in plan.avoidedCheckpoints)
+      if (c.status == CheckpointStatus.closed) c,
+  ];
+  final avoidedCongested = [
+    for (final c in plan.avoidedCheckpoints)
+      if (c.status == CheckpointStatus.congested) c,
+  ];
+  return [
+    switch (plan.status) {
+      RoutePlanStatus.reroutedClosed => RouteNotice(
+        RouteNoticeLevel.warning,
+        plan.extraMinutes > 0
+            ? l10n.routeChangedClosedExtra(
+                _joinNames(l10n, avoidedClosed),
+                plan.extraMinutes,
+              )
+            : l10n.routeChangedClosed(_joinNames(l10n, avoidedClosed)),
+      ),
+      RoutePlanStatus.reroutedCongestion => RouteNotice(
+        RouteNoticeLevel.info,
+        l10n.routeChangedCongested(_joinNames(l10n, avoidedCongested)),
+      ),
+      RoutePlanStatus.blocked => RouteNotice(
+        RouteNoticeLevel.critical,
+        l10n.routeAllClosed(_joinNames(l10n, plan.closedOnRoute)),
+      ),
+      RoutePlanStatus.congestionWarning => RouteNotice(
+        RouteNoticeLevel.warning,
+        l10n.routeCongestedWarning(_joinNames(l10n, plan.congestedOnRoute)),
+      ),
+      RoutePlanStatus.unchecked => RouteNotice(
+        RouteNoticeLevel.warning,
+        l10n.routeCheckUnavailable,
+      ),
+      RoutePlanStatus.clear => null,
+    },
+    if (plan.hasWarning('status_stale'))
+      RouteNotice(RouteNoticeLevel.info, l10n.routeStatusStale),
+    if (plan.hasWarning('position_approximate'))
+      RouteNotice(RouteNoticeLevel.info, l10n.routePositionApproximate),
+  ].nonNulls.toList(growable: false);
+}
+
+/// Highlights the checkpoints a planned route passes, in their status colour,
+/// behind the ordinary checkpoint pins (which keep their own details).
+List<DarbMapMarker> roadRouteMarkers(
+  AppLocalizations l10n,
+  RoadRoute? road,
+) => [
+  for (final c in road?.plan?.checkpointsOnRoute ?? const <PlannedCheckpoint>[])
+    DarbMapMarker(
+      position: c.position,
+      icon: Icons.alt_route_rounded,
+      color: checkpointStatusColor(c.status),
+      size: 54,
+      type: DarbMapMarkerType.checkpoint,
+      fit: false,
+      label: l10n.routeCheckpointOnRoute(c.displayName),
+    ),
+];
+
+/// The route notices as a banner: warm for a reroute or warning, red when
+/// every known route is closed. Null when there is nothing to say.
+Widget? routeNoticeBanner(AppLocalizations l10n, RoadRoute? road) {
+  final notices = routeNotices(l10n, road);
+  if (notices.isEmpty) return null;
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      for (final notice in notices)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                notice.level == RouteNoticeLevel.info
+                    ? Icons.info_outline_rounded
+                    : notice.level == RouteNoticeLevel.critical
+                    ? Icons.block_rounded
+                    : Icons.alt_route_rounded,
+                size: 18,
+                color: notice.level == RouteNoticeLevel.critical
+                    ? SemanticColors.checkpointClosed
+                    : notice.level == RouteNoticeLevel.warning
+                    ? SemanticColors.checkpointCongested
+                    : SemanticColors.checkpointUnknown,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  notice.text,
+                  key: const ValueKey('routeNotice'),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
+}
 
 /// Watches the road route through [waypoints] (the record's own points, in
 /// travel order). Null while it loads or when there are fewer than two points.
@@ -109,6 +257,7 @@ class DarbRouteMap extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final overlay = showOverlay ? watchMapOverlay(ref, l10n) : null;
     final road = watchRoadRoute(ref, waypoints);
+    final routeBanner = routeNoticeBanner(l10n, road);
     final origin = waypoints.isEmpty ? null : waypoints.first;
     final destination = waypoints.length < 2 ? null : waypoints.last;
     final stops = waypoints.length > 2
@@ -119,14 +268,26 @@ class DarbRouteMap extends ConsumerWidget {
       height: height,
       emptyLabel: emptyLabel,
       attributionLabel: l10n.mapAttribution,
-      banner: banner,
+      banner: routeBanner == null
+          ? banner
+          : banner == null
+          ? routeBanner
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [banner!, const SizedBox(height: 6), routeBanner],
+            ),
       bannerElevation: bannerElevation,
       controlsTop: controlsTop,
       onTap: onTap,
       tileProvider: tileProvider,
       paths: roadRoutePaths(road, color: routeColor),
-      notes: [...roadRouteNotes(l10n, road), ...?overlay?.notes],
+      notes: [
+        ...roadRouteNotes(l10n, road, includeCheckpointNotices: false),
+        ...?overlay?.notes,
+      ],
       markers: [
+        ...roadRouteMarkers(l10n, road),
         ...?overlay?.markers,
         for (var i = 0; i < stops.length; i++)
           DarbMapMarker(

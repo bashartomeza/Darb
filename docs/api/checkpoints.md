@@ -141,3 +141,7 @@ without supplying credentials. Neither synthetic tests nor source removal prove
 live provider compatibility or revocation. Replacement credentials belong only
 in approved backend secret storage; never include them in mobile artifacts,
 documentation, logs, or review evidence.
+
+## Route planning
+
+Routes the apps draw and time use these same checkpoints: see [route-plans.md](route-plans.md) (`POST /api/v1/route-plans`).

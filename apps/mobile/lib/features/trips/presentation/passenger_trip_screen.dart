@@ -1065,6 +1065,7 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
             // origin/destination/current location stay
             // visually on top when markers overlap.
             //
+            ...roadRouteMarkers(l10n, road),
             ...overlay.markers,
 
             // ==========================================================

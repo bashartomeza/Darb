@@ -84,6 +84,14 @@ const rawSchema = z.object({
   CHECKPOINTS_API_KEY: z.string().min(20).optional(),
   CHECKPOINTS_TIMEOUT_MS: z.coerce.number().int().min(500).max(15_000).default(6_000),
   CHECKPOINTS_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(3_600).default(60),
+  CHECKPOINT_ROUTING_THRESHOLD_METERS: z.coerce.number().int().min(30).max(1_000).default(150),
+  CHECKPOINT_ROUTING_APPROX_THRESHOLD_METERS: z.coerce.number().int().min(30).max(3_000).default(500),
+  CHECKPOINT_ROUTING_STATUS_TTL_SECONDS: z.coerce.number().int().min(15).max(86_400).default(300),
+  CHECKPOINT_ROUTING_CONGESTION_MAX_EXTRA_SECONDS: z.coerce.number().int().min(0).max(7_200).default(600),
+  CHECKPOINT_ROUTING_CONGESTION_MAX_EXTRA_METERS: z.coerce.number().int().min(0).max(100_000).default(8_000),
+  CHECKPOINT_ROUTING_OSRM_URL: z.string().url().default("https://router.project-osrm.org"),
+  CHECKPOINT_ROUTING_TIMEOUT_MS: z.coerce.number().int().min(500).max(20_000).default(6_000),
+  CHECKPOINT_ROUTING_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(60),
   ROUTE_MAPS_ENABLED: z.string().optional(),
   ROUTE_PROVIDER: z.enum(ROUTE_PROVIDERS).default("disabled"),
   ROUTE_PROVIDER_SECRET: z.string().trim().min(8).optional(),
@@ -766,6 +774,17 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
           cacheTtlSeconds: raw.CHECKPOINTS_CACHE_TTL_SECONDS
         }
       : undefined,
+    // Checkpoint-aware route planning (POST /route-plans). Tunable without a release.
+    checkpointRouting: {
+      thresholdMeters: raw.CHECKPOINT_ROUTING_THRESHOLD_METERS,
+      approximateThresholdMeters: Math.max(raw.CHECKPOINT_ROUTING_APPROX_THRESHOLD_METERS, raw.CHECKPOINT_ROUTING_THRESHOLD_METERS),
+      statusTtlSeconds: raw.CHECKPOINT_ROUTING_STATUS_TTL_SECONDS,
+      congestionMaxExtraSeconds: raw.CHECKPOINT_ROUTING_CONGESTION_MAX_EXTRA_SECONDS,
+      congestionMaxExtraMeters: raw.CHECKPOINT_ROUTING_CONGESTION_MAX_EXTRA_METERS,
+      osrmBaseUrl: raw.CHECKPOINT_ROUTING_OSRM_URL,
+      timeoutMs: raw.CHECKPOINT_ROUTING_TIMEOUT_MS,
+      rateLimitPerMinute: raw.CHECKPOINT_ROUTING_RATE_LIMIT_PER_MINUTE
+    },
     routeMaps: {
       enabled: routeMapsEnabled,
       provider: raw.ROUTE_PROVIDER,
