@@ -91,7 +91,7 @@ String driverPassengerPickupText(
   BuildContext context,
   DriverPassengerSummary passenger,
 ) =>
-    passenger.pickupDetails ??
+    passenger.pickupSummary(arabic: _arabic(context)) ??
     localizedCorridorPlace(context, passenger.pickupLabel);
 
 /// Where the passenger gets off: their own words, or the old place label.
@@ -99,19 +99,21 @@ String driverPassengerDropoffText(
   BuildContext context,
   DriverPassengerSummary passenger,
 ) =>
-    passenger.dropoffDetails ??
+    passenger.dropoffSummary(arabic: _arabic(context)) ??
     localizedCorridorPlace(context, passenger.destinationLabel);
 
 /// Where to collect a merchant's parcels: their words, or the old place label.
 String driverMerchantPickupText(
   BuildContext context,
   DriverMerchantSummary order,
-) => order.pickupDetails ?? localizedCorridorPlace(context, order.pickupLabel);
+) =>
+    order.pickupSummary(arabic: _arabic(context)) ??
+    localizedCorridorPlace(context, order.pickupLabel);
 
 /// Where one parcel goes: the merchant's words, or the old place label.
 String? driverParcelDropoffText(BuildContext context, DriverParcelStop parcel) {
   final label = parcel.destinationLabel;
-  return parcel.dropoffDetails ??
+  return parcel.dropoffSummary(arabic: _arabic(context)) ??
       (label == null ? null : localizedCorridorPlace(context, label));
 }
 

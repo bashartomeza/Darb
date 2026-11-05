@@ -45,8 +45,9 @@ export function evaluateApproaching(
  * typed text (`pickup_details`), so its coordinate says nothing about where the
  * passenger waits: a driver crossing the city centre is not "approaching" them.
  */
-export function hasRealPickupCoordinate(request: { pickup_details?: string | null }) {
-  return !request.pickup_details?.trim();
+export function hasRealPickupCoordinate(request: { pickup_details?: string | null; pickup_place_id?: string | null }) {
+  // A chosen place has its own coordinate; only free text leaves the city centre.
+  return Boolean(request.pickup_place_id) || !request.pickup_details?.trim();
 }
 
 /**
@@ -73,7 +74,7 @@ export async function maybeNotifyDriverApproaching(
       select: {
         id: true,
         status: true,
-        passenger_request: { select: { passenger_id: true, pickup_lat: true, pickup_lng: true, pickup_details: true } }
+        passenger_request: { select: { passenger_id: true, pickup_lat: true, pickup_lng: true, pickup_details: true, pickup_place_id: true } }
       }
     });
     if (!trip?.passenger_request) return false;

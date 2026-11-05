@@ -529,23 +529,33 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
                 // ==================================================
                 // EXACT PLACES (requests booked on a route)
                 // ==================================================
-                if (data.trip.pickupDetails != null ||
-                    data.trip.dropoffDetails != null) ...[
+                if (data.trip.pickupSummary(arabic: _isArabic(context)) !=
+                        null ||
+                    data.trip.dropoffSummary(arabic: _isArabic(context)) !=
+                        null) ...[
                   const SizedBox(height: 10),
                   _placeDetails(
                     key: const ValueKey('tripPlaceDetails'),
                     rows: [
-                      if (data.trip.pickupDetails != null)
+                      if (data.trip.pickupSummary(arabic: _isArabic(context)) !=
+                          null)
                         (
                           icon: Icons.trip_origin_rounded,
                           label: l10n.passengerPickupPoint,
-                          value: data.trip.pickupDetails!,
+                          value: data.trip.pickupSummary(
+                            arabic: _isArabic(context),
+                          )!,
                         ),
-                      if (data.trip.dropoffDetails != null)
+                      if (data.trip.dropoffSummary(
+                            arabic: _isArabic(context),
+                          ) !=
+                          null)
                         (
                           icon: Icons.location_on_rounded,
                           label: l10n.passengerDropoffPoint,
-                          value: data.trip.dropoffDetails!,
+                          value: data.trip.dropoffSummary(
+                            arabic: _isArabic(context),
+                          )!,
                         ),
                     ],
                   ),
@@ -1247,3 +1257,6 @@ class _BottomSheetHandle extends StatelessWidget {
     );
   }
 }
+
+bool _isArabic(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar';

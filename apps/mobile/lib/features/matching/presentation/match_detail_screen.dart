@@ -115,16 +115,30 @@ class _MatchDetailScreenState extends ConsumerState<MatchDetailScreen> {
                                   icon: Icons.route_outlined,
                                   valueKey: const ValueKey('matchRouteName'),
                                 ),
-                                if (match.pickupDetails != null)
+                                if (match.pickupSummary(
+                                      arabic:
+                                          Localizations.localeOf(
+                                            context,
+                                          ).languageCode ==
+                                          'ar',
+                                    )
+                                    case final pickup?)
                                   DetailRow(
                                     label: l10n.passengerPickupPoint,
-                                    value: match.pickupDetails!,
+                                    value: pickup,
                                     icon: Icons.trip_origin_rounded,
                                   ),
-                                if (match.dropoffDetails != null)
+                                if (match.dropoffSummary(
+                                      arabic:
+                                          Localizations.localeOf(
+                                            context,
+                                          ).languageCode ==
+                                          'ar',
+                                    )
+                                    case final dropoff?)
                                   DetailRow(
                                     label: l10n.passengerDropoffPoint,
-                                    value: match.dropoffDetails!,
+                                    value: dropoff,
                                     icon: Icons.location_on_outlined,
                                   ),
                                 DetailRow(

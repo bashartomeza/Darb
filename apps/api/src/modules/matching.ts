@@ -81,6 +81,8 @@ const matchParcelSelect = {
   order_id: true,
   destination_label: true,
   dropoff_details: true,
+  dropoff_place_name_ar: true,
+  dropoff_place_name_en: true,
   size: true,
   priority: true,
   status: true,
@@ -129,6 +131,10 @@ const matchSummarySelect = {
       created_at: true,
       pickup_details: true,
       dropoff_details: true,
+      pickup_place_name_ar: true,
+      pickup_place_name_en: true,
+      dropoff_place_name_ar: true,
+      dropoff_place_name_en: true,
       fare_unit_minor: true,
       fare_total_minor: true,
       fare_currency: true,
@@ -141,6 +147,8 @@ const matchSummarySelect = {
       merchant_id: true,
       pickup_label: true,
       pickup_details: true,
+      pickup_place_name_ar: true,
+      pickup_place_name_en: true,
       status: true,
       created_at: true,
       route_version: routeSummarySelect,
@@ -164,6 +172,8 @@ const matchSummarySelect = {
               id: true,
               pickup_label: true,
               pickup_details: true,
+              pickup_place_name_ar: true,
+              pickup_place_name_en: true,
               parcels: { select: matchParcelSelect, orderBy: { id: "asc" as const } },
               _count: { select: { parcels: true } }
             }
@@ -226,6 +236,10 @@ function toMatchSummary(match: MatchSummaryRecord) {
           ...routeFields(match.passenger_request.route_version),
           pickup_details: match.passenger_request.pickup_details ?? null,
           dropoff_details: match.passenger_request.dropoff_details ?? null,
+          pickup_place_name_ar: match.passenger_request.pickup_place_name_ar ?? null,
+          pickup_place_name_en: match.passenger_request.pickup_place_name_en ?? null,
+          dropoff_place_name_ar: match.passenger_request.dropoff_place_name_ar ?? null,
+          dropoff_place_name_en: match.passenger_request.dropoff_place_name_en ?? null,
           // The saved fare: this driver's price once the match exists.
           fare: passengerFareResponse(match.passenger_request)
         }
@@ -239,6 +253,8 @@ function toMatchSummary(match: MatchSummaryRecord) {
           created_at: match.merchant_order.created_at,
           ...routeFields(match.merchant_order.route_version),
           pickup_details: match.merchant_order.pickup_details ?? null,
+          pickup_place_name_ar: match.merchant_order.pickup_place_name_ar ?? null,
+          pickup_place_name_en: match.merchant_order.pickup_place_name_en ?? null,
           parcels: match.merchant_order.parcels ?? [],
           is_passenger_parcel: Boolean(match.merchant_order.passenger_parcel),
           fare: orderFareResponse(match.merchant_order.parcels)
@@ -257,6 +273,8 @@ function toMatchSummary(match: MatchSummaryRecord) {
             id: member.merchant_order.id,
             pickup_label: member.merchant_order.pickup_label,
             pickup_details: member.merchant_order.pickup_details ?? null,
+            pickup_place_name_ar: member.merchant_order.pickup_place_name_ar ?? null,
+            pickup_place_name_en: member.merchant_order.pickup_place_name_en ?? null,
             parcels: member.merchant_order.parcels ?? []
           }))
         }

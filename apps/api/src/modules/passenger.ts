@@ -8,7 +8,8 @@ import { latitudeSchema, legacyLabelSchema, longitudeSchema } from "../lib/valid
 import { legacyPassengerCreationService, passengerRequestInclude } from "../services/legacyPassengerCreation.js";
 import { cancelPassengerRequest, serializeCancellation } from "../services/cancellations.js";
 import { cancelBodySchema } from "../services/cancellationReasons.js";
-import { detailsSchema, routeFields, serviceRouteIdSchema, type RouteSummary } from "../services/operatingRoutes.js";
+import { routeFields, serviceRouteIdSchema, type RouteSummary } from "../services/operatingRoutes.js";
+import { optionalDetailsSchema, placeIdSchema } from "../services/cityPlaces.js";
 import { passengerFareResponse } from "../services/routeFares.js";
 
 /** Older app builds: coordinates for each end; mapped to the Hebron → Bethlehem route. */
@@ -23,11 +24,17 @@ const createPassengerRequestSchema = z.object({
   passenger_count: z.coerce.number().int().min(1).max(4),
   selected_driver_route_id: z.string().trim().min(1).max(191).optional()
 });
-/** Route-based body: a predefined route and the exact pickup and drop-off as text. */
+/**
+ * Route-based body: a predefined route, the pickup and drop-off places (ids
+ * from GET /operating-routes/:id/places) and optional extra text. Older app
+ * builds send text only; see docs/routes/city-places.md.
+ */
 const createRoutePassengerRequestSchema = z.object({
   service_route_id: serviceRouteIdSchema,
-  pickup_details: detailsSchema,
-  dropoff_details: detailsSchema,
+  pickup_place_id: placeIdSchema.optional(),
+  dropoff_place_id: placeIdSchema.optional(),
+  pickup_details: optionalDetailsSchema,
+  dropoff_details: optionalDetailsSchema,
   preferred_time: z.coerce.date(),
   passenger_count: z.coerce.number().int().min(1).max(4),
   selected_driver_route_id: z.string().trim().min(1).max(191).optional()
@@ -60,6 +67,12 @@ export function serializeLegacyPassengerRequest(value: Record<string, unknown>) 
     ...routeFields(value.route_version as RouteSummary),
     pickup_details: value.pickup_details ?? null,
     dropoff_details: value.dropoff_details ?? null,
+    pickup_place_id: value.pickup_place_id ?? null,
+    pickup_place_name_ar: value.pickup_place_name_ar ?? null,
+    pickup_place_name_en: value.pickup_place_name_en ?? null,
+    dropoff_place_id: value.dropoff_place_id ?? null,
+    dropoff_place_name_ar: value.dropoff_place_name_ar ?? null,
+    dropoff_place_name_en: value.dropoff_place_name_en ?? null,
     // The seat fare frozen at booking; null when the route had no fare.
     fare: passengerFareResponse(value),
     // Who ended the request and why, once it is cancelled; otherwise null.

@@ -319,6 +319,13 @@ return {
     apiRequest<{ deleted: true }>(`/admin/checkpoint-positions/${encodeURIComponent(id)}`, { method: "DELETE", token }),
   unplacedCheckpoints: (token: string) =>
     apiRequest<UnplacedCheckpointsResponse>("/admin/checkpoint-positions/unplaced", { token }),
+  /** Every city's places, disabled ones included; optionally one city or a name search. */
+  cityPlaces: (token: string, query: { city_key?: string; search?: string } = {}) =>
+    apiRequest<{ cities: CityPlaceCity[]; places: CityPlace[] }>(withQuery("/admin/city-places", { city_key: query.city_key || undefined, search: query.search || undefined }), { token }),
+  createCityPlace: (token: string, body: CityPlaceDraft) =>
+    apiRequest<{ place: CityPlace }>("/admin/city-places", { method: "POST", token, body }),
+  updateCityPlace: (token: string, id: string, body: CityPlaceUpdate) =>
+    apiRequest<{ place: CityPlace }>(`/admin/city-places/${encodeURIComponent(id)}`, { method: "PATCH", token, body }),
   /** Every predefined route, active and turned off, with how many orders use it. */
   operatingRoutes: (token: string) => apiRequest<{ routes: AdminOperatingRoute[] }>("/admin/operating-routes", { token }),
   createOperatingRoute: (token: string, body: OperatingRouteDraft) =>
@@ -817,7 +824,32 @@ export type OrderRouteFields = {
   service_route_id?: string | null;
   route_name_ar?: string | null;
   route_name_en?: string | null;
+  /** The village / town picked from the route's city list; null for older free-text orders. */
+  pickup_place_name_ar?: string | null;
+  pickup_place_name_en?: string | null;
+  dropoff_place_name_ar?: string | null;
+  dropoff_place_name_en?: string | null;
 };
+
+/** A named village or town riders and senders pick as pickup / drop-off inside a city. */
+export type CityPlace = {
+  id: string;
+  city_key: string;
+  name_ar: string;
+  name_en: string;
+  latitude: number;
+  longitude: number;
+  /** True for a village-centre point from a map extract; false once an admin set or moved it. */
+  approximate: boolean;
+  source: string;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+export type CityPlaceCity = { city_key: string; name_ar: string; name_en: string; places_total: number; places_active: number };
+export type CityPlaceDraft = { city_key: string; name_ar: string; name_en: string; latitude: number; longitude: number };
+export type CityPlaceUpdate = Partial<{ name_ar: string; name_en: string; latitude: number; longitude: number; active: boolean; sort_order: number }>;
 
 /** The reasons an Admin can give when cancelling (the API's `admin` list). */
 export const ADMIN_CANCELLATION_REASONS = ["customer_request", "driver_unavailable", "safety_concern", "duplicate", "policy_violation", "other"] as const;

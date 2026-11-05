@@ -25,6 +25,7 @@ describe("admin navigation", () => {
       "trips",
       "routes",
       "checkpointPositions",
+      "cityPlaces",
       "deliveries",
       "matchingBatching",
       "cancellations",
@@ -53,6 +54,7 @@ describe("admin navigation", () => {
       ["trips", "operations"],
       ["routes", "operations"],
       ["checkpointPositions", "operations"],
+      ["cityPlaces", "operations"],
       ["deliveries", "operations"],
       ["matchingBatching", "operations"],
       ["cancellations", "operations"],
@@ -81,6 +83,7 @@ describe("admin navigation", () => {
     expect(hashForModule("communityReports")).toBe("#/community-reports");
     expect(hashForModule("appRatings")).toBe("#/app-ratings");
     expect(hashForModule("checkpointPositions")).toBe("#/checkpoint-positions");
+    expect(hashForModule("cityPlaces")).toBe("#/city-places");
     expect(hashForModule("profile")).toBe("#/profile");
     expect(moduleFromHash("#/profile")).toBe("profile");
     expect(NAV_ITEMS.map((item) => item.id)).not.toContain("profile");

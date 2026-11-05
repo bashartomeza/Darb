@@ -1932,5 +1932,21 @@
   "merchantOrderMapTitle": "مسار الطلب",
   "driverPhoneLabel": "هاتف السائق",
   "callDriver": "اتصل بالسائق",
-  "callDriverUnavailable": "لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر."
+  "callDriverUnavailable": "لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر.",
+  "routePlacePickupLabel": "قرية أو بلدة الالتقاط",
+  "routePlaceDropoffLabel": "قرية أو بلدة التسليم",
+  "routePlacePickupHint": "اختر مكان الالتقاط",
+  "routePlaceDropoffHint": "اختر مكان التسليم",
+  "routePlaceChooseRouteFirst": "اختر المسار أولاً",
+  "routePlaceRequired": "اختر مكاناً للمتابعة.",
+  "routePlaceSearchHint": "ابحث عن قرية أو بلدة",
+  "routePlaceNoResults": "لا توجد نتائج مطابقة.",
+  "routePlacesLoading": "جارٍ تحميل الأماكن…",
+  "routePlacesLoadFailed": "تعذر تحميل الأماكن.",
+  "routePlacesEmpty": "لا توجد أماكن لهذه المدينة بعد.",
+  "routePlaceMoreDetailsLabel": "تفاصيل إضافية (اختياري)",
+  "routePlacePickupDetailsHint": "مثال: أمام البوابة الرئيسية",
+  "routePlaceDropoffDetailsHint": "مثال: بجانب الصيدلية",
+  "routePlaceDetailsHelper": "اختياري: ساعد السائق على إيجاد المكان بدقة.",
+  "routePlaceSavedChoice": "مكان مختار من القائمة"
 }

@@ -16,6 +16,8 @@ class PassengerAssistantTripDraft {
     this.destinationLat,
     this.destinationLng,
     this.serviceRouteId,
+    this.pickupPlaceId,
+    this.dropoffPlaceId,
     this.pickupDetails,
     this.dropoffDetails,
   });
@@ -38,6 +40,8 @@ class PassengerAssistantTripDraft {
       destinationLat: _optionalDouble(json['destination_lat']),
       destinationLng: _optionalDouble(json['destination_lng']),
       serviceRouteId: _optionalString(json['service_route_id']),
+      pickupPlaceId: _optionalString(json['pickup_place_id']),
+      dropoffPlaceId: _optionalString(json['dropoff_place_id']),
       pickupDetails: _optionalString(json['pickup_details']),
       dropoffDetails: _optionalString(json['dropoff_details']),
     );
@@ -60,6 +64,11 @@ class PassengerAssistantTripDraft {
   /// review card. Set before searching; the assistant itself only extracts
   /// places, which preselect the route and prefill the details.
   final String? serviceRouteId;
+
+  /// The village or town picked from the route's cities for each end, and
+  /// the optional extra details next to it.
+  final String? pickupPlaceId;
+  final String? dropoffPlaceId;
   final String? pickupDetails;
   final String? dropoffDetails;
 
@@ -77,6 +86,8 @@ class PassengerAssistantTripDraft {
     'preferred_time': preferredTime.toUtc().toIso8601String(),
     'passenger_count': passengerCount,
     'service_route_id': ?serviceRouteId,
+    'pickup_place_id': ?pickupPlaceId,
+    'dropoff_place_id': ?dropoffPlaceId,
     'pickup_details': ?pickupDetails,
     'dropoff_details': ?dropoffDetails,
   };
@@ -93,6 +104,8 @@ class PassengerAssistantTripDraft {
     double? destinationLat,
     double? destinationLng,
     String? serviceRouteId,
+    String? pickupPlaceId,
+    String? dropoffPlaceId,
     String? pickupDetails,
     String? dropoffDetails,
   }) => PassengerAssistantTripDraft(
@@ -107,6 +120,8 @@ class PassengerAssistantTripDraft {
     destinationLat: destinationLat ?? this.destinationLat,
     destinationLng: destinationLng ?? this.destinationLng,
     serviceRouteId: serviceRouteId ?? this.serviceRouteId,
+    pickupPlaceId: pickupPlaceId ?? this.pickupPlaceId,
+    dropoffPlaceId: dropoffPlaceId ?? this.dropoffPlaceId,
     pickupDetails: pickupDetails ?? this.pickupDetails,
     dropoffDetails: dropoffDetails ?? this.dropoffDetails,
   );

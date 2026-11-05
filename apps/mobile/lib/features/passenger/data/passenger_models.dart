@@ -1,5 +1,6 @@
 import '../../../core/cancellation/cancellation.dart';
 import '../../../core/fares/fare.dart';
+import '../../operating_routes/data/city_place_models.dart';
 
 class PassengerRequest {
   const PassengerRequest({
@@ -20,6 +21,10 @@ class PassengerRequest {
     this.routeNameEn,
     this.pickupDetails,
     this.dropoffDetails,
+    this.pickupPlaceAr,
+    this.pickupPlaceEn,
+    this.dropoffPlaceAr,
+    this.dropoffPlaceEn,
     this.fare,
     this.cancellation,
   });
@@ -51,6 +56,30 @@ class PassengerRequest {
   final String? routeNameEn;
   final String? pickupDetails;
   final String? dropoffDetails;
+
+  /// The village or town picked from the route's city list for each end
+  /// (names as saved when ordering); null for orders typed as free text.
+  final String? pickupPlaceAr;
+  final String? pickupPlaceEn;
+  final String? dropoffPlaceAr;
+  final String? dropoffPlaceEn;
+
+  /// The pickup as one line: the chosen place and the optional details, or
+  /// only the details of an older order; null when neither was saved.
+  String? pickupSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: pickupPlaceAr,
+    nameEn: pickupPlaceEn,
+    details: pickupDetails,
+  );
+
+  /// The drop-off as one line, like [pickupSummary].
+  String? dropoffSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: dropoffPlaceAr,
+    nameEn: dropoffPlaceEn,
+    details: dropoffDetails,
+  );
 
   /// The route's seat fare frozen when the request was made (per seat and for
   /// the whole party); null when the route had no fare.
@@ -104,6 +133,10 @@ class PassengerRequest {
       routeNameEn: _optionalString(json, 'route_name_en'),
       pickupDetails: _optionalString(json, 'pickup_details'),
       dropoffDetails: _optionalString(json, 'dropoff_details'),
+      pickupPlaceAr: _optionalString(json, 'pickup_place_name_ar'),
+      pickupPlaceEn: _optionalString(json, 'pickup_place_name_en'),
+      dropoffPlaceAr: _optionalString(json, 'dropoff_place_name_ar'),
+      dropoffPlaceEn: _optionalString(json, 'dropoff_place_name_en'),
       fare: FareSnapshot.tryParse(json['fare']),
       cancellation: CancellationInfo.tryParse(json['cancellation']),
     );
@@ -112,19 +145,25 @@ class PassengerRequest {
 
 /// The body of `POST /passenger/requests` (and, without the details and the
 /// driver route, of `POST /matches/search`): a predefined route plus the exact
-/// pickup and drop-off typed by the passenger. The server fills the place
-/// labels and coordinates from the route's cities.
+/// pickup and drop-off places chosen from the route's cities, plus optional
+/// extra details for each. The server fills the labels from the route's
+/// cities and the coordinates from the chosen places.
 Map<String, dynamic> passengerRouteRequestBody({
   required String serviceRouteId,
-  required String pickupDetails,
-  required String dropoffDetails,
+  String? pickupPlaceId,
+  String? dropoffPlaceId,
+  String pickupDetails = '',
+  String dropoffDetails = '',
   required DateTime preferredTime,
   required int passengerCount,
   String? selectedDriverRouteId,
 }) => {
   'service_route_id': serviceRouteId,
-  'pickup_details': pickupDetails.trim(),
-  'dropoff_details': dropoffDetails.trim(),
+  'pickup_place_id': ?pickupPlaceId,
+  'dropoff_place_id': ?dropoffPlaceId,
+  if (pickupDetails.trim().isNotEmpty) 'pickup_details': pickupDetails.trim(),
+  if (dropoffDetails.trim().isNotEmpty)
+    'dropoff_details': dropoffDetails.trim(),
   'preferred_time': preferredTime.toUtc().toIso8601String(),
   'passenger_count': passengerCount,
   'selected_driver_route_id': ?selectedDriverRouteId,

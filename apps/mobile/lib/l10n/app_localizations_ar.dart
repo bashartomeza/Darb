@@ -4387,4 +4387,53 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get callDriverUnavailable =>
       'لا يمكن إجراء المكالمة من هذا الجهاز. اتصل بالرقم الظاهر.';
+
+  @override
+  String get routePlacePickupLabel => 'قرية أو بلدة الالتقاط';
+
+  @override
+  String get routePlaceDropoffLabel => 'قرية أو بلدة التسليم';
+
+  @override
+  String get routePlacePickupHint => 'اختر مكان الالتقاط';
+
+  @override
+  String get routePlaceDropoffHint => 'اختر مكان التسليم';
+
+  @override
+  String get routePlaceChooseRouteFirst => 'اختر المسار أولاً';
+
+  @override
+  String get routePlaceRequired => 'اختر مكاناً للمتابعة.';
+
+  @override
+  String get routePlaceSearchHint => 'ابحث عن قرية أو بلدة';
+
+  @override
+  String get routePlaceNoResults => 'لا توجد نتائج مطابقة.';
+
+  @override
+  String get routePlacesLoading => 'جارٍ تحميل الأماكن…';
+
+  @override
+  String get routePlacesLoadFailed => 'تعذر تحميل الأماكن.';
+
+  @override
+  String get routePlacesEmpty => 'لا توجد أماكن لهذه المدينة بعد.';
+
+  @override
+  String get routePlaceMoreDetailsLabel => 'تفاصيل إضافية (اختياري)';
+
+  @override
+  String get routePlacePickupDetailsHint => 'مثال: أمام البوابة الرئيسية';
+
+  @override
+  String get routePlaceDropoffDetailsHint => 'مثال: بجانب الصيدلية';
+
+  @override
+  String get routePlaceDetailsHelper =>
+      'اختياري: ساعد السائق على إيجاد المكان بدقة.';
+
+  @override
+  String get routePlaceSavedChoice => 'مكان مختار من القائمة';
 }

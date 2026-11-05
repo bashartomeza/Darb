@@ -66,8 +66,10 @@ export type PassengerParcelInput = {
 /** The route-based body: a predefined route and the exact pickup and drop-off as text. */
 export type RoutePassengerParcelInput = {
   serviceRouteId: string;
-  pickupDetails: string;
-  dropoffDetails: string;
+  pickupPlaceId?: string;
+  dropoffPlaceId?: string;
+  pickupDetails?: string | null;
+  dropoffDetails?: string | null;
   preferredTime: Date;
   size: PassengerParcelSize;
   note?: string;
@@ -202,6 +204,12 @@ export function serializePassengerParcel(detail: DetailWithOrder) {
     dropoff_label: parcel?.destination_label ?? null,
     pickup_details: detail.order.pickup_details ?? null,
     dropoff_details: parcel?.dropoff_details ?? null,
+    pickup_place_id: detail.order.pickup_place_id ?? null,
+    pickup_place_name_ar: detail.order.pickup_place_name_ar ?? null,
+    pickup_place_name_en: detail.order.pickup_place_name_en ?? null,
+    dropoff_place_id: parcel?.dropoff_place_id ?? null,
+    dropoff_place_name_ar: parcel?.dropoff_place_name_ar ?? null,
+    dropoff_place_name_en: parcel?.dropoff_place_name_en ?? null,
     size: detail.size,
     // The size fare frozen at creation; null when the route had no fare.
     fare: parcelFareResponse(parcel as Record<string, unknown> | undefined),
@@ -273,8 +281,9 @@ export function createPassengerParcelService(
         actor.id,
         {
           service_route_id: input.serviceRouteId,
+          pickup_place_id: input.pickupPlaceId,
           pickup_details: input.pickupDetails,
-          parcels: [{ dropoff_details: input.dropoffDetails, size: input.size, priority: "normal" }]
+          parcels: [{ dropoff_place_id: input.dropoffPlaceId, dropoff_details: input.dropoffDetails, size: input.size, priority: "normal" }]
         },
         actor.idempotencyKey,
         {
@@ -492,9 +501,11 @@ export async function listPassengerParcelsForAdmin(db: PrismaClient = prisma, li
           status: true,
           pickup_label: true,
           pickup_details: true,
+          pickup_place_name_ar: true,
+          pickup_place_name_en: true,
           requested_departure_from: true,
           requested_departure_until: true,
-          parcels: { select: { status: true, destination_label: true, dropoff_details: true } },
+          parcels: { select: { status: true, destination_label: true, dropoff_details: true, dropoff_place_name_ar: true, dropoff_place_name_en: true } },
           canonical_dispatch: { select: { status: true } },
           route_version: routeSummarySelect
         }
@@ -510,6 +521,10 @@ export async function listPassengerParcelsForAdmin(db: PrismaClient = prisma, li
     dropoff_label: row.order.parcels[0]?.destination_label ?? null,
     pickup_details: row.order.pickup_details ?? null,
     dropoff_details: row.order.parcels[0]?.dropoff_details ?? null,
+    pickup_place_name_ar: row.order.pickup_place_name_ar ?? null,
+    pickup_place_name_en: row.order.pickup_place_name_en ?? null,
+    dropoff_place_name_ar: row.order.parcels[0]?.dropoff_place_name_ar ?? null,
+    dropoff_place_name_en: row.order.parcels[0]?.dropoff_place_name_en ?? null,
     tracking_state: passengerParcelTrackingState(row.order, row.order.parcels[0]?.status),
     dispatch_status: row.order.canonical_dispatch?.status ?? null,
     requested_departure_from: row.order.requested_departure_from,

@@ -171,7 +171,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                       ),
                       DetailRow(
                         key: const ValueKey('requestPickupDetails'),
-                        label: request.pickupDetails == null
+                        label: !request.hasOwnPickup
                             ? l10n.pickup
                             : l10n.passengerPickupPoint,
                         value: request.pickupText(context),
@@ -182,7 +182,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                       ),
                       DetailRow(
                         key: const ValueKey('requestDropoffDetails'),
-                        label: request.dropoffDetails == null
+                        label: !request.hasOwnDropoff
                             ? l10n.destination
                             : l10n.passengerDropoffPoint,
                         value: request.dropoffText(context),

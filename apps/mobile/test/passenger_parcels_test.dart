@@ -136,6 +136,8 @@ void main() {
   group('parcel draft', () {
     const complete = PassengerParcelDraft(
       serviceRouteId: 'route-heb-bth',
+      pickupPlaceId: 'place-heb-halhul',
+      dropoffPlaceId: 'place-bth-beitjala',
       pickupDetails: 'The shop next to Ibn Rushd roundabout',
       dropoffDetails: 'Receiver house near the Church of the Nativity',
       receiverName: 'Sami',
@@ -155,16 +157,21 @@ void main() {
     });
 
     test(
-      'rejects a missing route, short places, large parcels, short names and bad phones',
+      'rejects a missing route or place, long details, large parcels, short names and bad phones',
       () {
         expect(const PassengerParcelDraft().firstIssue, ParcelFormIssue.route);
         expect(
-          complete.copyWith(pickupDetails: ' a ').firstIssue,
+          complete.copyWith(pickupDetails: 'x' * 301).firstIssue,
           ParcelFormIssue.pickup,
         );
         expect(
-          complete.copyWith(dropoffDetails: 'ab').firstIssue,
+          complete.copyWith(dropoffDetails: 'y' * 301).firstIssue,
           ParcelFormIssue.dropoff,
+        );
+        // Details are optional once the places are chosen.
+        expect(
+          complete.copyWith(pickupDetails: '', dropoffDetails: '').isValid,
+          isTrue,
         );
         expect(complete.copyWith(size: 'L').firstIssue, ParcelFormIssue.size);
         expect(
@@ -183,6 +190,8 @@ void main() {
       );
       expect(payload, {
         'service_route_id': 'route-heb-bth',
+        'pickup_place_id': 'place-heb-halhul',
+        'dropoff_place_id': 'place-bth-beitjala',
         'pickup_details': 'The shop next to Ibn Rushd roundabout',
         'dropoff_details': 'Receiver house near the Church of the Nativity',
         'preferred_time': '2026-11-01T10:00:00.000Z',

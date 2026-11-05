@@ -21,6 +21,7 @@ import '../../passenger/application/passenger_controller.dart';
 import '../../operating_routes/data/operating_route_models.dart';
 import '../../operating_routes/data/operating_route_repository.dart';
 import '../../operating_routes/presentation/operating_route_inputs.dart';
+import '../../operating_routes/presentation/route_place_picker.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../passenger/domain/trip_offer.dart';
 import '../../passenger/presentation/widgets/trip_offer_card.dart';
@@ -661,6 +662,8 @@ class _TripReviewCard extends ConsumerStatefulWidget {
 
 class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
   late PassengerAssistantTripDraft _draft = widget.draft;
+  // The assistant's own wording of each place prefills the optional details;
+  // the passenger still picks the village or town from the route's cities.
   late final _pickupDetails = TextEditingController(
     text: _initialPickup(widget.draft),
   );
@@ -671,6 +674,8 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
   /// The route the passenger picked; until they do, the one the extracted
   /// places point to (or the route a restored draft already carries).
   String? _routeId;
+  late String? _pickupPlaceId = widget.draft.pickupPlaceId;
+  late String? _dropoffPlaceId = widget.draft.dropoffPlaceId;
   bool _routeTouched = false;
   bool _showErrors = false;
 
@@ -692,6 +697,8 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
         // A new reply from the assistant: start over from its places.
         _routeTouched = false;
         _routeId = null;
+        _pickupPlaceId = null;
+        _dropoffPlaceId = null;
         _showErrors = false;
         _pickupDetails.text = _initialPickup(widget.draft);
         _dropoffDetails.text = _initialDropoff(widget.draft);
@@ -723,9 +730,7 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
     final timeValid = _draft.preferredTime.isAfter(DateTime.now());
     final routeId = _selectedRoute(ref.watch(operatingRoutesProvider).value);
     final complete =
-        routeId != null &&
-        routeDetailsValid(_pickupDetails.text) &&
-        routeDetailsValid(_dropoffDetails.text);
+        routeId != null && _pickupPlaceId != null && _dropoffPlaceId != null;
 
     return DarbCard(
       key: const ValueKey('assistantExtractedData'),
@@ -763,34 +768,56 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
                 ? l10n.passengerRouteRequired
                 : null,
             onChanged: (route) => setState(() {
+              if (route.id != routeId) {
+                _pickupPlaceId = null;
+                _dropoffPlaceId = null;
+              }
               _routeTouched = true;
               _routeId = route.id;
             }),
           ),
           const SizedBox(height: AppTokens.spaceMedium),
+          RoutePlacePicker(
+            key: const ValueKey('assistantPickupPlacePicker'),
+            routeId: routeId,
+            side: RoutePlaceSide.pickup,
+            selectedId: _pickupPlaceId,
+            enabled: !widget.searching,
+            errorText: _showErrors && _pickupPlaceId == null
+                ? l10n.routePlaceRequired
+                : null,
+            onChanged: (place) => setState(() => _pickupPlaceId = place.id),
+          ),
+          const SizedBox(height: AppTokens.spaceSmall),
           RouteDetailsField(
             key: const ValueKey('assistantPickupDetailsField'),
             controller: _pickupDetails,
             enabled: !widget.searching,
-            icon: Icons.trip_origin_rounded,
-            label: l10n.passengerPickupDetailsLabel,
-            hint: l10n.passengerPickupDetailsHint,
-            errorText: _showErrors
-                ? routeDetailsError(l10n, _pickupDetails.text)
-                : null,
+            icon: Icons.edit_location_alt_outlined,
+            label: l10n.routePlaceMoreDetailsLabel,
+            hint: l10n.routePlacePickupDetailsHint,
             onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: AppTokens.spaceMedium),
+          RoutePlacePicker(
+            key: const ValueKey('assistantDropoffPlacePicker'),
+            routeId: routeId,
+            side: RoutePlaceSide.dropoff,
+            selectedId: _dropoffPlaceId,
+            enabled: !widget.searching,
+            errorText: _showErrors && _dropoffPlaceId == null
+                ? l10n.routePlaceRequired
+                : null,
+            onChanged: (place) => setState(() => _dropoffPlaceId = place.id),
           ),
           const SizedBox(height: AppTokens.spaceSmall),
           RouteDetailsField(
             key: const ValueKey('assistantDropoffDetailsField'),
             controller: _dropoffDetails,
             enabled: !widget.searching,
-            icon: Icons.location_on_outlined,
-            label: l10n.passengerDropoffDetailsLabel,
-            hint: l10n.passengerDropoffDetailsHint,
-            errorText: _showErrors
-                ? routeDetailsError(l10n, _dropoffDetails.text)
-                : null,
+            icon: Icons.edit_location_alt_outlined,
+            label: l10n.routePlaceMoreDetailsLabel,
+            hint: l10n.routePlaceDropoffDetailsHint,
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: AppTokens.spaceSmall),
@@ -853,6 +880,8 @@ class _TripReviewCardState extends ConsumerState<_TripReviewCard> {
                     widget.onConfirm(
                       _draft.copyWith(
                         serviceRouteId: routeId,
+                        pickupPlaceId: _pickupPlaceId,
+                        dropoffPlaceId: _dropoffPlaceId,
                         pickupDetails: _pickupDetails.text.trim(),
                         dropoffDetails: _dropoffDetails.text.trim(),
                       ),

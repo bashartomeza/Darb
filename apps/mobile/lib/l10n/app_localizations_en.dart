@@ -4423,4 +4423,53 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get callDriverUnavailable =>
       'This device can\'t place the call. Dial the number shown.';
+
+  @override
+  String get routePlacePickupLabel => 'Pickup village or town';
+
+  @override
+  String get routePlaceDropoffLabel => 'Drop-off village or town';
+
+  @override
+  String get routePlacePickupHint => 'Choose where you are picked up';
+
+  @override
+  String get routePlaceDropoffHint => 'Choose where you are dropped off';
+
+  @override
+  String get routePlaceChooseRouteFirst => 'Choose a route first';
+
+  @override
+  String get routePlaceRequired => 'Choose a place to continue.';
+
+  @override
+  String get routePlaceSearchHint => 'Search villages and towns';
+
+  @override
+  String get routePlaceNoResults => 'Nothing matches your search.';
+
+  @override
+  String get routePlacesLoading => 'Loading places…';
+
+  @override
+  String get routePlacesLoadFailed => 'Places could not be loaded.';
+
+  @override
+  String get routePlacesEmpty => 'No places are listed for this city yet.';
+
+  @override
+  String get routePlaceMoreDetailsLabel => 'More details (optional)';
+
+  @override
+  String get routePlacePickupDetailsHint => 'e.g. In front of the main gate';
+
+  @override
+  String get routePlaceDropoffDetailsHint => 'e.g. Next to the pharmacy';
+
+  @override
+  String get routePlaceDetailsHelper =>
+      'Optional: help the driver find the exact spot.';
+
+  @override
+  String get routePlaceSavedChoice => 'Place chosen from the list';
 }

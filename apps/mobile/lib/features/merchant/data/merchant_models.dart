@@ -3,6 +3,7 @@ import '../../../core/fares/fare.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../delivery_handover/data/delivery_handover_models.dart';
 import '../../matching/data/matching_models.dart';
+import '../../operating_routes/data/city_place_models.dart';
 import '../../operating_routes/data/operating_route_models.dart';
 import '../../trips/data/trip_models.dart';
 
@@ -23,11 +24,13 @@ double merchantTripProgress(String status) {
   return index < 0 ? 0 : (index + 1) / merchantTripTimeline.length;
 }
 
-/// One parcel of an order being written: where it goes, as free text the
-/// driver reads, plus its size, priority and an optional receiver.
+/// One parcel of an order being written: the village or town it goes to (of
+/// the route's destination city) with optional details the driver reads, plus
+/// its size, priority and an optional receiver.
 class ParcelDraft {
   const ParcelDraft({
     this.id = 0,
+    this.dropoffPlaceId,
     this.dropoffDetails = '',
     this.size = 'S',
     this.priority = 'normal',
@@ -38,13 +41,26 @@ class ParcelDraft {
   /// Stable within one form, so a parcel's text fields follow it when an
   /// earlier parcel is removed. Never sent.
   final int id;
+  final String? dropoffPlaceId;
   final String dropoffDetails;
   final String size;
   final String priority;
   final String receiverName;
   final String receiverPhone;
 
+  /// The same parcel with no drop-off place chosen (the route changed, and
+  /// places belong to a route's cities).
+  ParcelDraft withoutPlace() => ParcelDraft(
+    id: id,
+    dropoffDetails: dropoffDetails,
+    size: size,
+    priority: priority,
+    receiverName: receiverName,
+    receiverPhone: receiverPhone,
+  );
+
   ParcelDraft copyWith({
+    String? dropoffPlaceId,
     String? dropoffDetails,
     String? size,
     String? priority,
@@ -52,6 +68,7 @@ class ParcelDraft {
     String? receiverPhone,
   }) => ParcelDraft(
     id: id,
+    dropoffPlaceId: dropoffPlaceId ?? this.dropoffPlaceId,
     dropoffDetails: dropoffDetails ?? this.dropoffDetails,
     size: size ?? this.size,
     priority: priority ?? this.priority,
@@ -64,8 +81,10 @@ class ParcelDraft {
   Map<String, dynamic> toJson() {
     final name = receiverName.trim();
     final phone = receiverPhone.trim();
+    final details = dropoffDetails.trim();
     return {
-      'dropoff_details': dropoffDetails.trim(),
+      'dropoff_place_id': ?dropoffPlaceId,
+      if (details.isNotEmpty) 'dropoff_details': details,
       'size': size,
       'priority': priority,
       if (name.isNotEmpty) 'receiver_name': name,
@@ -120,13 +139,18 @@ class PendingOrderPreview {
     required this.pickup,
     required this.parcels,
     this.serviceRouteId,
+    this.pickupPlaceChosen = false,
   });
 
   /// Null for an order saved before routes existed.
   final String? serviceRouteId;
 
-  /// The typed pickup details, or the older corridor place label.
+  /// The typed pickup details (empty when only a place was chosen), or the
+  /// older corridor place label.
   final String pickup;
+
+  /// Whether a pickup place was chosen from the route's list.
+  final bool pickupPlaceChosen;
   final List<PendingParcelPreview> parcels;
 
   bool get legacy => serviceRouteId == null;
@@ -134,7 +158,8 @@ class PendingOrderPreview {
   factory PendingOrderPreview.fromPayload(Map<String, dynamic> payload) {
     final routeId = payload['service_route_id'];
     final pickup = routeId is String
-        ? payload['pickup_details']
+        ? (payload['pickup_details'] ??
+              (payload['pickup_place_id'] is String ? '' : null))
         : payload['pickup_label'];
     final parcels = payload['parcels'];
     if (pickup is! String || parcels is! List || parcels.isEmpty) {
@@ -142,6 +167,7 @@ class PendingOrderPreview {
     }
     return PendingOrderPreview(
       serviceRouteId: routeId is String ? routeId : null,
+      pickupPlaceChosen: payload['pickup_place_id'] is String,
       pickup: pickup,
       parcels: [
         for (final parcel in parcels)
@@ -160,10 +186,15 @@ class PendingParcelPreview {
     required this.size,
     required this.priority,
     this.receiverName,
+    this.placeChosen = false,
   });
 
-  /// The typed drop-off details, or the older corridor place label.
+  /// The typed drop-off details (empty when only a place was chosen), or the
+  /// older corridor place label.
   final String dropoff;
+
+  /// Whether a drop-off place was chosen from the route's list.
+  final bool placeChosen;
   final String size;
   final String priority;
   final String? receiverName;
@@ -172,7 +203,10 @@ class PendingParcelPreview {
     Map<String, dynamic> json, {
     required bool legacy,
   }) {
-    final dropoff = json[legacy ? 'destination_label' : 'dropoff_details'];
+    final dropoff = legacy
+        ? json['destination_label']
+        : (json['dropoff_details'] ??
+              (json['dropoff_place_id'] is String ? '' : null));
     final size = json['size'];
     final priority = json['priority'];
     if (dropoff is! String || size is! String || priority is! String) {
@@ -180,6 +214,7 @@ class PendingParcelPreview {
     }
     return PendingParcelPreview(
       dropoff: dropoff,
+      placeChosen: json['dropoff_place_id'] is String,
       size: size,
       priority: priority,
       receiverName: _text(json['receiver_name']),
@@ -196,6 +231,9 @@ class MerchantParcel {
     required this.status,
     this.destinationPosition,
     this.dropoffDetails,
+    this.dropoffPlaceId,
+    this.dropoffPlaceNameAr,
+    this.dropoffPlaceNameEn,
     this.receiverName,
   });
 
@@ -211,7 +249,21 @@ class MerchantParcel {
   /// Where exactly the parcel goes, as typed; null for parcels created before
   /// routes existed.
   final String? dropoffDetails;
+
+  /// The village or town chosen as the drop-off; null for free-text parcels.
+  final String? dropoffPlaceId;
+  final String? dropoffPlaceNameAr;
+  final String? dropoffPlaceNameEn;
   final String? receiverName;
+
+  /// The drop-off place and its optional details in the reading language, or
+  /// only the details of an older parcel; null when neither exists.
+  String? dropoffSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: dropoffPlaceNameAr,
+    nameEn: dropoffPlaceNameEn,
+    details: dropoffDetails,
+  );
 
   factory MerchantParcel.fromJson(Map<String, dynamic> json) => MerchantParcel(
     id: _string(json, 'id'),
@@ -221,6 +273,9 @@ class MerchantParcel {
     status: _string(json, 'status'),
     destinationPosition: _point(json, 'destination_lat', 'destination_lng'),
     dropoffDetails: _text(json['dropoff_details']),
+    dropoffPlaceId: _text(json['dropoff_place_id']),
+    dropoffPlaceNameAr: _text(json['dropoff_place_name_ar']),
+    dropoffPlaceNameEn: _text(json['dropoff_place_name_en']),
     receiverName: _text(json['receiver_name']),
   );
 }
@@ -332,6 +387,9 @@ class MerchantOrder {
     this.routeNameAr,
     this.routeNameEn,
     this.pickupDetails,
+    this.pickupPlaceId,
+    this.pickupPlaceNameAr,
+    this.pickupPlaceNameEn,
     this.fare,
     this.tripStatus,
     this.cancellation,
@@ -359,6 +417,20 @@ class MerchantOrder {
   final String? routeNameAr;
   final String? routeNameEn;
   final String? pickupDetails;
+
+  /// The village or town chosen as the pickup; null for free-text orders.
+  final String? pickupPlaceId;
+  final String? pickupPlaceNameAr;
+  final String? pickupPlaceNameEn;
+
+  /// The pickup place and its optional details in the reading language, or
+  /// only the details of an older order; null when neither exists.
+  String? pickupSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: pickupPlaceNameAr,
+    nameEn: pickupPlaceNameEn,
+    details: pickupDetails,
+  );
 
   String? routeName({required bool arabic}) =>
       storedRouteName(routeNameAr, routeNameEn, arabic: arabic);
@@ -440,6 +512,9 @@ class MerchantOrder {
       routeNameAr: _text(json['route_name_ar']),
       routeNameEn: _text(json['route_name_en']),
       pickupDetails: _text(json['pickup_details']),
+      pickupPlaceId: _text(json['pickup_place_id']),
+      pickupPlaceNameAr: _text(json['pickup_place_name_ar']),
+      pickupPlaceNameEn: _text(json['pickup_place_name_en']),
       fare: FareSnapshot.tryParse(json['fare']),
       tripStatus: _text(json['trip_status']),
       cancellation: CancellationInfo.tryParse(json['cancellation']),
@@ -456,7 +531,10 @@ class MerchantOrderSummary {
     this.routeNameAr,
     this.routeNameEn,
     this.pickupDetails,
+    this.pickupPlaceNameAr,
+    this.pickupPlaceNameEn,
     this.dropoffs = const [],
+    this.dropoffLines = const [],
   });
 
   final String id;
@@ -466,6 +544,25 @@ class MerchantOrderSummary {
   final String? routeNameAr;
   final String? routeNameEn;
   final String? pickupDetails;
+  final String? pickupPlaceNameAr;
+  final String? pickupPlaceNameEn;
+
+  /// The pickup place and its optional details in the reading language, or
+  /// only the details of an older order; null when neither exists.
+  String? pickupSummary({required bool arabic}) => placeWithDetails(
+    arabic: arabic,
+    nameAr: pickupPlaceNameAr,
+    nameEn: pickupPlaceNameEn,
+    details: pickupDetails,
+  );
+
+  /// Each parcel's drop-off (place and details, or the older place label),
+  /// without repeats, in the reading language.
+  List<String> dropoffTexts({required bool arabic}) =>
+      {for (final line in dropoffLines) ?line.text(arabic: arabic)}.toList();
+
+  /// The drop-offs as structured lines, for [dropoffTexts].
+  final List<PlaceLine> dropoffLines;
 
   /// Each parcel's drop-off as typed (or the older place label), in order and
   /// without repeats; empty when the payload has no parcels.
@@ -484,6 +581,19 @@ class MerchantOrderSummary {
       routeNameAr: _text(json['route_name_ar']),
       routeNameEn: _text(json['route_name_en']),
       pickupDetails: _text(json['pickup_details']),
+      pickupPlaceNameAr: _text(json['pickup_place_name_ar']),
+      pickupPlaceNameEn: _text(json['pickup_place_name_en']),
+      dropoffLines: parcels is List
+          ? [
+              for (final parcel in parcels)
+                if (parcel is Map<String, dynamic>)
+                  PlaceLine.fromJson(
+                    parcel,
+                    'dropoff',
+                    fallback: _text(parcel['destination_label']),
+                  ),
+            ]
+          : const [],
       dropoffs: parcels is List
           ? {
               for (final parcel in parcels)
