@@ -309,6 +309,17 @@ return {
     apiRequest<{ report: CommunityReport }>(`/admin/community-reports/${encodeURIComponent(id)}`, { method: "PATCH", token, body: { action } }),
   appRatings: (token: string, query: AppRatingQuery = {}) =>
     apiRequest<AppRatingPage>(withQuery("/admin/app-ratings", query), { token }),
+  mapPlaces: (token: string, query: MapPlaceQuery = {}) =>
+    apiRequest<MapPlacePage>(withQuery("/admin/map-places", { ...query, search: query.search || undefined, category: query.category || undefined, active: query.active || undefined }), { token }),
+  mapPlaceSummary: (token: string) => apiRequest<MapPlaceSummary>("/admin/map-places/summary", { token }),
+  createMapPlace: (token: string, body: MapPlaceDraft) =>
+    apiRequest<{ place: MapPlace }>("/admin/map-places", { method: "POST", token, body }),
+  updateMapPlace: (token: string, id: string, body: MapPlaceUpdate) =>
+    apiRequest<{ place: MapPlace }>(`/admin/map-places/${encodeURIComponent(id)}`, { method: "PATCH", token, body }),
+  mapPlaceReports: (token: string, query: { page?: number; limit?: number } = {}) =>
+    apiRequest<MapPlaceReportPage>(withQuery("/admin/map-place-reports", { ...query, status: "open" }), { token }),
+  reviewMapPlaceReport: (token: string, id: string, body: { status: "resolved" | "dismissed"; deactivate_place?: boolean }) =>
+    apiRequest<{ report: { id: string; status: string } }>(`/admin/map-place-reports/${encodeURIComponent(id)}`, { method: "PATCH", token, body }),
   checkpointPositions: (token: string, query: { search?: string; page?: number; limit?: number } = {}) =>
     apiRequest<CheckpointPositionPage>(withQuery("/admin/checkpoint-positions", { ...query, search: query.search || undefined }), { token }),
   createCheckpointPosition: (token: string, body: CheckpointPositionDraft) =>
@@ -743,6 +754,40 @@ export type AppRatingSummary = {
   distribution: Record<"1" | "2" | "3" | "4" | "5", number>;
 };
 export type AppRatingPage = { ratings: AppRating[]; summary: AppRatingSummary } & PageMeta;
+
+export const MAP_PLACE_CATEGORIES = ["cafe", "restaurant", "fuel", "pharmacy", "hospital", "clinic", "supermarket", "atm", "mosque", "car_repair", "rest_stop", "ev_charging"] as const;
+export type MapPlace = {
+  id: string;
+  category: string;
+  name_ar: string | null;
+  name_en: string | null;
+  latitude: number;
+  longitude: number;
+  phone: string | null;
+  opening_hours: string | null;
+  city: string | null;
+  source: string;
+  osm_id: string | null;
+  active: boolean;
+  admin_edited: boolean;
+  created_at: string;
+  updated_at: string;
+};
+export type MapPlaceQuery = { search?: string; category?: string; active?: "true" | "false"; page?: number; limit?: number };
+export type MapPlacePage = { places: MapPlace[] } & PageMeta;
+export type MapPlaceDraft = {
+  category: string;
+  name_ar?: string | null;
+  name_en?: string | null;
+  latitude: number;
+  longitude: number;
+  phone?: string | null;
+  opening_hours?: string | null;
+};
+export type MapPlaceUpdate = Partial<MapPlaceDraft & { active: boolean }>;
+export type MapPlaceSummary = { by_category: Record<string, { active: number; inactive: number }>; by_city: Record<string, number> };
+export type MapPlaceReport = { id: string; reason: string; note: string | null; status: string; created_at: string; resolved_at: string | null; place: MapPlace };
+export type MapPlaceReportPage = { reports: MapPlaceReport[] } & PageMeta;
 
 export const CHECKPOINT_CONFIDENCES = ["high", "medium", "low", "unverified"] as const;
 export type CheckpointConfidence = (typeof CHECKPOINT_CONFIDENCES)[number];

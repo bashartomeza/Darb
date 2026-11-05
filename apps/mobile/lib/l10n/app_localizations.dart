@@ -8089,6 +8089,306 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مكان مختار من القائمة'**
   String get routePlaceSavedChoice;
+
+  /// No description provided for @placeCategoryCafe.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقهى'**
+  String get placeCategoryCafe;
+
+  /// No description provided for @placeCategoryRestaurant.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطعم'**
+  String get placeCategoryRestaurant;
+
+  /// No description provided for @placeCategoryFuel.
+  ///
+  /// In ar, this message translates to:
+  /// **'محطة وقود'**
+  String get placeCategoryFuel;
+
+  /// No description provided for @placeCategoryRestStop.
+  ///
+  /// In ar, this message translates to:
+  /// **'استراحة / دورة مياه'**
+  String get placeCategoryRestStop;
+
+  /// No description provided for @placeCategoryPharmacy.
+  ///
+  /// In ar, this message translates to:
+  /// **'صيدلية'**
+  String get placeCategoryPharmacy;
+
+  /// No description provided for @placeCategoryHospital.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستشفى'**
+  String get placeCategoryHospital;
+
+  /// No description provided for @placeCategoryClinic.
+  ///
+  /// In ar, this message translates to:
+  /// **'عيادة'**
+  String get placeCategoryClinic;
+
+  /// No description provided for @placeCategorySupermarket.
+  ///
+  /// In ar, this message translates to:
+  /// **'سوبرماركت'**
+  String get placeCategorySupermarket;
+
+  /// No description provided for @placeCategoryAtm.
+  ///
+  /// In ar, this message translates to:
+  /// **'صراف / بنك'**
+  String get placeCategoryAtm;
+
+  /// No description provided for @placeCategoryMosque.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسجد'**
+  String get placeCategoryMosque;
+
+  /// No description provided for @placeCategoryCarRepair.
+  ///
+  /// In ar, this message translates to:
+  /// **'ورشة سيارات'**
+  String get placeCategoryCarRepair;
+
+  /// No description provided for @placeCategoryEvCharging.
+  ///
+  /// In ar, this message translates to:
+  /// **'شحن كهربائي'**
+  String get placeCategoryEvCharging;
+
+  /// No description provided for @placeClusterLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} × {category} — قرّب الخريطة لرؤيتها'**
+  String placeClusterLabel(int count, String category);
+
+  /// No description provided for @placesLoading.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ تحميل الأماكن…'**
+  String get placesLoading;
+
+  /// No description provided for @placesLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل الأماكن'**
+  String get placesLoadFailed;
+
+  /// No description provided for @placesNoneHere.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد {category} في هذه المنطقة'**
+  String placesNoneHere(String category);
+
+  /// No description provided for @placesTruncated.
+  ///
+  /// In ar, this message translates to:
+  /// **'تظهر الأقرب فقط — قرّب الخريطة لرؤية المزيد'**
+  String get placesTruncated;
+
+  /// No description provided for @placeDistanceMetres.
+  ///
+  /// In ar, this message translates to:
+  /// **'{value} م'**
+  String placeDistanceMetres(int value);
+
+  /// No description provided for @placeDistanceKm.
+  ///
+  /// In ar, this message translates to:
+  /// **'{value} كم'**
+  String placeDistanceKm(String value);
+
+  /// No description provided for @placeOpenNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوح الآن'**
+  String get placeOpenNow;
+
+  /// No description provided for @placeClosedNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلق الآن'**
+  String get placeClosedNow;
+
+  /// No description provided for @placeNavigate.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاتجاهات'**
+  String get placeNavigate;
+
+  /// No description provided for @placeNavigateFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد تطبيق خرائط لفتح الاتجاهات'**
+  String get placeNavigateFailed;
+
+  /// No description provided for @placeShowOnMap.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض على الخريطة'**
+  String get placeShowOnMap;
+
+  /// No description provided for @placeCall.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتصال'**
+  String get placeCall;
+
+  /// No description provided for @placeReport.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإبلاغ عن خطأ'**
+  String get placeReport;
+
+  /// No description provided for @placeReportTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما المشكلة في هذا المكان؟'**
+  String get placeReportTitle;
+
+  /// No description provided for @placeReportClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلق نهائيًا'**
+  String get placeReportClosed;
+
+  /// No description provided for @placeReportWrongLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع خاطئ'**
+  String get placeReportWrongLocation;
+
+  /// No description provided for @placeReportWrongInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلومات خاطئة'**
+  String get placeReportWrongInfo;
+
+  /// No description provided for @placeReportNotExists.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير موجود'**
+  String get placeReportNotExists;
+
+  /// No description provided for @placeReportSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'شكرًا، سنراجع البلاغ'**
+  String get placeReportSent;
+
+  /// No description provided for @placeReportFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر إرسال البلاغ. حاول لاحقًا'**
+  String get placeReportFailed;
+
+  /// No description provided for @placeDataAttribution.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات الأماكن © مساهمو OpenStreetMap'**
+  String get placeDataAttribution;
+
+  /// No description provided for @placeSuggestCafe.
+  ///
+  /// In ar, this message translates to:
+  /// **'يوجد مقهى على طريقك — قهوة؟'**
+  String get placeSuggestCafe;
+
+  /// No description provided for @placeSuggestCafeNamed.
+  ///
+  /// In ar, this message translates to:
+  /// **'على طريقك مقهى {name} — قهوة؟'**
+  String placeSuggestCafeNamed(String name);
+
+  /// No description provided for @placeSuggestRestaurant.
+  ///
+  /// In ar, this message translates to:
+  /// **'يوجد مطعم على طريقك'**
+  String get placeSuggestRestaurant;
+
+  /// No description provided for @placeSuggestRestaurantNamed.
+  ///
+  /// In ar, this message translates to:
+  /// **'على طريقك مطعم {name}'**
+  String placeSuggestRestaurantNamed(String name);
+
+  /// No description provided for @placeSuggestFuel.
+  ///
+  /// In ar, this message translates to:
+  /// **'توجد محطة وقود على طريقك'**
+  String get placeSuggestFuel;
+
+  /// No description provided for @placeSuggestFuelNamed.
+  ///
+  /// In ar, this message translates to:
+  /// **'على طريقك محطة وقود {name}'**
+  String placeSuggestFuelNamed(String name);
+
+  /// No description provided for @placeSuggestRestStop.
+  ///
+  /// In ar, this message translates to:
+  /// **'توجد استراحة على طريقك'**
+  String get placeSuggestRestStop;
+
+  /// No description provided for @placeSuggestRestStopNamed.
+  ///
+  /// In ar, this message translates to:
+  /// **'على طريقك استراحة {name}'**
+  String placeSuggestRestStopNamed(String name);
+
+  /// No description provided for @placeSuggestGeneric.
+  ///
+  /// In ar, this message translates to:
+  /// **'يوجد {category} على طريقك'**
+  String placeSuggestGeneric(String category);
+
+  /// No description provided for @placeSuggestGenericNamed.
+  ///
+  /// In ar, this message translates to:
+  /// **'على طريقك {category}: {name}'**
+  String placeSuggestGenericNamed(String category, String name);
+
+  /// No description provided for @placeSuggestNever.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا تقترح هذا مجددًا'**
+  String get placeSuggestNever;
+
+  /// No description provided for @placeSuggestDismiss.
+  ///
+  /// In ar, this message translates to:
+  /// **'إغلاق'**
+  String get placeSuggestDismiss;
+
+  /// No description provided for @placeSuggestSettingTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اقتراحات على الطريق'**
+  String get placeSuggestSettingTitle;
+
+  /// No description provided for @placeSuggestSettingSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه هادئ عند وجود مقهى أو محطة وقود قريبة أثناء الرحلة'**
+  String get placeSuggestSettingSubtitle;
+
+  /// No description provided for @placeSuggestSettingMaster.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار الاقتراحات أثناء الرحلة'**
+  String get placeSuggestSettingMaster;
+
+  /// No description provided for @mapFilterCheckpoints.
+  ///
+  /// In ar, this message translates to:
+  /// **'حواجز'**
+  String get mapFilterCheckpoints;
 }
 
 class _AppLocalizationsDelegate

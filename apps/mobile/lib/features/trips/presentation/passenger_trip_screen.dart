@@ -19,6 +19,8 @@ import '../../../core/widgets/state_views.dart';
 import '../../checkpoints/application/checkpoint_controller.dart';
 import '../../community_reports/application/community_reports_controller.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
+import '../../places/presentation/map_filter_bar.dart';
+import '../../places/presentation/places_layer.dart';
 import '../application/passenger_trip_controller.dart';
 import 'driver_call_card.dart';
 import 'passenger_cancel_trip_section.dart';
@@ -1056,6 +1058,8 @@ class _PassengerTripScreenState extends ConsumerState<PassengerTripScreen> {
           emptyLabel: l10n.noLocationYet,
           attributionLabel: l10n.mapAttribution,
           focus: _focus,
+          overlay: const MapFilterBar(),
+          onViewportChanged: (bounds) => reportPlacesViewport(ref, bounds),
 
           banner: data.locationIsStale
               ? OfflineBanner(message: l10n.locationIsStale)

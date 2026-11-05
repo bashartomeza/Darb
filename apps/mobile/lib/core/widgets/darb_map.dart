@@ -37,6 +37,10 @@ enum DarbMapMarkerType {
 
   /// Unverified community report.
   report,
+
+  /// A place of interest (cafe, pharmacy, fuel station, ...). A background
+  /// layer: it never moves the camera.
+  place,
 }
 
 /// What a line in a marker's callout describes. The callout picks the line's
@@ -103,6 +107,7 @@ class DarbMapMarker {
     this.badgeIcon,
     this.dimmed = false,
     this.details,
+    this.onTap,
   });
 
   final GeoPoint position;
@@ -137,10 +142,16 @@ class DarbMapMarker {
   /// lines of [label] after the first are shown.
   final List<DarbMapDetail>? details;
 
+  /// When set, tapping the pin calls this instead of opening the callout
+  /// (e.g. a place's own sheet). Not part of equality: a new closure on every
+  /// build must not rebuild every pin.
+  final VoidCallback? onTap;
+
   bool get fitsCamera =>
       fit ??
       (type != DarbMapMarkerType.checkpoint &&
-          type != DarbMapMarkerType.report);
+          type != DarbMapMarkerType.report &&
+          type != DarbMapMarkerType.place);
 
   @override
   bool operator ==(Object other) =>
@@ -319,6 +330,7 @@ class DarbMap extends StatefulWidget {
     this.tileProvider,
     this.tileCache,
     this.focus,
+    this.onViewportChanged,
     super.key,
   });
 
@@ -371,6 +383,11 @@ class DarbMap extends StatefulWidget {
   /// When this changes the camera centres on its point (if it is inside the
   /// service area) and stops following content updates until reset.
   final DarbMapFocus? focus;
+
+  /// Called with the visible area once the map is ready and whenever a pan,
+  /// fling or zoom has finished (not on every frame of a gesture). Used to load
+  /// the places of interest for the view.
+  final ValueChanged<LatLngBounds>? onViewportChanged;
 
   @override
   State<DarbMap> createState() => _DarbMapState();
@@ -489,7 +506,8 @@ class _DarbMapState extends State<DarbMap> {
     ]);
     if (own.isNotEmpty) return own;
     return DarbServiceArea.inArea([
-      for (final marker in widget.markers) _toLatLng(marker.position),
+      for (final marker in widget.markers)
+        if (marker.type != DarbMapMarkerType.place) _toLatLng(marker.position),
     ]);
   }
 
@@ -536,6 +554,17 @@ class _DarbMapState extends State<DarbMap> {
         _mapReady = true;
         // Content may have changed between the first build and now.
         _fitIfContentMoved();
+        _reportViewport();
+      },
+      onMapEvent: (event) {
+        if (event is MapEventMoveEnd ||
+            event is MapEventFlingAnimationEnd ||
+            event is MapEventDoubleTapZoomEnd ||
+            event is MapEventScrollWheelZoom ||
+            (event is MapEventMove &&
+                event.source == MapEventSource.fitCamera)) {
+          _reportViewport();
+        }
       },
       onPositionChanged: (_, hasGesture) {
         if (hasGesture) _userMovedCamera = true;
@@ -550,6 +579,16 @@ class _DarbMapState extends State<DarbMap> {
         }
       },
     );
+  }
+
+  void _reportViewport() {
+    final callback = widget.onViewportChanged;
+    if (callback == null || !_mapReady) return;
+    // Never from inside a build or layout pass: the callback updates providers.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_mapReady) return;
+      callback(_controller.camera.visibleBounds);
+    });
   }
 
   void _fitIfContentMoved() {
@@ -808,6 +847,11 @@ class _DarbMapState extends State<DarbMap> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
+            final onTap = marker.onTap;
+            if (onTap != null) {
+              onTap();
+              return;
+            }
             setState(() {
               _selectedLabel = marker.label;
             });

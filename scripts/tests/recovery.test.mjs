@@ -131,7 +131,8 @@ test("release metadata is reproducible with SOURCE_DATE_EPOCH and excludes secre
       "20261111130000_reliability_indexes",
       "20261112120000_cancellations",
       "20261113120000_data_retention",
-      "20261114120000_city_places"
+      "20261114120000_city_places",
+      "20261115120000_map_places"
     ]
   );
   rmSync(directory, { recursive: true, force: true });

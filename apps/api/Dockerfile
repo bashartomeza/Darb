@@ -15,6 +15,8 @@ COPY apps/api/tsconfig.json apps/api/tsconfig.json
 COPY apps/api/src apps/api/src
 COPY apps/api/data/checkpoint-directory.v1.manifest.json apps/api/data/checkpoint-directory.v1.manifest.json
 COPY apps/api/data/osm-checkpoints.json apps/api/data/osm-checkpoints.json
+COPY apps/api/data/map-place-categories.json apps/api/data/map-place-categories.json
+COPY apps/api/data/osm-places.json apps/api/data/osm-places.json
 RUN DATABASE_URL=mysql://127.0.0.1:3306/build npm run prisma:generate
 RUN npm run build:api
 
@@ -38,6 +40,8 @@ COPY --from=production-dependencies --chown=node:node /workspace/node_modules /a
 COPY --from=build --chown=node:node /workspace/apps/api/dist /app/apps/api/dist
 COPY --from=build --chown=node:node /workspace/apps/api/data/checkpoint-directory.v1.manifest.json /app/apps/api/data/checkpoint-directory.v1.manifest.json
 COPY --from=build --chown=node:node /workspace/apps/api/data/osm-checkpoints.json /app/apps/api/data/osm-checkpoints.json
+COPY --from=build --chown=node:node /workspace/apps/api/data/map-place-categories.json /app/apps/api/data/map-place-categories.json
+COPY --from=build --chown=node:node /workspace/apps/api/data/osm-places.json /app/apps/api/data/osm-places.json
 COPY --chown=node:node apps/api/package.json /app/apps/api/package.json
 USER node
 EXPOSE 3000

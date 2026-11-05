@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../theme/passenger_theme.dart';
 import '../theme/merchant_theme.dart';
 import 'merchant_bottom_nav.dart';
+import '../../features/places/presentation/place_suggestion_host.dart';
 import '../../features/push/presentation/push_permission_prompt.dart';
 
 /// A bottom-nav destination. The branch it selects is its index in the list, so
@@ -61,7 +62,7 @@ class RoleShellScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      PushPermissionPrompt(child: _shell(context));
+      PlaceSuggestionHost(child: PushPermissionPrompt(child: _shell(context)));
 
   Widget _shell(BuildContext context) {
     final passenger = passengerItems;

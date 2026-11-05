@@ -2007,5 +2007,131 @@
   "routePlacePickupDetailsHint": "مثال: أمام البوابة الرئيسية",
   "routePlaceDropoffDetailsHint": "مثال: بجانب الصيدلية",
   "routePlaceDetailsHelper": "اختياري: ساعد السائق على إيجاد المكان بدقة.",
-  "routePlaceSavedChoice": "مكان مختار من القائمة"
+  "routePlaceSavedChoice": "مكان مختار من القائمة",
+  "placeCategoryCafe": "مقهى",
+  "placeCategoryRestaurant": "مطعم",
+  "placeCategoryFuel": "محطة وقود",
+  "placeCategoryRestStop": "استراحة / دورة مياه",
+  "placeCategoryPharmacy": "صيدلية",
+  "placeCategoryHospital": "مستشفى",
+  "placeCategoryClinic": "عيادة",
+  "placeCategorySupermarket": "سوبرماركت",
+  "placeCategoryAtm": "صراف / بنك",
+  "placeCategoryMosque": "مسجد",
+  "placeCategoryCarRepair": "ورشة سيارات",
+  "placeCategoryEvCharging": "شحن كهربائي",
+  "placeClusterLabel": "{count} × {category} — قرّب الخريطة لرؤيتها",
+  "@placeClusterLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "placesLoading": "جارٍ تحميل الأماكن…",
+  "placesLoadFailed": "تعذر تحميل الأماكن",
+  "placesNoneHere": "لا يوجد {category} في هذه المنطقة",
+  "@placesNoneHere": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "placesTruncated": "تظهر الأقرب فقط — قرّب الخريطة لرؤية المزيد",
+  "placeDistanceMetres": "{value} م",
+  "@placeDistanceMetres": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "placeDistanceKm": "{value} كم",
+  "@placeDistanceKm": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "placeOpenNow": "مفتوح الآن",
+  "placeClosedNow": "مغلق الآن",
+  "placeNavigate": "الاتجاهات",
+  "placeNavigateFailed": "لا يوجد تطبيق خرائط لفتح الاتجاهات",
+  "placeShowOnMap": "عرض على الخريطة",
+  "placeCall": "اتصال",
+  "placeReport": "الإبلاغ عن خطأ",
+  "placeReportTitle": "ما المشكلة في هذا المكان؟",
+  "placeReportClosed": "مغلق نهائيًا",
+  "placeReportWrongLocation": "الموقع خاطئ",
+  "placeReportWrongInfo": "معلومات خاطئة",
+  "placeReportNotExists": "غير موجود",
+  "placeReportSent": "شكرًا، سنراجع البلاغ",
+  "placeReportFailed": "تعذر إرسال البلاغ. حاول لاحقًا",
+  "placeDataAttribution": "بيانات الأماكن © مساهمو OpenStreetMap",
+  "placeSuggestCafe": "يوجد مقهى على طريقك — قهوة؟",
+  "placeSuggestCafeNamed": "على طريقك مقهى {name} — قهوة؟",
+  "@placeSuggestCafeNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestRestaurant": "يوجد مطعم على طريقك",
+  "placeSuggestRestaurantNamed": "على طريقك مطعم {name}",
+  "@placeSuggestRestaurantNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestFuel": "توجد محطة وقود على طريقك",
+  "placeSuggestFuelNamed": "على طريقك محطة وقود {name}",
+  "@placeSuggestFuelNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestRestStop": "توجد استراحة على طريقك",
+  "placeSuggestRestStopNamed": "على طريقك استراحة {name}",
+  "@placeSuggestRestStopNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestGeneric": "يوجد {category} على طريقك",
+  "@placeSuggestGeneric": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestGenericNamed": "على طريقك {category}: {name}",
+  "@placeSuggestGenericNamed": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "placeSuggestNever": "لا تقترح هذا مجددًا",
+  "placeSuggestDismiss": "إغلاق",
+  "placeSuggestSettingTitle": "اقتراحات على الطريق",
+  "placeSuggestSettingSubtitle": "تنبيه هادئ عند وجود مقهى أو محطة وقود قريبة أثناء الرحلة",
+  "placeSuggestSettingMaster": "إظهار الاقتراحات أثناء الرحلة",
+  "mapFilterCheckpoints": "حواجز"
 }

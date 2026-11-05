@@ -9,6 +9,8 @@ import '../../features/checkpoints/domain/checkpoint_models.dart';
 import '../../features/community_reports/application/community_reports_controller.dart';
 import '../../features/community_reports/data/community_report_models.dart';
 import '../../features/community_reports/presentation/community_reports_section.dart';
+import '../../features/places/domain/place_category.dart';
+import '../../features/places/presentation/places_layer.dart';
 import '../widgets/darb_map.dart';
 import 'checkpoint_map_markers.dart';
 
@@ -22,10 +24,20 @@ class MapOverlay {
     required this.notes,
     required this.snapshot,
     required this.checkpointsAvailable,
+    this.placeMarkers = const [],
+    this.filter,
   });
 
   final List<DarbMapMarker> checkpointMarkers;
   final List<DarbMapMarker> reportMarkers;
+
+  /// Places of interest, drawn only while a place category is the active
+  /// filter (see [mapFilterProvider]).
+  final List<DarbMapMarker> placeMarkers;
+
+  /// The active map filter: a place category key, [checkpointsFilterId], or
+  /// null for the normal view.
+  final String? filter;
 
   /// E.g. "Checkpoint data unavailable", "barrier states may be out of date".
   final List<String> notes;
@@ -35,7 +47,11 @@ class MapOverlay {
   /// Null while the server's capabilities are still loading.
   final bool? checkpointsAvailable;
 
-  List<DarbMapMarker> get markers => [...checkpointMarkers, ...reportMarkers];
+  List<DarbMapMarker> get markers => [
+    ...checkpointMarkers,
+    ...reportMarkers,
+    ...placeMarkers,
+  ];
 }
 
 /// Reads the checkpoint and community layers for a map.
@@ -85,15 +101,43 @@ MapOverlay watchMapOverlay(
       ? watchCommunityReportsForMap(ref)
       : const <CommunityReport>[];
 
+  // A chip filter shows one layer and hides the rest. The checkpoint data is
+  // still read (the checkpoint list under the map uses it); only what the map
+  // draws changes.
+  final layer = watchPlacesLayer(ref, l10n);
+  final filter = layer.filter;
+  final checkpointMarkers = checkpointTrafficMarkers(
+    snapshot.checkpoints,
+    l10n: l10n,
+    community: communityCheckpointNotes(snapshot.checkpoints, reports),
+  );
+  if (filter == null) {
+    return MapOverlay(
+      checkpointMarkers: checkpointMarkers,
+      reportMarkers: communityReportMarkers(l10n, reports),
+      notes: notes,
+      snapshot: snapshot,
+      checkpointsAvailable: available,
+    );
+  }
+  if (filter == checkpointsFilterId) {
+    return MapOverlay(
+      checkpointMarkers: checkpointMarkers,
+      reportMarkers: const [],
+      notes: notes,
+      snapshot: snapshot,
+      checkpointsAvailable: available,
+      filter: filter,
+    );
+  }
+
   return MapOverlay(
-    checkpointMarkers: checkpointTrafficMarkers(
-      snapshot.checkpoints,
-      l10n: l10n,
-      community: communityCheckpointNotes(snapshot.checkpoints, reports),
-    ),
-    reportMarkers: communityReportMarkers(l10n, reports),
-    notes: notes,
+    checkpointMarkers: const [],
+    reportMarkers: const [],
+    placeMarkers: layer.markers,
+    notes: layer.notes,
     snapshot: snapshot,
     checkpointsAvailable: available,
+    filter: filter,
   );
 }

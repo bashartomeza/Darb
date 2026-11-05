@@ -15,6 +15,8 @@ import { parcelHandoverRouter } from "./modules/parcelHandover.js";
 import { adminRouter } from "./modules/admin.js";
 import { adminAppRatingsRouter } from "./modules/adminAppRatings.js";
 import { createAdminCheckpointPositionsRouter } from "./modules/adminCheckpointPositions.js";
+import { createAdminMapPlacesRouter } from "./modules/adminMapPlaces.js";
+import { createMapPlacesRouter } from "./modules/mapPlaces.js";
 import { matchingRouter } from "./modules/matching.js";
 import { batchingRouter } from "./modules/batching.js";
 import { comparisonRouter } from "./modules/comparison.js";
@@ -317,6 +319,8 @@ export function createApp(
   );
   app.use("/api/v1", adminAppRatingsRouter);
   app.use("/api/v1", createAdminCheckpointPositionsRouter(partnerCheckpointMap));
+  app.use("/api/v1", createAdminMapPlacesRouter());
+  app.use("/api/v1", createMapPlacesRouter());
   app.use("/api/v1", adminRouter);
   if (appConfig.adminStaticDir) app.use(createAdminSiteRouter(appConfig.adminStaticDir));
 

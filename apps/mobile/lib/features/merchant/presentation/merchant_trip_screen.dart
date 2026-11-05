@@ -11,6 +11,9 @@ import '../../../core/widgets/darb_map.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../canonical_routes/domain/canonical_route_models.dart';
 import '../../delivery_handover/presentation/handover_code_card.dart';
+import '../../places/application/places_controller.dart';
+import '../../places/presentation/map_filter_bar.dart';
+import '../../places/presentation/places_layer.dart';
 import '../../incidents/presentation/report_incident_sheet.dart';
 import '../../security/presentation/session_status_banner.dart';
 import '../../trips/data/trip_models.dart';
@@ -440,11 +443,17 @@ class _CorridorTripMap extends ConsumerWidget {
               .value
         : null;
     final location = this.location;
+    // Merchants have no checkpoint layer here, so their chip row is places only.
+    final layer = watchPlacesLayer(ref, l10n);
     return DarbMap(
       key: const ValueKey('merchantDeliveryMap'),
       emptyLabel: l10n.noLocationYet,
       attributionLabel: l10n.mapAttribution,
       height: height,
+      notes: layer.notes,
+      overlay: const MapFilterBar(includeCheckpoints: false),
+      focus: ref.watch(placeFocusProvider),
+      onViewportChanged: (bounds) => reportPlacesViewport(ref, bounds),
       controlsTop: 112,
       bannerElevation: 0,
       paths: [
@@ -458,6 +467,7 @@ class _CorridorTripMap extends ConsumerWidget {
           ),
       ],
       markers: [
+        ...layer.markers,
         if (origin != null)
           DarbMapMarker(
             position: origin,

@@ -10,6 +10,7 @@ import '../../../../core/theme/passenger_theme.dart';
 import '../../../../core/theme/semantic_colors.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../push/application/push_controller.dart';
+import '../../../places/presentation/place_suggestions_settings_tile.dart';
 import '../../../push/presentation/push_settings_tile.dart';
 import '../../../security/presentation/security_actions.dart';
 import '../../../security/presentation/session_status_banner.dart';
@@ -77,6 +78,8 @@ class PassengerSettingsScreen extends ConsumerWidget {
             const PushSettingsTile.passenger(),
             if (ref.watch(pushControllerProvider).available)
               const SizedBox(height: 12),
+            const PlaceSuggestionsSettingsTile.passenger(),
+            const SizedBox(height: 12),
             SettingsRow(
               key: const ValueKey('settingsRate'),
               icon: Icons.star_outline_rounded,

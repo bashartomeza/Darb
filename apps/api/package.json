@@ -21,6 +21,7 @@
     "documents:purge": "node dist/scripts/purgeDriverDocuments.js",
     "documents:import": "node dist/scripts/importDocumentFiles.js",
     "parcels:purge-receivers": "node dist/scripts/purgePassengerParcelReceivers.js",
+    "places:import": "node dist/scripts/importMapPlaces.js",
     "retention:locations": "node dist/scripts/purgeLocationEvents.js",
     "retention:expired": "node dist/scripts/purgeExpiredData.js",
     "documents:expiry": "node dist/scripts/checkDriverDocumentExpiry.js",

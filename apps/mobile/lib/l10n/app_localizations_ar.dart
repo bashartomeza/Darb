@@ -4491,4 +4491,175 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get routePlaceSavedChoice => 'مكان مختار من القائمة';
+
+  @override
+  String get placeCategoryCafe => 'مقهى';
+
+  @override
+  String get placeCategoryRestaurant => 'مطعم';
+
+  @override
+  String get placeCategoryFuel => 'محطة وقود';
+
+  @override
+  String get placeCategoryRestStop => 'استراحة / دورة مياه';
+
+  @override
+  String get placeCategoryPharmacy => 'صيدلية';
+
+  @override
+  String get placeCategoryHospital => 'مستشفى';
+
+  @override
+  String get placeCategoryClinic => 'عيادة';
+
+  @override
+  String get placeCategorySupermarket => 'سوبرماركت';
+
+  @override
+  String get placeCategoryAtm => 'صراف / بنك';
+
+  @override
+  String get placeCategoryMosque => 'مسجد';
+
+  @override
+  String get placeCategoryCarRepair => 'ورشة سيارات';
+
+  @override
+  String get placeCategoryEvCharging => 'شحن كهربائي';
+
+  @override
+  String placeClusterLabel(int count, String category) {
+    return '$count × $category — قرّب الخريطة لرؤيتها';
+  }
+
+  @override
+  String get placesLoading => 'جارٍ تحميل الأماكن…';
+
+  @override
+  String get placesLoadFailed => 'تعذر تحميل الأماكن';
+
+  @override
+  String placesNoneHere(String category) {
+    return 'لا يوجد $category في هذه المنطقة';
+  }
+
+  @override
+  String get placesTruncated => 'تظهر الأقرب فقط — قرّب الخريطة لرؤية المزيد';
+
+  @override
+  String placeDistanceMetres(int value) {
+    return '$value م';
+  }
+
+  @override
+  String placeDistanceKm(String value) {
+    return '$value كم';
+  }
+
+  @override
+  String get placeOpenNow => 'مفتوح الآن';
+
+  @override
+  String get placeClosedNow => 'مغلق الآن';
+
+  @override
+  String get placeNavigate => 'الاتجاهات';
+
+  @override
+  String get placeNavigateFailed => 'لا يوجد تطبيق خرائط لفتح الاتجاهات';
+
+  @override
+  String get placeShowOnMap => 'عرض على الخريطة';
+
+  @override
+  String get placeCall => 'اتصال';
+
+  @override
+  String get placeReport => 'الإبلاغ عن خطأ';
+
+  @override
+  String get placeReportTitle => 'ما المشكلة في هذا المكان؟';
+
+  @override
+  String get placeReportClosed => 'مغلق نهائيًا';
+
+  @override
+  String get placeReportWrongLocation => 'الموقع خاطئ';
+
+  @override
+  String get placeReportWrongInfo => 'معلومات خاطئة';
+
+  @override
+  String get placeReportNotExists => 'غير موجود';
+
+  @override
+  String get placeReportSent => 'شكرًا، سنراجع البلاغ';
+
+  @override
+  String get placeReportFailed => 'تعذر إرسال البلاغ. حاول لاحقًا';
+
+  @override
+  String get placeDataAttribution => 'بيانات الأماكن © مساهمو OpenStreetMap';
+
+  @override
+  String get placeSuggestCafe => 'يوجد مقهى على طريقك — قهوة؟';
+
+  @override
+  String placeSuggestCafeNamed(String name) {
+    return 'على طريقك مقهى $name — قهوة؟';
+  }
+
+  @override
+  String get placeSuggestRestaurant => 'يوجد مطعم على طريقك';
+
+  @override
+  String placeSuggestRestaurantNamed(String name) {
+    return 'على طريقك مطعم $name';
+  }
+
+  @override
+  String get placeSuggestFuel => 'توجد محطة وقود على طريقك';
+
+  @override
+  String placeSuggestFuelNamed(String name) {
+    return 'على طريقك محطة وقود $name';
+  }
+
+  @override
+  String get placeSuggestRestStop => 'توجد استراحة على طريقك';
+
+  @override
+  String placeSuggestRestStopNamed(String name) {
+    return 'على طريقك استراحة $name';
+  }
+
+  @override
+  String placeSuggestGeneric(String category) {
+    return 'يوجد $category على طريقك';
+  }
+
+  @override
+  String placeSuggestGenericNamed(String category, String name) {
+    return 'على طريقك $category: $name';
+  }
+
+  @override
+  String get placeSuggestNever => 'لا تقترح هذا مجددًا';
+
+  @override
+  String get placeSuggestDismiss => 'إغلاق';
+
+  @override
+  String get placeSuggestSettingTitle => 'اقتراحات على الطريق';
+
+  @override
+  String get placeSuggestSettingSubtitle =>
+      'تنبيه هادئ عند وجود مقهى أو محطة وقود قريبة أثناء الرحلة';
+
+  @override
+  String get placeSuggestSettingMaster => 'إظهار الاقتراحات أثناء الرحلة';
+
+  @override
+  String get mapFilterCheckpoints => 'حواجز';
 }

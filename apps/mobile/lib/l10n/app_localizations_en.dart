@@ -4529,4 +4529,177 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routePlaceSavedChoice => 'Place chosen from the list';
+
+  @override
+  String get placeCategoryCafe => 'Cafe';
+
+  @override
+  String get placeCategoryRestaurant => 'Restaurant';
+
+  @override
+  String get placeCategoryFuel => 'Fuel station';
+
+  @override
+  String get placeCategoryRestStop => 'Rest stop / toilets';
+
+  @override
+  String get placeCategoryPharmacy => 'Pharmacy';
+
+  @override
+  String get placeCategoryHospital => 'Hospital';
+
+  @override
+  String get placeCategoryClinic => 'Clinic';
+
+  @override
+  String get placeCategorySupermarket => 'Supermarket';
+
+  @override
+  String get placeCategoryAtm => 'ATM / bank';
+
+  @override
+  String get placeCategoryMosque => 'Mosque';
+
+  @override
+  String get placeCategoryCarRepair => 'Car repair';
+
+  @override
+  String get placeCategoryEvCharging => 'EV charging';
+
+  @override
+  String placeClusterLabel(int count, String category) {
+    return '$count × $category — zoom in to see them';
+  }
+
+  @override
+  String get placesLoading => 'Loading places…';
+
+  @override
+  String get placesLoadFailed => 'Places could not be loaded';
+
+  @override
+  String placesNoneHere(String category) {
+    return 'No $category in this area';
+  }
+
+  @override
+  String get placesTruncated => 'Showing the nearest only — zoom in for more';
+
+  @override
+  String placeDistanceMetres(int value) {
+    return '$value m';
+  }
+
+  @override
+  String placeDistanceKm(String value) {
+    return '$value km';
+  }
+
+  @override
+  String get placeOpenNow => 'Open now';
+
+  @override
+  String get placeClosedNow => 'Closed now';
+
+  @override
+  String get placeNavigate => 'Navigate';
+
+  @override
+  String get placeNavigateFailed => 'No maps app was found to open directions';
+
+  @override
+  String get placeShowOnMap => 'Show on map';
+
+  @override
+  String get placeCall => 'Call';
+
+  @override
+  String get placeReport => 'Report a problem';
+
+  @override
+  String get placeReportTitle => 'What is wrong with this place?';
+
+  @override
+  String get placeReportClosed => 'Permanently closed';
+
+  @override
+  String get placeReportWrongLocation => 'Wrong location';
+
+  @override
+  String get placeReportWrongInfo => 'Wrong information';
+
+  @override
+  String get placeReportNotExists => 'Does not exist';
+
+  @override
+  String get placeReportSent => 'Thanks, we will review your report';
+
+  @override
+  String get placeReportFailed =>
+      'The report could not be sent. Try again later';
+
+  @override
+  String get placeDataAttribution => 'Place data © OpenStreetMap contributors';
+
+  @override
+  String get placeSuggestCafe =>
+      'There is a cafe on your road — want a coffee?';
+
+  @override
+  String placeSuggestCafeNamed(String name) {
+    return '$name cafe is on your road — want a coffee?';
+  }
+
+  @override
+  String get placeSuggestRestaurant => 'There is a restaurant on your road';
+
+  @override
+  String placeSuggestRestaurantNamed(String name) {
+    return '$name restaurant is on your road';
+  }
+
+  @override
+  String get placeSuggestFuel => 'There is a fuel station on your road';
+
+  @override
+  String placeSuggestFuelNamed(String name) {
+    return '$name fuel station is on your road';
+  }
+
+  @override
+  String get placeSuggestRestStop => 'There is a rest stop on your road';
+
+  @override
+  String placeSuggestRestStopNamed(String name) {
+    return '$name rest stop is on your road';
+  }
+
+  @override
+  String placeSuggestGeneric(String category) {
+    return 'There is a $category on your road';
+  }
+
+  @override
+  String placeSuggestGenericNamed(String category, String name) {
+    return 'A $category is on your road: $name';
+  }
+
+  @override
+  String get placeSuggestNever => 'Don\'t suggest this again';
+
+  @override
+  String get placeSuggestDismiss => 'Dismiss';
+
+  @override
+  String get placeSuggestSettingTitle => 'Suggestions on your road';
+
+  @override
+  String get placeSuggestSettingSubtitle =>
+      'A quiet note when a cafe or fuel station is near during a trip';
+
+  @override
+  String get placeSuggestSettingMaster => 'Show suggestions during a trip';
+
+  @override
+  String get mapFilterCheckpoints => 'Checkpoints';
 }
