@@ -9,6 +9,8 @@ import { recomputeTrustForTrip } from "../services/driverTrust.js";
 import { HttpError } from "../middleware/error.js";
 import { AuditAction, MatchStatus, TripStatus } from "../generated/prisma/enums.js";
 import { advanceLegacyTrip, isLegacyTripTransitionAllowed } from "../services/tripLifecycle.js";
+import { driverCancelTrip, serializeCancellation } from "../services/cancellations.js";
+import { cancelBodySchema } from "../services/cancellationReasons.js";
 import { maybeNotifyDriverApproaching, maybeNotifyDriverApproachingFromLatest } from "../services/driverApproaching.js";
 import { notifyMatchDecision } from "../services/notifications.js";
 import {
@@ -20,7 +22,7 @@ import {
   tripOrderIds,
   unconfirmedOrderIds
 } from "../services/deliveryHandover.js";
-import { isLegacyRouteTimely, legacyRouteTimingWhere, legacyParcelUnits, reserveLegacyCapacity, releaseLegacyCapacity, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
+import { isLegacyRouteTimely, legacyRouteTimingWhere, legacyParcelUnits, reserveLegacyCapacity, releaseLegacyCapacity, requestExpiryCutoff, requireEligibleLegacyRoute } from "../services/legacyCapacity.js";
 import { routeSummarySelect, withRouteFields, type RouteSummary } from "../services/operatingRoutes.js";
 import {
   assignedDriverSummary,
@@ -44,14 +46,24 @@ function routeParam(value: string | string[] | undefined) {
 
 type WithRoute = { route_version?: RouteSummary } | null;
 
+/** The latest cancellation recorded against a trip (loaded with it; shown only while it is cancelled). */
+const tripCancellationInclude = {
+  orderBy: { created_at: "desc" as const },
+  take: 1,
+  select: { reason_code: true, automatic: true, actor_role: true, created_at: true }
+};
+
 /**
  * A trip as the API returns it: the embedded request, order and driver route
  * carry `service_route_id`, `route_name_ar` and `route_name_en`; their
  * pickup / drop-off details are plain columns of those rows.
  */
-function serializeTrip<T extends { driver_route: WithRoute; passenger_request: WithRoute; merchant_order: WithRoute }>(trip: T) {
+function serializeTrip<T extends { driver_route: WithRoute; passenger_request: WithRoute; merchant_order: WithRoute; status?: string; cancellations?: unknown }>(trip: T) {
+  const { cancellations, ...rest } = trip;
   return {
-    ...trip,
+    ...rest,
+    // Who cancelled the trip and why, once it is cancelled; otherwise null.
+    cancellation: trip.status === "cancelled" ? serializeCancellation(cancellations as never) : null,
     driver_route: trip.driver_route ? withRouteFields(trip.driver_route) : null,
     passenger_request: trip.passenger_request ? withRouteFields(trip.passenger_request) : null,
     merchant_order: trip.merchant_order ? withRouteFields(trip.merchant_order) : null
@@ -163,7 +175,8 @@ export async function getVisibleTrip(id: string, req: AuthenticatedRequest) {
       driver_route: { include: { driver: { include: { user: { select: assignedDriverUserSelect } } }, route_version: routeSummarySelect } },
       passenger_request: { include: { route_version: routeSummarySelect } },
       merchant_order: { include: { parcels: true, route_version: routeSummarySelect } },
-      parcel_batch: tripBatchInclude
+      parcel_batch: tripBatchInclude,
+      cancellations: tripCancellationInclude
     }
   });
   if (!trip) throw new HttpError(404, "trip_not_found");
@@ -218,7 +231,7 @@ tripsRouter.post("/matches/:id/accept", requireAuth, async (req: AuthenticatedRe
         const now = new Date();
         if (match.expires_at && match.expires_at <= now) throw new HttpError(409, "match_expired");
         if (!isLegacyRouteTimely(match.driver_route, now)) throw new HttpError(409, "driver_route_not_available");
-        if (match.passenger_request && match.passenger_request.preferred_time <= now) {
+        if (match.passenger_request && match.passenger_request.preferred_time <= requestExpiryCutoff(now)) {
           throw new HttpError(409, "passenger_request_expired");
         }
 
@@ -241,7 +254,9 @@ tripsRouter.post("/matches/:id/accept", requireAuth, async (req: AuthenticatedRe
           where: match.passenger_request_id
             ? {
                 passenger_request_id: match.passenger_request_id,
-                operational_mode: "legacy"
+                operational_mode: "legacy",
+                // A trip its driver cancelled (the request went back to waiting) is not a duplicate.
+                status: { notIn: [TripStatus.cancelled, TripStatus.failed] }
               }
             : {
                 driver_route_id: match.driver_route_id,
@@ -258,7 +273,7 @@ tripsRouter.post("/matches/:id/accept", requireAuth, async (req: AuthenticatedRe
             where: {
               id: match.passenger_request_id,
               status: { in: ["pending", "matched"] },
-              preferred_time: { gt: new Date() },
+              preferred_time: { gt: requestExpiryCutoff(new Date()) },
             },
             data: { status: "accepted" }
           });
@@ -523,7 +538,8 @@ tripsRouter.get("/trips", requireAuth, async (req: AuthenticatedRequest, res, ne
         driver_route: { include: { route_version: routeSummarySelect } },
         passenger_request: { include: { route_version: routeSummarySelect } },
         merchant_order: { include: { route_version: routeSummarySelect } },
-        parcel_batch: { include: { members: { select: { merchant_order_id: true }, orderBy: { created_at: "asc" } } } }
+        parcel_batch: { include: { members: { select: { merchant_order_id: true }, orderBy: { created_at: "asc" } } } },
+        cancellations: tripCancellationInclude
       },
       orderBy: listPageOrderBy,
       take: page.limit + 1
@@ -567,6 +583,11 @@ tripsRouter.post("/trips/:id/status", requireAuth, async (req: AuthenticatedRequ
       throw new HttpError(403, "forbidden");
     }
     if (!isLegacyTripTransitionAllowed(existing.status, input.status)) throw new HttpError(409, "invalid_trip_status_transition");
+    // Before pickup a driver cancels through POST /trips/:id/cancel: it needs a reason, is limited
+    // per day and puts the order back to waiting. Admins cancel through the admin cancel endpoints.
+    if (req.user!.role === "driver" && input.status === "cancelled" && ["accepted", "pickup_started"].includes(existing.status)) {
+      throw new HttpError(409, "cancellation_reason_required");
+    }
 
     const trip = await prisma.$transaction(async (tx) => {
       return advanceLegacyTrip(tx, existing, input.status, {
@@ -581,6 +602,26 @@ tripsRouter.post("/trips/:id/status", requireAuth, async (req: AuthenticatedRequ
     res.json({ trip });
   } catch (error) {
     next(error);
+  }
+});
+
+// A driver cancels an accepted trip before pickup, with a reason. The request or orders go back to
+// waiting for another driver while still inside their window (ORDER_AUTO_CANCEL_MINUTES), else they
+// are cancelled automatically. Counts against the driver's trust score and is limited per day.
+tripsRouter.post("/trips/:id/cancel", requireAuth, requireRole("driver"), async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const tripId = routeParam(req.params.id);
+    const input = cancelBodySchema("driver").parse(req.body ?? {});
+    const result = await prisma.$transaction(
+      (tx) => driverCancelTrip(tx, { tripId, driverUserId: req.user!.id, reason: { code: input.reason, note: input.note } }),
+      { isolationLevel: "ReadCommitted" }
+    );
+    await recomputeTrustForTrip(prisma, tripId);
+    const trip = await prisma.trip.findUniqueOrThrow({ where: { id: tripId } });
+    res.json({ trip, returned_to_waiting: result.returnedToWaiting });
+  } catch (error) {
+    next(error && typeof error === "object" && "code" in error && error.code === "P2034"
+      ? new HttpError(409, "transaction_retry_required") : error);
   }
 });
 

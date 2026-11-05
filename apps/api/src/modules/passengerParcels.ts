@@ -1,3 +1,4 @@
+import { cancelBodySchema } from "../services/cancellationReasons.js";
 import { Router } from "express";
 import { z } from "zod";
 import type { AppConfig } from "../config.js";
@@ -181,7 +182,9 @@ export function createPassengerParcelRouter(
 
   router.patch("/passenger/parcels/:id/cancel", async (req: AuthenticatedRequest, res, next) => {
     try {
-      res.json({ parcel: serializePassengerParcel(await service.cancel(req.user!.id, routeParam(req.params.id))) });
+      const input = cancelBodySchema("sender").parse(req.body ?? {});
+      const detail = await service.cancel(req.user!.id, routeParam(req.params.id), { code: input.reason, note: input.note });
+      res.json({ parcel: serializePassengerParcel(detail) });
     } catch (error) {
       next(retryable(error));
     }

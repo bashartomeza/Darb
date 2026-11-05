@@ -33,6 +33,7 @@
     "security:audit": "node scripts/audit-policy.mjs",
     "security:artifacts": "node scripts/scan-production-artifacts.mjs",
     "test:integration:capacity": "node apps/api/dist/scripts/capacityIntegrityIntegration.js",
+    "test:integration:cancellations": "node apps/api/dist/scripts/cancellationIntegration.js",
     "test:integration:canonical-capacity": "node apps/api/dist/scripts/canonicalCapacityIntegrityIntegration.js",
     "test:integration:passenger-trip-sync": "node apps/api/dist/scripts/passengerTripSyncIntegration.js",
     "test:integration:cargo": "node scripts/legacy-cargo-batch-integrity.mjs",

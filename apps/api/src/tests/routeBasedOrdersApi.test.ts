@@ -218,7 +218,7 @@ describe("passenger trips on a route", () => {
     });
     const response = await request(createApp()).get("/api/v1/passenger/requests/request_1").set(auth("p1", "passenger")).expect(200);
     expect(response.body.request).toMatchObject({ service_route_id: HEBRON_BETHLEHEM.id, route_name_en: "Hebron → Bethlehem", pickup_details: "gate", dropoff_details: "station" });
-    expect(prismaMock.passengerRequest.findFirst).toHaveBeenCalledWith(expect.objectContaining({ include: { route_version: expect.anything() } }));
+    expect(prismaMock.passengerRequest.findFirst).toHaveBeenCalledWith(expect.objectContaining({ include: expect.objectContaining({ route_version: expect.anything() }) }));
   });
 });
 

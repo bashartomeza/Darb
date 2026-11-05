@@ -232,7 +232,8 @@ describe("trip acceptance, status, and tracking", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const initial = new Date("2026-10-16T12:00:00.000Z");
     vi.setSystemTime(initial);
-    const deadline = new Date(initial.getTime() + 1_000);
+    // A request stays acceptable for ORDER_AUTO_CANCEL_MINUTES (45) after its booked time.
+    const deadline = new Date(initial.getTime() - 45 * 60_000 + 1_000);
     prismaMock.match.findUnique.mockResolvedValue({ ...baseMatch,
       passenger_request: { ...baseMatch.passenger_request, preferred_time: deadline } });
     prismaMock.trip.findFirst.mockImplementation(async () => {
@@ -245,7 +246,7 @@ describe("trip acceptance, status, and tracking", () => {
     try {
       await request(createApp()).post("/api/v1/matches/match_1/accept").set(auth("driver_1")).expect(409);
       expect(prismaMock.passengerRequest.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: expect.objectContaining({ preferred_time: { gt: new Date(initial.getTime() + 2_000) } }),
+        where: expect.objectContaining({ preferred_time: { gt: new Date(initial.getTime() + 2_000 - 45 * 60_000) } }),
       }));
       expect(prismaMock.trip.create).not.toHaveBeenCalled();
     } finally {
@@ -259,7 +260,7 @@ describe("trip acceptance, status, and tracking", () => {
       const initial = new Date("2026-10-16T12:00:00.000Z");
       vi.setSystemTime(initial);
       const deadline = new Date(initial.getTime() + 1_000);
-      const preferredTime = claimDelegate === "passengerRequest" ? deadline : new Date(initial.getTime() + 3_600_000);
+      const preferredTime = claimDelegate === "passengerRequest" ? new Date(initial.getTime() - 45 * 60_000 + 1_000) : new Date(initial.getTime() + 3_600_000);
       const expiresAt = claimDelegate === "match" ? deadline : new Date(initial.getTime() + 600_000);
       const departureAt = claimDelegate === "driverRoute" ? deadline : null;
       prismaMock.match.findUnique.mockResolvedValue({ ...baseMatch, legacy_capacity_held: true, expires_at: expiresAt,
@@ -858,22 +859,18 @@ describe("trip acceptance, status, and tracking", () => {
     }));
   });
 
-  it("trip cancellation persists to the passenger request and closes the route", async () => {
+  it("a driver cannot cancel before pickup through the status endpoint: a reason is required", async () => {
     prismaMock.trip.findUnique.mockResolvedValue(baseTrip("accepted"));
-    prismaMock.trip.update.mockResolvedValue(baseTrip("cancelled"));
 
-    await request(createApp())
+    const response = await request(createApp())
       .post("/api/v1/trips/trip_1/status")
       .set(auth("driver_1"))
       .send({ status: "cancelled" })
-      .expect(200);
+      .expect(409);
 
-    expect(prismaMock.passengerRequest.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: "cancelled" } })
-    );
-    expect(prismaMock.driverRoute.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "active" }) })
-    );
+    expect(JSON.stringify(response.body)).toContain("cancellation_reason_required");
+    expect(prismaMock.trip.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.passengerRequest.updateMany).not.toHaveBeenCalled();
   });
 
   it("trip cancellation after start releases legacy capacity and closes the route", async () => {

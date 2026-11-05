@@ -33,6 +33,73 @@ const documentKind: Record<string, Strings> = {
   contract: { en: "Contract", ar: "العقد" }
 };
 
+/** Labels of the cancellation reason codes (services/cancellationReasons.ts); the app has the same in cancelReason_*. */
+const cancelReason: Record<string, Strings> = {
+  changed_plans: { en: "Changed plans", ar: "تغيّرت الخطط" },
+  found_other_transport: { en: "Found other transport", ar: "وجدت وسيلة نقل أخرى" },
+  driver_too_far: { en: "The driver is too far or too slow", ar: "السائق بعيد أو متأخر" },
+  wrong_details: { en: "Wrong details entered", ar: "إدخال بيانات خاطئة" },
+  found_other_delivery: { en: "Found another delivery option", ar: "وجدت خيار توصيل آخر" },
+  vehicle_problem: { en: "Vehicle problem", ar: "مشكلة في المركبة" },
+  emergency: { en: "Emergency", ar: "حالة طارئة" },
+  cannot_reach_pickup: { en: "Cannot reach the pickup point", ar: "لا يمكن الوصول إلى نقطة الاستلام" },
+  route_changed: { en: "Route changed", ar: "تغيّر المسار" },
+  customer_request: { en: "Customer request", ar: "بطلب من العميل" },
+  driver_unavailable: { en: "Driver unavailable", ar: "السائق غير متاح" },
+  safety_concern: { en: "Safety concern", ar: "مخاوف تتعلق بالسلامة" },
+  duplicate: { en: "Duplicate request", ar: "طلب مكرر" },
+  policy_violation: { en: "Policy violation", ar: "مخالفة للسياسة" },
+  other: { en: "Other", ar: "سبب آخر" },
+  no_driver_in_time: { en: "No driver accepted in time", ar: "لم يقبله أي سائق في الوقت المحدد" }
+};
+
+const cancelNoun: Record<string, { title: Strings; the: Strings }> = {
+  ride: { title: { en: "Ride request cancelled", ar: "تم إلغاء طلب الرحلة" }, the: { en: "ride request", ar: "طلب الرحلة" } },
+  order: { title: { en: "Order cancelled", ar: "تم إلغاء الطلب" }, the: { en: "order", ar: "الطلب" } },
+  parcel: { title: { en: "Parcel cancelled", ar: "تم إلغاء الطرد" }, the: { en: "parcel", ar: "الطرد" } }
+};
+
+/** Wording of the `cancelled` notification (services/cancellations.ts). Mirrors notifCancelled* in the app. */
+function cancelledText(params: unknown, lang: PushLanguage): Text {
+  const kind = param(params, "kind") ?? "order";
+  const noun = cancelNoun[kind] ?? cancelNoun.order;
+  const by = param(params, "by");
+  const reason = cancelReason[param(params, "reason") ?? "other"]?.[lang] ?? cancelReason.other[lang];
+  const flag = (key: string) => params && typeof params === "object" && (params as Record<string, unknown>)[key] === true;
+  const en = lang === "en";
+  if (param(params, "audience") === "driver") {
+    if (flag("partial")) {
+      return {
+        title: en ? "Order removed from your trip" : "تمت إزالة طلب من رحلتك",
+        body: en ? `A ${noun.the.en} was cancelled: ${reason}. The rest of the trip continues.` : `أُلغي ${noun.the.ar}: ${reason}. تستمر بقية الرحلة.`
+      };
+    }
+    const who =
+      by === "admin"
+        ? { en: "The Darb team cancelled", ar: "ألغى فريق درب" }
+        : kind === "ride"
+          ? { en: "The passenger cancelled", ar: "ألغى الراكب" }
+          : { en: "The sender cancelled", ar: "ألغى المرسل" };
+    return { title: en ? "Trip cancelled" : "تم إلغاء الرحلة", body: `${who[lang]}${en ? " this trip" : " هذه الرحلة"}: ${reason}.` };
+  }
+  if (flag("waiting")) {
+    return {
+      title: en ? "Your driver cancelled" : "ألغى السائق الرحلة",
+      body: en ? "Your request is waiting for another driver." : "طلبك بانتظار سائق آخر."
+    };
+  }
+  if (flag("automatic")) {
+    return {
+      title: noun.title[lang],
+      body: en ? "No driver accepted it in time, so it was cancelled." : "لم يقبله أي سائق في الوقت المحدد، لذلك أُلغي تلقائياً."
+    };
+  }
+  return {
+    title: noun.title[lang],
+    body: by === "admin" ? (en ? `Cancelled by the Darb team: ${reason}.` : `ألغاه فريق درب: ${reason}.`) : `${reason}.`
+  };
+}
+
 const fixed: Record<string, { title: Strings; body?: Strings }> = {
   match_offered: {
     title: { en: "New match offer", ar: "عرض مطابقة جديد" },
@@ -157,9 +224,16 @@ export function pushText(type: string, params: unknown, locale: string | null | 
             : undefined;
       return { title: lang === "en" ? "Order expired" : "انتهت صلاحية الطلب", body: body?.[lang] };
     }
+    case "cancelled":
+      return cancelledText(params, lang);
     case "match_withdrawn": {
       const body =
-        param(params, "reason") === "expired"
+        param(params, "reason") === "request_cancelled"
+          ? {
+              en: "The passenger cancelled this request, so it is no longer waiting for you.",
+              ar: "ألغى الراكب هذا الطلب، لذلك لم يعد بانتظارك."
+            }
+          : param(params, "reason") === "expired"
           ? {
               en: "An order in this parcel offer expired, so it is no longer waiting for you.",
               ar: "انتهت صلاحية طلب في عرض الطرود هذا، لذلك لم يعد بانتظارك."

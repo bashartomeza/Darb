@@ -240,7 +240,7 @@ describe("matching, batching, comparison", () => {
     // its lock; the pre-transaction application clock still sees valid supply.
     prismaMock.$queryRaw.mockImplementation(async (query: TemplateStringsArray) => query.join("").includes("TIMESTAMP")
       ? [{ now: new Date("2026-07-02T10:00:00.001Z") }]
-      : [{ id: "route_compatible", status: "active", verified: true, role: "driver", account_status: "active", preferred_time: new Date(boundary === "demand" ? "2026-07-02T10:00:00.000Z" : "2026-07-02T11:00:00.000Z"),
+      : [{ id: "route_compatible", status: "active", verified: true, role: "driver", account_status: "active", preferred_time: new Date(boundary === "demand" ? "2026-07-02T09:15:00.000Z" : "2026-07-02T11:00:00.000Z"),
         departure_at: boundary === "departure" ? new Date("2026-07-02T10:00:00.000Z") : null,
         departed_at: null,
         availability_window_end: boundary === "window" ? new Date("2026-07-02T10:00:00.000Z") : null }]);

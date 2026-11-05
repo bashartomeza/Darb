@@ -44,7 +44,7 @@ async function call(who,method,path,body,headers={}){
 function payload(n=1,lat=31.5326){return{pickup_label:'SYNTHETIC Task14A pickup',pickup_lat:lat,pickup_lng:35.0998,parcels:Array.from({length:n},()=>({destination_label:'SYNTHETIC Bethlehem',destination_lat:31.7054,destination_lng:35.2024,size:'S',priority:'normal'}))};}
 async function order(who,n=1,lat=31.5326){const r=await call(who,'POST','/merchant/orders',payload(n,lat),{'idempotency-key':'task14a-'+randomUUID()});assert.equal(r.status,201,'order fixture');orderIds.push(r.body.order.id);return r.body.order.id;}
 const batch=(who,id)=>call(who,'POST','/merchant/orders/'+id+'/batch',{});
-const cancel=(who,id)=>call(who,'PATCH','/merchant/orders/'+id+'/cancel',{});
+const cancel=(who,id)=>call(who,'PATCH','/merchant/orders/'+id+'/cancel',{reason:'other'});
 const match=(who,id)=>call(who,'POST','/matches/run',{merchantOrderId:id});
 async function inspect(label,ids,routeId){
  const orders=await prisma.merchantOrder.findMany({where:{id:{in:ids}},select:{id:true,merchant_id:true,status:true}});

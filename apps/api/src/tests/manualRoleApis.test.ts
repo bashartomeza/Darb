@@ -23,6 +23,8 @@ const prismaMock = vi.hoisted(() => ({
   deliveryHandover: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
   serviceRoute: { findUnique: vi.fn() },
   routeFare: { findMany: vi.fn(async () => []) },
+  cancellation: { create: vi.fn(async () => ({ id: "cancellation_1" })) },
+  passengerParcelDetail: { count: vi.fn(async () => 0), updateMany: vi.fn(async () => ({ count: 0 })) },
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
@@ -219,7 +221,7 @@ describe("manual role APIs", () => {
     prismaMock.passengerRequest.update.mockResolvedValue({ id: "req_1", status: "cancelled", passenger_id: "passenger_1" });
 
     const response = await request(createApp())
-      .patch("/api/v1/passenger/requests/req_1/cancel")
+      .patch("/api/v1/passenger/requests/req_1/cancel").send({ reason: "other" })
       .set(auth("passenger_1"))
       .expect(200);
 
@@ -257,7 +259,7 @@ describe("manual role APIs", () => {
     });
 
     const response = await request(createApp())
-      .patch("/api/v1/passenger/requests/req_1/cancel")
+      .patch("/api/v1/passenger/requests/req_1/cancel").send({ reason: "other" })
       .set(auth("passenger_1"))
       .expect(200);
 
@@ -287,7 +289,7 @@ describe("manual role APIs", () => {
     prismaMock.parcel.count.mockResolvedValue(3);
 
     const response = await request(createApp())
-      .patch("/api/v1/merchant/orders/order_1/cancel")
+      .patch("/api/v1/merchant/orders/order_1/cancel").send({ reason: "other" })
       .set(auth("merchant_1"))
       .expect(200);
 
@@ -339,7 +341,7 @@ describe("manual role APIs", () => {
     prismaMock.match.updateMany.mockResolvedValue({ count: 0 });
     prismaMock.parcel.count.mockResolvedValue(3);
 
-    await request(createApp()).patch("/api/v1/merchant/orders/order_1/cancel").set(auth("merchant_1")).expect(200);
+    await request(createApp()).patch("/api/v1/merchant/orders/order_1/cancel").send({ reason: "other" }).set(auth("merchant_1")).expect(200);
 
     // The batch row is locked first, and the lost offer claim releases nothing.
     expect(prismaMock.$queryRaw).toHaveBeenCalled();
@@ -353,7 +355,7 @@ describe("manual role APIs", () => {
     prismaMock.parcelBatchOrder.findMany.mockResolvedValue([{ merchant_order_id: "order_1" }]);
 
     const response = await request(createApp())
-      .patch("/api/v1/merchant/orders/order_1/cancel")
+      .patch("/api/v1/merchant/orders/order_1/cancel").send({ reason: "other" })
       .set(auth("merchant_1"))
       .expect(200);
 
@@ -375,7 +377,7 @@ describe("manual role APIs", () => {
     prismaMock.merchantOrder.findFirst.mockResolvedValue({ id: "order_1", status: "matched" });
     prismaMock.merchantOrder.updateMany.mockResolvedValue({ count: 0 });
 
-    await request(createApp()).patch("/api/v1/merchant/orders/order_1/cancel").set(auth("merchant_1")).expect(409);
+    await request(createApp()).patch("/api/v1/merchant/orders/order_1/cancel").send({ reason: "other" }).set(auth("merchant_1")).expect(409);
     expect(prismaMock.match.updateMany).not.toHaveBeenCalled();
     expect(prismaMock.parcel.updateMany).not.toHaveBeenCalled();
   });
@@ -383,7 +385,7 @@ describe("manual role APIs", () => {
   it("invalid cancel state is rejected", async () => {
     prismaMock.passengerRequest.findFirst.mockResolvedValue({ id: "req_1", status: "accepted", passenger_id: "passenger_1" });
 
-    await request(createApp()).patch("/api/v1/passenger/requests/req_1/cancel").set(auth("passenger_1")).expect(409);
+    await request(createApp()).patch("/api/v1/passenger/requests/req_1/cancel").send({ reason: "other" }).set(auth("passenger_1")).expect(409);
   });
 
   it("driver can create a route on a predefined route", async () => {

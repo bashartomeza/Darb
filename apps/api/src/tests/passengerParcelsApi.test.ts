@@ -112,10 +112,10 @@ describe("passenger parcel API", () => {
     const { app, service } = setup();
     await request(app).get("/api/v1/passenger/parcels").set(auth("p1", "passenger")).expect(200);
     await request(app).get("/api/v1/passenger/parcels/order_1").set(auth("p1", "passenger")).expect(200);
-    await request(app).patch("/api/v1/passenger/parcels/order_1/cancel").set(auth("p1", "passenger")).expect(200);
+    await request(app).patch("/api/v1/passenger/parcels/order_1/cancel").send({ reason: "other" }).set(auth("p1", "passenger")).expect(200);
     expect(service.list).toHaveBeenCalledWith("p1");
     expect(service.get).toHaveBeenCalledWith("p1", "order_1");
-    expect(service.cancel).toHaveBeenCalledWith("p1", "order_1");
+    expect(service.cancel).toHaveBeenCalledWith("p1", "order_1", { code: "other", note: undefined });
   });
 
   it("stays available without multi-route entry, which only gates the canonical body", async () => {

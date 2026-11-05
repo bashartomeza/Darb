@@ -111,9 +111,10 @@ try {
   check((await prisma.driverRoute.findUniqueOrThrow({ where: { id: main.routeId } })).seats_available === 3, 'completion preserves existing capacity rule');
   for (const terminal of ['cancelled', 'failed'] as const) {
     const t = await trip();
-    if (terminal === 'failed')
-      for (const status of ['pickup_started', 'picked_up', 'in_transit'])
-        assert.equal((await call('driver', 'POST', `/trips/${t.id}/status`, { status })).status, 200);
+    // Before pickup a driver cancels through POST /trips/:id/cancel (covered by cancellationIntegration);
+    // the status endpoint still cancels or fails a trip that is already under way.
+    for (const status of terminal === 'failed' ? ['pickup_started', 'picked_up', 'in_transit'] : ['pickup_started', 'picked_up'])
+      assert.equal((await call('driver', 'POST', `/trips/${t.id}/status`, { status })).status, 200);
     const terminalRace = await Promise.all(Array.from({ length: 2 }, () => call('driver', 'POST', `/trips/${t.id}/status`, { status: terminal })));
     check(terminalRace.filter(r => r.status === 200).length === 1 && terminalRace.filter(r => r.status === 409).length === 1, `${terminal} concurrent transition commits once`);
     await both(t.id, terminal);
@@ -127,10 +128,10 @@ try {
     const t = await trip();
     if (loseResponse) {
       dropCancellationResponse = true;
-      await assert.rejects(call('passenger', 'PATCH', `/passenger/requests/${t.requestId}/cancel`, {}));
+      await assert.rejects(call('passenger', 'PATCH', `/passenger/requests/${t.requestId}/cancel`, { reason: "other" }));
       check(!dropCancellationResponse, 'successful committed cancellation response destroyed');
     } else {
-      const cancelled = await call('passenger', 'PATCH', `/passenger/requests/${t.requestId}/cancel`, {});
+      const cancelled = await call('passenger', 'PATCH', `/passenger/requests/${t.requestId}/cancel`, { reason: "other" });
       check(cancelled.status === 200 && cancelled.body.request.status === 'cancelled', 'successful cancellation returns saved request');
     }
     await both(t.id, 'cancelled');
@@ -141,26 +142,27 @@ try {
     check(await prisma.auditEvent.count({ where: { entity_id: t.requestId, action: 'passenger_request_cancelled' } }) === 1, 'one passenger cancellation audit');
     check(await prisma.auditEvent.count({ where: { entity_id: t.id, action: 'trip_status_updated' } }) === 1, 'one trip transition audit');
     check(await prisma.match.count({ where: { passenger_request_id: t.requestId, legacy_capacity_held: true } }) === 0, 'no capacity hold remains after cancellation');
-    check((await call('passenger', 'PATCH', `/passenger/requests/${t.requestId}/cancel`, {})).status === 409, 'duplicate cancellation cannot reapply');
+    check((await call('passenger', 'PATCH', `/passenger/requests/${t.requestId}/cancel`, { reason: "other" })).status === 409, 'duplicate cancellation cannot reapply');
     check((await prisma.driverRoute.findUniqueOrThrow({ where: { id: t.routeId } })).seats_available === 4, 'duplicate cancellation cannot inflate capacity');
     check(await prisma.auditEvent.count({ where: { entity_id: t.requestId, action: 'passenger_request_cancelled' } }) === 1, 'duplicate cancellation cannot add audit');
     check((await call('otherPassenger', 'GET', `/trips/${t.id}`)).status === 403, 'other Passenger cannot read cancelled trip');
     check((await call('otherPassenger', 'GET', `/passenger/requests/${t.requestId}`)).status === 404, 'other Passenger cannot read cancelled request');
-    check((await call('otherPassenger', 'PATCH', `/passenger/requests/${t.requestId}/cancel`, {})).status === 404, 'other Passenger cannot cancel request');
+    check((await call('otherPassenger', 'PATCH', `/passenger/requests/${t.requestId}/cancel`, { reason: "other" })).status === 404, 'other Passenger cannot cancel request');
   }
   const race = await trip();
+  assert.equal((await call('driver', 'POST', `/trips/${race.id}/status`, { status: 'pickup_started' })).status, 200);
   const competing = await Promise.all([
-    call('passenger', 'PATCH', `/passenger/requests/${race.requestId}/cancel`, {}),
-    call('driver', 'POST', `/trips/${race.id}/status`, { status: 'pickup_started' }),
+    call('passenger', 'PATCH', `/passenger/requests/${race.requestId}/cancel`, { reason: "other" }),
+    call('driver', 'POST', `/trips/${race.id}/status`, { status: 'picked_up' }),
   ]);
   check(competing.filter(r => r.status === 200).length === 1 && competing.filter(r => r.status === 409).length === 1, 'Passenger cancellation and Driver progress commit only one transition');
   const persisted = await prisma.trip.findUniqueOrThrow({ where: { id: race.id } });
   const cancelled = persisted.status === 'cancelled';
-  check(cancelled || persisted.status === 'pickup_started', 'race ends in one permitted authoritative state');
+  check(cancelled || persisted.status === 'picked_up', 'race ends in one permitted authoritative state');
   await both(race.id, persisted.status);
-  check((await call('passenger', 'GET', `/passenger/requests/${race.requestId}`)).body.request.status === (cancelled ? 'cancelled' : 'accepted'), 'request obeys existing status mapping after race');
+  check((await call('passenger', 'GET', `/passenger/requests/${race.requestId}`)).body.request.status === (cancelled ? 'cancelled' : 'picked_up'), 'request obeys existing status mapping after race');
   check((await prisma.driverRoute.findUniqueOrThrow({ where: { id: race.routeId } })).seats_available === (cancelled ? 4 : 3), 'race restores capacity only when cancellation won');
-  check(await prisma.auditEvent.count({ where: { entity_id: race.id, action: 'trip_status_updated' } }) === 1, 'race has one trip transition audit');
+  check(await prisma.auditEvent.count({ where: { entity_id: race.id, action: 'trip_status_updated' } }) === 2, 'race has the pickup_started audit and one race transition audit');
   console.log(JSON.stringify({ suite: 'passenger_driver_trip_sync_real_mysql', assertions, failures, location_evidence: 'synthetic stored LocationEvents; no live GPS ingestion/provider claim' }));
   assert.equal(failures.length, 0);
 }

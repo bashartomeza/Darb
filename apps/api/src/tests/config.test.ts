@@ -53,11 +53,19 @@ describe("fail-closed application configuration", () => {
     );
   });
 
-  it("expires unmatched merchant orders after 72 hours unless configured within 1-720 hours", () => {
-    expect(createConfig(environment()).merchantOrderMaxAgeHours).toBe(72);
-    expect(createConfig(environment({ MERCHANT_ORDER_MAX_AGE_HOURS: "24" })).merchantOrderMaxAgeHours).toBe(24);
-    for (const invalid of ["0", "721", "1.5", "three days"]) {
-      expect(() => createConfig(environment({ MERCHANT_ORDER_MAX_AGE_HOURS: invalid }))).toThrow(/MERCHANT_ORDER_MAX_AGE_HOURS/);
+  it("auto-cancels unaccepted orders after 45 minutes unless configured within 10-240 minutes", () => {
+    expect(createConfig(environment()).orderAutoCancelMinutes).toBe(45);
+    expect(createConfig(environment({ ORDER_AUTO_CANCEL_MINUTES: "90" })).orderAutoCancelMinutes).toBe(90);
+    for (const invalid of ["9", "241", "1.5", "an hour"]) {
+      expect(() => createConfig(environment({ ORDER_AUTO_CANCEL_MINUTES: invalid }))).toThrow(/ORDER_AUTO_CANCEL_MINUTES/);
+    }
+  });
+
+  it("limits driver cancellations to 3 a day unless configured within 1-100", () => {
+    expect(createConfig(environment()).driverCancellationsPerDay).toBe(3);
+    expect(createConfig(environment({ DRIVER_CANCELLATIONS_PER_DAY: "5" })).driverCancellationsPerDay).toBe(5);
+    for (const invalid of ["0", "101", "many"]) {
+      expect(() => createConfig(environment({ DRIVER_CANCELLATIONS_PER_DAY: invalid }))).toThrow(/DRIVER_CANCELLATIONS_PER_DAY/);
     }
   });
 

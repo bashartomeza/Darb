@@ -62,7 +62,8 @@ const expected = {
   "20261109120000_document_files_in_database": "6f623d449c9bb07d0122a8b69652d0bae68acbe1f5c194bcaecefe8858590e41",
   "20261110120000_route_fare_driver_price": "469d44c0a9cdbd32fc9279d89dbc5bb37d61f296583f8595a19de78e95bb80e0",
   "20261111120000_push_devices": "50fbc8ba7407a76f20c0ebf5eb8f06a88a9002e31e9410ed9e2f43ad29537298",
-  "20261111130000_reliability_indexes": "6c31fa141425d26d6c8ee684dd08c2ecfc24d140edf815ddcb199f65d793d674"
+  "20261111130000_reliability_indexes": "6c31fa141425d26d6c8ee684dd08c2ecfc24d140edf815ddcb199f65d793d674",
+  "20261112120000_cancellations": "b104deae94982b753420ae1679aed395063252b9db6d1e33415f4ee89cc247be"
 };
 
 function normalizedChecksum(path) {

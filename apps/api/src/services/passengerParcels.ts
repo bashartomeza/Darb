@@ -9,7 +9,7 @@ import {
   type CanonicalDemandService
 } from "./canonicalDemand.js";
 import { issueHandover } from "./deliveryHandover.js";
-import { releaseLegacyCapacity } from "./legacyCapacity.js";
+import { cancelMerchantOrder, endedCancellationInclude, serializeCancellation, type CancelReason } from "./cancellations.js";
 import { createLegacyMerchantOrder } from "./legacyMerchantOrders.js";
 import { routeFields, routeSummarySelect } from "./operatingRoutes.js";
 import { parcelFareResponse } from "./routeFares.js";
@@ -140,6 +140,7 @@ export function passengerParcelTrackingState(order: { status: string }, parcelSt
 const detailInclude = {
   order: {
     include: {
+      ...endedCancellationInclude,
       parcels: true,
       canonical_dispatch: { select: { status: true } },
       route_version: routeSummarySelect,
@@ -156,6 +157,7 @@ type CancellableShape = {
     canonical_entry_version?: string | null;
     canonical_dispatch?: { status: string } | null;
     parcels: Array<{ status: string }>;
+    trips?: Array<{ status: string }>;
   };
 };
 
@@ -171,7 +173,10 @@ function isLegacyParcel(detail: CancellableShape) {
 function isCancellable(detail: CancellableShape) {
   const parcel = detail.order.parcels[0];
   if (isLegacyParcel(detail)) {
-    return ["submitted", "matched"].includes(detail.order.status) && parcel?.status === "pending";
+    if (["submitted", "batched", "matched"].includes(detail.order.status)) return true;
+    // A driver accepted it: the sender can still cancel until it is picked up.
+    const tripStatus = detail.order.trips?.[0]?.status;
+    return detail.order.status === "assigned" && (tripStatus === "accepted" || tripStatus === "pickup_started");
   }
   const dispatchStatus = detail.order.canonical_dispatch?.status;
   return (
@@ -209,6 +214,8 @@ export function serializePassengerParcel(detail: DetailWithOrder) {
     // The trip carrying the parcel once a driver accepted it (GET /trips/:id).
     trip_id: detail.order.trips?.[0]?.id ?? null,
     created_at: detail.created_at,
+    // Who ended the parcel and why, once it is cancelled; otherwise null.
+    cancellation: detail.order.status === "cancelled" ? serializeCancellation(detail.order.cancellations) : null,
     can_cancel: isCancellable(detail)
   };
 }
@@ -246,52 +253,6 @@ export function createPassengerParcelService(
     if (recent >= PASSENGER_PARCEL_LIMITS.maximumPerDay) throw new HttpError(429, "passenger_parcel_daily_limit_reached");
   }
 
-  /**
-   * Cancels a route-based parcel the order row is already locked for. An
-   * offer still waiting for its driver is withdrawn and the capacity it held
-   * is given back, the same steps a merchant cancellation takes.
-   */
-  async function cancelRouteParcel(tx: Prisma.TransactionClient, senderId: string, orderId: string, current: DetailWithOrder) {
-    if (!isCancellable(current)) throw new HttpError(409, "parcel_cannot_be_cancelled");
-    const offers = await tx.match.findMany({
-      where: { merchant_order_id: orderId, operational_mode: "legacy", status: { in: ["proposed", "sent_to_driver"] } },
-      select: { id: true, driver_route_id: true, legacy_capacity_held: true }
-    });
-    const parcelUnits = await tx.parcel.count({
-      where: { order_id: orderId, status: { notIn: ["cancelled", "failed", "expired"] } }
-    });
-    if (parcelUnits > 0) {
-      const heldRoutes = new Set(offers.filter((offer) => offer.legacy_capacity_held).map((offer) => offer.driver_route_id));
-      for (const driverRouteId of heldRoutes) {
-        await releaseLegacyCapacity(tx, { driverRouteId, seats: 0, parcelUnits });
-      }
-    }
-    if (offers.length > 0) {
-      await tx.match.updateMany({
-        where: { id: { in: offers.map((offer) => offer.id) } },
-        data: { status: "invalidated", legacy_demand_key: null, legacy_capacity_held: false }
-      });
-    }
-    const claimed = await tx.merchantOrder.updateMany({
-      where: { id: orderId, status: { in: ["submitted", "matched"] } },
-      data: { status: "cancelled" }
-    });
-    if (claimed.count !== 1) throw new HttpError(409, "parcel_cannot_be_cancelled");
-    await tx.parcel.updateMany({ where: { order_id: orderId, status: "pending" }, data: { status: "cancelled" } });
-    // The receiver is no longer needed: erase now rather than at expiry.
-    await tx.passengerParcelDetail.update({
-      where: { order_id: orderId },
-      data: { receiver_name: null, receiver_phone: null, note: null, receiver_purged_at: new Date() }
-    });
-    await auditEvent(tx, {
-      userId: senderId,
-      action: AuditAction.merchant_order_cancelled,
-      entityType: "MerchantOrder",
-      entityId: orderId,
-      metadata: { action: "passenger_parcel_cancelled", withdrawn_offers: offers.length }
-    });
-    return (await load(senderId, orderId, tx))!;
-  }
 
   function validate(input: { size: string; forbiddenItemsAcknowledged: boolean; note?: string }) {
     if (!(PASSENGER_PARCEL_LIMITS.allowedSizes as readonly string[]).includes(input.size)) throw new HttpError(400, "parcel_size_not_allowed");
@@ -422,11 +383,19 @@ export function createPassengerParcelService(
       return detail;
     },
 
-    /** Cancel while no driver has been offered or assigned the parcel. */
-    async cancel(senderId: string, orderId: string) {
+    /**
+     * Cancel a route-based parcel any time before pickup (also after a driver accepted it), or a
+     * canonical parcel while no driver has been offered or assigned it.
+     */
+    async cancel(senderId: string, orderId: string, reason: CancelReason = { code: "other" }) {
       return db.$transaction(async (tx) => {
         const owned = await load(senderId, orderId, tx);
         if (!owned) throw new HttpError(404, "parcel_not_found");
+        if (isLegacyParcel(owned)) {
+          // Route-based: the shared order cancellation takes its own locks (batch before order).
+          await cancelMerchantOrder(tx, { orderId, ownerId: senderId, actor: { userId: senderId, role: "passenger" }, reason });
+          return (await load(senderId, orderId, tx))!;
+        }
         const dispatch = await tx.canonicalDemandDispatch.findUnique({
           where: { merchant_order_id: orderId },
           select: { id: true }
@@ -436,7 +405,6 @@ export function createPassengerParcelService(
         await lockRow(tx, "merchant_orders", orderId);
         const current = await load(senderId, orderId, tx);
         if (!current) throw new HttpError(404, "parcel_not_found");
-        if (isLegacyParcel(current)) return cancelRouteParcel(tx, senderId, orderId, current);
         const parcel = current.order.parcels[0];
         const dispatchStatus = current.order.canonical_dispatch?.status;
         const unmatched =
@@ -470,7 +438,7 @@ export function createPassengerParcelService(
           metadata: { action: "passenger_parcel_cancelled" }
         });
         return (await load(senderId, orderId, tx))!;
-      });
+      }, { isolationLevel: "ReadCommitted" });
     }
   };
 }
