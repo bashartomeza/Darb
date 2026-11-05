@@ -54,3 +54,12 @@ session (ADR-023) works on one origin. Other projects on the same account are ne
 
 `cd ~/darb-app && source ~/nodevenv/darb-app/22/bin/activate && node ops/run.mjs <command>`
 (for example `npx prisma migrate status`). Secrets reach the child process only and are never printed.
+
+## Direct sign-up (no emailed code)
+
+Outbound Gmail SMTP is blocked on this host, and riders should be able to sign up directly. In cPanel >
+Setup Node.js App > darb-app > Environment variables set both `EMAIL_VERIFICATION_DISABLED=true` and
+`ALLOW_UNVERIFIED_EMAIL_SIGNUP=true` (the API refuses the first one alone in production). A rider then signs up
+with name, email, mobile number and password, accepts the legal texts and is signed in, with no code. Consequences:
+accounts can use any address; password reset and email codes need a working mailbox (`darb@aynur.ps` on
+`mail.aynur.ps:465`, see `ops/setup.sh`); driver and shop-owner sign-up still sends an email code.

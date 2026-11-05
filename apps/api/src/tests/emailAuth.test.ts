@@ -326,6 +326,15 @@ describe("email authentication lifecycle", () => {
       expect(() => createConfig({ ...process.env, APP_ENV: appEnv, EMAIL_VERIFICATION_DISABLED: "true" } as any)).toThrow(/EMAIL_VERIFICATION_DISABLED is only allowed/);
     }
   });
+  it("allows unverified email sign-up in production only with the explicit second switch", () => {
+    const problemsFor = (extra: Record<string, string>) => {
+      try { createConfig({ ...process.env, APP_ENV: "production", ...extra } as any); return ""; }
+      catch (error) { return String((error as Error).message); }
+    };
+    expect(problemsFor({ EMAIL_VERIFICATION_DISABLED: "true", ALLOW_UNVERIFIED_EMAIL_SIGNUP: "true" })).not.toMatch(/EMAIL_VERIFICATION_DISABLED is only allowed/);
+    expect(problemsFor({ ALLOW_UNVERIFIED_EMAIL_SIGNUP: "true" })).toMatch(/ALLOW_UNVERIFIED_EMAIL_SIGNUP only makes sense/);
+    expect(problemsFor({ EMAIL_VERIFICATION_DISABLED: "true" })).toMatch(/EMAIL_VERIFICATION_DISABLED is only allowed/);
+  });
   it.each(["/auth/mobile/login", "/auth/mobile/login/", "/AUTH/MOBILE/LOGIN"])("rejects Admin credentials on the mobile login variant %s", async (path) => {
     users.push(actor({ role: "admin", password_hash: await bcrypt.hash(registration.password, 4) }));
     const response = await request(app()).post(`/api/v1${path}`).send({ email: registration.email, password: registration.password }).expect(401);

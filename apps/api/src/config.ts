@@ -117,6 +117,7 @@ const rawSchema = z.object({
   PUBLIC_ONBOARDING_ENABLED: z.string().optional(),
   EMAIL_VERIFICATION_DISABLED: z.string().optional(),
   PHONE_VERIFICATION_DISABLED: z.string().optional(),
+  ALLOW_UNVERIFIED_EMAIL_SIGNUP: z.string().optional(),
   OPEN_SIGNUP_MAX_STARTS_PER_HOUR: z.coerce.number().int().min(1).max(10_000).default(200),
   DRIVER_DOCUMENTS_ENABLED: z.string().optional(),
   DRIVER_DOCUMENTS_DIR: z.string().min(1).optional(),
@@ -443,7 +444,14 @@ export function createConfig(environment: NodeJS.ProcessEnv | Record<string, str
   // Local development only: email sign-up skips the emailed code and unverified
   // email accounts may sign in. Staging and production always verify.
   const emailVerificationDisabled = parseBoolean("EMAIL_VERIFICATION_DISABLED", raw.EMAIL_VERIFICATION_DISABLED);
-  if (productionLike && emailVerificationDisabled) problems.push("EMAIL_VERIFICATION_DISABLED is only allowed outside staging and production");
+  // Verified email is always required in staging/production unless the owner explicitly accepts unverified
+  // sign-up with a second, deliberately named switch (accounts can then use any address, and a password
+  // reset by email only works for real mailboxes).
+  const allowUnverifiedEmailSignup = parseBoolean("ALLOW_UNVERIFIED_EMAIL_SIGNUP", raw.ALLOW_UNVERIFIED_EMAIL_SIGNUP);
+  if (productionLike && emailVerificationDisabled && !allowUnverifiedEmailSignup) {
+    problems.push("EMAIL_VERIFICATION_DISABLED is only allowed outside staging and production");
+  }
+  if (allowUnverifiedEmailSignup && !emailVerificationDisabled) problems.push("ALLOW_UNVERIFIED_EMAIL_SIGNUP only makes sense together with EMAIL_VERIFICATION_DISABLED=true");
   // Local development only: adding a phone to the profile needs no code. The number is stored unverified.
   const phoneVerificationDisabled = parseBoolean("PHONE_VERIFICATION_DISABLED", raw.PHONE_VERIFICATION_DISABLED);
   if (productionLike && phoneVerificationDisabled) problems.push("PHONE_VERIFICATION_DISABLED is only allowed outside staging and production");
